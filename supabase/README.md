@@ -1,39 +1,67 @@
 # Supabase
 
-## Cách 1 — SQL Editor (nhanh nhất)
+## CLI
 
-1. Vào Supabase Dashboard → **SQL Editor**.
-2. Dán toàn bộ `migrations/0001_init.sql` → **Run**.
-
-## Cách 2 — Supabase CLI
+CLI được cài sẵn làm **devDependency** của dự án, nên ai clone repo về cũng có
+đúng phiên bản. Không cần cài global.
 
 ```bash
-# Cài CLI (một lần)
-pnpm add -g supabase
-
-# Đăng nhập & liên kết project
-supabase login
-supabase link --project-ref <your-project-ref>
-
-# Đẩy migration lên
-supabase db push
+corepack pnpm exec supabase --version
 ```
+
+> Máy này chưa có `pnpm` trên PATH nên dùng `corepack pnpm`. Muốn gõ `pnpm`
+> trực tiếp thì chạy `corepack enable` một lần.
+
+## Cách 1 — SQL Editor (nhanh nhất, không cần cấu hình gì)
+
+1. Vào Supabase Dashboard → **SQL Editor**.
+2. Dán `migrations/0001_init.sql` → **Run**.
+3. Dán `migrations/0002_search_rollup_categories.sql` → **Run**.
+
+## Cách 2 — CLI, đẩy lên project trên cloud
+
+```bash
+corepack pnpm exec supabase login     # mở trình duyệt, một lần
+corepack pnpm db:link                 # hỏi project-ref và mật khẩu database
+corepack pnpm db:push                 # đẩy mọi migration chưa áp dụng
+```
+
+## Cách 3 — Stack Supabase chạy local
+
+**Cần Docker Desktop.** Máy hiện tại chưa cài, nên cách này chưa dùng được.
+
+Nếu cài Docker rồi thì:
+
+```bash
+corepack pnpm exec supabase start     # dựng Postgres + Auth + Storage local
+corepack pnpm exec supabase status    # in ra URL, anon key, service_role key
+```
+
+Ba giá trị in ra chép thẳng vào `.env.local`. Cách này cho phép chạy migration,
+`seed-dev` và toàn bộ test tích hợp mà không cần project trên cloud và không
+đụng vào dữ liệu thật.
 
 ## Sinh lại type từ DB
 
-Sau khi đổi schema, regen `src/lib/database.types.ts` để TypeScript luôn khớp:
+**Bắt buộc sau mỗi lần đổi schema.** `src/lib/database.types.ts` hiện viết tay
+và chưa biết gì về các bảng thêm ở `0002` — `tsc` sẽ đỏ khi chạy `seed-dev`.
 
 ```bash
-npx supabase gen types typescript \
-  --project-id <your-project-ref> \
-  --schema public > ../src/lib/database.types.ts
+corepack pnpm db:types
 ```
+
+Lệnh này cần `db:link` chạy trước (nó dùng cờ `--linked`).
 
 ## Ghi chú schema
 
 - **RLS** chỉ bật cho dữ liệu người dùng (`users`, `watches`, `alert_events`,
-  `click_events`). Catalog & price data đọc công khai; ghi qua **service role**
-  (collector/cron) sẽ bỏ qua RLS.
-- Trigger `on_auth_user_created` tự tạo hồ sơ `public.users` khi có `auth.users` mới.
-- `price_observations` nên **partition theo tháng** hoặc dùng **TimescaleDB** khi
-  dữ liệu lớn (xem chú thích trong migration).
+  `click_events`) và bảng vận hành `lookup_requests`. Catalog & price data đọc
+  công khai; ghi qua **service role** (collector/cron) sẽ bỏ qua RLS.
+- `lookup_requests` bật RLS nhưng **không có policy nào** — chỉ service role
+  đọc/ghi được.
+- Trigger `on_auth_user_created` tự tạo hồ sơ `public.users` khi có
+  `auth.users` mới.
+- `refresh_variant_daily_prices` ép ngày theo `Asia/Ho_Chi_Minh`. Đừng bỏ mệnh
+  đề `at time zone` — biên ngày sẽ trôi theo `TimeZone` của session.
+- `price_observations` nên **partition theo tháng** hoặc dùng **TimescaleDB**
+  khi dữ liệu lớn (xem chú thích trong migration).
