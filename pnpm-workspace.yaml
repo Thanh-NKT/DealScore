@@ -1,0 +1,4 @@
+# Cho phép chạy build script của dependency (pnpm chặn mặc định vì lý do bảo mật).
+# unrs-resolver có postinstall biên dịch native binding.
+allowBuilds:
+  unrs-resolver: true
