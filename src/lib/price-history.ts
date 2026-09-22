@@ -1,4 +1,5 @@
 import type { PriceObservation } from "@/lib/deal-score";
+import { toVnDate } from "@/lib/format";
 
 export interface DailyPriceRow {
   day: string; // 'YYYY-MM-DD'
@@ -52,8 +53,14 @@ export function medianWindow(
   toDaysAgo: number,
   now = new Date(),
 ): { value: number | null; dayCount: number } {
-  const nowTime = now.getTime();
   const msPerDay = 86_400_000;
+
+  // Cửa sổ phải được định nghĩa theo NGÀY LỊCH, không theo hiệu mili-giây.
+  // Nếu so bằng mili-giây với mốc 05:00Z của từng dòng, thì dòng hôm nay lọt
+  // vào cửa sổ khi chạy buổi chiều nhưng bị loại khi chạy buổi sáng — cùng một
+  // trang sẽ cho hai con số khác nhau tùy giờ người dùng mở.
+  const fromDay = toVnDate(new Date(now.getTime() - fromDaysAgo * msPerDay));
+  const toDay = toVnDate(new Date(now.getTime() - toDaysAgo * msPerDay));
 
   const validPrices: number[] = [];
 
@@ -62,11 +69,9 @@ export function medianWindow(
       continue;
     }
 
-    const rowDate = new Date(`${row.day}T05:00:00.000Z`);
-    const daysAgo = (nowTime - rowDate.getTime()) / msPerDay;
-
-    // Khoảng [fromDaysAgo, toDaysAgo)
-    if (daysAgo >= toDaysAgo && daysAgo < fromDaysAgo) {
+    // Khoảng [fromDay, toDay) — mốc toDay bị LOẠI TRỪ, nên medianWindow(rows, 30, 0)
+    // phủ ngày -30..-1 và không gồm hôm nay.
+    if (row.day >= fromDay && row.day < toDay) {
       validPrices.push(row.min_price);
     }
   }

@@ -5,6 +5,8 @@ import { SearchBox } from "@/components/search/search-box";
 import { ProductCard } from "@/components/search/product-card";
 import { searchProducts } from "@/lib/search";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   // Lấy danh sách sản phẩm mới cập nhật cho trang chủ
   const { items: recentProducts } = await searchProducts({

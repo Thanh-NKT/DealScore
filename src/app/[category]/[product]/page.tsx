@@ -17,6 +17,8 @@ interface PageProps {
   searchParams: Promise<{ variant?: string; range?: string }>;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function ProductPage({ params, searchParams }: PageProps) {
   const { product: productSlug } = await params;
   const { variant, range: rawRange } = await searchParams;

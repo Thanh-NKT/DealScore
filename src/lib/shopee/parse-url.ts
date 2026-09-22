@@ -30,9 +30,16 @@ export function parseShopeeUrl(raw: string): ParsedShopeeUrl {
 
   const trimmed = raw.trim();
 
+  // Chỉ thêm protocol khi chuỗi thực sự trông như một tên miền. Nếu không,
+  // mọi từ khóa tìm kiếm ("samsung") sẽ thành URL hợp lệ và người dùng nhận
+  // thông báo "chỉ hỗ trợ Shopee" thay vì "hãy dán một đường dẫn".
+  const looksLikeHost = /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$|\?|#|:)/i.test(trimmed);
+
   let parsed: URL;
   try {
-    // Nếu người dùng không gõ protocol nhưng gõ domain shopee
+    if (!/^https?:\/\//i.test(trimmed) && !looksLikeHost) {
+      return { ok: false, reason: "not_a_url" };
+    }
     const toParse = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
     parsed = new URL(toParse);
   } catch {
@@ -41,18 +48,18 @@ export function parseShopeeUrl(raw: string): ParsedShopeeUrl {
 
   const host = parsed.hostname.toLowerCase();
 
-  // Kiểm tra link rút gọn
-  if (
-    host === "shope.ee" ||
-    host === "s.shopee.vn" ||
-    host.endsWith(".shope.ee") ||
-    host.endsWith(".s.shopee.vn")
-  ) {
+  // So khớp host CHÍNH XÁC theo danh sách trắng.
+  // So khớp lỏng bằng includes("shopee.") hay endsWith("shopee.vn") cho lọt
+  // shopee.vn.evil.com và evil-shopee.com.attacker.net — đây là URL do người
+  // dùng cung cấp mà server sẽ đi gọi và ghi vào catalog, nên phải chặt.
+  const SHORT_HOSTS = new Set(["shope.ee", "s.shopee.vn"]);
+  const SHOPEE_HOSTS = new Set(["shopee.vn", "www.shopee.vn"]);
+
+  if (SHORT_HOSTS.has(host)) {
     return { ok: false, reason: "needs_redirect" };
   }
 
-  // Kiểm tra host Shopee
-  if (!host.includes("shopee.")) {
+  if (!SHOPEE_HOSTS.has(host)) {
     return { ok: false, reason: "not_shopee" };
   }
 

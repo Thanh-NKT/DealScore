@@ -102,15 +102,23 @@ export function buildVariantPricing(input: {
     });
   }
 
-  // 6. Tính Deal Score riêng cho từng offer (so với offer rẻ nhất)
+  // 6. Tính Deal Score riêng cho từng offer (so với offer rẻ nhất).
+  //
+  // Với CHÍNH offer rẻ nhất thì phép so sánh này là so với chính nó: cBetween
+  // luôn bằng 100 và dòng đó sẽ hiện cao hơn điểm đầu trang tới 20 điểm.
+  // Người dùng nhìn thấy hai con số mâu thuẫn trên cùng một màn hình.
+  // Vì vậy offer rẻ nhất dùng lại đúng điểm đầu trang (nhánh reweight 62.5/37.5).
   for (const offer of mappedOffers) {
-    if (offer.price != null && offer.price > 0) {
-      offer.dealScore = computeDealScore({
-        price: offer.price,
-        history: historyObs,
-        bestOffer: cheapest?.price ?? undefined,
-      });
-    }
+    if (offer.price == null || offer.price <= 0) continue;
+
+    offer.dealScore =
+      cheapest != null && offer.offerId === cheapest.offerId
+        ? headline
+        : computeDealScore({
+            price: offer.price,
+            history: historyObs,
+            bestOffer: cheapest?.price ?? undefined,
+          });
   }
 
   // 7. Fake Sale Detection
@@ -135,8 +143,10 @@ export function buildVariantPricing(input: {
   }
 
   // 8. Thời điểm cập nhật & Cảnh báo dữ liệu cũ (> 48h)
+  // Chỉ tính trên offer hiển thị được: một offer đã bị ẩn (listing inactive,
+  // matching chưa chắc) không được làm dữ liệu trông tươi hơn thực tế.
   let latestObservedAt: string | null = null;
-  for (const o of offers) {
+  for (const o of mappedOffers) {
     if (o.observedAt) {
       if (!latestObservedAt || new Date(o.observedAt).getTime() > new Date(latestObservedAt).getTime()) {
         latestObservedAt = o.observedAt;

@@ -113,7 +113,10 @@ export function toSearchParams(p: SearchParams): URLSearchParams {
   }
   if (p.minPrice != null) sp.set("min", p.minPrice.toString());
   if (p.maxPrice != null) sp.set("max", p.maxPrice.toString());
-  if (p.sort) sp.set("sort", p.sort);
+  // Không ghi giá trị mặc định vào URL: ghi vào sẽ sinh hai đường dẫn khác nhau
+  // cho cùng một trang — trùng lặp nội dung, có hại cho SEO ở mục 1.7.
+  const defaultSort = p.q ? "relevance" : "updated";
+  if (p.sort && p.sort !== defaultSort) sp.set("sort", p.sort);
   if (p.page && p.page > 1) sp.set("page", p.page.toString());
 
   return sp;

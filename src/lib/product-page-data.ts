@@ -63,20 +63,20 @@ export async function loadProductPageData(params: {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const productAny = product as any;
-    const variantsRaw = (productAny.product_variants || []) as any[];
+    const variantsRaw = (productAny.product_variants || []) as Array<Record<string, unknown>>;
     if (variantsRaw.length === 0) {
       return null;
     }
 
     const variants = variantsRaw.map((v) => {
-      const vcp = Array.isArray(v.variant_current_price)
+      const vcp = (Array.isArray(v.variant_current_price)
         ? v.variant_current_price[0]
-        : v.variant_current_price;
+        : v.variant_current_price) as Record<string, unknown> | undefined;
       return {
         id: v.id as string,
         variantKey: (v.variant_key as string) || "Tiêu chuẩn",
         price: vcp?.price != null ? Number(vcp.price) : null,
-        inStock: vcp?.in_stock ?? true,
+        inStock: (vcp?.in_stock as boolean | undefined) ?? true,
       };
     });
 
