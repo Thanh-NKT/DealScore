@@ -375,8 +375,11 @@ export function medianWindow(
   rows: DailyPriceRow[],
   fromDaysAgo: number,
   toDaysAgo: number,
+  now?: Date,
 ): { value: number | null; dayCount: number };
 ```
+
+Cửa sổ so theo **ngày lịch** (`row.day >= fromDay && row.day < toDay`), không theo hiệu mili-giây. So bằng mili-giây với mốc 05:00Z của từng dòng sẽ khiến dòng hôm nay lọt vào cửa sổ khi chạy buổi chiều nhưng bị loại khi chạy buổi sáng — cùng một trang cho hai con số khác nhau tùy giờ người dùng mở.
 
 ### Hệ quả có chủ đích với hai ngưỡng của `deal-score.ts`
 
@@ -456,11 +459,20 @@ export function buildVariantPricing(input: {
 // computeDealScore đã có sẵn nhánh reweight 62.5/37.5 cho đúng tình huống này.
 const headline = computeDealScore({ price: cheapest.price, history });
 
-// Điểm riêng từng offer: ĐÂY là chỗ duy nhất truyền bestOffer.
+// Điểm riêng từng offer KHÁC offer rẻ nhất: đây là chỗ duy nhất truyền bestOffer.
 const perOffer = computeDealScore({ price: offer.price, history, bestOffer: cheapest.price });
+
+// CHÍNH offer rẻ nhất KHÔNG được tính lại theo cách trên: bestOffer sẽ là chính nó,
+// cBetween luôn = 100, và dòng đó hiện cao hơn điểm đầu trang 15–20 điểm.
+// Nó dùng lại đúng headline.
+cheapestOffer.dealScore = headline;
 ```
 
-**Test:** trên cùng dữ liệu, `computeDealScore({price: p, history})` phải cho điểm **thấp hơn** `computeDealScore({price: p, history, bestOffer: p})`.
+**Test:**
+1. Trên cùng dữ liệu, `computeDealScore({price: p, history})` cho điểm **thấp hơn** `computeDealScore({price: p, history, bestOffer: p})`. Giá dùng để test phải nằm **giữa** dải lịch sử — giá dưới đáy làm cả hai cách chạm trần 100 và test không phân biệt được gì.
+2. `pricing.cheapest.dealScore.score === pricing.headline.score`.
+
+> **Sửa ngày 2026-09-22.** Bản đầu của mục này bảo truyền `bestOffer` cho *mọi* offer, kể cả offer rẻ nhất. Test `tests/lib/variant-pricing.test.ts` cho thấy khi đó đầu trang hiện 25 còn dòng rẻ nhất ngay dưới hiện 40.
 
 ### §5.2 — Offer nào được hiện
 
@@ -574,6 +586,7 @@ export async function resolveShopeeRedirect(url: string): Promise<
 
 Người dùng cung cấp URL và server đi gọi nó — đây là SSRF surface. Bắt buộc:
 
+- Dùng chung `SHOPEE_HOSTS` / `SHORT_HOSTS` với `parse-url.ts`: so khớp host **chính xác** theo tập, không dùng `includes("shopee.")` hay `endsWith("shopee.vn")` — cả hai đều cho lọt `shopee.vn.evil.com` và `evil-shopee.com.attacker.net`.
 - Kiểm tra allowlist **sau mỗi hop**, không chỉ hop đầu.
 - Tối đa **3 hop**, timeout **3 giây** mỗi hop (`AbortSignal.timeout`).
 - Chỉ chấp nhận `https:`. `http:` → `insecure`.
