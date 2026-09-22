@@ -126,138 +126,55 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   const page = params.page || 1;
   const offset = (page - 1) * PAGE_SIZE;
 
-  try {
-    const supabase = await createClient();
+  const supabase = await createClient();
 
-    let catId = params.categoryId;
-    if (!catId && params.categorySlug) {
-      const { data: cat } = await supabase
-        .from("categories")
-        .select("id")
-        .eq("slug", params.categorySlug)
-        .maybeSingle();
-      if (cat) catId = cat.id;
-    }
-
-    const { data, error } = await supabase.rpc("search_products", {
-      p_q: params.q || null,
-      p_category_id: catId || null,
-      p_brands: params.brands && params.brands.length > 0 ? params.brands : null,
-      p_min_price: params.minPrice || null,
-      p_max_price: params.maxPrice || null,
-      p_sort: params.sort || "relevance",
-      p_limit: PAGE_SIZE,
-      p_offset: offset,
-    });
-
-    if (error || !data || data.length === 0) {
-      // Fallback demo cho dev nếu database chưa có dữ liệu
-      return getDemoSearchResults(params, page);
-    }
-
-    const total = data[0]?.total_count ? Number(data[0].total_count) : data.length;
-    const items: SearchItem[] = data.map((d) => ({
-      productId: d.product_id,
-      slug: d.slug,
-      canonicalName: d.canonical_name,
-      brand: d.brand,
-      image: d.image,
-      categorySlug: d.category_slug || "san-pham",
-      bestPrice: d.best_price != null ? Number(d.best_price) : null,
-      originalPrice: d.original_price != null ? Number(d.original_price) : null,
-      score: d.score != null ? Number(d.score) : null,
-      recommendation: d.recommendation as SearchItem["recommendation"],
-      lastObservedAt: d.last_observed_at,
-    }));
-
-    return {
-      items,
-      total,
-      page,
-      pageSize: PAGE_SIZE,
-    };
-  } catch (err) {
-    console.warn("searchProducts error, fallback demo:", err);
-    return getDemoSearchResults(params, page);
-  }
-}
-
-function getDemoSearchResults(params: SearchParams, page: number): SearchResult {
-  const demoItems: SearchItem[] = [
-    {
-      productId: "prod-990-pro",
-      slug: "ssd-samsung-990-pro-2tb",
-      canonicalName: "SSD Samsung 990 Pro PCIe 4.0 NVMe M.2 2TB",
-      brand: "Samsung",
-      image: "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=400&auto=format&fit=crop&q=80",
-      categorySlug: "o-cung-ssd",
-      bestPrice: 3690000,
-      originalPrice: 4590000,
-      score: 82,
-      recommendation: "buy",
-      lastObservedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-    },
-    {
-      productId: "prod-wd-sn850x",
-      slug: "ssd-wd-black-sn850x-2tb",
-      canonicalName: "SSD Western Digital WD Black SN850X 2TB",
-      brand: "Western Digital",
-      image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=400&auto=format&fit=crop&q=80",
-      categorySlug: "o-cung-ssd",
-      bestPrice: 3850000,
-      originalPrice: 4200000,
-      score: 65,
-      recommendation: "wait",
-      lastObservedAt: new Date(Date.now() - 7200 * 1000).toISOString(),
-    },
-    {
-      productId: "prod-kingston-kc3000",
-      slug: "ssd-kingston-kc3000-2tb",
-      canonicalName: "SSD Kingston KC3000 PCIe 4.0 NVMe 2TB",
-      brand: "Kingston",
-      image: "https://images.unsplash.com/photo-1531492746076-161ca9bcad58?w=400&auto=format&fit=crop&q=80",
-      categorySlug: "o-cung-ssd",
-      bestPrice: 3450000,
-      originalPrice: 3600000,
-      score: 42,
-      recommendation: "avoid",
-      lastObservedAt: new Date(Date.now() - 14400 * 1000).toISOString(),
-    },
-    {
-      productId: "prod-crucial-t500",
-      slug: "ssd-crucial-t500-2tb",
-      canonicalName: "SSD Crucial T500 PCIe 4.0 NVMe M.2 2TB",
-      brand: "Crucial",
-      image: null,
-      categorySlug: "o-cung-ssd",
-      bestPrice: 3390000,
-      originalPrice: 3990000,
-      score: null,
-      recommendation: "insufficient_data",
-      lastObservedAt: new Date(Date.now() - 86400 * 1000).toISOString(),
-    },
-  ];
-
-  let filtered = demoItems;
-  if (params.q) {
-    const qLower = params.q.toLowerCase();
-    filtered = filtered.filter(
-      (item) =>
-        item.canonicalName.toLowerCase().includes(qLower) ||
-        (item.brand && item.brand.toLowerCase().includes(qLower)),
-    );
+  let catId = params.categoryId;
+  if (!catId && params.categorySlug) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", params.categorySlug)
+      .maybeSingle();
+    if (cat) catId = cat.id;
   }
 
-  if (params.brands && params.brands.length > 0) {
-    filtered = filtered.filter(
-      (item) => item.brand && params.brands?.includes(item.brand.toLowerCase()),
-    );
+  const { data, error } = await supabase.rpc("search_products", {
+    p_q: params.q ?? undefined,
+    p_category_id: catId ?? undefined,
+    p_brands: params.brands && params.brands.length > 0 ? params.brands : undefined,
+    p_min_price: params.minPrice ?? undefined,
+    p_max_price: params.maxPrice ?? undefined,
+    p_sort: params.sort || "relevance",
+    p_limit: PAGE_SIZE,
+    p_offset: offset,
+  });
+
+  // KHÔNG nuốt lỗi và KHÔNG trả dữ liệu bịa. Với một sản phẩm tra giá, hiển thị
+  // sản phẩm và giá không có thật là phá hỏng đúng thứ duy nhất khiến người
+  // dùng tin nó. Lỗi phải nổi lên để trang hiện trạng thái lỗi thật.
+  if (error) {
+    throw new Error(`Tìm kiếm thất bại: ${error.message}`);
   }
 
-  return {
-    items: filtered,
-    total: filtered.length,
-    page,
-    pageSize: PAGE_SIZE,
-  };
+  const rows = data ?? [];
+
+  // Không có kết quả là trạng thái HỢP LỆ (1.1.b AC#6) — trang kết quả sẽ gợi ý
+  // bỏ bớt filter và mời dán URL Shopee.
+  const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+
+  const items: SearchItem[] = rows.map((d) => ({
+    productId: d.product_id,
+    slug: d.slug,
+    canonicalName: d.canonical_name,
+    brand: d.brand,
+    image: d.image,
+    categorySlug: d.category_slug || "san-pham",
+    bestPrice: d.best_price != null ? Number(d.best_price) : null,
+    originalPrice: d.original_price != null ? Number(d.original_price) : null,
+    score: d.score != null ? Number(d.score) : null,
+    recommendation: d.recommendation as SearchItem["recommendation"],
+    lastObservedAt: d.last_observed_at,
+  }));
+
+  return { items, total, page, pageSize: PAGE_SIZE };
 }

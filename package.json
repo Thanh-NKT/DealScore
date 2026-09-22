@@ -16,7 +16,9 @@
     "test:watch": "vitest",
     "db:link": "supabase link",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --linked --schema public > src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --local --schema public > src/lib/database.types.ts",
+    "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
+    "scores:recompute": "tsx --env-file=.env.local scripts/recompute-deal-scores.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -34,6 +36,7 @@
     "eslint-config-next": "16.3.5",
     "supabase": "^2.117.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.0.1"
   }

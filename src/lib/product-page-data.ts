@@ -53,13 +53,10 @@ export async function loadProductPageData(params: {
       .eq("slug", productSlug)
       .maybeSingle();
 
-    if (prodError || !product) {
-      // Fallback demo cho trải nghiệm dev nếu chưa seed DB
-      if (productSlug === "ssd-samsung-990-pro-2tb" || productSlug === "demo") {
-        return getDemoProductData(variantId);
-      }
-      return null;
-    }
+    // Không tìm thấy là trạng thái hợp lệ — trang sẽ trả notFound().
+    // KHÔNG trả dữ liệu giả: hiện giá không có thật cho một sản phẩm có thật
+    // là phá hỏng đúng thứ khiến người dùng tin sản phẩm này.
+    if (prodError || !product) return null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const productAny = product as any;
@@ -187,7 +184,7 @@ export async function loadProductPageData(params: {
         brand: product.brand,
         model: product.model,
         image: product.image,
-        status: product.status,
+        status: product.status === "draft" ? "draft" : "verified",
         categorySlug: cat?.slug || "linh-kien",
         categoryName: cat?.name || "Linh kiện",
       },
@@ -197,134 +194,8 @@ export async function loadProductPageData(params: {
       dailyPrices,
     };
   } catch (err) {
+    // Lỗi hạ tầng phải nổi lên, không được ngụy trang thành "không tìm thấy".
     console.error("Lỗi loadProductPageData:", err);
-    if (productSlug === "ssd-samsung-990-pro-2tb" || productSlug === "demo") {
-      return getDemoProductData(variantId);
-    }
-    return null;
+    throw err;
   }
-}
-
-/**
- * Dữ liệu giả lập mẫu cho SSD Samsung 990 Pro 2TB (phục vụ test UI ngay cả khi chưa kết nối DB)
- */
-function getDemoProductData(requestedVariantId?: string): ProductPageData {
-  const v1Id = "var-990pro-1tb";
-  const v2Id = "var-990pro-2tb";
-  const v3Id = "var-990pro-4tb";
-
-  const selectedId = requestedVariantId === v1Id ? v1Id : requestedVariantId === v3Id ? v3Id : v2Id;
-
-  const dailyPrices: DailyPriceRow[] = [];
-  const base = selectedId === v1Id ? 2_450_000 : selectedId === v3Id ? 7_800_000 : 3_890_000;
-  const now = new Date();
-
-  for (let i = 89; i >= 0; i--) {
-    // Để lại một vài ngày trống để kiểm tra ngắt đoạn biểu đồ SVG (không nội suy)
-    if (i === 12 || i === 45) continue;
-
-    const d = new Date(now.getTime() - i * 86_400_000);
-    const dayStr = toVnDate(d);
-    const wobble = Math.sin(i / 6) * 120_000;
-    const dip = i >= 18 && i <= 24 ? -250_000 : 0;
-    const hasFlash = i === 20 || i === 55;
-    const minP = Math.round(base + wobble + dip);
-
-    dailyPrices.push({
-      day: dayStr,
-      min_price: minP,
-      median_price: minP + 50_000,
-      max_price: minP + 180_000,
-      obs_count: 5,
-      offer_count: 3,
-      has_flash_sale: hasFlash,
-      flash_min_price: hasFlash ? minP - 200_000 : null,
-    });
-  }
-
-  const currentPrice = selectedId === v1Id ? 2_290_000 : selectedId === v3Id ? 7_590_000 : 3_690_000;
-  const originalPrice = selectedId === v1Id ? 2_990_000 : selectedId === v3Id ? 8_990_000 : 4_590_000;
-
-  const mockOffers: OfferRow[] = [
-    {
-      offerId: "offer-1",
-      marketplace: "shopee",
-      listingUrl: "https://shopee.vn/product/123/456",
-      listingStatus: "active",
-      matchStatus: "auto",
-      sellerName: "Samsung Official Store",
-      sellerRating: 4.9,
-      sellerRatingCount: 15400,
-      sellerIsOfficial: true,
-      affiliateEligible: true,
-      price: currentPrice,
-      originalPrice: originalPrice,
-      stock: 45,
-      isFlashSale: false,
-      observedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-    },
-    {
-      offerId: "offer-2",
-      marketplace: "shopee",
-      listingUrl: "https://shopee.vn/product/789/101",
-      listingStatus: "active",
-      matchStatus: "auto",
-      sellerName: "Memoryzone Official",
-      sellerRating: 4.9,
-      sellerRatingCount: 8900,
-      sellerIsOfficial: true,
-      affiliateEligible: true,
-      price: currentPrice + 80_000,
-      originalPrice: originalPrice,
-      stock: 12,
-      isFlashSale: false,
-      observedAt: new Date(Date.now() - 7200 * 1000).toISOString(),
-    },
-    {
-      offerId: "offer-3",
-      marketplace: "shopee",
-      listingUrl: "https://shopee.vn/product/999/888",
-      listingStatus: "active",
-      matchStatus: "auto",
-      sellerName: "GearVN Mall",
-      sellerRating: 4.8,
-      sellerRatingCount: 3400,
-      sellerIsOfficial: true,
-      affiliateEligible: false,
-      price: currentPrice + 150_000,
-      originalPrice: originalPrice,
-      stock: 0, // Hết hàng
-      isFlashSale: false,
-      observedAt: new Date(Date.now() - 14400 * 1000).toISOString(),
-    },
-  ];
-
-  const pricing = buildVariantPricing({
-    offers: mockOffers,
-    history: dailyPrices,
-    trackingSince: dailyPrices[0]?.day ?? "2026-06-20",
-    isDraftProduct: false,
-  });
-
-  return {
-    product: {
-      id: "prod-990-pro",
-      slug: "ssd-samsung-990-pro-2tb",
-      canonicalName: "SSD Samsung 990 Pro PCIe 4.0 NVMe M.2",
-      brand: "Samsung",
-      model: "MZ-V9P2T0B",
-      image: "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=600&auto=format&fit=crop&q=80",
-      status: "verified",
-      categorySlug: "o-cung-ssd",
-      categoryName: "Ổ cứng SSD",
-    },
-    variants: [
-      { id: v1Id, variantKey: "1TB", price: 2_290_000, inStock: true },
-      { id: v2Id, variantKey: "2TB", price: 3_690_000, inStock: true },
-      { id: v3Id, variantKey: "4TB", price: 7_590_000, inStock: true },
-    ],
-    selectedVariantId: selectedId,
-    pricing,
-    dailyPrices,
-  };
 }
