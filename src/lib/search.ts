@@ -178,3 +178,36 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
 
   return { items, total, page, pageSize: PAGE_SIZE };
 }
+
+export interface FilterFacets {
+  categories: Array<{ slug: string; name: string }>;
+  brands: string[];
+}
+
+/**
+ * Danh mục và brand có THẬT trong catalog, để dựng bộ lọc.
+ *
+ * Không hard-code danh sách này: slug hard-code sẽ lệch khỏi slug thật và mọi
+ * link lọc đều ra 0 kết quả, còn brand hard-code thì vừa hiện thứ không có vừa
+ * thiếu thứ đang có.
+ *
+ * Ở quy mô G1 (vài nghìn sản phẩm) việc gom brand ở tầng ứng dụng là đủ. Khi
+ * catalog lớn hơn, đổi sang một view hoặc RPC trả sẵn danh sách distinct.
+ */
+export async function getFilterFacets(): Promise<FilterFacets> {
+  const supabase = await createClient();
+
+  const [catRes, brandRes] = await Promise.all([
+    supabase.from("categories").select("slug, name").order("sort_order"),
+    supabase.from("products").select("brand").not("brand", "is", null),
+  ]);
+
+  if (catRes.error) throw new Error(`Đọc danh mục thất bại: ${catRes.error.message}`);
+  if (brandRes.error) throw new Error(`Đọc brand thất bại: ${brandRes.error.message}`);
+
+  const brands = Array.from(
+    new Set((brandRes.data ?? []).map((r) => r.brand).filter((b): b is string => !!b)),
+  ).sort((a, b) => a.localeCompare(b, "vi"));
+
+  return { categories: catRes.data ?? [], brands };
+}

@@ -1,15 +1,13 @@
 import Link from "next/link";
 import {
+  getFilterFacets,
   parseSearchParams,
   searchProducts,
   toSearchParams,
 } from "@/lib/search";
 import { SearchBox } from "@/components/search/search-box";
-import {
-  Filters,
-  ActiveFilterChips,
-  SortSelect,
-} from "@/components/search/filters";
+import { Filters, ActiveFilterChips } from "@/components/search/filters";
+import { SortSelect } from "@/components/search/sort-select";
 import { ProductCard } from "@/components/search/product-card";
 import { EmptyState } from "@/components/search/empty-state";
 
@@ -22,7 +20,10 @@ export const dynamic = "force-dynamic";
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const rawParams = await searchParams;
   const params = parseSearchParams(rawParams);
-  const result = await searchProducts(params);
+  const [result, facets] = await Promise.all([
+    searchProducts(params),
+    getFilterFacets(),
+  ]);
 
   const totalPages = Math.ceil(result.total / result.pageSize);
   const currentPage = result.page;
@@ -45,7 +46,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
       <div className="flex flex-col md:flex-row gap-8 items-start">
         {/* Cột bộ lọc trái */}
-        <Filters params={params} />
+        <Filters
+          params={params}
+          availableCategories={facets.categories}
+          availableBrands={facets.brands}
+        />
 
         {/* Cột nội dung kết quả */}
         <div className="flex-1 w-full space-y-6">
@@ -69,7 +74,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               )}
             </div>
 
-            <SortSelect currentSort={params.sort} />
+            <SortSelect params={params} />
           </div>
 
           {/* Danh sách sản phẩm */}

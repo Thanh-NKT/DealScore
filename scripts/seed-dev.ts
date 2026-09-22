@@ -121,7 +121,15 @@ async function main() {
       .single();
     if (prodErr) throw prodErr;
 
-    const nVariants = 2 + Math.floor(rnd() * 3);
+    // Tối đa 3: CAPACITY chỉ có 3 mức, nhiều hơn sẽ sinh hai variant trùng khóa
+    // trong cùng một sản phẩm.
+    const nVariants = 2 + Math.floor(rnd() * 2);
+    // Giá gốc theo SẢN PHẨM. Trước đây bốc riêng cho từng variant nên bản 512GB
+    // có thể đắt hơn bản 2TB — dữ liệu vô lý, và làm bộ lọc khoảng giá không
+    // kiểm chứng được gì vì giá sản phẩm lấy theo variant rẻ nhất.
+    const productBasePrice = 500_000 + Math.floor(rnd() * 4_500_000);
+    // Hệ số theo dung lượng: 512GB < 1TB < 2TB.
+    const CAPACITY_MULT = [1, 1.7, 2.9];
 
     for (let v = 0; v < nVariants; v++) {
       const { data: variant, error: vErr } = await db
@@ -132,7 +140,7 @@ async function main() {
       if (vErr) throw vErr;
       variantCount++;
 
-      const basePrice = 500_000 + Math.floor(rnd() * 4_500_000);
+      const basePrice = Math.round(productBasePrice * CAPACITY_MULT[v % 3]);
       // Mỗi variant một xu hướng riêng: âm = giá giảm dần (hôm nay rẻ -> buy),
       // dương = giá tăng dần (hôm nay đắt -> avoid), quanh 0 -> wait.
       // Nếu mọi variant cùng giảm thì mọi sản phẩm đều ra "buy" và dữ liệu seed

@@ -34,12 +34,13 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       .eq("id", offerId)
       .maybeSingle();
 
+    // Offer không tồn tại là 404. KHÔNG đẩy người dùng sang sàn bằng một
+    // truy vấn vô nghĩa: vừa che lỗi, vừa tạo traffic affiliate cho thứ không
+    // có thật.
     if (offerError || !offer) {
-      // Nếu không tìm thấy offer trong DB (chẳng hạn ở môi trường demo)
-      // Cho phép redirect tạm thời sang Shopee search nếu offer là mock
-      return NextResponse.redirect(
-        `https://shopee.vn/search?keyword=${encodeURIComponent(offerId)}`,
-        { status: 302, headers: { "Cache-Control": "no-store" } },
+      return NextResponse.json(
+        { error: "Không tìm thấy offer" },
+        { status: 404, headers: { "Cache-Control": "no-store" } },
       );
     }
 
@@ -69,9 +70,16 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
     // 3. Quyết định target URL chuyển hướng
     let targetUrl = aff?.short_link || aff?.affiliate_url || listing?.url;
 
+    // Offer có thật nhưng chưa có đường dẫn mua hàng: 404, không bịa một truy
+    // vấn tìm kiếm trên sàn.
     if (!targetUrl) {
-      targetUrl = `https://shopee.vn/search?keyword=${encodeURIComponent(offerId)}`;
-    } else if (clickEventId && aff?.affiliate_url && !aff?.short_link) {
+      return NextResponse.json(
+        { error: "Offer chưa có đường dẫn mua hàng" },
+        { status: 404, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    if (clickEventId && aff?.affiliate_url && !aff?.short_link) {
       // Gắn click_ref vào sub_id affiliate
       const u = new URL(targetUrl);
       u.searchParams.set("sub_id", clickEventId);
@@ -85,10 +93,11 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       },
     });
   } catch (err) {
+    // Lỗi hạ tầng phải hiện ra là lỗi, không ngụy trang thành một cú redirect.
     console.error(`Lỗi redirect /go/${marketplace}/${offerId}:`, err);
-    return NextResponse.redirect("https://shopee.vn", {
-      status: 302,
-      headers: { "Cache-Control": "no-store" },
-    });
+    return NextResponse.json(
+      { error: "Không xử lý được liên kết" },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
   }
 }

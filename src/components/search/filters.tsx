@@ -3,19 +3,16 @@ import { toSearchParams, type SearchParams } from "@/lib/search";
 
 interface FiltersProps {
   params: SearchParams;
-  availableCategories?: Array<{ slug: string; name: string }>;
-  availableBrands?: string[];
+  // Bắt buộc truyền: lấy từ getFilterFacets(). Hard-code danh sách này sẽ sinh
+  // ra link lọc không khớp slug thật và luôn trả 0 kết quả.
+  availableCategories: Array<{ slug: string; name: string }>;
+  availableBrands: string[];
 }
 
 export function Filters({
   params,
-  availableCategories = [
-    { slug: "o-cung-ssd", name: "Ổ cứng SSD" },
-    { slug: "ram-may-tinh", name: "RAM máy tính" },
-    { slug: "ban-phim-co", name: "Bàn phím cơ" },
-    { slug: "chuot-gaming", name: "Chuột Gaming" },
-  ],
-  availableBrands = ["Samsung", "Western Digital", "Kingston", "Crucial", "Logitech"],
+  availableCategories,
+  availableBrands,
 }: FiltersProps) {
   // Helper tạo link thay đổi params
   const createFilterHref = (patch: Partial<SearchParams>) => {
@@ -220,40 +217,5 @@ export function ActiveFilterChips({ params }: { params: SearchParams }) {
         Xóa tất cả
       </Link>
     </div>
-  );
-}
-
-export function SortSelect({ currentSort }: { currentSort?: string }) {
-  const sort = currentSort || "relevance";
-
-  return (
-    <form method="get" className="flex items-center gap-2 text-xs">
-      <label htmlFor="sort-select" className="text-muted font-medium whitespace-nowrap">
-        Sắp xếp:
-      </label>
-      <select
-        id="sort-select"
-        name="sort"
-        defaultValue={sort}
-        // Có JS thì tự submit form khi đổi lựa chọn
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onChange={(e: any) => e.target.form?.submit()}
-        className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none font-medium cursor-pointer"
-      >
-        <option value="relevance">Khớp nhất</option>
-        <option value="deal_score">Deal Score cao nhất</option>
-        <option value="price_asc">Giá tăng dần</option>
-        <option value="price_desc">Giá giảm dần</option>
-        <option value="updated">Mới cập nhật</option>
-      </select>
-      <noscript>
-        <button
-          type="submit"
-          className="rounded-lg border border-border px-2 py-1 text-xs"
-        >
-          Lọc
-        </button>
-      </noscript>
-    </form>
   );
 }
