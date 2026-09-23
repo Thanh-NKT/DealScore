@@ -56,6 +56,7 @@ describe("describeWatch", () => {
     const sent = describeWatch(
       input({
         latestAlert: {
+          id: "a1",
           createdAt: "t",
           deliverAfter: "t",
           deliveries: [{ channel: "email", status: "sent", sentAt: "2026-09-22T03:15:00Z" }],
@@ -66,7 +67,7 @@ describe("describeWatch", () => {
     const pending = describeWatch(
       input({
         settings: { ...DEFAULT_NOTIFICATION_SETTINGS, frequency: "daily_digest" },
-        latestAlert: { createdAt: "t", deliverAfter: "2026-09-24T01:00:00Z", deliveries: [{ channel: "email", status: "pending", sentAt: null }] },
+        latestAlert: { id: "a1", createdAt: "t", deliverAfter: "2026-09-24T01:00:00Z", deliveries: [{ channel: "email", status: "pending", sentAt: null }] },
       }),
     );
     expect(pending.alertStatus).toEqual({ kind: "scheduled", deliverAfter: "2026-09-24T01:00:00Z", reason: "daily_digest" });
