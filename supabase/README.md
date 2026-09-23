@@ -77,7 +77,7 @@ Lệnh này cần `db:link` chạy trước (nó dùng cờ `--linked`).
 
 - **SMTP:** host `smtp.resend.com`, port `465`, user `resend`, pass = `RESEND_API_KEY`, sender = `EMAIL_FROM`.
 - **Site URL** = `NEXT_PUBLIC_SITE_URL`; **Redirect URLs** = `${NEXT_PUBLIC_SITE_URL}/**`.
-- **Template** `Magic Link` **và** `Confirm signup` = nội dung `supabase/templates/dang-nhap.html`,
+- **Template** `Magic Link` **và** `Confirm signup` = nội dung `supabase/templates/login.html`,
   subject "Đăng nhập Kairo". Người dùng mới nhận template confirm, người cũ nhận magic link.
 - **Rate limit** gửi email mỗi giờ: đặt theo gói Resend. `max_frequency` = 60 giây.
 - **Xác minh domain gửi** trên Resend (SPF, DKIM, DMARC) **trước** khi mở đăng ký.

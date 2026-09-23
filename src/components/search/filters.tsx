@@ -22,7 +22,7 @@ export function Filters({
       page: 1, // Đổi filter luôn reset về trang 1
     };
     const sp = toSearchParams(updated);
-    return `/tim-kiem?${sp.toString()}`;
+    return `/search?${sp.toString()}`;
   };
 
   // Helper toggle brand
@@ -110,7 +110,7 @@ export function Filters({
         <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
           Khoảng giá (₫)
         </h4>
-        <form method="get" action="/tim-kiem" className="space-y-2">
+        <form method="get" action="/search" className="space-y-2">
           {params.q && <input type="hidden" name="q" value={params.q} />}
           {params.categorySlug && (
             <input type="hidden" name="cat" value={params.categorySlug} />
@@ -172,7 +172,7 @@ export function ActiveFilterChips({ params }: { params: SearchParams }) {
 
       {params.categorySlug && (
         <Link
-          href={`/tim-kiem?${toSearchParams({
+          href={`/search?${toSearchParams({
             ...params,
             categorySlug: undefined,
             page: 1,
@@ -187,7 +187,7 @@ export function ActiveFilterChips({ params }: { params: SearchParams }) {
       {params.brands?.map((b) => (
         <Link
           key={b}
-          href={`/tim-kiem?${toSearchParams({
+          href={`/search?${toSearchParams({
             ...params,
             brands: params.brands?.filter((item) => item !== b),
             page: 1,
@@ -201,7 +201,7 @@ export function ActiveFilterChips({ params }: { params: SearchParams }) {
 
       {(params.minPrice != null || params.maxPrice != null) && (
         <Link
-          href={`/tim-kiem?${toSearchParams({
+          href={`/search?${toSearchParams({
             ...params,
             minPrice: undefined,
             maxPrice: undefined,
@@ -218,7 +218,7 @@ export function ActiveFilterChips({ params }: { params: SearchParams }) {
       )}
 
       <Link
-        href={`/tim-kiem?${params.q ? `q=${encodeURIComponent(params.q)}` : ""}`}
+        href={`/search?${params.q ? `q=${encodeURIComponent(params.q)}` : ""}`}
         className="text-xs font-semibold text-rec-avoid hover:underline ml-2"
       >
         Xóa tất cả

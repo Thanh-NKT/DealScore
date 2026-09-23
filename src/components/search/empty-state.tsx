@@ -43,7 +43,7 @@ export function EmptyState({ query, hasFilters = false }: EmptyStateProps) {
         </p>
         <div>
           <Link
-            href="/tim-kiem"
+            href="/search"
             className="inline-flex items-center rounded-xl bg-foreground px-4 py-2 text-xs font-semibold text-background hover:opacity-90"
           >
             Xóa tất cả bộ lọc

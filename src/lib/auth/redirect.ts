@@ -35,7 +35,8 @@ export function safeNextPath(
     // Không chuyển hướng lặp vòng về luồng đăng nhập hoặc xác thực
     const pathname = url.pathname;
     if (
-      pathname === "/dang-nhap" ||
+      pathname === "/login" ||
+      pathname === "/dang-nhap" || // legacy URL, 308-redirects to /login
       pathname.startsWith("/auth/")
     ) {
       return fallback;
@@ -49,9 +50,9 @@ export function safeNextPath(
 
 export type AuthGate =
   | { kind: "ok" }
-  | { kind: "login"; to: string } // /dang-nhap?next=…
-  | { kind: "consent"; to: string } // /tai-khoan/dong-y?next=…
-  | { kind: "restore"; to: string }; // /tai-khoan/khoi-phuc
+  | { kind: "login"; to: string } // /login?next=…
+  | { kind: "consent"; to: string } // /account/consent?next=…
+  | { kind: "restore"; to: string }; // /account/restore
 
 export function decideAuthGate(input: {
   userId: string | null;
@@ -73,7 +74,7 @@ export function decideAuthGate(input: {
     const safePath = safeNextPath(path, "/");
     return {
       kind: "login",
-      to: `/dang-nhap?next=${encodeURIComponent(safePath)}`,
+      to: `/login?next=${encodeURIComponent(safePath)}`,
     };
   }
 
@@ -84,15 +85,15 @@ export function decideAuthGate(input: {
 
   // 3. Đang chờ xóa (deletedAt != null) và không cho phép → restore
   if (profile.deletedAt && !allowPendingDeletion) {
-    return { kind: "restore", to: "/tai-khoan/khoi-phuc" };
+    return { kind: "restore", to: "/account/restore" };
   }
 
   // 4. Cần đồng ý điều khoản mới/lần đầu và không cho phép bỏ qua → consent
   if (needsConsent(profile.consentVersion) && !allowMissingConsent) {
-    const safePath = safeNextPath(path, "/tai-khoan");
+    const safePath = safeNextPath(path, "/account");
     return {
       kind: "consent",
-      to: `/tai-khoan/dong-y?next=${encodeURIComponent(safePath)}`,
+      to: `/account/consent?next=${encodeURIComponent(safePath)}`,
     };
   }
 

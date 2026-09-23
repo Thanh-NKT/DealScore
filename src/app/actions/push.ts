@@ -9,7 +9,7 @@ export async function savePushSubscription(
   subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
   userAgent: string | null,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const user = await requireUser({ path: "/tai-khoan/thong-bao" });
+  const user = await requireUser({ path: "/account/notifications" });
   let url: URL;
   try {
     url = new URL(subscription.endpoint);
@@ -45,7 +45,7 @@ export async function savePushSubscription(
 }
 
 export async function deletePushSubscription(endpoint: string): Promise<void> {
-  await requireUser({ path: "/tai-khoan/thong-bao" });
+  await requireUser({ path: "/account/notifications" });
   const supabase = await createClient();
   const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
   if (error) throw new Error(`Xóa đăng ký thông báo thất bại: ${error.message}`);

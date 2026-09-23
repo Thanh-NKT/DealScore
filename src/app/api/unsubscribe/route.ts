@@ -7,7 +7,7 @@ const NO_STORE = { "Cache-Control": "no-store" };
 /**
  * Chỉ POST. KHÔNG có GET: trình quét link của hộp thư tự mở mọi link, GET mà
  * hủy luôn thì người dùng bị hủy mà không hề bấm (W14).
- * Nhận cả One-Click của Gmail/Yahoo (RFC 8058) lẫn form từ trang /huy-dang-ky.
+ * Nhận cả One-Click của Gmail/Yahoo (RFC 8058) lẫn form từ trang /unsubscribe.
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.UNSUBSCRIBE_SECRET;
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   if (error) throw new Error(`Hủy đăng ký thất bại: ${error.message}`);
 
   if ((request.headers.get("accept") ?? "").includes("text/html")) {
-    return NextResponse.redirect(new URL(`/huy-dang-ky?xong=${scope.kind}`, request.url), { status: 303, headers: NO_STORE });
+    return NextResponse.redirect(new URL(`/unsubscribe?done=${scope.kind}`, request.url), { status: 303, headers: NO_STORE });
   }
   return new NextResponse(null, { status: 200, headers: NO_STORE });
 }

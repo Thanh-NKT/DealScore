@@ -53,7 +53,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const actions = await import("@/app/tai-khoan/actions");
+const actions = await import("@/app/account/actions");
 
 function form(entries: Record<string, string>) {
   const f = new FormData();
@@ -111,13 +111,13 @@ describe("requestAccountDeletion", () => {
 
   it("đúng thứ tự: ghi deleted_at → gửi email → đăng xuất mọi nơi → redirect", async () => {
     await expect(actions.requestAccountDeletion({ status: "idle" }, form({ confirm: " xóa " }))).rejects.toMatchObject({
-      url: "/?tai-khoan=da-xoa",
+      url: "/?account=deleted",
     });
     expect(calls).toEqual([
       "admin.update:users",
       "sendEmail",
       `signOut:${JSON.stringify({ scope: "global" })}`,
-      "redirect:/?tai-khoan=da-xoa",
+      "redirect:/?account=deleted",
     ]);
   });
 
@@ -126,7 +126,7 @@ describe("requestAccountDeletion", () => {
     vi.mocked(sendEmail).mockRejectedValueOnce(new Error("smtp"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(actions.requestAccountDeletion({ status: "idle" }, form({ confirm: "XÓA" }))).rejects.toMatchObject({
-      url: "/?tai-khoan=da-xoa",
+      url: "/?account=deleted",
     });
     expect(calls).toContain(`signOut:${JSON.stringify({ scope: "global" })}`);
   });

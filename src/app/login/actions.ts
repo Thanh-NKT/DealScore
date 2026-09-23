@@ -44,7 +44,7 @@ export async function requestLoginCode(
     email,
     options: {
       shouldCreateUser: true,
-      emailRedirectTo: `${siteUrl()}/auth/xac-nhan?next=${encodeURIComponent(next)}`,
+      emailRedirectTo: `${siteUrl()}/auth/confirm?next=${encodeURIComponent(next)}`,
     },
   });
 

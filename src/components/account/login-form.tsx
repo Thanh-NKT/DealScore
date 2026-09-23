@@ -5,7 +5,7 @@ import {
   requestLoginCode,
   verifyLoginCode,
   type LoginState,
-} from "@/app/dang-nhap/actions";
+} from "@/app/login/actions";
 import { authErrorFromCode } from "@/lib/auth/errors";
 
 interface LoginFormProps {

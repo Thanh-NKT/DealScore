@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   if (!token_hash || !type || !allowedTypes.includes(type)) {
     redirect(
-      `/dang-nhap?loi=otp_expired&next=${encodeURIComponent(next)}`,
+      `/login?error=otp_expired&next=${encodeURIComponent(next)}`,
     );
   }
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   if (error || !data.user) {
     const authError = mapAuthError(error ?? {}, "verify");
     redirect(
-      `/dang-nhap?loi=${encodeURIComponent(authError.code)}&next=${encodeURIComponent(next)}`,
+      `/login?error=${encodeURIComponent(authError.code)}&next=${encodeURIComponent(next)}`,
     );
   }
 

@@ -61,7 +61,7 @@ export default async function Home() {
               Sản phẩm theo dõi gần đây
             </h2>
             <Link
-              href="/tim-kiem"
+              href="/search"
               className="text-xs font-semibold text-foreground hover:underline"
             >
               Xem tất cả →

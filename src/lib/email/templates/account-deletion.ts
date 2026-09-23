@@ -9,7 +9,7 @@ export function renderAccountDeletionEmail(input: {
   const dateStr = formatVnDate(purgeDate);
   // Giá trị chèn vào HTML đều phải escape.
   const hDate = escapeHtml(dateStr);
-  const hLogin = escapeHtml(`${siteUrl}/dang-nhap`);
+  const hLogin = escapeHtml(`${siteUrl}/login`);
 
   const subject = "Xác nhận yêu cầu xóa tài khoản Kairo";
 
@@ -19,7 +19,7 @@ Mọi thông báo và theo dõi giá đã dừng ngay lập tức.
 Tài khoản và dữ liệu cá nhân của bạn sẽ bị xóa vĩnh viễn vào ngày ${dateStr}.
 
 Nếu bạn muốn khôi phục tài khoản, vui lòng đăng nhập lại tại:
-${siteUrl}/dang-nhap trước ngày ${dateStr}.
+${siteUrl}/login trước ngày ${dateStr}.
 
 Lưu ý: Lịch sử click liên kết mua sắm được giữ lại độc lập và tách biệt hoàn toàn khỏi danh tính người dùng nhằm phục vụ đối soát hoa hồng với sàn.`;
 

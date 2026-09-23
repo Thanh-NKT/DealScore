@@ -96,7 +96,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             >
               {currentPage > 1 && (
                 <Link
-                  href={`/tim-kiem?${toSearchParams({
+                  href={`/search?${toSearchParams({
                     ...params,
                     page: currentPage - 1,
                   }).toString()}`}
@@ -112,7 +112,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
               {currentPage < totalPages && (
                 <Link
-                  href={`/tim-kiem?${toSearchParams({
+                  href={`/search?${toSearchParams({
                     ...params,
                     page: currentPage + 1,
                   }).toString()}`}

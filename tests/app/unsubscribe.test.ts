@@ -55,7 +55,7 @@ describe("POST /api/unsubscribe", () => {
       req(signUnsubscribeToken({ kind: "watch", userId: "u1", watchId: "w1" }, "s"), "text/html") as never,
     );
     expect(res.status).toBe(303);
-    expect(res.headers.get("location")).toContain("/huy-dang-ky?xong=watch");
+    expect(res.headers.get("location")).toContain("/unsubscribe?done=watch");
     expect(updates).toEqual([["watches", { status: "paused" }, { id: "w1", user_id: "u1" }]]);
   });
 });

@@ -125,7 +125,7 @@ export function WatchList({ initialItems }: WatchListProps) {
           </div>
           {activeTab === "active" && (
             <Link
-              href="/tim-kiem"
+              href="/search"
               className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2 text-xs font-semibold text-background hover:opacity-90"
             >
               Tìm sản phẩm ngay →
@@ -141,7 +141,7 @@ export function WatchList({ initialItems }: WatchListProps) {
             return (
               <div
                 key={item.id}
-                // Email alert trỏ tới /tai-khoan/watch#{watchId} — anchor cuộn tới đúng Watch.
+                // Email alert trỏ tới /account/watch#{watchId} — anchor cuộn tới đúng Watch.
                 id={item.id}
                 className="scroll-mt-6 flex flex-col md:flex-row md:items-center justify-between gap-6 rounded-3xl border border-border bg-black/[0.01] p-5 sm:p-6 shadow-sm dark:bg-white/[0.01]"
               >
@@ -343,7 +343,7 @@ export function WatchList({ initialItems }: WatchListProps) {
             config: editingWatch.config,
             status: editingWatch.status,
           }}
-          currentPath="/tai-khoan/watch"
+          currentPath="/account/watch"
         />
       )}
     </div>

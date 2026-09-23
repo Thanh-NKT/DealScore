@@ -10,7 +10,7 @@ import { NotificationSettingsForm } from "@/components/account/notification-sett
 export const dynamic = "force-dynamic";
 
 export default async function NotificationSettingsPage() {
-  const user = await requireUser({ path: "/tai-khoan/thong-bao" });
+  const user = await requireUser({ path: "/account/notifications" });
   const supabase = await createClient();
 
   const { data: settingsRow } = await supabase
@@ -28,7 +28,7 @@ export default async function NotificationSettingsPage() {
       {/* Breadcrumb & Tiêu đề */}
       <div className="space-y-2">
         <nav aria-label="Đường dẫn" className="text-xs text-muted flex items-center gap-2">
-          <Link href="/tai-khoan" className="hover:text-foreground">
+          <Link href="/account" className="hover:text-foreground">
             ← Quay lại Tài khoản
           </Link>
         </nav>

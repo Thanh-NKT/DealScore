@@ -48,7 +48,7 @@ describe("buildPushPayload", () => {
       ],
       "https://k",
     );
-    expect(many).toMatchObject({ title: "3 sản phẩm có tin mới", url: "https://k/tai-khoan/watch" });
+    expect(many).toMatchObject({ title: "3 sản phẩm có tin mới", url: "https://k/account/watch" });
   });
 });
 

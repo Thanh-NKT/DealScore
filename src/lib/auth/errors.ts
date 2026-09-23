@@ -76,7 +76,7 @@ export function mapAuthError(
   return info("internal");
 }
 
-/** Dùng cho `?loi=` trên URL — chỉ nhận mã đã biết, không bao giờ hiện chuỗi thô từ URL. */
+/** Dùng cho `?error=` trên URL — chỉ nhận mã đã biết, không bao giờ hiện chuỗi thô từ URL. */
 export function authErrorFromCode(code: string | null | undefined): AuthErrorInfo | null {
   if (!code) return null;
   if (code === "rate_limited") return rateLimited();

@@ -143,13 +143,13 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
         setSubmitting(false);
       }
     }
-    // Ngược lại để form submit bình thường tới /tim-kiem?q=...
+    // Ngược lại để form submit bình thường tới /search?q=...
   };
 
   return (
     <div ref={wrapperRef} className="relative w-full">
       <form
-        action="/tim-kiem"
+        action="/search"
         method="get"
         onSubmit={handleFormSubmit}
         className="flex items-center gap-2"

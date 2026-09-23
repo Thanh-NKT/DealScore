@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/tai-khoan/actions";
+import { signOut } from "@/app/account/actions";
 import { MarketingToggle } from "@/components/account/marketing-toggle";
 
 export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
-  const user = await requireUser({ path: "/tai-khoan" });
+  const user = await requireUser({ path: "/account" });
   const supabase = await createClient();
 
   // Đếm số watch đang theo dõi
@@ -83,7 +83,7 @@ export default async function AccountPage() {
 
           <div className="mt-6">
             <Link
-              href="/tai-khoan/watch"
+              href="/account/watch"
               className="inline-flex w-full items-center justify-center rounded-xl bg-foreground py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90"
             >
               Quản lý Watch →
@@ -112,7 +112,7 @@ export default async function AccountPage() {
 
           <div className="mt-6">
             <Link
-              href="/tai-khoan/thong-bao"
+              href="/account/notifications"
               className="inline-flex w-full items-center justify-center rounded-xl border border-border bg-background py-2 text-xs font-semibold text-foreground transition-colors hover:bg-black/5 dark:hover:bg-white/5"
             >
               Chỉnh sửa thông báo →
@@ -152,7 +152,7 @@ export default async function AccountPage() {
             </p>
           </div>
           <a
-            href="/tai-khoan/xuat-du-lieu"
+            href="/account/export"
             download
             className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-black/5 dark:hover:bg-white/5 shrink-0"
           >
@@ -171,7 +171,7 @@ export default async function AccountPage() {
             </p>
           </div>
           <Link
-            href="/tai-khoan/xoa"
+            href="/account/delete"
             className="inline-flex items-center justify-center rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 shrink-0"
           >
             Yêu cầu xóa tài khoản

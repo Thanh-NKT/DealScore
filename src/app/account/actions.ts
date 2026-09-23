@@ -29,12 +29,12 @@ export async function acceptConsent(
   prev: ActionResult<"agree">,
   form: FormData,
 ): Promise<ActionResult<"agree">> {
-  const user = await requireUser({ path: "/tai-khoan/dong-y", allowMissingConsent: true });
+  const user = await requireUser({ path: "/account/consent", allowMissingConsent: true });
 
   const agree = form.get("agree") === "on";
   const marketing = form.get("marketing") === "on";
   const rawNext = form.get("next") as string | null;
-  const next = safeNextPath(rawNext, "/tai-khoan");
+  const next = safeNextPath(rawNext, "/account");
 
   if (!agree) {
     return {
@@ -70,7 +70,7 @@ export async function updateNotificationSettings(
   prev: ActionResult<SettingsField>,
   form: FormData,
 ): Promise<ActionResult<SettingsField>> {
-  const user = await requireUser({ path: "/tai-khoan/thong-bao" });
+  const user = await requireUser({ path: "/account/notifications" });
   const parsed = parseNotificationSettings(form);
 
   if (!parsed.ok) {
@@ -92,7 +92,7 @@ export async function updateNotificationSettings(
     throw new Error(`Lỗi cập nhật cài đặt thông báo: ${error.message}`);
   }
 
-  revalidatePath("/tai-khoan/thong-bao");
+  revalidatePath("/account/notifications");
   return { status: "saved" };
 }
 
@@ -103,7 +103,7 @@ export async function updateMarketingOptIn(
   prev: ActionResult,
   form: FormData,
 ): Promise<ActionResult> {
-  const user = await requireUser({ path: "/tai-khoan/thong-bao" });
+  const user = await requireUser({ path: "/account/notifications" });
   const marketing = form.get("marketing") === "on";
 
   const supabase = await createClient();
@@ -116,7 +116,7 @@ export async function updateMarketingOptIn(
     throw new Error(`Lỗi cập nhật nhận email marketing: ${error.message}`);
   }
 
-  revalidatePath("/tai-khoan");
+  revalidatePath("/account");
   return { status: "saved" };
 }
 
@@ -127,7 +127,7 @@ export async function requestAccountDeletion(
   prev: ActionResult<"confirm">,
   form: FormData,
 ): Promise<ActionResult<"confirm">> {
-  const user = await requireUser({ path: "/tai-khoan/xoa" });
+  const user = await requireUser({ path: "/account/delete" });
   const confirm = (form.get("confirm") as string | null)?.trim().normalize("NFC") ?? "";
 
   if (confirm !== "XÓA" && confirm !== "xóa") {
@@ -174,14 +174,14 @@ export async function requestAccountDeletion(
   const supabase = await createClient();
   await supabase.auth.signOut({ scope: "global" });
 
-  redirect("/?tai-khoan=da-xoa");
+  redirect("/?account=deleted");
 }
 
 /**
  * Khôi phục tài khoản đang trong trạng thái chờ xóa.
  */
 export async function restoreAccount(): Promise<void> {
-  const user = await requireUser({ path: "/tai-khoan/khoi-phuc", allowPendingDeletion: true });
+  const user = await requireUser({ path: "/account/restore", allowPendingDeletion: true });
 
   const admin = createAdminClient();
   const { error } = await admin
@@ -193,8 +193,8 @@ export async function restoreAccount(): Promise<void> {
     throw new Error(`Lỗi khôi phục tài khoản: ${error.message}`);
   }
 
-  revalidatePath("/tai-khoan");
-  redirect("/tai-khoan");
+  revalidatePath("/account");
+  redirect("/account");
 }
 
 /**

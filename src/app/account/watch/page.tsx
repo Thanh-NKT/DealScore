@@ -6,7 +6,7 @@ import { WatchList } from "@/components/watch/watch-list";
 export const dynamic = "force-dynamic";
 
 export default async function MyWatchesPage() {
-  const user = await requireUser({ path: "/tai-khoan/watch" });
+  const user = await requireUser({ path: "/account/watch" });
   const items = await listMyWatches(user.id, new Date());
 
   return (
@@ -15,7 +15,7 @@ export default async function MyWatchesPage() {
       <div className="flex flex-col gap-2 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <nav aria-label="Đường dẫn" className="text-xs text-muted flex items-center gap-2 mb-2">
-            <Link href="/tai-khoan" className="hover:text-foreground">
+            <Link href="/account" className="hover:text-foreground">
               ← Tài khoản
             </Link>
           </nav>
@@ -29,7 +29,7 @@ export default async function MyWatchesPage() {
         </div>
 
         <Link
-          href="/tim-kiem"
+          href="/search"
           className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2 text-xs font-semibold text-background hover:opacity-90 self-start sm:self-auto shrink-0"
         >
           + Thêm sản phẩm mới

@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import {
   updateNotificationSettings,
   type ActionResult,
-} from "@/app/tai-khoan/actions";
+} from "@/app/account/actions";
 import type {
   Frequency,
   NotificationSettings,

@@ -192,19 +192,19 @@ export async function dispatchDueDeliveries(
             e.offerId && e.marketplace
               ? `${site}/go/${e.marketplace}/${e.offerId}?src=email&watch=${e.watchId}&alert=${e.id}`
               : productUrl(site, e),
-          // Chưa có trang chi tiết /tai-khoan/watch/[id] — trỏ vào danh sách, cuộn tới Watch đó.
-          manageUrl: `${site}/tai-khoan/watch#${e.watchId}`,
-          pauseUrl: `${site}/huy-dang-ky?t=${signUnsubscribeToken({ kind: "watch", userId: group.userId, watchId: e.watchId }, secret)}`,
+          // Chưa có trang chi tiết /account/watch/[id] — trỏ vào danh sách, cuộn tới Watch đó.
+          manageUrl: `${site}/account/watch#${e.watchId}`,
+          pauseUrl: `${site}/unsubscribe?t=${signUnsubscribeToken({ kind: "watch", userId: group.userId, watchId: e.watchId }, secret)}`,
         }));
         const mail = renderAlertEmail({
           items: emailItems,
-          unsubscribeAllUrl: `${site}/huy-dang-ky?t=${allToken}`,
+          unsubscribeAllUrl: `${site}/unsubscribe?t=${allToken}`,
           siteUrl: site,
         });
         const res = await sendEmail({
           to,
           ...mail,
-          headers: listUnsubscribeHeaders(`${site}/api/unsubscribe?t=${allToken}`, `${site}/huy-dang-ky?t=${allToken}`),
+          headers: listUnsubscribeHeaders(`${site}/api/unsubscribe?t=${allToken}`, `${site}/unsubscribe?t=${allToken}`),
           tags: [{ name: "type", value: "alert" }],
         });
         providerId = res.id;

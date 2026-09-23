@@ -44,14 +44,14 @@ Never mix these up; the choice encodes the security model.
 - `src/lib/supabase/admin.ts` — **service-role** client, **bypasses RLS**. Trusted server code
   only (collector, cron, admin). **Never import into a Client Component.**
   Chỗ được dùng: collector / cron / scripts, `src/lib/ingest.ts`, `src/lib/rate-limit.ts`,
-  `src/app/go/…/route.ts`, `src/app/tai-khoan/actions.ts`, `src/app/tai-khoan/xuat-du-lieu/route.ts`,
+  `src/app/go/…/route.ts`, `src/app/account/actions.ts`, `src/app/account/export/route.ts`,
   `src/lib/account-purge.ts`, `src/lib/alerts/*`, `src/lib/push/index.ts`, `src/app/actions/push.ts`,
   `src/app/api/unsubscribe/route.ts`, `src/app/api/cron/alerts/route.ts`, `scripts/run-alerts.ts`,
   `src/lib/affiliate/import.ts`, `src/app/api/cron/conversions/route.ts`, `scripts/import-conversions.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
-  quyền trong `proxy.ts`). Link email dùng luồng `token_hash` qua `src/app/auth/xac-nhan/route.ts`.
+  quyền trong `proxy.ts`). Link email dùng luồng `token_hash` qua `src/app/auth/confirm/route.ts`.
 - **Watch & Alert (1.3/1.4):** hàm thuần `decideAlert()` (`src/lib/watch/decide.ts`) quyết định có báo
   không; `tests/lib/alerts/scenarios.test.ts` là cam kết "không spam" — đừng sửa kỳ vọng ở đó để test xanh.
   Ngưỡng nằm ở `src/lib/watch/constants.ts` (và `50` trong trigger `watches_enforce_limit`). Truy vấn có thể

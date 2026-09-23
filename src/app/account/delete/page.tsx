@@ -5,7 +5,7 @@ import { DeleteAccountForm } from "@/components/account/delete-account-form";
 export const dynamic = "force-dynamic";
 
 export default async function DeleteAccountPage() {
-  await requireUser({ path: "/tai-khoan/xoa" });
+  await requireUser({ path: "/account/delete" });
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-12 sm:py-16">
@@ -53,7 +53,7 @@ export default async function DeleteAccountPage() {
 
         <div className="text-center pt-2">
           <Link
-            href="/tai-khoan"
+            href="/account"
             className="text-xs font-semibold text-muted hover:text-foreground"
           >
             ← Hủy và quay lại Tài khoản

@@ -48,15 +48,15 @@ const item = (o: Partial<AlertEmailItem> = {}): AlertEmailItem => ({
   triggerTexts: ["Giá đã xuống dưới mức bạn đặt (2.600.000 ₫)"],
   scoreReasons: ["✓ Thấp hơn 12% so với giá trung vị 90 ngày"],
   buyUrl: "https://kairo.vn/go/shopee/o1?src=email&watch=w1&alert=a1",
-  manageUrl: "https://kairo.vn/tai-khoan/watch/w1",
-  pauseUrl: "https://kairo.vn/huy-dang-ky?t=x",
+  manageUrl: "https://kairo.vn/account/watch/w1",
+  pauseUrl: "https://kairo.vn/unsubscribe?t=x",
   ...o,
 });
 
 describe("renderAlertEmail", () => {
   const input = (items: AlertEmailItem[]) => ({
     items,
-    unsubscribeAllUrl: "https://kairo.vn/huy-dang-ky?t=all",
+    unsubscribeAllUrl: "https://kairo.vn/unsubscribe?t=all",
     siteUrl: "https://kairo.vn",
   });
 
@@ -72,7 +72,7 @@ describe("renderAlertEmail", () => {
     for (const body of [e.html, e.text]) {
       expect(body).toContain("src=email&");
       expect(body).toContain("alert=a1");
-      expect(body).toContain("https://kairo.vn/huy-dang-ky?t=all");
+      expect(body).toContain("https://kairo.vn/unsubscribe?t=all");
       expect(body).toContain("hoa hồng");
     }
   });
@@ -80,8 +80,8 @@ describe("renderAlertEmail", () => {
 
 describe("listUnsubscribeHeaders", () => {
   it("đúng RFC 8058", () => {
-    expect(listUnsubscribeHeaders("https://kairo.vn/api/unsubscribe?t=a", "https://kairo.vn/huy-dang-ky?t=a")).toEqual({
-      "List-Unsubscribe": "<https://kairo.vn/api/unsubscribe?t=a>, <https://kairo.vn/huy-dang-ky?t=a>",
+    expect(listUnsubscribeHeaders("https://kairo.vn/api/unsubscribe?t=a", "https://kairo.vn/unsubscribe?t=a")).toEqual({
+      "List-Unsubscribe": "<https://kairo.vn/api/unsubscribe?t=a>, <https://kairo.vn/unsubscribe?t=a>",
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     });
   });

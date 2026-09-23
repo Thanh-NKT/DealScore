@@ -22,7 +22,7 @@ export async function saveWatch(
   if (result.status !== "saved") return result;
 
   revalidatePath(path);
-  revalidatePath("/tai-khoan/watch");
+  revalidatePath("/account/watch");
 
   return result;
 }
@@ -54,7 +54,7 @@ export async function setWatchStatus(
     notFound();
   }
 
-  revalidatePath("/tai-khoan/watch");
+  revalidatePath("/account/watch");
 }
 
 export async function deleteWatch(watchId: string): Promise<void> {
@@ -76,5 +76,5 @@ export async function deleteWatch(watchId: string): Promise<void> {
     notFound();
   }
 
-  revalidatePath("/tai-khoan/watch");
+  revalidatePath("/account/watch");
 }

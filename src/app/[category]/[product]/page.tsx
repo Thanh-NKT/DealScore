@@ -65,7 +65,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           Trang chủ
         </Link>
         <span>/</span>
-        <Link href={`/tim-kiem?cat=${product.categorySlug}`} className="hover:text-foreground">
+        <Link href={`/search?cat=${product.categorySlug}`} className="hover:text-foreground">
           {product.categoryName}
         </Link>
         <span>/</span>

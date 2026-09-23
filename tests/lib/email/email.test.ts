@@ -65,7 +65,7 @@ describe("renderAccountDeletionEmail", () => {
     });
     expect(e.subject).toContain("xóa");
     expect(e.text).toContain("23/10/2026");
-    expect(e.text).toContain("https://kairo.vn/<x>/dang-nhap");
+    expect(e.text).toContain("https://kairo.vn/<x>/login");
     expect(e.html).toContain("&lt;x&gt;");
     expect(e.html).not.toContain("<x>");
     expect(e.text).toMatch(/click/i);

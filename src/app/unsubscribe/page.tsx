@@ -5,13 +5,13 @@ import { UnsubscribeForm } from "@/components/watch/unsubscribe-form";
 export const dynamic = "force-dynamic";
 
 interface UnsubscribePageProps {
-  searchParams: Promise<{ t?: string; xong?: string }>;
+  searchParams: Promise<{ t?: string; done?: string }>;
 }
 
 export default async function UnsubscribePage({
   searchParams,
 }: UnsubscribePageProps) {
-  const { t: token, xong: completedKind } = await searchParams;
+  const { t: token, done: completedKind } = await searchParams;
   // Không có giá trị mặc định: chuỗi mặc định nằm công khai trong repo, ai cũng giả được token.
   const secret = process.env.UNSUBSCRIBE_SECRET;
 
@@ -66,7 +66,7 @@ export default async function UnsubscribePage({
           </p>
           <div className="pt-2">
             <Link
-              href="/dang-nhap"
+              href="/login"
               className="inline-flex items-center justify-center rounded-xl bg-foreground px-5 py-2 text-xs font-semibold text-background hover:opacity-90"
             >
               Đăng nhập Kairo

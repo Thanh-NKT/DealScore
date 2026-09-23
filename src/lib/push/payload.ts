@@ -11,7 +11,7 @@ export function buildPushPayload(
   return {
     title: `${items.length} sản phẩm có tin mới`,
     body: `${items.slice(0, 2).map((i) => i.productName).join(", ")}…`,
-    url: `${siteUrl}/tai-khoan/watch`,
+    url: `${siteUrl}/account/watch`,
     tag: "kairo-alert",
   };
 }

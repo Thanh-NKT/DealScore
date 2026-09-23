@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import {
   requestAccountDeletion,
   type ActionResult,
-} from "@/app/tai-khoan/actions";
+} from "@/app/account/actions";
 
 export function DeleteAccountForm() {
   const [state, formAction, isPending] = useActionState(

@@ -28,12 +28,12 @@ describe("safeNextPath", () => {
     expect(safeNextPath(raw)).toBe("/");
   });
   it("null / undefined → fallback", () => {
-    expect(safeNextPath(null, "/tai-khoan")).toBe("/tai-khoan");
+    expect(safeNextPath(null, "/account")).toBe("/account");
     expect(safeNextPath(undefined)).toBe("/");
   });
   it("không quay về chính luồng đăng nhập", () => {
-    expect(safeNextPath("/dang-nhap?next=/x")).toBe("/");
-    expect(safeNextPath("/auth/xac-nhan?token_hash=1")).toBe("/");
+    expect(safeNextPath("/login?next=/x")).toBe("/");
+    expect(safeNextPath("/auth/confirm?token_hash=1")).toBe("/");
   });
 });
 
@@ -41,9 +41,9 @@ describe("decideAuthGate", () => {
   const ok = { consentVersion: CURRENT_CONSENT_VERSION, deletedAt: null };
 
   it("chưa đăng nhập → login kèm next", () => {
-    expect(decideAuthGate({ userId: null, profile: null, path: "/tai-khoan/thong-bao" })).toEqual({
+    expect(decideAuthGate({ userId: null, profile: null, path: "/account/notifications" })).toEqual({
       kind: "login",
-      to: "/dang-nhap?next=%2Ftai-khoan%2Fthong-bao",
+      to: "/login?next=%2Faccount%2Fnotifications",
     });
   });
   it("đăng nhập mà thiếu hồ sơ → ném", () => {
@@ -51,7 +51,7 @@ describe("decideAuthGate", () => {
   });
   it("chờ xóa đi trước chưa đồng ý", () => {
     const g = decideAuthGate({ userId: "u", profile: { consentVersion: null, deletedAt: "2026-09-01" }, path: "/" });
-    expect(g).toEqual({ kind: "restore", to: "/tai-khoan/khoi-phuc" });
+    expect(g).toEqual({ kind: "restore", to: "/account/restore" });
   });
   it("allowPendingDeletion bỏ qua trạng thái chờ xóa", () => {
     const g = decideAuthGate({
@@ -64,7 +64,7 @@ describe("decideAuthGate", () => {
   });
   it("chưa đồng ý → consent kèm next", () => {
     const g = decideAuthGate({ userId: "u", profile: { consentVersion: null, deletedAt: null }, path: "/x" });
-    expect(g).toEqual({ kind: "consent", to: "/tai-khoan/dong-y?next=%2Fx" });
+    expect(g).toEqual({ kind: "consent", to: "/account/consent?next=%2Fx" });
   });
   it("allowMissingConsent bỏ qua cổng đồng ý", () => {
     const g = decideAuthGate({

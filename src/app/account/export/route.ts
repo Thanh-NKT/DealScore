@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/dang-nhap?next=/tai-khoan");
+    redirect("/login?next=/account");
   }
 
   const supabase = await createClient();

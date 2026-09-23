@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { updateMarketingOptIn } from "@/app/tai-khoan/actions";
+import { updateMarketingOptIn } from "@/app/account/actions";
 
 interface MarketingToggleProps {
   initialOptIn: boolean;

@@ -20,7 +20,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { requestLoginCode, verifyLoginCode } = await import("@/app/dang-nhap/actions");
+const { requestLoginCode, verifyLoginCode } = await import("@/app/login/actions");
 
 function form(entries: Record<string, string>) {
   const f = new FormData();
@@ -49,7 +49,7 @@ describe("requestLoginCode", () => {
     expect(r).toEqual({ status: "sent", email: "an@kairo.vn", next: "/" });
     expect(auth.signInWithOtp).toHaveBeenCalledWith({
       email: "an@kairo.vn",
-      options: { shouldCreateUser: true, emailRedirectTo: "https://kairo.test/auth/xac-nhan?next=%2F" },
+      options: { shouldCreateUser: true, emailRedirectTo: "https://kairo.test/auth/confirm?next=%2F" },
     });
   });
 

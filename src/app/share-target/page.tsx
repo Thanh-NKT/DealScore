@@ -46,7 +46,7 @@ export default async function ShareTargetPage({
   const fallbackQuery = text || title || candidateText;
   redirect(
     fallbackQuery
-      ? `/tim-kiem?q=${encodeURIComponent(fallbackQuery)}`
-      : "/tim-kiem",
+      ? `/search?q=${encodeURIComponent(fallbackQuery)}`
+      : "/search",
   );
 }

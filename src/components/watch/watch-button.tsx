@@ -33,7 +33,7 @@ export function WatchButton({
 
   const handleClick = () => {
     if (!isLoggedIn) {
-      router.push(`/dang-nhap?next=${encodeURIComponent(currentPath)}`);
+      router.push(`/login?next=${encodeURIComponent(currentPath)}`);
     } else {
       setIsModalOpen(true);
     }

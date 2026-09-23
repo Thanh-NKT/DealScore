@@ -1,18 +1,18 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
-import { restoreAccount, signOut } from "@/app/tai-khoan/actions";
+import { restoreAccount, signOut } from "@/app/account/actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function RestoreAccountPage() {
   const user = await requireUser({
-    path: "/tai-khoan/khoi-phuc",
+    path: "/account/restore",
     allowPendingDeletion: true,
   });
 
-  // Nếu tài khoản không ở trạng thái chờ xóa thì chuyển về /tai-khoan
+  // Nếu tài khoản không ở trạng thái chờ xóa thì chuyển về /account
   if (!user.deletedAt) {
-    redirect("/tai-khoan");
+    redirect("/account");
   }
 
   const deletedDate = new Date(user.deletedAt);

@@ -12,11 +12,11 @@ interface ConsentPageProps {
 
 export default async function ConsentPage({ searchParams }: ConsentPageProps) {
   const { next: rawNext } = await searchParams;
-  const next = safeNextPath(rawNext, "/tai-khoan");
+  const next = safeNextPath(rawNext, "/account");
 
   // Kiểm tra user hiện tại (cho phép thiếu consent để hiển thị form)
   const user = await requireUser({
-    path: `/tai-khoan/dong-y?next=${encodeURIComponent(next)}`,
+    path: `/account/consent?next=${encodeURIComponent(next)}`,
     allowMissingConsent: true,
   });
 

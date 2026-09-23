@@ -5,11 +5,11 @@ import { LoginForm } from "@/components/account/login-form";
 export const dynamic = "force-dynamic";
 
 interface LoginPageProps {
-  searchParams: Promise<{ next?: string; loi?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { next: rawNext, loi: rawError } = await searchParams;
+  const { next: rawNext, error: rawError } = await searchParams;
   const next = safeNextPath(rawNext, "/");
 
   return (
@@ -36,11 +36,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       <p className="mt-8 text-center text-xs text-muted leading-relaxed">
         Bằng việc đăng nhập, bạn đồng ý với{" "}
-        <Link href="/tai-khoan/dong-y" className="text-foreground underline">
+        <Link href="/account/consent" className="text-foreground underline">
           Điều khoản sử dụng
         </Link>{" "}
         và{" "}
-        <Link href="/tai-khoan/dong-y" className="text-foreground underline">
+        <Link href="/account/consent" className="text-foreground underline">
           Chính sách quyền riêng tư
         </Link>{" "}
         của Kairo.
