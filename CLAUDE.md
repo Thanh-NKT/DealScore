@@ -13,12 +13,31 @@ pnpm start       # serve the production build
 pnpm lint        # eslint (flat config, eslint-config-next)
 ```
 
-There is **no test runner configured yet**. `src/lib/pricing/deal-score.ts` is written as pure
-functions specifically so it can be unit-tested / backtested — if you add tests, wire up a
-runner (e.g. vitest) first.
+Tests use vitest: `pnpm test` (unit, `tests/**` except `tests/db`) and `pnpm test:db` (local
+Supabase). `src/lib/pricing/deal-score.ts` is pure so it can be unit-tested / backtested.
 
-Codebase comments and user-facing copy are in **Vietnamese**; match that language when
-editing UI text or comments.
+**Language:** code comments, identifiers, file/route names, test names and dev-facing
+logs/errors are in **English**. User-facing copy (UI text, form errors, Deal Score reasons,
+email/push bodies) stays **Vietnamese**. Applied migrations keep their function bodies and
+`raise exception` texts as-is — only `--` comments are English.
+
+## Project structure
+
+Strategy from the Next.js docs "Store project files outside of `app`": `src/app/` is for
+routing only (`page`, `layout`, `route`, …). Everything else lives outside it:
+
+- `src/actions/` — Server Actions (`auth`, `account`, `watch`, `push`).
+- `src/lib/<domain>/` — `account/`, `pricing/` (deal-score, price-history, variant-pricing,
+  chart-series), `lookup/`, `product/`, `watch/`, `alerts/`, `affiliate/`, `auth/`, `email/`,
+  `push/`, `shopee/`, `supabase/`.
+- `src/components/<feature>/` — UI grouped by feature.
+- `tests/` mirrors `src/` (`tests/actions`, `tests/lib/<domain>`, `tests/app`, `tests/db`).
+- Secret-bearing modules (`lib/supabase/admin.ts`, `lib/email/index.ts`, `lib/push/index.ts`)
+  start with `import "server-only"`. Vitest aliases it to an empty stub; tsx scripts that import
+  them run with `--conditions=react-server`.
+- Routes are English (`/account`, `/login`, `/search`, `/unsubscribe`, `/auth/confirm`). The old
+  Vietnamese paths 308-redirect via `LEGACY_ROUTES` in `next.config.ts` — keep them: links in
+  already-sent emails depend on them.
 
 ## Next.js 16 gotchas
 
@@ -42,7 +61,8 @@ Never mix these up; the choice encodes the security model.
 - `src/lib/supabase/server.ts` — **server** client, anon key + RLS, reads/writes session via
   cookies. Server Components / Route Handlers / Server Actions.
 - `src/lib/supabase/admin.ts` — **service-role** client, **bypasses RLS**. Trusted server code
-  only (collector, cron, admin). **Never import into a Client Component.**
+  only (collector, cron, admin). **Never import into a Client Component** (enforced by
+  `server-only`).
   Chỗ được dùng: collector / cron / scripts, `src/lib/ingest.ts`, `src/lib/rate-limit.ts`,
   `src/app/go/…/route.ts`, `src/actions/account.ts`, `src/app/account/export/route.ts`,
   `src/lib/account/purge.ts`, `src/lib/alerts/*`, `src/lib/push/index.ts`, `src/actions/push.ts`,
