@@ -54,6 +54,8 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
   // watch sai định dạng thì bỏ, không làm hỏng cả lượt ghi click.
   const rawWatch = searchParams.get("watch");
   const watchId = rawWatch && UUID_RE.test(rawWatch) ? rawWatch : null;
+  const rawAlert = searchParams.get("alert");
+  const alertEventId = rawAlert && UUID_RE.test(rawAlert) ? rawAlert : null;
 
   try {
     const supabase = createAdminClient();
@@ -108,15 +110,16 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       offer_id: offerId,
       source,
       watch_id: watchId,
+      alert_event_id: alertEventId,
       user_id: auth.user?.id ?? null,
       session_id: sessionId,
     };
     let clickRes = await supabase.from("click_events").insert(click).select("id").single();
-    // watch không tồn tại (FK) — vẫn ghi click, chỉ bỏ watch_id.
-    if (clickRes.error?.code === "23503" && watchId) {
+    // watch / alert không tồn tại (FK) — vẫn ghi click, bỏ hai tham chiếu đó.
+    if (clickRes.error?.code === "23503" && (watchId || alertEventId)) {
       clickRes = await supabase
         .from("click_events")
-        .insert({ ...click, watch_id: null })
+        .insert({ ...click, watch_id: null, alert_event_id: null })
         .select("id")
         .single();
     }
