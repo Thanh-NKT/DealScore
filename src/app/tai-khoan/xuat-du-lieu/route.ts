@@ -23,24 +23,26 @@ export async function GET() {
     alertsRes,
     clicksRes,
     lookupsRes,
+    pushRes,
   ] = await Promise.all([
     supabase.from("users").select("*").eq("id", user.id).single(),
     supabase.from("notification_settings").select("*").eq("user_id", user.id).single(),
     supabase.from("watches").select("*").eq("user_id", user.id),
     supabase
       .from("alert_events")
-      .select("*, watches!inner(user_id)")
+      .select("watch_id, trigger_types, price, deal_score, created_at, alert_deliveries(channel, status, sent_at), watches!inner(user_id)")
       .eq("watches.user_id", user.id),
     supabase.from("click_events").select("*").eq("user_id", user.id),
     admin
       .from("lookup_requests")
       .select("created_at, outcome")
       .eq("user_id", user.id),
+    supabase.from("push_subscriptions").select("created_at, user_agent").eq("user_id", user.id),
   ]);
 
   // BẤT KỲ truy vấn nào lỗi → ném. Bỏ qua lỗi là đưa cho người dùng một file
   // thiếu dữ liệu mà trông như đầy đủ.
-  const results = { profileRes, settingsRes, watchesRes, alertsRes, clicksRes, lookupsRes };
+  const results = { profileRes, settingsRes, watchesRes, alertsRes, clicksRes, lookupsRes, pushRes };
   for (const [name, res] of Object.entries(results)) {
     if (res.error) throw new Error(`Xuất dữ liệu: đọc ${name} thất bại: ${res.error.message}`);
   }
@@ -52,6 +54,7 @@ export async function GET() {
     settings: settingsRes.data!,
     watches: watchesRes.data ?? [],
     alertEvents: alertsRes.data ?? [],
+    pushDevices: pushRes.data ?? [],
     clicks: clicksRes.data ?? [],
     lookups: lookupsRes.data ?? [],
   });

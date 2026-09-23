@@ -83,3 +83,13 @@ Lệnh này cần `db:link` chạy trước (nó dùng cờ `--linked`).
 - **Xác minh domain gửi** trên Resend (SPF, DKIM, DMARC) **trước** khi mở đăng ký.
 - Đổi `config.toml` ở local thì phải `supabase stop && supabase start` — Auth chỉ nạp cấu hình lúc khởi động.
 - **Test tích hợp** `pnpm test:db` chỉ chạy trên Supabase local (helper tự chặn URL khác).
+
+## Lịch chạy (pg_cron) — mỗi môi trường
+
+Migration 0006 tạo job `kairo-alerts` (mỗi 15 phút). Job đọc URL và secret từ Vault lúc chạy:
+
+    select vault.create_secret('https://kairo.vn', 'kairo_app_url');   -- local: http://host.docker.internal:3000
+    select vault.create_secret('<CRON_SECRET>', 'kairo_cron_secret');  -- trùng env CRON_SECRET của app
+
+Xem lịch sử chạy: `select * from cron.job_run_details order by start_time desc limit 20;`
+Ở local không đặt Vault thì dùng `pnpm alerts:run`.
