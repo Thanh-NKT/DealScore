@@ -72,3 +72,14 @@ Lệnh này cần `db:link` chạy trước (nó dùng cờ `--linked`).
   đề `at time zone` — biên ngày sẽ trôi theo `TimeZone` của session.
 - `price_observations` nên **partition theo tháng** hoặc dùng **TimescaleDB**
   khi dữ liệu lớn (xem chú thích trong migration).
+
+## Auth production (Dashboard — không nằm trong repo)
+
+- **SMTP:** host `smtp.resend.com`, port `465`, user `resend`, pass = `RESEND_API_KEY`, sender = `EMAIL_FROM`.
+- **Site URL** = `NEXT_PUBLIC_SITE_URL`; **Redirect URLs** = `${NEXT_PUBLIC_SITE_URL}/**`.
+- **Template** `Magic Link` **và** `Confirm signup` = nội dung `supabase/templates/dang-nhap.html`,
+  subject "Đăng nhập Kairo". Người dùng mới nhận template confirm, người cũ nhận magic link.
+- **Rate limit** gửi email mỗi giờ: đặt theo gói Resend. `max_frequency` = 60 giây.
+- **Xác minh domain gửi** trên Resend (SPF, DKIM, DMARC) **trước** khi mở đăng ký.
+- Đổi `config.toml` ở local thì phải `supabase stop && supabase start` — Auth chỉ nạp cấu hình lúc khởi động.
+- **Test tích hợp** `pnpm test:db` chỉ chạy trên Supabase local (helper tự chặn URL khác).

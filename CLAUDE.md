@@ -43,6 +43,14 @@ Never mix these up; the choice encodes the security model.
   cookies. Server Components / Route Handlers / Server Actions.
 - `src/lib/supabase/admin.ts` — **service-role** client, **bypasses RLS**. Trusted server code
   only (collector, cron, admin). **Never import into a Client Component.**
+  Chỗ được dùng: collector / cron / scripts, `src/lib/ingest.ts`, `src/lib/rate-limit.ts`,
+  `src/app/go/…/route.ts`, `src/app/tai-khoan/actions.ts`, `src/app/tai-khoan/xuat-du-lieu/route.ts`,
+  `src/lib/account-purge.ts`. Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
+  không bao giờ nhận `userId` từ form.
+- **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
+  quyền trong `proxy.ts`). Link email dùng luồng `token_hash` qua `src/app/auth/xac-nhan/route.ts`.
+- **Test DB:** `pnpm test:db` chạy `tests/db/**` trên Supabase local (helper tự chặn URL khác). Script
+  chạy bằng `tsx` bị biên dịch sang CJS — **không** dùng `await` ở cấp cao nhất, bọc trong `main()`.
 - `src/lib/supabase/middleware.ts` — `updateSession()`, called from `src/proxy.ts` on every
   request to refresh the auth token. Do not insert logic between `createServerClient` and the
   `getUser()` call there.
