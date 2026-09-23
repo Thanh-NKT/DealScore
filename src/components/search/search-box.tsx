@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, type KeyboardEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { parseShopeeUrl } from "@/lib/shopee/parse-url";
+import { normalizeLookupInput, parseShopeeUrl } from "@/lib/shopee/parse-url";
 import { formatVnd } from "@/lib/format";
 
 interface Suggestion {
@@ -26,6 +26,8 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -33,7 +35,8 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
   // Kiểm tra nếu query là một Shopee URL
   const isShopeeUrl = (() => {
     if (!query) return false;
-    const parsed = parseShopeeUrl(query);
+    // Chuẩn hóa như server: nhận cả đoạn văn bản chia sẻ từ app Shopee.
+    const parsed = parseShopeeUrl(normalizeLookupInput(query));
     return parsed.ok || parsed.reason === "needs_redirect";
   })();
 
@@ -115,9 +118,11 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
   const handleFormSubmit = async (e: FormEvent) => {
     if (isShopeeUrl) {
       e.preventDefault();
+      if (submitting) return;
       // Chuyển sang luồng URL lookup
+      setLookupError(null);
       try {
-        setLoading(true);
+        setSubmitting(true);
         const res = await fetch("/api/lookup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -127,12 +132,15 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
         if (res.ok && data.productUrl) {
           router.push(data.productUrl);
         } else {
-          router.push(`/tim-kiem?q=${encodeURIComponent(query.trim())}`);
+          // Hiện đúng lỗi server trả về. Chuyển sang trang tìm kiếm với
+          // chính URL làm từ khóa chỉ ra "không tìm thấy" và làm mất lý do thật
+          // (vd bị giới hạn lượt tra cứu).
+          setLookupError(data?.message || "Có lỗi xảy ra. Vui lòng thử lại.");
         }
       } catch {
-        router.push(`/tim-kiem?q=${encodeURIComponent(query.trim())}`);
+        setLookupError("Có lỗi xảy ra. Vui lòng thử lại.");
       } finally {
-        setLoading(false);
+        setSubmitting(false);
       }
     }
     // Ngược lại để form submit bình thường tới /tim-kiem?q=...
@@ -154,6 +162,7 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
             onChange={(e) => {
               const val = e.target.value;
               setQuery(val);
+              setLookupError(null);
               if (val.trim().length < 2) {
                 setIsOpen(false);
               }
@@ -177,11 +186,18 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
 
         <button
           type="submit"
-          className="rounded-xl border border-foreground bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:opacity-90 active:scale-95"
+          disabled={submitting}
+          className="disabled:opacity-60 rounded-xl border border-foreground bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:opacity-90 active:scale-95"
         >
           {isShopeeUrl ? "Kiểm tra giá" : "Tìm kiếm"}
         </button>
       </form>
+
+      {lookupError && (
+        <p role="alert" className="mt-2 text-xs text-rec-avoid">
+          {lookupError}
+        </p>
+      )}
 
       {/* Danh sách gợi ý Autocomplete */}
       {showDropdown && (

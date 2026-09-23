@@ -1,5 +1,10 @@
 /**
  * Client bọc Shopee Open API.
+ *
+ * Chưa có token thật (spike Giai đoạn 0), nên chưa có lời gọi HTTP nào.
+ * Dữ liệu giả lập CHỈ bật khi SHOPEE_CLIENT=fake và không phải production:
+ * giá giả ghi vào catalog như giá thật là phá hỏng đúng thứ khiến người dùng
+ * tin sản phẩm này.
  */
 
 export interface ShopeeItemDetail {
@@ -18,13 +23,33 @@ export interface ShopeeItemDetail {
     stock: number | null;
     isFlashSale: boolean;
   }>;
+  /** 'seed' = dữ liệu giả lập, ghi vào price_observations.source để không lẫn với giá thật. */
+  source: "api" | "seed";
+}
+
+/** Không lấy được dữ liệu từ Shopee — route trả `upstream_unavailable`. */
+export class ShopeeUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ShopeeUnavailableError";
+  }
+}
+
+export function isFakeClientEnabled(): boolean {
+  return process.env.SHOPEE_CLIENT === "fake" && process.env.NODE_ENV !== "production";
 }
 
 export async function getItemDetail(
   shopId: string,
   itemId: string,
 ): Promise<ShopeeItemDetail> {
-  // Khi chưa có token thật từ Shopee Open API (Giai đoạn 0), cung cấp dữ liệu giả lập cho luồng ingest
+  if (isFakeClientEnabled()) {
+    return fakeItemDetail(shopId, itemId);
+  }
+  throw new ShopeeUnavailableError("Chưa cấu hình Shopee Open API");
+}
+
+function fakeItemDetail(shopId: string, itemId: string): ShopeeItemDetail {
   return {
     shopId,
     itemId,
@@ -43,5 +68,6 @@ export async function getItemDetail(
         isFlashSale: false,
       },
     ],
+    source: "seed",
   };
 }

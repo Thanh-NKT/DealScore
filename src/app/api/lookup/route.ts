@@ -1,142 +1,60 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { parseShopeeUrl } from "@/lib/shopee/parse-url";
-import { resolveShopeeRedirect } from "@/lib/shopee/resolve-redirect";
-import { hashIp, checkLookupLimit, recordLookup } from "@/lib/rate-limit";
-import { resolveOrIngestShopee } from "@/lib/ingest";
+import { clientIp, hashIp } from "@/lib/rate-limit";
+import { lookupErrorMessage, lookupShopeeUrl, type LookupErrorCode } from "@/lib/lookup";
+import { createClient } from "@/lib/supabase/server";
+
+const NO_STORE = { "Cache-Control": "no-store" };
+
+const STATUS_BY_CODE: Record<LookupErrorCode, number> = {
+  not_a_url: 400,
+  not_shopee: 400,
+  unrecognized_format: 400,
+  rate_limited: 429,
+  upstream_unavailable: 503,
+  internal: 500,
+};
+
+function errorResponse(code: LookupErrorCode, retryAfter?: number) {
+  return NextResponse.json(
+    { status: "error", code, message: lookupErrorMessage(code, retryAfter), retryAfter },
+    {
+      status: STATUS_BY_CODE[code],
+      headers: retryAfter ? { ...NO_STORE, "Retry-After": String(retryAfter) } : NO_STORE,
+    },
+  );
+}
 
 export async function POST(request: NextRequest) {
+  let rawUrl: unknown;
   try {
-    const body = await request.json();
-    const rawUrl = body?.url;
+    rawUrl = (await request.json())?.url;
+  } catch {
+    return errorResponse("not_a_url");
+  }
+  if (!rawUrl || typeof rawUrl !== "string") {
+    return errorResponse("not_a_url");
+  }
 
-    if (!rawUrl || typeof rawUrl !== "string") {
-      return NextResponse.json(
-        {
-          status: "error",
-          code: "not_a_url",
-          message: "Hãy dán một đường dẫn sản phẩm.",
-        },
-        { status: 400 },
-      );
-    }
+  try {
+    // Người đã đăng nhập có hạn mức riêng (60 ingest/giờ) thay vì chung theo IP.
+    const supabase = await createClient();
+    const { data: auth } = await supabase.auth.getUser();
 
-    // 1. Phân tích URL Shopee
-    let parsed = parseShopeeUrl(rawUrl);
-
-    if (!parsed.ok && parsed.reason === "needs_redirect") {
-      const redirectRes = await resolveShopeeRedirect(rawUrl);
-      if (!redirectRes.ok) {
-        return NextResponse.json(
-          {
-            status: "error",
-            code: "unrecognized_format",
-            message: "Không đọc được đường dẫn này. Hãy thử sao chép lại từ ứng dụng Shopee.",
-          },
-          { status: 400 },
-        );
-      }
-      parsed = parseShopeeUrl(redirectRes.finalUrl);
-    }
-
-    if (!parsed.ok) {
-      if (parsed.reason === "not_shopee") {
-        return NextResponse.json(
-          {
-            status: "error",
-            code: "not_shopee",
-            message: "Hiện tại mới hỗ trợ Shopee.",
-          },
-          { status: 400 },
-        );
-      }
-      if (parsed.reason === "not_a_url") {
-        return NextResponse.json(
-          {
-            status: "error",
-            code: "not_a_url",
-            message: "Hãy dán một đường dẫn sản phẩm.",
-          },
-          { status: 400 },
-        );
-      }
-      return NextResponse.json(
-        {
-          status: "error",
-          code: "unrecognized_format",
-          message: "Không đọc được đường dẫn này. Hãy thử sao chép lại từ ứng dụng Shopee.",
-        },
-        { status: 400 },
-      );
-    }
-
-    // 2. Lấy IP hash và kiểm tra rate limit
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
-    const ipHash = hashIp(ip);
-
-    const limitVerdict = await checkLookupLimit({
-      ipHash,
-      userId: null,
-      isIngest: true,
+    const result = await lookupShopeeUrl({
+      raw: rawUrl,
+      ipHash: hashIp(clientIp(request.headers)),
+      userId: auth.user?.id ?? null,
     });
 
-    if (!limitVerdict.allowed) {
-      const isUpstreamCap = limitVerdict.reason === "global_daily";
-      return NextResponse.json(
-        {
-          status: "error",
-          code: isUpstreamCap ? "upstream_unavailable" : "rate_limited",
-          message: isUpstreamCap
-            ? "Chưa lấy được dữ liệu từ Shopee lúc này."
-            : `Bạn đã tra cứu khá nhiều. Thử lại sau ${limitVerdict.retryAfterSeconds}s.`,
-          retryAfter: limitVerdict.retryAfterSeconds,
-        },
-        { status: isUpstreamCap ? 503 : 429 },
-      );
+    if (result.status === "error") {
+      return errorResponse(result.code, result.retryAfter);
     }
-
-    // 3. Tra cứu hoặc Ingest sản phẩm
-    const result = await resolveOrIngestShopee({
-      shopId: parsed.shopId,
-      itemId: parsed.itemId,
-    });
-
-    // 4. Ghi nhận nhật ký tra cứu
-    if (result.status === "resolved") {
-      await recordLookup({ ipHash, userId: null, outcome: "resolved" });
-      return NextResponse.json(
-        { status: "ok", productUrl: result.productUrl },
-        { headers: { "Cache-Control": "no-store" } },
-      );
-    } else if (result.status === "ingested") {
-      await recordLookup({ ipHash, userId: null, outcome: "ingested" });
-      return NextResponse.json(
-        { status: "ingested", productUrl: result.productUrl },
-        { headers: { "Cache-Control": "no-store" } },
-      );
-    } else {
-      await recordLookup({ ipHash, userId: null, outcome: "error" });
-      return NextResponse.json(
-        {
-          status: "error",
-          code: result.code,
-          message:
-            result.code === "upstream_unavailable"
-              ? "Chưa lấy được dữ liệu từ Shopee lúc này."
-              : "Có lỗi xảy ra. Vui lòng thử lại.",
-        },
-        { status: 500, headers: { "Cache-Control": "no-store" } },
-      );
-    }
+    return NextResponse.json(
+      { status: result.status, productUrl: result.productUrl },
+      { headers: NO_STORE },
+    );
   } catch (err) {
     console.error("Lỗi api/lookup:", err);
-    return NextResponse.json(
-      {
-        status: "error",
-        code: "internal",
-        message: "Có lỗi xảy ra. Vui lòng thử lại.",
-      },
-      { status: 500, headers: { "Cache-Control": "no-store" } },
-    );
+    return errorResponse("internal");
   }
 }

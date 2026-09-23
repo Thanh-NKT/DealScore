@@ -53,10 +53,10 @@ export async function loadProductPageData(params: {
       .eq("slug", productSlug)
       .maybeSingle();
 
+    // Lỗi DB phải nổi lên — biến nó thành 404 là nói dối rằng sản phẩm không có.
+    if (prodError) throw new Error(`Đọc sản phẩm thất bại: ${prodError.message}`);
     // Không tìm thấy là trạng thái hợp lệ — trang sẽ trả notFound().
-    // KHÔNG trả dữ liệu giả: hiện giá không có thật cho một sản phẩm có thật
-    // là phá hỏng đúng thứ khiến người dùng tin sản phẩm này.
-    if (prodError || !product) return null;
+    if (!product) return null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const productAny = product as any;
@@ -100,7 +100,7 @@ export async function loadProductPageData(params: {
             marketplace, url, title, status, last_observed_at,
             sellers ( name, rating, rating_count, is_official )
           ),
-          affiliate_offers ( eligible, short_link, affiliate_url )
+          affiliate_offers ( eligible )
         `)
         .eq("variant_id", targetVariantId),
 
@@ -115,6 +115,17 @@ export async function loadProductPageData(params: {
 
       supabase.rpc("variant_tracking_since", { p_variant_id: targetVariantId }),
     ]);
+
+    // Bất kỳ query nào lỗi thì cả trang lỗi. Nuốt lỗi ở đây thì trang hiện
+    // "Chưa có người bán" hoặc ⚪ như thể đó là dữ liệu thật.
+    for (const [name, res] of [
+      ["offers", offersRes],
+      ["variant_daily_prices", historyRes],
+      ["latest_price_per_offer", latestPricesRes],
+      ["variant_tracking_since", trackingSinceRes],
+    ] as const) {
+      if (res.error) throw new Error(`Đọc ${name} thất bại: ${res.error.message}`);
+    }
 
     // Map offer rows
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,7 +160,7 @@ export async function loadProductPageData(params: {
         originalPrice: latest?.original_price != null ? Number(latest.original_price) : null,
         stock: latest?.stock != null ? Number(latest.stock) : null,
         isFlashSale: Boolean(latest?.is_flash_sale),
-        observedAt: latest?.observed_at || listing?.last_observed_at || new Date().toISOString(),
+        observedAt: latest?.observed_at || listing?.last_observed_at || null,
       };
     });
 

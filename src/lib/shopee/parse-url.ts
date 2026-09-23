@@ -17,10 +17,29 @@ export function externalItemId(shopId: string, itemId: string): string {
   return `${shopId}_${itemId}`;
 }
 
+/** Link rút gọn — phải theo redirect mới biết shopId/itemId. */
+export const SHORT_HOSTS: ReadonlySet<string> = new Set(["shope.ee", "s.shopee.vn"]);
+/** Host của trang sản phẩm canonical. */
+export const SHOPEE_HOSTS: ReadonlySet<string> = new Set(["shopee.vn", "www.shopee.vn"]);
+
 export function extractFirstUrl(text: string): string | null {
   if (!text) return null;
   const match = text.match(/https?:\/\/[^\s]+/i);
-  return match ? match[0] : null;
+  // Văn bản chia sẻ hay kẹp link trong ngoặc hoặc kết câu ngay sau link.
+  return match ? match[0].replace(/[)\]}>.,;:!?'"]+$/, "") : null;
+}
+
+/**
+ * Chuẩn hóa thứ người dùng dán vào: lấy URL đầu tiên nếu là cả đoạn văn bản
+ * chia sẻ, thêm https:// nếu thiếu. Parse và theo redirect phải dùng CÙNG
+ * chuỗi này — `shope.ee/abc` parse được nhưng `new URL("shope.ee/abc")` ném lỗi.
+ */
+export function normalizeLookupInput(raw: string): string {
+  const trimmed = (raw ?? "").trim();
+  const candidate = extractFirstUrl(trimmed) ?? trimmed;
+  if (/^https?:\/\//i.test(candidate)) return candidate;
+  const looksLikeHost = /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$|\?|#|:)/i.test(candidate);
+  return looksLikeHost ? `https://${candidate}` : candidate;
 }
 
 export function parseShopeeUrl(raw: string): ParsedShopeeUrl {
@@ -52,9 +71,6 @@ export function parseShopeeUrl(raw: string): ParsedShopeeUrl {
   // So khớp lỏng bằng includes("shopee.") hay endsWith("shopee.vn") cho lọt
   // shopee.vn.evil.com và evil-shopee.com.attacker.net — đây là URL do người
   // dùng cung cấp mà server sẽ đi gọi và ghi vào catalog, nên phải chặt.
-  const SHORT_HOSTS = new Set(["shope.ee", "s.shopee.vn"]);
-  const SHOPEE_HOSTS = new Set(["shopee.vn", "www.shopee.vn"]);
-
   if (SHORT_HOSTS.has(host)) {
     return { ok: false, reason: "needs_redirect" };
   }

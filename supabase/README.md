@@ -16,7 +16,7 @@ corepack pnpm exec supabase --version
 
 1. Vào Supabase Dashboard → **SQL Editor**.
 2. Dán `migrations/0001_init.sql` → **Run**.
-3. Dán `migrations/0002_search_rollup_categories.sql` → **Run**.
+3. Lần lượt dán các file còn lại trong `migrations/` theo thứ tự số (`0002`, `0003`, `0004`…) → **Run** từng file.
 
 ## Cách 2 — CLI, đẩy lên project trên cloud
 
@@ -59,6 +59,13 @@ Lệnh này cần `db:link` chạy trước (nó dùng cờ `--linked`).
   công khai; ghi qua **service role** (collector/cron) sẽ bỏ qua RLS.
 - `lookup_requests` bật RLS nhưng **không có policy nào** — chỉ service role
   đọc/ghi được.
+- **Quyền bảng** (`0004`): Supabase mặc định cấp ALL trên schema `public` cho
+  `anon`/`authenticated`. Không bật RLS **không** có nghĩa là chỉ đọc — `0004`
+  thu hồi quyền ghi của hai role này trên mọi bảng catalog và đổi default
+  privileges. Bảng thuộc người dùng tạo sau này phải `GRANT` quyền ghi cho
+  `authenticated` một cách tường minh, kèm policy RLS.
+- Hàm `security definer` mặc định ai cũng gọi được (`EXECUTE` cho `PUBLIC`) —
+  luôn `revoke execute … from public, anon, authenticated`.
 - Trigger `on_auth_user_created` tự tạo hồ sơ `public.users` khi có
   `auth.users` mới.
 - `refresh_variant_daily_prices` ép ngày theo `Asia/Ho_Chi_Minh`. Đừng bỏ mệnh

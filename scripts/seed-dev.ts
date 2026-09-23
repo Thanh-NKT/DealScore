@@ -209,10 +209,18 @@ async function main() {
             stock,
             is_flash_sale: isFlash,
             is_valid: true,
-            source: "api",
+            // Dữ liệu tổng hợp, không phải giá thật — không được lẫn với 'api'.
+            source: "seed",
           });
 
-          if (d === 0 && (bestLatest === null || price < bestLatest.price)) {
+          // Offer đại diện: còn hàng trước, rồi rẻ nhất — giống cách trang chi tiết
+          // chọn. Chọn offer rẻ nhất bất kể tồn kho thì variant bị ghi "hết hàng"
+          // trong khi vẫn còn người bán có hàng.
+          const better =
+            bestLatest === null ||
+            (stock > 0 && bestLatest.stock <= 0) ||
+            ((stock > 0) === (bestLatest.stock > 0) && price < bestLatest.price);
+          if (d === 0 && better) {
             bestLatest = {
               offer_id: offerRow.id,
               price,

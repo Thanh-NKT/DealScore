@@ -1,7 +1,17 @@
 import {
   type DealScoreResult,
+  MIN_DAYS_FOR_SCORE,
+  MIN_OBSERVATIONS_FOR_SCORE,
   RECOMMENDATION_LABEL,
 } from "@/lib/deal-score";
+
+/** Nói rõ còn thiếu gì (design §12.3): thiếu số ngày theo dõi, hay thiếu số ngày có dữ liệu. */
+function insufficientDetail(stats: DealScoreResult["stats"]): string {
+  if (stats.daysCovered < MIN_DAYS_FOR_SCORE) {
+    return `Đã theo dõi ${stats.daysCovered} ngày (cần tối thiểu ${MIN_DAYS_FOR_SCORE} ngày)`;
+  }
+  return `Mới có dữ liệu giá ${stats.observations} ngày (cần tối thiểu ${MIN_OBSERVATIONS_FOR_SCORE} ngày)`;
+}
 
 interface DealScoreBadgeProps {
   result: DealScoreResult;
@@ -31,7 +41,7 @@ export function DealScoreBadge({ result }: DealScoreBadgeProps) {
             <div className="text-center">
               <div className="text-base font-bold">{label}</div>
               <div className="mt-0.5 text-xs opacity-80">
-                Đã theo dõi {stats.daysCovered} ngày (cần tối thiểu 14 ngày)
+                {insufficientDetail(stats)}
               </div>
             </div>
           </div>

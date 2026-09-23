@@ -1,219 +1,111 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { externalItemId } from "@/lib/shopee/parse-url";
-import { getItemDetail } from "@/lib/shopee/client";
-import { slugify, uniqueSlug } from "@/lib/slug";
-import { toVnDate } from "@/lib/format";
+import { getItemDetail, ShopeeUnavailableError } from "@/lib/shopee/client";
+import { slugify } from "@/lib/slug";
 
 export type IngestResult =
   | { status: "resolved"; productUrl: string }
   | { status: "ingested"; productUrl: string }
   | { status: "error"; code: "upstream_unavailable" | "internal" };
 
-export async function resolveOrIngestShopee(params: {
+function productUrl(categorySlug: string | null, productSlug: string, variantId: string | null) {
+  const base = `/${categorySlug || "san-pham"}/${productSlug}`;
+  return variantId ? `${base}?variant=${variantId}` : base;
+}
+
+/**
+ * URL trang sản phẩm nếu listing đã có trong catalog và đã ghép variant.
+ * Chỉ đọc, không gọi Shopee — dùng để quyết định lượt này có phải ingest không
+ * trước khi tính hạn mức ingest.
+ */
+export async function findExistingProductUrl(params: {
+  shopId: string;
+  itemId: string;
+}): Promise<string | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("offers")
+    .select(`
+      variant_id,
+      listings!inner ( marketplace, external_item_id ),
+      product_variants!inner ( products!inner ( slug, categories ( slug ) ) )
+    `)
+    .eq("listings.marketplace", "shopee")
+    .eq("listings.external_item_id", externalItemId(params.shopId, params.itemId))
+    .not("variant_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(`Tra listing thất bại: ${error.message}`);
+  if (!data?.variant_id) return null;
+
+  const product = data.product_variants?.products;
+  if (!product?.slug) return null;
+  return productUrl(product.categories?.slug ?? null, product.slug, data.variant_id);
+}
+
+/**
+ * Lấy chi tiết từ Shopee rồi ghi toàn bộ vào catalog bằng RPC
+ * ingest_shopee_item — một transaction: thất bại giữa chừng thì không để lại
+ * listing thiếu offer hay offer thiếu quan sát. Hai request đồng thời cho cùng
+ * một item được RPC tuần tự hóa; request sau nhận 'resolved'.
+ */
+export async function ingestShopeeItem(params: {
   shopId: string;
   itemId: string;
 }): Promise<IngestResult> {
   const { shopId, itemId } = params;
-  const extItemId = externalItemId(shopId, itemId);
 
+  let detail;
   try {
-    const supabase = createAdminClient();
-
-    // 1. Kiểm tra listing đã có trong hệ thống chưa
-    const { data: existingListing } = await supabase
-      .from("listings")
-      .select("id, status")
-      .eq("marketplace", "shopee")
-      .eq("external_item_id", extItemId)
-      .maybeSingle();
-
-    if (existingListing) {
-      // Tìm offer đã ghép variant
-      const { data: offer } = await supabase
-        .from("offers")
-        .select(`
-          id, variant_id,
-          product_variants (
-            id,
-            products (
-              slug,
-              category_id,
-              categories ( slug )
-            )
-          )
-        `)
-        .eq("listing_id", existingListing.id)
-        .not("variant_id", "is", null)
-        .limit(1)
-        .maybeSingle();
-
-      if (offer?.variant_id) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const offerAny = offer as any;
-        const variant = offerAny?.product_variants;
-        const product = variant?.products;
-        const catSlug = product?.categories?.slug || "san-pham";
-        const prodSlug = product?.slug || "chi-tiet";
-        return {
-          status: "resolved",
-          productUrl: `/${catSlug}/${prodSlug}?variant=${offer.variant_id}`,
-        };
-      }
-    }
-
-    // 2. Chưa có trong catalog -> Thực hiện Ingest (Đ6)
-    const itemDetail = await getItemDetail(shopId, itemId);
-    if (!itemDetail || !itemDetail.title) {
-      return { status: "error", code: "upstream_unavailable" };
-    }
-
-    // 3. Upsert seller
-    const sellerExtId = shopId;
-    let sellerId: string | undefined;
-    const { data: existingSeller } = await supabase
-      .from("sellers")
-      .select("id")
-      .eq("marketplace", "shopee")
-      .eq("external_seller_id", sellerExtId)
-      .maybeSingle();
-
-    if (existingSeller) {
-      sellerId = existingSeller.id;
-    } else {
-      const { data: newSeller } = await supabase
-        .from("sellers")
-        .insert({
-          marketplace: "shopee",
-          external_seller_id: sellerExtId,
-          name: itemDetail.sellerName,
-          rating: itemDetail.sellerRating,
-          rating_count: itemDetail.sellerRatingCount,
-          is_official: itemDetail.sellerIsOfficial,
-        })
-        .select("id")
-        .single();
-      sellerId = newSeller?.id;
-    }
-
-    // 4. Upsert listing
-    let listingId = existingListing?.id;
-    if (!listingId) {
-      const { data: newListing, error: listingError } = await supabase
-        .from("listings")
-        .insert({
-          marketplace: "shopee",
-          external_item_id: extItemId,
-          seller_id: sellerId ?? null,
-          title: itemDetail.title,
-          url: `https://shopee.vn/product/${shopId}/${itemId}`,
-          status: "active",
-          refresh_priority: 1,
-        })
-        .select("id")
-        .single();
-
-      if (listingError || !newListing) {
-        throw new Error(`Failed to create listing: ${listingError?.message}`);
-      }
-      listingId = newListing.id;
-    }
-
-    // 5. Tạo Product 'draft' cho sản phẩm mới (Đ6)
-    const baseSlug = slugify(itemDetail.title, 80);
-    const prodSlug = await uniqueSlug(baseSlug, async (testSlug) => {
-      const { data } = await supabase
-        .from("products")
-        .select("id")
-        .eq("slug", testSlug)
-        .maybeSingle();
-      return !!data;
-    });
-
-    const { data: newProduct, error: prodError } = await supabase
-      .from("products")
-      .insert({
-        canonical_name: itemDetail.title,
-        status: "draft",
-        slug: prodSlug,
-        specs: {},
-      })
-      .select("id")
-      .single();
-
-    if (prodError || !newProduct) {
-      throw new Error(`Failed to create draft product: ${prodError?.message}`);
-    }
-
-    const productId = newProduct.id;
-    let firstVariantId: string | null = null;
-    const nowIso = new Date().toISOString();
-
-    // 6. Tạo variant, offer, quan sát giá
-    for (const model of itemDetail.models) {
-      const { data: newVariant } = await supabase
-        .from("product_variants")
-        .insert({
-          product_id: productId,
-          variant_key: model.name,
-          specs: {},
-        })
-        .select("id")
-        .single();
-
-      if (!newVariant) continue;
-      if (!firstVariantId) firstVariantId = newVariant.id;
-
-      const { data: newOffer } = await supabase
-        .from("offers")
-        .insert({
-          listing_id: listingId,
-          external_model_id: model.modelId,
-          variant_id: newVariant.id,
-          match_status: "pending",
-        })
-        .select("id")
-        .single();
-
-      if (newOffer) {
-        // Quan sát giá đầu tiên
-        await supabase.from("price_observations").insert({
-          offer_id: newOffer.id,
-          price: model.price,
-          original_price: model.originalPrice,
-          stock: model.stock,
-          is_flash_sale: model.isFlashSale,
-          is_valid: true,
-          source: "api",
-          observed_at: nowIso,
-        });
-
-        // Cập nhật variant_current_price
-        await supabase.from("variant_current_price").upsert({
-          variant_id: newVariant.id,
-          best_offer_id: newOffer.id,
-          price: model.price,
-          original_price: model.originalPrice,
-          is_flash_sale: model.isFlashSale,
-          in_stock: (model.stock ?? 1) > 0,
-          offer_count: 1,
-          observed_at: nowIso,
-        });
-      }
-    }
-
-    // Refresh rollup cho hôm nay
-    const todayStr = toVnDate(new Date());
-    await supabase.rpc("refresh_variant_daily_prices", {
-      p_from: todayStr,
-      p_to: todayStr,
-    });
-
-    return {
-      status: "ingested",
-      productUrl: `/san-pham/${prodSlug}${firstVariantId ? `?variant=${firstVariantId}` : ""}`,
-    };
+    detail = await getItemDetail(shopId, itemId);
   } catch (err) {
-    console.error("Lỗi Ingest Shopee:", err);
+    if (!(err instanceof ShopeeUnavailableError)) console.error("Lỗi gọi Shopee:", err);
+    return { status: "error", code: "upstream_unavailable" };
+  }
+  if (!detail.title || detail.models.length === 0) {
+    return { status: "error", code: "upstream_unavailable" };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("ingest_shopee_item", {
+    p: {
+      ext_item_id: externalItemId(shopId, itemId),
+      url: `https://shopee.vn/product/${shopId}/${itemId}`,
+      title: detail.title,
+      slug_base: slugify(detail.title, 80),
+      source: detail.source,
+      seller: {
+        external_id: shopId,
+        name: detail.sellerName,
+        rating: detail.sellerRating,
+        rating_count: detail.sellerRatingCount,
+        is_official: detail.sellerIsOfficial,
+      },
+      models: detail.models.map((m) => ({
+        model_id: m.modelId,
+        name: m.name,
+        price: m.price,
+        original_price: m.originalPrice,
+        stock: m.stock,
+        is_flash_sale: m.isFlashSale,
+      })),
+    },
+  });
+
+  if (error || !data) {
+    console.error("Lỗi ingest_shopee_item:", error?.message);
     return { status: "error", code: "internal" };
   }
+
+  const r = data as {
+    status: "resolved" | "ingested";
+    product_slug: string;
+    category_slug: string | null;
+    variant_id: string | null;
+  };
+  return {
+    status: r.status,
+    productUrl: productUrl(r.category_slug, r.product_slug, r.variant_id),
+  };
 }

@@ -33,6 +33,9 @@ export interface SearchResult {
 }
 
 const PAGE_SIZE = 24;
+const AUTOCOMPLETE_LIMIT = 8;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function parseSearchParams(
   raw: URLSearchParams | Record<string, string | string[] | undefined>,
@@ -56,7 +59,9 @@ export function parseSearchParams(
   };
 
   const q = getParam("q")?.trim() || undefined;
-  const categoryId = getParam("catId") || undefined;
+  // catId đi thẳng vào tham số uuid của RPC: giá trị rác làm RPC ném lỗi → trang lỗi.
+  const rawCatId = getParam("catId");
+  const categoryId = rawCatId && UUID_RE.test(rawCatId) ? rawCatId : undefined;
   const categorySlug = getParam("cat") || undefined;
 
   // brands có thể truyền dạng ?brand=samsung&brand=wd
@@ -191,23 +196,56 @@ export interface FilterFacets {
  * link lọc đều ra 0 kết quả, còn brand hard-code thì vừa hiện thứ không có vừa
  * thiếu thứ đang có.
  *
- * Ở quy mô G1 (vài nghìn sản phẩm) việc gom brand ở tầng ứng dụng là đủ. Khi
- * catalog lớn hơn, đổi sang một view hoặc RPC trả sẵn danh sách distinct.
+ * Brand lấy qua RPC distinct: đọc cả cột về tầng ứng dụng thì bị PostgREST cắt
+ * âm thầm ở 1000 dòng.
  */
 export async function getFilterFacets(): Promise<FilterFacets> {
   const supabase = await createClient();
 
   const [catRes, brandRes] = await Promise.all([
     supabase.from("categories").select("slug, name").order("sort_order"),
-    supabase.from("products").select("brand").not("brand", "is", null),
+    supabase.rpc("product_brands"),
   ]);
 
   if (catRes.error) throw new Error(`Đọc danh mục thất bại: ${catRes.error.message}`);
   if (brandRes.error) throw new Error(`Đọc brand thất bại: ${brandRes.error.message}`);
 
-  const brands = Array.from(
-    new Set((brandRes.data ?? []).map((r) => r.brand).filter((b): b is string => !!b)),
-  ).sort((a, b) => a.localeCompare(b, "vi"));
+  const brands = (brandRes.data ?? [])
+    .map((r) => r.brand)
+    .filter((b): b is string => !!b)
+    .sort((a, b) => a.localeCompare(b, "vi"));
 
   return { categories: catRes.data ?? [], brands };
+}
+
+export interface AutocompleteItem {
+  productId: string;
+  slug: string;
+  categorySlug: string;
+  name: string;
+  brand: string | null;
+  image: string | null;
+  bestPrice: number | null;
+}
+
+/** Gợi ý khi gõ: chỉ lấy đúng số dòng cần hiện (spec §12), không filter. */
+export async function autocompleteProducts(q: string): Promise<AutocompleteItem[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("search_products", {
+    p_q: q,
+    p_sort: "relevance",
+    p_limit: AUTOCOMPLETE_LIMIT,
+    p_offset: 0,
+  });
+  if (error) throw new Error(`Gợi ý tìm kiếm thất bại: ${error.message}`);
+
+  return (data ?? []).map((d) => ({
+    productId: d.product_id,
+    slug: d.slug,
+    categorySlug: d.category_slug || "san-pham",
+    name: d.canonical_name,
+    brand: d.brand,
+    image: d.image,
+    bestPrice: d.best_price != null ? Number(d.best_price) : null,
+  }));
 }

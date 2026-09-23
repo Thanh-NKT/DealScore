@@ -6,9 +6,14 @@ import {
 import { discountPercent } from "@/lib/format";
 import {
   expandRollup,
+  historyStats,
   medianWindow,
   type DailyPriceRow,
+  type HistoryStats,
 } from "@/lib/price-history";
+
+export const FLASH_SALE_REASON =
+  "⚠ Giá hiện tại là giá flash sale, chỉ kéo dài trong thời gian ngắn";
 
 export interface OfferRow {
   offerId: string;
@@ -25,7 +30,8 @@ export interface OfferRow {
   originalPrice: number | null;
   stock: number | null;
   isFlashSale: boolean;
-  observedAt: string;
+  /** null = chưa có quan sát nào. KHÔNG thay bằng "bây giờ": dữ liệu sẽ trông tươi hơn thực tế. */
+  observedAt: string | null;
 }
 
 export interface PricedOffer extends OfferRow {
@@ -38,8 +44,20 @@ export interface PricedOffer extends OfferRow {
 export interface VariantPricing {
   offers: PricedOffer[]; // còn hàng theo giá tăng dần, rồi hết hàng
   cheapest: PricedOffer | null; // offer còn hàng rẻ nhất
+  /**
+   * Khi KHÔNG còn offer nào còn hàng: offer có giá ghi nhận gần nhất, để hiện
+   * "Tạm hết hàng" + giá lần cuối (1.2.a.4). null khi còn hàng, hoặc chưa có giá.
+   */
+  lastKnown: PricedOffer | null;
+  /** true khi có offer có giá nhưng tất cả đều hết hàng — không chấm điểm (1.2.e). */
+  allOutOfStock: boolean;
   /** Điểm hiển thị đầu trang. Gọi KHÔNG truyền bestOffer (Quyết định Đ7). */
   headline: DealScoreResult | null;
+  /**
+   * Đáy / trung vị / đỉnh 90 ngày cho StatsRow. Luôn tính, kể cả khi Deal
+   * Score chưa đủ ngưỡng (1.2.d.3: "vẫn hiện các số đã có").
+   */
+  stats: HistoryStats;
   fakeSaleMessage: string | null;
   trackingSince: string | null; // 'YYYY-MM-DD'
   updatedAt: string | null;
@@ -93,13 +111,33 @@ export function buildVariantPricing(input: {
   // 4. Offer rẻ nhất còn hàng
   const cheapest = mappedOffers.find((o) => o.inStock && o.price != null && o.price > 0) ?? null;
 
+  // Hết hàng ở mọi người bán: giá lần cuối lấy từ quan sát MỚI nhất.
+  const pricedOffers = mappedOffers.filter((o) => o.price != null && o.price > 0);
+  const lastKnown =
+    cheapest == null
+      ? ([...pricedOffers].sort(
+          (a, b) =>
+            (b.observedAt ? Date.parse(b.observedAt) : 0) -
+            (a.observedAt ? Date.parse(a.observedAt) : 0),
+        )[0] ?? null)
+      : null;
+
   // 5. Tính Deal Score đầu trang (Đ7: KHÔNG truyền bestOffer)
   let headline: DealScoreResult | null = null;
   if (cheapest && cheapest.price != null) {
     headline = computeDealScore({
       price: cheapest.price,
       history: historyObs,
+      now,
     });
+    // Lịch sử đã loại flash sale nên giá flash hiện tại gần như luôn "Nên mua".
+    // Không đổi điểm, nhưng phải nói rõ giá này chỉ tạm thời.
+    if (cheapest.isFlashSale && headline.score != null) {
+      headline = {
+        ...headline,
+        reasons: [FLASH_SALE_REASON, ...headline.reasons].slice(0, 4),
+      };
+    }
   }
 
   // 6. Tính Deal Score riêng cho từng offer (so với offer rẻ nhất).
@@ -118,6 +156,7 @@ export function buildVariantPricing(input: {
             price: offer.price,
             history: historyObs,
             bestOffer: cheapest?.price ?? undefined,
+            now,
           });
   }
 
@@ -128,16 +167,23 @@ export function buildVariantPricing(input: {
     const m14 = medianWindow(history, 14, 0, now);
     const m60 = medianWindow(history, 74, 14, now);
 
+    // Heuristic #2 ("tăng giá trước đợt giảm") chỉ có nghĩa khi ĐANG có đợt
+    // giảm: có giá niêm yết gạch ngang, hoặc giá hiện tại thấp hơn trung vị 14
+    // ngày. Không thì một sản phẩm chỉ vừa tăng giá cũng bị gắn nhãn — một phát
+    // ngôn về người bán mà "thà bỏ sót" (design §13) không cho phép.
+    const onSale =
+      cheapest.discountPercent != null ||
+      (m14.value != null && cheapest.price < m14.value);
+    const priceHikeCheckable = onSale && m14.dayCount >= 10 && m60.dayCount >= 30;
+
     // Heuristic #1 chỉ chạy khi m30.dayCount >= 14
     if (m30.dayCount >= 14) {
       fakeSaleMessage = detectFakeSale({
         currentPrice: cheapest.price,
         listedPrice: cheapest.originalPrice ?? 0,
         median30d: m30.value ?? 0,
-        median14dBeforeSale:
-          m14.dayCount >= 10 && m60.dayCount >= 30 ? m14.value ?? undefined : undefined,
-        median60dBefore:
-          m14.dayCount >= 10 && m60.dayCount >= 30 ? m60.value ?? undefined : undefined,
+        median14dBeforeSale: priceHikeCheckable ? m14.value ?? undefined : undefined,
+        median60dBefore: priceHikeCheckable ? m60.value ?? undefined : undefined,
       });
     }
   }
@@ -162,7 +208,10 @@ export function buildVariantPricing(input: {
   return {
     offers: mappedOffers,
     cheapest,
+    lastKnown,
+    allOutOfStock: cheapest == null && lastKnown != null,
     headline,
+    stats: historyStats(history, now),
     fakeSaleMessage,
     trackingSince,
     updatedAt: latestObservedAt,

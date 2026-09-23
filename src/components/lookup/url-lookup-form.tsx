@@ -2,18 +2,13 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { lookupErrorMessage, type LookupErrorCode } from "@/lib/lookup-messages";
 
 interface UrlLookupFormProps {
   autoFocus?: boolean;
 }
 
-type ErrorCode =
-  | "not_a_url"
-  | "not_shopee"
-  | "unrecognized_format"
-  | "rate_limited"
-  | "upstream_unavailable"
-  | "internal";
+type ErrorCode = LookupErrorCode;
 
 export function UrlLookupForm({ autoFocus = false }: UrlLookupFormProps) {
   const router = useRouter();
@@ -76,21 +71,9 @@ export function UrlLookupForm({ autoFocus = false }: UrlLookupFormProps) {
 
   const getErrorMessage = () => {
     if (!errorInfo) return null;
-    switch (errorInfo.code) {
-      case "not_a_url":
-        return "Hãy dán một đường dẫn sản phẩm.";
-      case "not_shopee":
-        return "Hiện tại mới hỗ trợ Shopee.";
-      case "unrecognized_format":
-        return "Không đọc được đường dẫn này. Hãy thử sao chép lại từ ứng dụng Shopee.";
-      case "rate_limited":
-        return `Bạn đã tra cứu khá nhiều. Thử lại sau ${errorInfo.retryAfter ? `${errorInfo.retryAfter}s` : "ít phút"}.`;
-      case "upstream_unavailable":
-        return "Chưa lấy được dữ liệu từ Shopee lúc này.";
-      case "internal":
-      default:
-        return errorInfo.message || "Có lỗi xảy ra. Vui lòng thử lại.";
-    }
+    // "internal" và mã lạ: dùng thông điệp server trả về nếu có.
+    if (errorInfo.code === "internal" && errorInfo.message) return errorInfo.message;
+    return lookupErrorMessage(errorInfo.code, errorInfo.retryAfter);
   };
 
   return (
@@ -131,22 +114,6 @@ export function UrlLookupForm({ autoFocus = false }: UrlLookupFormProps) {
           className="rounded-xl border border-rec-avoid/30 bg-rec-avoid-bg p-3 text-xs text-rec-avoid space-y-2"
         >
           <p className="font-semibold">{getErrorMessage()}</p>
-          {errorInfo.code === "upstream_unavailable" && (
-            <div className="flex flex-col sm:flex-row gap-2 pt-1">
-              <input
-                type="email"
-                placeholder="Nhập email của bạn"
-                className="rounded-lg border border-rec-avoid/40 bg-background px-3 py-1.5 text-xs text-foreground outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => alert("Đã ghi nhận! Chúng tôi sẽ gửi thông báo khi dữ liệu sẵn sàng.")}
-                className="rounded-lg bg-rec-avoid px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
-              >
-                Báo cho tôi khi sẵn sàng
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>

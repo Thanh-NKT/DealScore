@@ -3,12 +3,13 @@ import { computeDealScore } from "@/lib/deal-score";
 import { expandRollup, type DailyPriceRow } from "@/lib/price-history";
 import {
   buildVariantPricing,
+  FLASH_SALE_REASON,
   isOfferVisible,
   type OfferRow,
 } from "@/lib/variant-pricing";
 
-/** computeDealScore() dùng new Date() bên trong — dữ liệu phải tương đối với thời gian thật. */
-const REAL_NOW = new Date();
+/** Đồng hồ cố định (10:00 giờ VN), truyền vào qua `now`. */
+const NOW = new Date("2026-06-15T03:00:00Z");
 
 function offer(over: Partial<OfferRow> = {}): OfferRow {
   return {
@@ -26,7 +27,7 @@ function offer(over: Partial<OfferRow> = {}): OfferRow {
     originalPrice: null,
     stock: 5,
     isFlashSale: false,
-    observedAt: REAL_NOW.toISOString(),
+    observedAt: NOW.toISOString(),
     ...over,
   };
 }
@@ -36,7 +37,7 @@ function history(days: number, price: (i: number) => number): DailyPriceRow[] {
     const daysAgo = days - 1 - i;
     const p = price(i);
     return {
-      day: new Date(REAL_NOW.getTime() - daysAgo * 86_400_000)
+      day: new Date(NOW.getTime() - daysAgo * 86_400_000)
         .toISOString()
         .slice(0, 10),
       min_price: p,
@@ -80,7 +81,7 @@ describe("buildVariantPricing — sắp xếp", () => {
     history: HIST,
     trackingSince: null,
     isDraftProduct: false,
-    now: REAL_NOW,
+    now: NOW,
   };
 
   it("còn hàng lên trước, trong nhóm thì giá tăng dần", () => {
@@ -129,7 +130,7 @@ describe("buildVariantPricing — điểm đầu trang (quyết định Đ7)", (
     history: HIST,
     trackingSince: null,
     isDraftProduct: false,
-    now: REAL_NOW,
+    now: NOW,
   };
 
   it("KHÔNG truyền bestOffer, nên điểm thấp hơn khi truyền bestOffer = chính nó", () => {
@@ -141,6 +142,7 @@ describe("buildVariantPricing — điểm đầu trang (quyết định Đ7)", (
       price: 1100,
       history: expandRollup(HIST),
       bestOffer: 1100, // cBetween luôn = 100 → cộng khống +20
+      now: NOW,
     });
 
     expect(out.headline).not.toBeNull();
@@ -170,7 +172,7 @@ describe("buildVariantPricing — điểm đầu trang (quyết định Đ7)", (
 });
 
 describe("buildVariantPricing — Fake Sale chỉ chạy khi đủ dữ liệu", () => {
-  const base = { trackingSince: null, isDraftProduct: false, now: REAL_NOW };
+  const base = { trackingSince: null, isDraftProduct: false, now: NOW };
 
   it("không ra nhãn khi lịch sử quá ngắn", () => {
     const out = buildVariantPricing({
@@ -205,7 +207,7 @@ describe("buildVariantPricing — độ tươi dữ liệu", () => {
     history: HIST,
     trackingSince: null,
     isDraftProduct: false,
-    now: REAL_NOW,
+    now: NOW,
   };
 
   it("đánh dấu cũ khi quan sát mới nhất quá 48 giờ", () => {
@@ -213,7 +215,7 @@ describe("buildVariantPricing — độ tươi dữ liệu", () => {
       ...base,
       offers: [
         offer({
-          observedAt: new Date(REAL_NOW.getTime() - 3 * 86_400_000).toISOString(),
+          observedAt: new Date(NOW.getTime() - 3 * 86_400_000).toISOString(),
         }),
       ],
     });
@@ -225,7 +227,7 @@ describe("buildVariantPricing — độ tươi dữ liệu", () => {
       ...base,
       offers: [
         offer({
-          observedAt: new Date(REAL_NOW.getTime() - 3_600_000).toISOString(),
+          observedAt: new Date(NOW.getTime() - 3_600_000).toISOString(),
         }),
       ],
     });
@@ -239,15 +241,100 @@ describe("buildVariantPricing — độ tươi dữ liệu", () => {
       offers: [
         offer({
           offerId: "hien",
-          observedAt: new Date(REAL_NOW.getTime() - 5 * 86_400_000).toISOString(),
+          observedAt: new Date(NOW.getTime() - 5 * 86_400_000).toISOString(),
         }),
         offer({
           offerId: "an",
           listingStatus: "inactive",
-          observedAt: REAL_NOW.toISOString(),
+          observedAt: NOW.toISOString(),
         }),
       ],
     });
     expect(out.isStale).toBe(true);
+  });
+});
+
+describe("buildVariantPricing — hết hàng ở mọi người bán (1.2.a.4, 1.2.e)", () => {
+  const base = { history: HIST, trackingSince: null, isDraftProduct: false, now: NOW };
+
+  it("không chấm điểm, nhưng giữ giá ghi nhận gần nhất để hiện 'Tạm hết hàng'", () => {
+    const out = buildVariantPricing({
+      ...base,
+      offers: [
+        offer({ offerId: "a", price: 900, stock: 0, observedAt: "2026-06-10T00:00:00Z" }),
+        offer({ offerId: "b", price: 950, stock: 0, observedAt: "2026-06-14T00:00:00Z" }),
+      ],
+    });
+    expect(out.cheapest).toBeNull();
+    expect(out.headline).toBeNull();
+    expect(out.allOutOfStock).toBe(true);
+    expect(out.lastKnown?.offerId).toBe("b");
+    expect(out.lastKnown?.inStock).toBe(false);
+  });
+
+  it("còn hàng thì không có lastKnown", () => {
+    const out = buildVariantPricing({ ...base, offers: [offer()] });
+    expect(out.allOutOfStock).toBe(false);
+    expect(out.lastKnown).toBeNull();
+  });
+
+  it("chưa có giá nào thì không phải trạng thái hết hàng", () => {
+    const out = buildVariantPricing({ ...base, offers: [offer({ price: null, stock: 0 })] });
+    expect(out.allOutOfStock).toBe(false);
+  });
+});
+
+describe("buildVariantPricing — số liệu StatsRow (1.2.d.3)", () => {
+  it("vẫn có đáy / trung vị / đỉnh khi Deal Score chưa đủ ngưỡng", () => {
+    const short = history(5, (i) => 1000 + i * 100);
+    const out = buildVariantPricing({
+      offers: [offer({ price: 1000 })],
+      history: short,
+      trackingSince: short[0].day,
+      isDraftProduct: false,
+      now: NOW,
+    });
+    expect(out.headline?.recommendation).toBe("insufficient_data");
+    expect(out.stats).toEqual({ low: 1000, median: 1200, high: 1400, dayCount: 5 });
+  });
+
+  it("khi đủ ngưỡng thì trùng với stats của Deal Score", () => {
+    const out = buildVariantPricing({
+      offers: [offer({ price: 1100 })],
+      history: HIST,
+      trackingSince: null,
+      isDraftProduct: false,
+      now: NOW,
+    });
+    const { low, median, high } = out.headline!.stats;
+    expect(out.stats).toMatchObject({ low, median, high });
+  });
+});
+
+describe("buildVariantPricing — flash sale", () => {
+  it("giá flash hiện tại thêm lý do cảnh báo lên đầu, không đổi điểm", () => {
+    const base = { history: HIST, trackingSince: null, isDraftProduct: false, now: NOW };
+    const normal = buildVariantPricing({ ...base, offers: [offer({ price: 900 })] });
+    const flash = buildVariantPricing({ ...base, offers: [offer({ price: 900, isFlashSale: true })] });
+    expect(flash.headline!.score).toBe(normal.headline!.score);
+    expect(flash.headline!.reasons[0]).toBe(FLASH_SALE_REASON);
+    expect(flash.headline!.reasons.length).toBeLessThanOrEqual(4);
+    expect(normal.headline!.reasons).not.toContain(FLASH_SALE_REASON);
+  });
+});
+
+describe("buildVariantPricing — heuristic tăng giá trước sale", () => {
+  // 60 ngày ở 1000, rồi 14 ngày gần nhất ở 1300: trung vị 14 ngày > 60 ngày × 1.15.
+  const raised = history(75, (i) => (i >= 60 ? 1300 : 1000));
+  const base = { history: raised, trackingSince: null, isDraftProduct: false, now: NOW };
+
+  it("chỉ tăng giá, KHÔNG có đợt giảm → không gắn nhãn", () => {
+    const out = buildVariantPricing({ ...base, offers: [offer({ price: 1300 })] });
+    expect(out.fakeSaleMessage).toBeNull();
+  });
+
+  it("tăng giá rồi 'giảm' về đúng mức cũ → gắn nhãn", () => {
+    const out = buildVariantPricing({ ...base, offers: [offer({ price: 1150 })] });
+    expect(out.fakeSaleMessage).toBe("Giá tăng gần đây trước đợt giảm.");
   });
 });

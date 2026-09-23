@@ -3,6 +3,7 @@ import { formatVnd } from "@/lib/format";
 import { UpdatedAt } from "./updated-at";
 
 interface PriceSummaryProps {
+  /** Offer còn hàng rẻ nhất, hoặc — khi hết hàng ở mọi nơi — offer có giá ghi nhận gần nhất. */
   cheapest: PricedOffer | null;
   offerCount: number;
   updatedAt?: string | null;
@@ -42,7 +43,7 @@ export function PriceSummary({
     );
   }
 
-  const { price, originalPrice, discountPercent } = cheapest;
+  const { price, originalPrice, discountPercent, isFlashSale } = cheapest;
 
   return (
     <div className="space-y-1">
@@ -50,6 +51,12 @@ export function PriceSummary({
         <div className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           {formatVnd(price)}
         </div>
+
+        {isFlashSale && (
+          <span className="rounded-md bg-rec-wait-bg px-2 py-0.5 text-xs font-bold text-rec-wait">
+            Flash sale
+          </span>
+        )}
 
         {discountPercent !== null && originalPrice != null && (
           <div className="flex items-center gap-2">

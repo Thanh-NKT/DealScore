@@ -34,7 +34,8 @@ export function Filters({
     if (existsIndex >= 0) {
       current.splice(existsIndex, 1);
     } else {
-      current.push(brandLower);
+      // Giữ nguyên chữ hoa/thường như trong catalog ("Samsung", "WD").
+      current.push(brand);
     }
 
     return createFilterHref({ brands: current });
@@ -117,7 +118,13 @@ export function Filters({
           {params.brands?.map((b) => (
             <input key={b} type="hidden" name="brand" value={b} />
           ))}
-          {params.sort && <input type="hidden" name="sort" value={params.sort} />}
+          {params.categoryId && (
+            <input type="hidden" name="catId" value={params.categoryId} />
+          )}
+          {/* Như toSearchParams: không ghi sort mặc định vào URL. */}
+          {params.sort && params.sort !== (params.q ? "relevance" : "updated") && (
+            <input type="hidden" name="sort" value={params.sort} />
+          )}
 
           <div className="flex items-center gap-2">
             <input

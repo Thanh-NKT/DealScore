@@ -66,6 +66,9 @@ export function OfferList({ offers }: OfferListProps) {
                   {offer.sellerRatingCount != null && (
                     <span>({offer.sellerRatingCount.toLocaleString("vi-VN")} đánh giá)</span>
                   )}
+                  {offer.isFlashSale && offer.inStock && (
+                    <span className="font-medium text-rec-wait">Flash sale</span>
+                  )}
                   {!offer.inStock && (
                     <span className="font-medium text-rec-avoid">Tạm hết hàng</span>
                   )}

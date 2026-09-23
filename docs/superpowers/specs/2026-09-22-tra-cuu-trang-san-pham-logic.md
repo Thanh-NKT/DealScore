@@ -7,6 +7,25 @@
 
 ---
 
+## Cập nhật sau review code (2026-09-23)
+
+Code đã lệch khỏi các mục dưới đây có chủ đích. Khi mâu thuẫn, **mục này thắng**.
+
+| Mục | Thay đổi | Lý do |
+|---|---|---|
+| §1 | Migration `0004` thu hồi INSERT/UPDATE/DELETE của `anon`/`authenticated` trên mọi bảng catalog, đổi default privileges, `revoke execute` các hàm `security definer`. `affiliate_offers` chỉ đọc được cột `offer_id, eligible`. | Supabase mặc định cấp ALL cho `anon`: bảng không RLS thì anon key ghi được, kể cả đích redirect của `/go`. |
+| §1 | `search_products`: lọc sơ bộ bằng `@@` / `%>` (dùng index) trước các lateral; giá và điểm lấy từ **cùng** variant đại diện (còn hàng, rẻ nhất); brand không phân biệt hoa thường; token có `-`/`.` được tách. Thêm RPC `product_brands()`. | Hiệu năng; card từng hiện điểm của variant này cạnh giá của variant khác. |
+| §9 | `getItemDetail` ném `ShopeeUnavailableError` khi chưa có API. Dữ liệu giả chỉ khi `SHOPEE_CLIENT=fake` và không phải production, ghi `source = 'seed'` (check constraint mở rộng). | Stub từng ghi giá bịa vào catalog như giá thật. |
+| §10 | Hạn mức kiểm-và-ghi **nguyên tử** trong DB: `lookup_begin()` (chống quét 120/giờ/IP, tạo dòng `pending`) → `lookup_begin_ingest()` (10/60/cap, chỉ khi URL chưa có) → `finishLookup()`. Lỗi DB thì chặn, không cho qua. `lookup_requests` thêm `is_ingest`, outcome `pending`. | Kiểm-rồi-ghi ở tầng ứng dụng không chặn được request đồng thời; lỗi DB từng tắt rate limit âm thầm. |
+| §11 | Ingest là RPC `ingest_shopee_item(jsonb)` — một transaction, advisory lock theo item, `on conflict` cho seller/listing/offer, unique `(listing_id, external_model_id)`. **Chưa làm matcher v0 (bước 7)**: mọi offer đi thẳng vào product draft. | Spec yêu cầu một transaction; bản JS cũ có race tạo product trùng. |
+| §12 | Luồng tra cứu gom vào `src/lib/lookup.ts` `lookupShopeeUrl()`, dùng chung cho `/api/lookup` **và** `/share-target`. Thứ tự: chuẩn hóa → parse → hạn mức chống quét → theo redirect → tra catalog → hạn mức ingest → ingest. | `/share-target` từng ingest không rate limit; tra catalog phải chạy trước để biết lượt này có phải ingest. |
+| §8 | Allowlist host dùng chung `SHOPEE_HOSTS`/`SHORT_HOSTS` từ `parse-url.ts`, so khớp chính xác, chặn cổng khác mặc định, dừng ngay khi đã đọc được URL sản phẩm. | Đúng spec gốc; bản cũ dùng `endsWith`. |
+| §5 | `VariantPricing` thêm `lastKnown`, `allOutOfStock`, `stats` (đáy/trung vị/đỉnh luôn có). Heuristic #2 chỉ chạy khi đang có đợt giảm. Giá flash hiện tại thêm lý do cảnh báo. `OfferRow.observedAt` có thể `null`. | Hết hàng từng hiện "Chưa có dữ liệu giá"; StatsRow trống khi chưa đủ ngưỡng; nhãn fake sale gắn cho sản phẩm chỉ vừa tăng giá. |
+| §12 `/go` | Validate UUID, đối chiếu `marketplace`, 404 cho offer `rejected`/listing inactive, allowlist host đích, kiểm tra lỗi ghi click, ghi `user_id` + `session_id` (cookie phiên `kairo_sid`). | Open redirect; click mất lặng lẽ. |
+| §13 | Mọi lỗi query đều ném, không biến thành 404 hay "chưa có dữ liệu". | Nuốt lỗi hạ tầng là hiện dữ liệu sai như dữ liệu thật. |
+
+---
+
 ## 0. Ràng buộc bắt buộc
 
 | | |
@@ -28,9 +47,15 @@
 
 `admin` **không bao giờ** được import vào Client Component.
 
-### Không được sửa
+### `deal-score.ts` — chỉ sửa có chủ đích
 
-`src/lib/deal-score.ts` giữ nguyên. Nó thuần hàm để backtest được. Mọi thứ khác bọc quanh nó.
+`src/lib/deal-score.ts` phải giữ **thuần hàm** để backtest được; mọi thứ khác bọc quanh nó.
+Sau review 2026-09-23 đã sửa hai điểm (được duyệt), mọi thay đổi công thức khác phải qua backtest:
+
+- Nhận `now?: Date`. Cửa sổ 90 ngày và `daysCovered` đếm theo **ngày lịch VN**, không theo
+  hiệu mili-giây — trước đó cùng một lịch sử cho ⚪ buổi sáng và có điểm buổi chiều.
+- Percentile rank kiểu **mid-rank** `(#< p + ½·#= p) / n`. Kiểu `≤ p` chấm giá đứng yên
+  như giá cao nhất lịch sử (🔴) trong khi lý do ghi "Đang ở mức đáy ghi nhận".
 
 ---
 

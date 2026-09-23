@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractFirstUrl,
   externalItemId,
+  normalizeLookupInput,
   parseShopeeUrl,
 } from "@/lib/shopee/parse-url";
 
@@ -113,5 +114,31 @@ describe("extractFirstUrl", () => {
 
   it("trả null khi không có URL", () => {
     expect(extractFirstUrl("không có link")).toBeNull();
+  });
+});
+
+describe("extractFirstUrl — dấu câu cuối", () => {
+  it("bỏ ngoặc và dấu chấm dính sau link trong văn bản chia sẻ", () => {
+    expect(extractFirstUrl("Xem nè (https://shope.ee/abc).")).toBe("https://shope.ee/abc");
+  });
+});
+
+describe("normalizeLookupInput", () => {
+  it("thêm https:// cho link rút gọn không có scheme — để theo redirect được", () => {
+    expect(normalizeLookupInput("shope.ee/abc")).toBe("https://shope.ee/abc");
+  });
+
+  it("lấy URL đầu tiên từ đoạn văn bản chia sẻ của app Shopee", () => {
+    expect(normalizeLookupInput("Mua ngay SSD giá tốt https://shope.ee/xyz nhé")).toBe(
+      "https://shope.ee/xyz",
+    );
+  });
+
+  it("giữ nguyên từ khóa không phải URL", () => {
+    expect(normalizeLookupInput("  ssd samsung ")).toBe("ssd samsung");
+    expect(parseShopeeUrl(normalizeLookupInput("samsung"))).toEqual({
+      ok: false,
+      reason: "not_a_url",
+    });
   });
 });

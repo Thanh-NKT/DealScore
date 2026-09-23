@@ -87,3 +87,47 @@ export function medianWindow(
 
   return { value: val, dayCount: n };
 }
+
+export interface HistoryStats {
+  low: number | null;
+  median: number | null;
+  high: number | null;
+  /** Số ngày có min_price trong cửa sổ. */
+  dayCount: number;
+}
+
+/**
+ * Đáy / trung vị / đỉnh của min_price theo ngày trong `windowDays` ngày gần
+ * nhất (tính cả hôm nay) — cùng dữ liệu computeDealScore() nhận qua
+ * expandRollup(), nên khi đã đủ ngưỡng các số này trùng với stats của Deal Score.
+ */
+export function historyStats(
+  rows: DailyPriceRow[],
+  now = new Date(),
+  windowDays = 90,
+): HistoryStats {
+  const fromDay = toVnDate(new Date(now.getTime() - windowDays * 86_400_000));
+  const today = toVnDate(now);
+  const prices = rows
+    .filter(
+      (r) =>
+        r.min_price != null &&
+        Number.isFinite(r.min_price) &&
+        r.min_price > 0 &&
+        r.day >= fromDay &&
+        r.day <= today,
+    )
+    .map((r) => r.min_price as number)
+    .sort((a, b) => a - b);
+
+  if (prices.length === 0) return { low: null, median: null, high: null, dayCount: 0 };
+
+  const n = prices.length;
+  const mid = Math.floor(n / 2);
+  return {
+    low: prices[0],
+    median: n % 2 === 0 ? (prices[mid - 1] + prices[mid]) / 2 : prices[mid],
+    high: prices[n - 1],
+    dayCount: n,
+  };
+}

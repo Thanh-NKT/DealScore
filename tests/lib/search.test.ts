@@ -61,3 +61,14 @@ describe("round-trip parse ↔ serialize", () => {
     expect(qs).not.toContain("sort=");
   });
 });
+
+describe("parseSearchParams — catId", () => {
+  it("bỏ catId không phải UUID, thay vì để RPC ném lỗi", () => {
+    expect(parseSearchParams({ catId: "abc" }).categoryId).toBeUndefined();
+  });
+
+  it("giữ catId đúng định dạng UUID", () => {
+    const id = "0b6f1c2e-5a8d-4c1e-9f3a-2d7b8e6c4a10";
+    expect(parseSearchParams({ catId: id }).categoryId).toBe(id);
+  });
+});

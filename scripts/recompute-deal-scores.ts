@@ -17,6 +17,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { computeDealScore } from "../src/lib/deal-score";
 import { expandRollup, type DailyPriceRow } from "../src/lib/price-history";
+import { toVnDate } from "../src/lib/format";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -34,9 +35,9 @@ async function main() {
     .select("variant_id, price");
   if (curErr) throw curErr;
 
-  const since = new Date(Date.now() - WINDOW_DAYS * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
+  // Một mốc now cho cả lượt chạy; cửa sổ theo ngày lịch VN, giống trang chi tiết.
+  const now = new Date();
+  const since = toVnDate(new Date(now.getTime() - WINDOW_DAYS * 86_400_000));
 
   const rows: Record<string, unknown>[] = [];
   const tally: Record<string, number> = {};
@@ -55,6 +56,7 @@ async function main() {
     const result = computeDealScore({
       price: v.price,
       history: expandRollup((history ?? []) as DailyPriceRow[]),
+      now,
     });
 
     tally[result.recommendation] = (tally[result.recommendation] ?? 0) + 1;
@@ -64,7 +66,7 @@ async function main() {
       score: result.score,
       recommendation: result.recommendation,
       price_at_compute: v.price,
-      computed_at: new Date().toISOString(),
+      computed_at: now.toISOString(),
     });
   }
 

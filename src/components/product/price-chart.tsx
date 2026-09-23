@@ -123,9 +123,10 @@ export function PriceChart({
           aria-labelledby="chart-title chart-desc"
           className="h-auto w-full select-none"
         >
-          <title id="chart-title">Biểu đồ giá {range} ngày</title>
+          {/* Một chuỗi duy nhất: <title>/<desc> trong SVG ghép nhiều text node thì HTML từ server không khớp lúc hydrate. */}
+          <title id="chart-title">{`Biểu đồ giá ${range} ngày`}</title>
           <desc id="chart-desc">
-            Giá thấp nhất từ {formatVnd(series.min)} đến {formatVnd(series.max)}, theo dõi {range} ngày.
+            {`Giá thấp nhất từ ${formatVnd(series.min)} đến ${formatVnd(series.max)}, theo dõi ${range} ngày.`}
           </desc>
 
           {/* Đường lưới và nhãn Y */}

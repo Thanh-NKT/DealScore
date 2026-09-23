@@ -45,10 +45,24 @@ export interface DealScoreInput {
   bestOffer?: number;
   /** Cửa sổ tính toán, mặc định 90 ngày. */
   windowDays?: number;
+  /**
+   * Thời điểm tính điểm, mặc định là bây giờ. Truyền vào để backtest tại một
+   * thời điểm trong quá khứ và để test không phụ thuộc đồng hồ thật.
+   */
+  now?: Date;
 }
 
-function daysBetween(a: Date, b: Date): number {
-  return Math.abs(a.getTime() - b.getTime()) / 86_400_000;
+const MS_PER_DAY = 86_400_000;
+/** Việt Nam cố định UTC+7, không có giờ mùa hè. */
+const VN_OFFSET_MS = 7 * 3_600_000;
+
+/**
+ * Số thứ tự NGÀY LỊCH theo giờ Việt Nam. Đếm độ phủ và cửa sổ bằng ngày lịch,
+ * không bằng hiệu mili-giây: nếu không, cùng một lịch sử cho ra ⚪ khi mở trang
+ * buổi sáng và có điểm khi mở buổi chiều.
+ */
+function vnDayIndex(d: Date): number {
+  return Math.floor((d.getTime() + VN_OFFSET_MS) / MS_PER_DAY);
 }
 
 function clamp(x: number, lo: number, hi: number): number {
@@ -61,14 +75,22 @@ function median(sorted: number[]): number {
   return n % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
-/** Tỷ lệ giá trị trong mảng ≤ p (percentile rank), 0–1. */
+/**
+ * Percentile rank kiểu mid-rank, 0–1: (số giá < p + ½ số giá = p) / n.
+ *
+ * Đếm cả phần bằng nhau (≤ p) thì giá đứng yên — rất phổ biến trên Shopee —
+ * có rank 1 và bị chấm như giá cao nhất lịch sử ("Chưa nên mua"), cùng lúc lý
+ * do lại ghi "Đang ở mức đáy ghi nhận".
+ */
 function percentileRank(sortedAsc: number[], p: number): number {
-  let count = 0;
+  let below = 0;
+  let equal = 0;
   for (const v of sortedAsc) {
-    if (v <= p) count++;
+    if (v < p) below++;
+    else if (v === p) equal++;
     else break;
   }
-  return count / sortedAsc.length;
+  return (below + 0.5 * equal) / sortedAsc.length;
 }
 
 /**
@@ -80,30 +102,29 @@ function percentileRank(sortedAsc: number[], p: number): number {
 export function computeDealScore(input: DealScoreInput): DealScoreResult {
   const { price, history, bestOffer } = input;
   const windowDays = input.windowDays ?? 90;
-  const now = new Date();
+  const today = vnDayIndex(input.now ?? new Date());
 
-  const valid = history.filter(
-    (o) =>
+  const valid = history.filter((o) => {
+    const day = vnDayIndex(new Date(o.observed_at));
+    return (
       o.is_valid !== false &&
       !o.is_flash_sale &&
       Number.isFinite(o.price) &&
       o.price > 0 &&
-      daysBetween(now, new Date(o.observed_at)) <= windowDays,
-  );
+      day >= today - windowDays &&
+      day <= today
+    );
+  });
 
+  // Số ngày lịch từ quan sát đầu tiên tới hôm nay: dữ liệu ngày -14..0 = 14 ngày.
   const daysCovered =
     valid.length > 0
-      ? daysBetween(
-          new Date(
-            Math.min(...valid.map((o) => new Date(o.observed_at).getTime())),
-          ),
-          now,
-        )
+      ? today - Math.min(...valid.map((o) => vnDayIndex(new Date(o.observed_at))))
       : 0;
 
   const emptyStats = {
     observations: valid.length,
-    daysCovered: Math.round(daysCovered),
+    daysCovered,
     low: null,
     median: null,
     high: null,
@@ -119,7 +140,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
       score: null,
       recommendation: "insufficient_data",
       reasons: [
-        `⚠ Hệ thống mới theo dõi sản phẩm này ${Math.round(daysCovered)} ngày`,
+        `⚠ Hệ thống mới theo dõi sản phẩm này ${daysCovered} ngày`,
       ],
       stats: emptyStats,
     };
@@ -180,7 +201,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
 
   if (daysCovered < 30) {
     reasons.push(
-      `⚠ Hệ thống mới theo dõi sản phẩm này ${Math.round(daysCovered)} ngày`,
+      `⚠ Hệ thống mới theo dõi sản phẩm này ${daysCovered} ngày`,
     );
   }
 
@@ -193,7 +214,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
     reasons: reasons.slice(0, 4),
     stats: {
       observations: valid.length,
-      daysCovered: Math.round(daysCovered),
+      daysCovered,
       low,
       median: med,
       high,

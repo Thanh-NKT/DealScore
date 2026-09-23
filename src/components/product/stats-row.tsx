@@ -1,13 +1,14 @@
-import type { DealScoreResult } from "@/lib/deal-score";
+import type { HistoryStats } from "@/lib/price-history";
 import { formatVnd } from "@/lib/format";
 
 interface StatsRowProps {
-  stats: DealScoreResult["stats"];
+  /** Luôn có số khi có dữ liệu — không phụ thuộc Deal Score đã đủ ngưỡng hay chưa. */
+  stats: HistoryStats;
   trackingSince: string | null;
 }
 
 export function StatsRow({ stats, trackingSince }: StatsRowProps) {
-  const { low, median, high, daysCovered } = stats;
+  const { low, median, high, dayCount } = stats;
 
   const formatDate = (dStr: string | null) => {
     if (!dStr) return "—";
@@ -59,9 +60,9 @@ export function StatsRow({ stats, trackingSince }: StatsRowProps) {
           <div className="mt-1 text-base font-bold text-foreground">
             {formatDate(trackingSince)}
           </div>
-          {daysCovered < 30 && daysCovered > 0 && (
+          {dayCount < 30 && dayCount > 0 && (
             <div className="text-[10px] text-muted">
-              (Dựa trên {daysCovered} ngày)
+              (Dựa trên {dayCount} ngày có dữ liệu)
             </div>
           )}
         </div>

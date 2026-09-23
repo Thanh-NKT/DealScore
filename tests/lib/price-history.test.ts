@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { computeDealScore } from "@/lib/deal-score";
-import { expandRollup, medianWindow, type DailyPriceRow } from "@/lib/price-history";
+import { toVnDate } from "@/lib/format";
+import {
+  expandRollup,
+  historyStats,
+  medianWindow,
+  type DailyPriceRow,
+} from "@/lib/price-history";
 
-/**
- * computeDealScore() gọi new Date() bên trong và KHÔNG nhận tham số now.
- * Vì vậy mọi dữ liệu dùng cho nó phải dựng tương đối với thời gian thật,
- * nếu không nó sẽ rơi ngoài cửa sổ 90 ngày và test đỏ vì lý do sai.
- */
-const REAL_NOW = new Date();
+/** Đồng hồ cố định, truyền vào computeDealScore qua `now`. 10:00 giờ VN. */
+const NOW = new Date("2026-06-15T03:00:00Z");
 
-function dayString(daysAgo: number, base: Date = REAL_NOW): string {
-  return new Date(base.getTime() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+function dayString(daysAgo: number, base: Date = NOW): string {
+  return toVnDate(new Date(base.getTime() - daysAgo * 86_400_000));
 }
 
 function row(daysAgo: number, price: number | null, base?: Date): DailyPriceRow {
@@ -63,25 +65,35 @@ describe("expandRollup", () => {
 describe("ngưỡng dữ liệu của deal-score khi đi qua rollup", () => {
   it("13 ngày đầy đủ vẫn là chưa đủ dữ liệu (ngưỡng 14 ngày)", () => {
     const rows = Array.from({ length: 13 }, (_, i) => row(12 - i, 1000));
-    const r = computeDealScore({ price: 1000, history: expandRollup(rows) });
+    const r = computeDealScore({ price: 1000, history: expandRollup(rows), now: NOW });
     expect(r.recommendation).toBe("insufficient_data");
     expect(r.score).toBeNull();
   });
 
-  it("trải 15 ngày nhưng chỉ 9 ngày có dữ liệu là chưa đủ (ngưỡng 10 quan sát)", () => {
-    // Ngày 15 có dữ liệu để daysCovered >= 14; thêm 8 ngày gần đây = 9 quan sát.
-    const rows = [row(15, 1000), ...Array.from({ length: 8 }, (_, i) => row(8 - i, 1000 + i))];
+  it("trải 14 ngày nhưng chỉ 9 ngày có dữ liệu là chưa đủ (ngưỡng 10 quan sát)", () => {
+    const rows = [row(14, 1000), ...Array.from({ length: 8 }, (_, i) => row(8 - i, 1000 + i))];
     expect(rows.filter((x) => x.min_price != null)).toHaveLength(9);
-    const r = computeDealScore({ price: 1000, history: expandRollup(rows) });
+    const r = computeDealScore({ price: 1000, history: expandRollup(rows), now: NOW });
     expect(r.recommendation).toBe("insufficient_data");
   });
 
-  it("trải 15 ngày và 10 ngày có dữ liệu thì chấm được điểm", () => {
-    const rows = Array.from({ length: 10 }, (_, i) => row(15 - i, 1000 + i));
+  it("trải 14 ngày và 10 ngày có dữ liệu thì chấm được điểm", () => {
+    const rows = [row(14, 1000), ...Array.from({ length: 9 }, (_, i) => row(8 - i, 1000 + i))];
     expect(rows.filter((x) => x.min_price != null)).toHaveLength(10);
-    const r = computeDealScore({ price: 900, history: expandRollup(rows) });
+    const r = computeDealScore({ price: 900, history: expandRollup(rows), now: NOW });
     expect(r.recommendation).not.toBe("insufficient_data");
-    expect(r.score).not.toBeNull();
+    expect(r.stats.daysCovered).toBe(14);
+  });
+
+  it("kết quả không đổi theo giờ trong ngày (đếm theo ngày lịch VN)", () => {
+    const rows = [row(14, 1000), ...Array.from({ length: 9 }, (_, i) => row(8 - i, 1000 + i))];
+    const at = (iso: string) =>
+      computeDealScore({ price: 900, history: expandRollup(rows), now: new Date(iso) });
+    // 00:30 và 23:30 giờ VN của cùng ngày NOW.
+    const early = at("2026-06-14T17:30:00Z");
+    const late = at("2026-06-15T16:30:00Z");
+    expect(early).toEqual(late);
+    expect(early.recommendation).not.toBe("insufficient_data");
   });
 });
 
@@ -124,5 +136,16 @@ describe("medianWindow", () => {
     const a = medianWindow(rows, 30, 0, morning);
     const b = medianWindow(rows, 30, 0, evening);
     expect(b.dayCount).toBe(a.dayCount);
+  });
+});
+
+describe("historyStats", () => {
+  it("đáy / trung vị / đỉnh trong 90 ngày, bỏ ngày ngoài cửa sổ và ngày trống", () => {
+    const rows = [row(91, 100), row(90, 3000), row(10, null), row(5, 1000), row(0, 2000)];
+    expect(historyStats(rows, NOW)).toEqual({ low: 1000, median: 2000, high: 3000, dayCount: 3 });
+  });
+
+  it("không có dữ liệu thì trả null", () => {
+    expect(historyStats([], NOW)).toEqual({ low: null, median: null, high: null, dayCount: 0 });
   });
 });

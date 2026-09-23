@@ -1,18 +1,20 @@
 /**
  * Theo redirect cho URL rút gọn của Shopee với kiểm tra bảo mật SSRF chặt chẽ.
+ *
+ * Người dùng cung cấp URL và server đi gọi nó. Mỗi hop đều phải qua:
+ * https, cổng mặc định, host nằm CHÍNH XÁC trong allowlist dùng chung với
+ * parse-url.ts. Không bao giờ trả body của response về client.
  */
+import { parseShopeeUrl, SHOPEE_HOSTS, SHORT_HOSTS } from "@/lib/shopee/parse-url";
 
-export const SHOPEE_HOST_ALLOWLIST = [
-  "shopee.vn",
-  "shope.ee",
-  "s.shopee.vn",
-] as const;
+const MAX_HOPS = 3;
+const HOP_TIMEOUT_MS = 3000;
 
-function isHostAllowed(hostname: string): boolean {
-  const h = hostname.toLowerCase();
-  return SHOPEE_HOST_ALLOWLIST.some(
-    (allowed) => h === allowed || h.endsWith(`.${allowed}`),
-  );
+function isHostAllowed(url: URL): boolean {
+  const h = url.hostname.toLowerCase();
+  // url.port rỗng = cổng mặc định của scheme (443). Cổng khác là dấu hiệu
+  // đang bị dắt tới một dịch vụ nội bộ.
+  return url.port === "" && (SHOPEE_HOSTS.has(h) || SHORT_HOSTS.has(h));
 }
 
 export async function resolveShopeeRedirect(
@@ -30,9 +32,10 @@ export async function resolveShopeeRedirect(
     }
 > {
   let currentUrl = initialUrl;
-  const maxHops = 3;
 
-  for (let hop = 0; hop < maxHops; hop++) {
+  // hop = số request đã gửi. Kiểm tra URL hiện tại TRƯỚC mỗi request, và
+  // kiểm tra cả URL đích cuối cùng sau request thứ MAX_HOPS.
+  for (let hop = 0; ; hop++) {
     let parsed: URL;
     try {
       parsed = new URL(currentUrl);
@@ -40,49 +43,46 @@ export async function resolveShopeeRedirect(
       return { ok: false, reason: "error" };
     }
 
-    // Chỉ chấp nhận HTTPS
     if (parsed.protocol !== "https:") {
       return { ok: false, reason: "insecure" };
     }
-
-    // Kiểm tra allowlist
-    if (!isHostAllowed(parsed.hostname)) {
+    if (!isHostAllowed(parsed)) {
       return { ok: false, reason: "host_not_allowed" };
     }
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+    // Đã tới URL sản phẩm đọc được — dừng, không gọi thêm request thừa.
+    if (parseShopeeUrl(currentUrl).ok) {
+      return { ok: true, finalUrl: currentUrl };
+    }
 
-      const res = await fetch(currentUrl, {
+    if (hop >= MAX_HOPS) {
+      return { ok: false, reason: "too_many_hops" };
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(currentUrl, {
         method: "HEAD",
         redirect: "manual",
-        signal: controller.signal,
+        signal: AbortSignal.timeout(HOP_TIMEOUT_MS),
       });
-
-      clearTimeout(timeoutId);
-
-      // Nếu có redirect status (301, 302, 307, 308)
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get("location");
-        if (!location) {
-          return { ok: true, finalUrl: currentUrl };
-        }
-
-        const nextUrl = new URL(location, currentUrl).toString();
-        currentUrl = nextUrl;
-      } else {
-        // Đã đến URL đích
-        return { ok: true, finalUrl: currentUrl };
-      }
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") {
+      if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
         return { ok: false, reason: "timeout" };
       }
       return { ok: false, reason: "error" };
     }
-  }
 
-  // Quá 3 hops
-  return { ok: false, reason: "too_many_hops" };
+    const location = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+    if (!location) {
+      // Không redirect nữa: URL hiện tại là đích.
+      return { ok: true, finalUrl: currentUrl };
+    }
+
+    try {
+      currentUrl = new URL(location, currentUrl).toString();
+    } catch {
+      return { ok: false, reason: "error" };
+    }
+  }
 }

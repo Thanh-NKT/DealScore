@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { searchProducts } from "@/lib/search";
+import { autocompleteProducts } from "@/lib/search";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -10,22 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await searchProducts({
-      q,
-      page: 1,
-      sort: "relevance",
-    });
-
-    const suggestions = result.items.slice(0, 8).map((item) => ({
-      productId: item.productId,
-      slug: item.slug,
-      categorySlug: item.categorySlug,
-      name: item.canonicalName,
-      brand: item.brand,
-      image: item.image,
-      bestPrice: item.bestPrice,
-    }));
-
+    const suggestions = await autocompleteProducts(q);
     return NextResponse.json(suggestions, {
       headers: {
         "Cache-Control": "public, max-age=60",
