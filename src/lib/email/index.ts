@@ -1,3 +1,4 @@
+import "server-only";
 import { Resend } from "resend";
 
 export interface EmailMessage {

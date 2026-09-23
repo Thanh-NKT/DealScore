@@ -20,8 +20,8 @@
     "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
     "scores:recompute": "tsx --env-file=.env.local scripts/recompute-deal-scores.ts",
     "test:db": "vitest run --config vitest.db.config.mts",
-    "alerts:run": "tsx --env-file=.env.local scripts/run-alerts.ts",
-    "conversions:import": "tsx --env-file=.env.local scripts/import-conversions.ts"
+    "alerts:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-alerts.ts",
+    "conversions:import": "tsx --conditions=react-server --env-file=.env.local scripts/import-conversions.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -31,6 +31,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "resend": "^6.28.1",
+    "server-only": "^0.0.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
