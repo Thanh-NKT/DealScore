@@ -6,11 +6,11 @@ const HEX = "3f2a1b4c5d6e4f708a9b0c1d2e3f4a5b";
 const ORIGIN = "https://shopee.vn/product/123/456";
 
 describe("encodeClickId / decodeClickId", () => {
-  it("khứ hồi", () => {
+  it("round trip", () => {
     expect(encodeClickId(ID)).toBe(HEX);
     expect(decodeClickId(HEX)).toBe(ID);
   });
-  it("chữ hoa vẫn nhận; sai độ dài / ký tự → null", () => {
+  it("uppercase still accepted; wrong length / characters → null", () => {
     expect(decodeClickId(HEX.toUpperCase())).toBe(ID);
     expect(decodeClickId(HEX.slice(1))).toBeNull();
     expect(decodeClickId(`${HEX.slice(1)}z`)).toBeNull();
@@ -18,18 +18,18 @@ describe("encodeClickId / decodeClickId", () => {
 });
 
 describe("encodeSubId / parseSubId", () => {
-  it.each(["web", "extension", "email", "push"] as const)("khứ hồi với %s", (src) => {
+  it.each(["web", "extension", "email", "push"] as const)("round trip with %s", (src) => {
     expect(parseSubId(encodeSubId(ID, src))).toEqual({ clickId: ID, source: src });
   });
-  it("clickId null → chỉ nguồn", () => {
+  it("null clickId → source only", () => {
     expect(encodeSubId(null, "email")).toBe("email");
     expect(parseSubId("email")).toEqual({ clickId: null, source: "email" });
   });
-  it("nhận mảng đã tách sẵn, và thứ tự slot đảo", () => {
+  it("accepts a pre-split array, and reversed slot order", () => {
     expect(parseSubId([HEX, "push"])).toEqual({ clickId: ID, source: "push" });
     expect(parseSubId(["push", HEX])).toEqual({ clickId: ID, source: "push" });
   });
-  it("rác → null / unknown, không ném", () => {
+  it("junk → null / unknown, never throws", () => {
     expect(parseSubId("abc-xyz")).toEqual({ clickId: null, source: "unknown" });
     expect(parseSubId(null)).toEqual({ clickId: null, source: "unknown" });
     expect(parseSubId([])).toEqual({ clickId: null, source: "unknown" });
@@ -46,7 +46,7 @@ describe("buildAffiliateUrl", () => {
     eligible: true,
   };
 
-  it("an_redir: đúng tham số, origin_link đã encode", () => {
+  it("an_redir: correct params, origin_link encoded", () => {
     const r = buildAffiliateUrl(base);
     expect(r.kind).toBe("affiliate");
     const u = new URL(r.url);
@@ -56,20 +56,20 @@ describe("buildAffiliateUrl", () => {
     expect(u.searchParams.get("sub_id")).toBe(`${HEX}-web`);
     expect(r.url).toContain(`origin_link=${encodeURIComponent(ORIGIN)}`);
   });
-  it("thiếu affiliateId → origin", () => {
+  it("missing affiliateId → origin", () => {
     expect(buildAffiliateUrl({ ...base, affiliateId: null })).toEqual({ url: ORIGIN, kind: "origin" });
   });
   it("eligible = false → origin", () => {
     expect(buildAffiliateUrl({ ...base, eligible: false })).toEqual({ url: ORIGIN, kind: "origin" });
   });
-  it("short_link: có → dùng nguyên; không → origin", () => {
+  it("short_link: present → used as is; absent → origin", () => {
     expect(buildAffiliateUrl({ ...base, mode: "short_link", shortLink: "https://s.shopee.vn/abc" })).toEqual({
       url: "https://s.shopee.vn/abc",
       kind: "affiliate",
     });
     expect(buildAffiliateUrl({ ...base, mode: "short_link" })).toEqual({ url: ORIGIN, kind: "origin" });
   });
-  it("originUrl không phải Shopee → ném (lỗi dữ liệu)", () => {
+  it("originUrl not on Shopee → throws (data error)", () => {
     expect(() => buildAffiliateUrl({ ...base, originUrl: "https://evil.com/x" })).toThrow();
   });
 });

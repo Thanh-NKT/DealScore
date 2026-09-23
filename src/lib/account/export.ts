@@ -51,8 +51,8 @@ export interface AccountExport {
 }
 
 /**
- * Chọn cột TƯỜNG MINH cho từng mục — không `...row`: cột thêm vào bảng sau này
- * (vd trạng thái nội bộ của engine như cond_state) không được tự động lọt vào
+ * Select columns EXPLICITLY for each section — no `...row`: columns added to a table later
+ * (e.g. internal engine state such as cond_state) must not leak in automatically
  * file export.
  */
 export function buildAccountExport(input: {
@@ -106,14 +106,14 @@ export function buildAccountExport(input: {
       price: num(e.price),
       deal_score: e.deal_score,
       created_at: e.created_at,
-      // Không xuất provider_message_id / last_error — dữ liệu vận hành nội bộ.
+      // Do not export provider_message_id / last_error — internal operational data.
       deliveries: e.alert_deliveries.map((d) => ({ channel: d.channel, status: d.status, sent_at: d.sent_at })),
     })),
-    // Chỉ thời điểm + trình duyệt — KHÔNG endpoint hay khóa (là bí mật gửi push).
+    // Only timestamp + browser — NEVER the endpoint or keys (they are push-delivery secrets).
     push_devices: input.pushDevices.map((d) => ({ created_at: d.created_at, user_agent: d.user_agent })),
     clicks: input.clicks.map((c) => ({ created_at: c.created_at, offer_id: c.offer_id, source: c.source })),
     url_lookups: input.lookups.map((l) => ({ created_at: l.created_at, outcome: l.outcome })),
-    // A8: không xuất commission / raw / sub_ids — đó là doanh thu của Kairo.
+    // A8: do not export commission / raw / sub_ids — that is Kairo's revenue.
     orders: input.orders.map((o) => ({
       purchase_time: o.purchase_time,
       status: o.status as ConversionStatus,
@@ -123,7 +123,7 @@ export function buildAccountExport(input: {
   };
 }
 
-/** kairo-du-lieu-YYYY-MM-DD.json theo ngày VN. */
+/** kairo-du-lieu-YYYY-MM-DD.json, dated in Vietnam time. */
 export function exportFileName(exportedAt: Date): string {
   const vnDate = exportedAt.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
   return `kairo-du-lieu-${vnDate}.json`;

@@ -2,7 +2,7 @@ import type { HistoryStats } from "@/lib/pricing/price-history";
 import { formatVnd } from "@/lib/format";
 
 interface StatsRowProps {
-  /** Luôn có số khi có dữ liệu — không phụ thuộc Deal Score đã đủ ngưỡng hay chưa. */
+  /** Always has numbers when data exists — regardless of whether the Deal Score met its threshold. */
   stats: HistoryStats;
   trackingSince: string | null;
 }

@@ -17,7 +17,7 @@ export function VariantPicker({
   selectedId,
   range,
 }: VariantPickerProps) {
-  // Ít hơn 2 phiên bản thì không cần bộ chọn
+  // Fewer than 2 variants: no picker needed
   if (!variants || variants.length < 2) {
     return null;
   }

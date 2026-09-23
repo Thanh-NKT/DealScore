@@ -37,7 +37,7 @@ describe("parseMoney", () => {
 });
 
 describe("parseTime", () => {
-  it("ISO, epoch giây, epoch ms, dd/MM/yyyy HH:mm:ss (giờ VN)", () => {
+  it("ISO, epoch seconds, epoch ms, dd/MM/yyyy HH:mm:ss (Vietnam time)", () => {
     expect(parseTime("2026-09-23T03:00:00Z")).toBe("2026-09-23T03:00:00.000Z");
     expect(parseTime(1_790_000_000)).toBe(new Date(1_790_000_000_000).toISOString());
     expect(parseTime(1_790_000_000_000)).toBe(new Date(1_790_000_000_000).toISOString());
@@ -45,7 +45,7 @@ describe("parseTime", () => {
     expect(parseTime("23/09/2026 10:00:00")).toBe("2026-09-23T03:00:00.000Z");
     expect(parseTime("23/09/2026 10:00")).toBe("2026-09-23T03:00:00.000Z");
   });
-  it("rác → null", () => {
+  it("junk → null", () => {
     expect(parseTime("hôm qua")).toBeNull();
     expect(parseTime("")).toBeNull();
     expect(parseTime(undefined)).toBeNull();
@@ -56,7 +56,7 @@ describe("normalizeApiRow", () => {
   const order = { orderId: "O1", orderStatus: "COMPLETED", purchaseTime: 1_790_000_000, utmContent: `${HEX}-email` };
   const item = { itemId: 111, modelId: 222, itemPrice: "250000", qty: 2, itemTotalCommission: "12500" };
 
-  it("đủ trường; order_value suy từ giá × số lượng; click + nguồn từ utmContent", () => {
+  it("all fields; order_value derived from price × quantity; click + source from utmContent", () => {
     const r = normalizeApiRow(order, item);
     expect(r).toMatchObject({
       ok: true,
@@ -78,19 +78,19 @@ describe("normalizeApiRow", () => {
     if (r.ok) expect(r.row.raw).toEqual({ order, item });
   });
 
-  it("thiếu orderId → lỗi kèm lý do", () => {
+  it("missing orderId → error with a reason", () => {
     const r = normalizeApiRow({ ...order, orderId: undefined }, item);
     expect(r).toEqual({ ok: false, reason: expect.stringContaining("order") });
   });
 
-  it("itemStatus ưu tiên hơn orderStatus", () => {
+  it("itemStatus takes precedence over orderStatus", () => {
     const r = normalizeApiRow(order, { ...item, displayItemStatus: "Cancelled" });
     expect(r.ok && r.row.status).toBe("cancelled");
   });
 });
 
 describe("normalizeCsvRow", () => {
-  it("khớp tên cột không phân biệt hoa thường; sub_id tách theo cột", () => {
+  it("case-insensitive column matching; sub_id split per column", () => {
     const r = normalizeCsvRow({
       "order id": "O9",
       "ITEM ID": "5",
@@ -120,7 +120,7 @@ describe("normalizeCsvRow", () => {
     });
   });
 
-  it("thiếu purchase_time → lỗi", () => {
+  it("missing purchase_time → error", () => {
     expect(normalizeCsvRow({ "Order ID": "O", "Item ID": "1", "Order Status": "Pending" }).ok).toBe(false);
   });
 });

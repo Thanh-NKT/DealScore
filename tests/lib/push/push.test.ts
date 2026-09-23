@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe("buildPushPayload", () => {
-  it("1 item → trang sản phẩm; n item → danh sách Watch", () => {
+  it("1 item → product page; n items → Watch list", () => {
     expect(buildPushPayload([{ productName: "SSD", price: 1_000_000, url: "https://k/ssd/a?variant=v" }], "https://k")).toEqual({
       title: "SSD",
       body: `Còn ${formatVnd(1_000_000)}`,
@@ -53,7 +53,7 @@ describe("buildPushPayload", () => {
 });
 
 describe("sendPushToUser", () => {
-  it("410 → xóa đăng ký; lỗi khác đạt 5 lần → xóa", async () => {
+  it("410 → delete the subscription; other errors reaching 5 → delete", async () => {
     sendNotification
       .mockRejectedValueOnce(Object.assign(new Error("gone"), { statusCode: 410 }))
       .mockRejectedValueOnce(Object.assign(new Error("boom"), { statusCode: 500 }));
@@ -62,14 +62,14 @@ describe("sendPushToUser", () => {
     expect(deleted.sort()).toEqual(["s1", "s2"]);
   });
 
-  it("thành công → cập nhật last_success_at", async () => {
+  it("success → updates last_success_at", async () => {
     sendNotification.mockResolvedValue({});
     const r = await sendPushToUser("u", { title: "t", body: "b", url: "u", tag: "kairo-alert" });
     expect(r.delivered).toBe(2);
     expect(updated.map(([id]) => id).sort()).toEqual(["s1", "s2"]);
   });
 
-  it("thiếu khóa VAPID → ném", async () => {
+  it("missing VAPID keys → throws", async () => {
     vi.stubEnv("VAPID_PRIVATE_KEY", "");
     await expect(sendPushToUser("u", { title: "t", body: "b", url: "u", tag: "kairo-alert" })).rejects.toThrow();
   });

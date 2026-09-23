@@ -4,7 +4,7 @@ import { parseWatchForm, suggestTargetPrice } from "@/lib/watch/form";
 const V = "0b6f1c2e-5a8d-4c1e-9f3a-2d7b8e6c4a10";
 
 describe("parseWatchForm", () => {
-  it("không điều kiện nào → _form", () => {
+  it("no condition → _form", () => {
     const r = parseWatchForm({ variantId: V });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errors._form).toBeTruthy();
@@ -26,7 +26,7 @@ describe("parseWatchForm", () => {
     });
   });
 
-  it("channel lặp lại → tập con", () => {
+  it("repeated channel → subset", () => {
     const f = new FormData();
     f.set("variantId", V);
     f.set("notifyLow", "on");
@@ -42,7 +42,7 @@ describe("parseWatchForm", () => {
     [{ minDealScore: "101" }, "minDealScore"],
     [{ targetPrice: "-5" }, "targetPrice"],
     [{ targetPrice: "abc" }, "targetPrice"],
-  ])("%j → lỗi %s", (extra, field) => {
+  ])("%j → error %s", (extra, field) => {
     const r = parseWatchForm({ variantId: V, notifyLow: "on", ...extra });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.errors).toHaveProperty(field);
@@ -53,14 +53,14 @@ describe("parseWatchForm", () => {
     expect(!r.ok && r.errors.variantId).toBeTruthy();
   });
 
-  it("kênh lạ → channels", () => {
+  it("unknown channel → channels", () => {
     const r = parseWatchForm({ variantId: V, notifyLow: "on", channel: "sms" });
     expect(!r.ok && r.errors.channels).toBeTruthy();
   });
 });
 
 describe("suggestTargetPrice", () => {
-  it("giá − 10%, làm tròn xuống tới 1.000", () => {
+  it("price − 10%, rounded down to 1,000", () => {
     expect(suggestTargetPrice(1_234_567)).toBe(1_111_000);
     expect(suggestTargetPrice(null)).toBeNull();
   });

@@ -1,11 +1,11 @@
 -- ============================================================================
--- 0002 — Nền cho 1.1 Tra cứu & 1.2 Trang sản phẩm
+-- 0002 — Foundations for 1.1 Search & 1.2 Product page
 -- ============================================================================
 
 create extension if not exists pg_trgm;
 create extension if not exists unaccent;
 
--- unaccent() KHÔNG immutable → không dùng trực tiếp trong index/generated column.
+-- unaccent() is NOT immutable → cannot be used directly in an index/generated column.
 create or replace function public.f_unaccent(text)
 returns text language sql immutable parallel safe strict
 as $$ select public.unaccent('public.unaccent', $1) $$;
@@ -18,7 +18,7 @@ create table if not exists public.categories (
   parent_id  uuid references public.categories(id) on delete set null,
   sort_order integer not null default 0,
   constraint categories_slug_format check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
-  -- URL sản phẩm là /{category}/{product}; các slug này đã bị route khác chiếm.
+  -- Product URLs are /{category}/{product}; these slugs are already taken by other routes.
   constraint categories_slug_reserved check (
     slug not in ('tim-kiem','brand','danh-muc','go','api','share-target',
                  'admin','auth','watch','tai-khoan')
@@ -66,7 +66,7 @@ create index if not exists idx_vcp_price on public.variant_current_price (price)
 create table if not exists public.variant_daily_prices (
   variant_id      uuid not null references public.product_variants(id) on delete cascade,
   day             date not null,
-  min_price       numeric(14,2),   -- thấp nhất trong ngày, ĐÃ loại flash sale
+  min_price       numeric(14,2),   -- lowest of the day, flash sales EXCLUDED
   median_price    numeric(14,2),
   max_price       numeric(14,2),
   obs_count       integer not null default 0,
@@ -93,7 +93,7 @@ create index if not exists idx_vds_score
 -- -------------------------------------------------------- lookup_requests
 create table if not exists public.lookup_requests (
   id         bigint generated always as identity primary key,
-  ip_hash    text not null,                     -- sha256(ip || salt), KHÔNG lưu IP thô
+  ip_hash    text not null,                     -- sha256(ip || salt), raw IP is NEVER stored
   user_id    uuid references public.users(id) on delete set null,
   outcome    text not null
              check (outcome in ('resolved','ingested','rejected','error')),
@@ -104,14 +104,14 @@ create index if not exists idx_lookup_req_ip
 create index if not exists idx_lookup_req_time
   on public.lookup_requests (created_at desc);
 
--- Dữ liệu vận hành: chỉ service role đụng tới. Bật RLS, KHÔNG tạo policy nào.
+-- Operational data: touched only by the service role. RLS on, NO policies.
 alter table public.lookup_requests enable row level security;
 
 -- ============================================================================
--- Hàm
+-- Functions
 -- ============================================================================
 
--- Rollup giá theo ngày. Gọi sau mỗi collector run cho (hôm qua, hôm nay).
+-- Daily price rollup. Called after every collector run for (yesterday, today).
 create or replace function public.refresh_variant_daily_prices(p_from date, p_to date)
 returns integer language plpgsql security definer set search_path = public as $$
 declare v_rows integer;
@@ -150,7 +150,7 @@ begin
   return v_rows;
 end $$;
 
--- Quan sát mới nhất của TỪNG offer thuộc variant.
+-- Latest observation of EACH offer of the variant.
 create or replace function public.latest_price_per_offer(p_variant_id uuid)
 returns table (offer_id uuid, price numeric, original_price numeric,
                stock integer, is_flash_sale boolean, observed_at timestamptz)
@@ -164,13 +164,13 @@ language sql stable as $$
   order by po.offer_id, po.observed_at desc
 $$;
 
--- Ngày theo dõi đầu tiên — KHÔNG cắt theo cửa sổ 90 ngày.
+-- First tracked day — NOT clipped to the 90-day window.
 create or replace function public.variant_tracking_since(p_variant_id uuid)
 returns date language sql stable as $$
   select min(day) from variant_daily_prices where variant_id = p_variant_id
 $$;
 
--- Tìm kiếm: FTS prefix, fallback trigram khi ít kết quả.
+-- Search: FTS prefix, trigram fallback when there are few results.
 create or replace function public.search_products(
   p_q           text    default null,
   p_category_id uuid    default null,
@@ -190,7 +190,7 @@ create or replace function public.search_products(
     select public.f_unaccent(lower(coalesce(p_q, ''))) as q
   ),
   tsq as (
-    -- Ghép tsquery an toàn: chỉ giữ [a-z0-9], mỗi token thêm :* rồi nối bằng &.
+    -- Build the tsquery safely: keep only [a-z0-9], append :* to each token, join with &.
     select case when (select q from norm) = '' then null
            else to_tsquery('simple',
                   array_to_string(

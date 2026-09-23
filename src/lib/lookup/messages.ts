@@ -1,7 +1,7 @@
 /**
- * Mã lỗi và thông điệp của luồng tra cứu URL. Tách riêng, không import gì
- * phía server, để Client Component dùng chung mà không kéo admin client vào
- * bundle trình duyệt.
+ * Error codes and messages for the URL lookup flow. Kept separate with no
+ * server-side imports so Client Components can share it without pulling the admin
+ * client into the browser bundle.
  */
 
 export type LookupErrorCode =

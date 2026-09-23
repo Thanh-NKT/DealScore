@@ -36,25 +36,25 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:py-12 space-y-8">
-      {/* Ô tìm kiếm đầu trang */}
+      {/* Top search box */}
       <div className="mx-auto max-w-3xl">
         <SearchBox initialQuery={params.q} />
       </div>
 
-      {/* Chip bộ lọc đang bật */}
+      {/* Active filter chips */}
       <ActiveFilterChips params={params} />
 
       <div className="flex flex-col md:flex-row gap-8 items-start">
-        {/* Cột bộ lọc trái */}
+        {/* Left filter column */}
         <Filters
           params={params}
           availableCategories={facets.categories}
           availableBrands={facets.brands}
         />
 
-        {/* Cột nội dung kết quả */}
+        {/* Results column */}
         <div className="flex-1 w-full space-y-6">
-          {/* Header kết quả + Sort */}
+          {/* Results header + sort */}
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
             <div className="text-xs text-muted">
               {params.q ? (
@@ -77,7 +77,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <SortSelect params={params} />
           </div>
 
-          {/* Danh sách sản phẩm */}
+          {/* Product list */}
           {result.items.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {result.items.map((item) => (
@@ -88,7 +88,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <EmptyState query={params.q} hasFilters={hasFilters} />
           )}
 
-          {/* Phân trang bằng Link (Server Component) */}
+          {/* Pagination via Link (Server Component) */}
           {totalPages > 1 && (
             <nav
               aria-label="Phân trang"

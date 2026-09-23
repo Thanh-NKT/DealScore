@@ -8,7 +8,7 @@ import {
 describe("signUnsubscribeToken & verifyUnsubscribeToken", () => {
   const secret = "test-super-secret-key-12345";
 
-  it("ký và xác thực token watch thành công", () => {
+  it("signs and verifies a watch token", () => {
     const scope: UnsubscribeScope = {
       kind: "watch",
       userId: "u123",
@@ -23,7 +23,7 @@ describe("signUnsubscribeToken & verifyUnsubscribeToken", () => {
     expect(verified).toEqual(scope);
   });
 
-  it("ký và xác thực token email thành công", () => {
+  it("signs and verifies an email token", () => {
     const scope: UnsubscribeScope = {
       kind: "email",
       userId: "u123",
@@ -34,18 +34,18 @@ describe("signUnsubscribeToken & verifyUnsubscribeToken", () => {
     expect(verified).toEqual(scope);
   });
 
-  it("trả về null khi token bị giả mạo hoặc sai secret", () => {
+  it("returns null for a tampered token or wrong secret", () => {
     const scope: UnsubscribeScope = { kind: "email", userId: "u123" };
     const token = signUnsubscribeToken(scope, secret);
 
     // Sai secret
     expect(verifyUnsubscribeToken(token, "wrong-secret")).toBe(null);
 
-    // Bị can thiệp ký tự
+    // Tampered character
     const tampered = token.slice(0, -3) + "xyz";
     expect(verifyUnsubscribeToken(tampered, secret)).toBe(null);
 
-    // Token rác
+    // Junk token
     expect(verifyUnsubscribeToken("garbage-token", secret)).toBe(null);
     expect(verifyUnsubscribeToken("", secret)).toBe(null);
   });

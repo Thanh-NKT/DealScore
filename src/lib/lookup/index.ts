@@ -1,13 +1,13 @@
 /**
- * Luồng tra cứu URL Shopee — MỘT chỗ duy nhất, dùng chung cho POST /api/lookup
- * và trang /share-target. Hai cửa vào mà hai luồng riêng thì cửa nào thiếu
- * rate limit sẽ thành đường ingest không giới hạn.
+ * Shopee URL lookup flow — the ONE shared implementation behind POST /api/lookup
+ * and the /share-target page. Two entry points with two separate flows means whichever
+ * lacks the rate limit becomes an unlimited ingest path.
  *
- *   chuẩn hóa → parse → hạn mức chống quét → theo redirect → tra catalog
- *   → (chưa có) hạn mức ingest → ingest → ghi outcome
+ *   normalize → parse → anti-scraping quota → follow redirect → catalog lookup
+ *   → (not found) ingest quota → ingest → record outcome
  *
- * Hạn mức chống quét chạy TRƯỚC khi theo redirect: mỗi lần theo redirect là
- * tới 3 request ra ngoài.
+ * The anti-scraping quota runs BEFORE following redirects: each redirect follow costs
+ * up to 3 outbound requests.
  */
 import { normalizeLookupInput, parseShopeeUrl } from "@/lib/shopee/parse-url";
 import { resolveShopeeRedirect } from "@/lib/shopee/resolve-redirect";
@@ -30,7 +30,7 @@ export async function lookupShopeeUrl(params: {
   const input = normalizeLookupInput(params.raw);
   let parsed = parseShopeeUrl(input);
 
-  // Lỗi cú pháp không tốn gì của hệ thống — không tính vào hạn mức.
+  // Syntax errors cost the system nothing — they don't count against the quota.
   if (!parsed.ok && parsed.reason !== "needs_redirect") {
     return { status: "error", code: parsed.reason };
   }
@@ -64,7 +64,7 @@ export async function lookupShopeeUrl(params: {
 
     const ingestVerdict = await beginIngest(requestId);
     if (!ingestVerdict.allowed) {
-      // Chạm trần toàn hệ thống: người dùng không làm gì sai.
+      // System-wide cap reached: the user did nothing wrong.
       return {
         status: "error",
         code: ingestVerdict.reason === "global_daily" ? "upstream_unavailable" : "rate_limited",
@@ -77,7 +77,7 @@ export async function lookupShopeeUrl(params: {
       await finishLookup(requestId, "error");
       return { status: "error", code: result.code };
     }
-    // RPC trả 'resolved' khi một request đồng thời vừa ingest xong item này.
+    // The RPC returns 'resolved' when a concurrent request has just ingested this item.
     await finishLookup(requestId, result.status);
     return {
       status: result.status === "ingested" ? "ingested" : "ok",

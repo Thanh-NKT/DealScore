@@ -20,7 +20,7 @@ async function userDeletedDaysAgo(days: number) {
 }
 
 describe("purgeDeletedAccounts", () => {
-  it("xóa hẳn user quá 30 ngày; giữ click với user_id null; không đụng user 29 ngày", async () => {
+  it("hard-deletes users older than 30 days; keeps clicks with null user_id; leaves the 29-day user alone", async () => {
     const old = await userDeletedDaysAgo(31);
     const recent = await userDeletedDaysAgo(29);
 
@@ -53,7 +53,7 @@ describe("purgeDeletedAccounts", () => {
     const { data: keptClick } = await admin.from("click_events").select("user_id").eq("id", click!.id).single();
     expect(keptClick?.user_id).toBeNull();
 
-    // Chạy lần hai: không còn gì của user cũ để xóa.
+    // Second run: nothing of the old user left to delete.
     const r2 = await purgeDeletedAccounts({ now: new Date() }, admin);
     expect(r2.purged).not.toContain(old.id);
   });

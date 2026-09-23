@@ -7,7 +7,7 @@ export function renderAccountDeletionEmail(input: {
   const { purgeDate, siteUrl } = input;
 
   const dateStr = formatVnDate(purgeDate);
-  // Giá trị chèn vào HTML đều phải escape.
+  // Every value interpolated into HTML must be escaped.
   const hDate = escapeHtml(dateStr);
   const hLogin = escapeHtml(`${siteUrl}/login`);
 

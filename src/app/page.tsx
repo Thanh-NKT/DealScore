@@ -8,7 +8,7 @@ import { searchProducts } from "@/lib/search";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // Lấy danh sách sản phẩm mới cập nhật cho trang chủ
+  // Recently updated products for the home page
   const { items: recentProducts } = await searchProducts({
     sort: "updated",
     page: 1,
@@ -16,7 +16,7 @@ export default async function Home() {
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:py-16 space-y-12">
-      {/* 1. Header & Giới thiệu giá trị cốt lõi */}
+      {/* 1. Header & core value proposition */}
       <header className="text-center max-w-2xl mx-auto space-y-3">
         <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
           KAIRO · Personal Shopping Intelligence
@@ -30,7 +30,7 @@ export default async function Home() {
         </p>
       </header>
 
-      {/* 2. Khối tra cứu nhanh bằng URL Shopee (P0) & Ô tìm kiếm */}
+      {/* 2. Quick lookup by Shopee URL (P0) & search box */}
       <section className="mx-auto max-w-2xl space-y-4 rounded-3xl border border-border bg-black/[0.01] p-6 shadow-sm dark:bg-white/[0.01]">
         <div className="space-y-1">
           <label className="text-xs font-bold uppercase tracking-wider text-muted">
@@ -53,7 +53,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 3. Sản phẩm mới cập nhật */}
+      {/* 3. Recently updated products */}
       {recentProducts.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-border pb-3">
@@ -76,14 +76,14 @@ export default async function Home() {
         </section>
       )}
 
-      {/* 4. Supabase Status (chỉ hiện trong môi trường dev) */}
+      {/* 4. Supabase status (dev environment only) */}
       {process.env.NODE_ENV !== "production" && (
         <section className="border-t border-border pt-6">
           <SupabaseStatus />
         </section>
       )}
 
-      {/* 5. Chân trang với affiliate disclosure bắt buộc */}
+      {/* 5. Footer with the mandatory affiliate disclosure */}
       <footer className="border-t border-border pt-6 text-center text-xs text-muted leading-relaxed">
         Một số liên kết là tiếp thị liên kết; nếu bạn mua hàng qua liên kết, chúng tôi có thể nhận hoa hồng.
         Điều này không thay đổi giá bạn trả và không ảnh hưởng đến Deal Score.

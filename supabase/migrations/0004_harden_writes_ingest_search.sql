@@ -1,21 +1,21 @@
 -- ============================================================================
--- 0004 — Siết quyền ghi, ingest nguyên tử, rate limit nguyên tử, search dùng index
+-- 0004 — Tighter write privileges, atomic ingest, atomic rate limit, index-backed search
 --
--- 1. Quyền. Supabase mặc định cấp ALL trên mọi bảng trong schema public cho
---    anon/authenticated. Bảng nào không bật RLS thì anon key (công khai trong
---    browser) ghi được thẳng — kể cả affiliate_offers.short_link, tức là chiếm
---    được đích redirect của /go. Catalog chỉ được ghi qua service role.
--- 2. ingest_shopee_item(): toàn bộ ingest trong MỘT transaction (spec §11).
--- 3. lookup_begin() / lookup_begin_ingest(): kiểm hạn mức + ghi nhận nguyên tử.
--- 4. search_products(): lọc sơ bộ bằng index, giá và điểm lấy từ CÙNG một
---    variant, brand so khớp không phân biệt hoa thường.
+-- 1. Privileges. Supabase grants ALL on every table in the public schema to
+--    anon/authenticated by default. Any table without RLS is writable by the anon key (public in the
+--    browser) — including affiliate_offers.short_link, i.e. hijacking
+--    the /go redirect target. The catalog must only be written via the service role.
+-- 2. ingest_shopee_item(): the whole ingest in ONE transaction (spec §11).
+-- 3. lookup_begin() / lookup_begin_ingest(): atomic quota check + record.
+-- 4. search_products(): index-based prefiltering, price and score from the SAME
+--    variant, case-insensitive brand matching.
 -- ============================================================================
 
 -- ============================================================================
--- 1. Quyền
+-- 1. Privileges
 -- ============================================================================
 
--- Bảng catalog / giá / vận hành: chỉ đọc với anon & authenticated.
+-- Catalog / price / operational tables: read-only for anon & authenticated.
 revoke insert, update, delete, truncate, references, trigger
   on public.products, public.product_variants, public.sellers, public.listings,
      public.offers, public.price_observations, public.match_candidates,
@@ -25,41 +25,41 @@ revoke insert, update, delete, truncate, references, trigger
      public.lookup_requests
   from anon, authenticated;
 
--- Dữ liệu nội bộ, không có lý do gì để public đọc.
+-- Internal data, no reason for public reads.
 revoke select on public.conversions, public.collector_runs, public.match_candidates,
                  public.lookup_requests
   from anon, authenticated;
 
--- affiliate_offers: trang sản phẩm chỉ cần biết offer có đủ điều kiện affiliate
--- hay không. Link affiliate, hoa hồng, campaign chỉ /go (service role) đọc.
+-- affiliate_offers: the product page only needs to know whether an offer is affiliate-eligible.
+-- Affiliate links, commission and campaigns are read only by /go (service role).
 revoke select on public.affiliate_offers from anon, authenticated;
 grant select (offer_id, eligible) on public.affiliate_offers to anon, authenticated;
 
--- Bảng TẠO SAU migration này cũng không tự động mở quyền ghi cho anon.
--- Hệ quả: bảng thuộc người dùng mới (kiểu watches) phải GRANT tường minh
--- quyền ghi cho authenticated, cùng với policy RLS.
+-- Tables CREATED AFTER this migration don't automatically grant writes to anon either.
+-- Consequence: new user-owned tables (like watches) must explicitly GRANT
+-- write privileges to authenticated, together with RLS policies.
 alter default privileges in schema public
   revoke insert, update, delete, truncate, references, trigger on tables
   from anon, authenticated;
 
--- Hàm security definer chạy bằng quyền chủ sở hữu — không để anon gọi.
--- (Postgres mặc định cấp EXECUTE cho PUBLIC.)
+-- Security definer functions run with the owner's privileges — don't let anon call them.
+-- (Postgres grants EXECUTE to PUBLIC by default.)
 revoke execute on function public.refresh_variant_daily_prices(date, date)
   from public, anon, authenticated;
 grant execute on function public.refresh_variant_daily_prices(date, date)
   to service_role;
 
 -- ============================================================================
--- 2. Ràng buộc dữ liệu cho ingest
+-- 2. Data constraints for ingest
 -- ============================================================================
 
--- Mỗi model của một listing là MỘT offer. Thiếu ràng buộc này thì mỗi lần
--- ingest lại một listing sinh thêm offer trùng.
+-- Each model of a listing is ONE offer. Without this constraint every
+-- re-ingest of a listing creates duplicate offers.
 create unique index if not exists uq_offers_listing_model
   on public.offers (listing_id, external_model_id);
 
--- 'seed' = dữ liệu không có thật (seed-dev, Shopee client giả lập ở dev).
--- Tách khỏi 'api' để không bao giờ lẫn với giá thật khi phân tích.
+-- 'seed' = non-real data (seed-dev, the fake Shopee client in dev).
+-- Kept apart from 'api' so it never mixes with real prices in analysis.
 alter table public.price_observations
   drop constraint if exists price_observations_source_check;
 alter table public.price_observations
@@ -67,7 +67,7 @@ alter table public.price_observations
   check (source in ('api', 'extension', 'seed'));
 
 -- ============================================================================
--- 3. ingest_shopee_item — toàn bộ ingest trong một transaction
+-- 3. ingest_shopee_item — the whole ingest in one transaction
 -- ============================================================================
 --
 -- Payload (jsonb):
@@ -75,13 +75,13 @@ alter table public.price_observations
 --     seller: { external_id, name, rating, rating_count, is_official },
 --     models: [ { model_id, name, price, original_price, stock, is_flash_sale } ] }
 --
--- slug_base do tầng ứng dụng sinh bằng slugify() — cùng một hàm bỏ dấu tiếng
--- Việt với mọi slug khác của hệ thống.
+-- slug_base is generated by the app via slugify() — the same Vietnamese diacritic-stripping
+-- function used for every other slug in the system.
 --
--- Trả về: { status: 'resolved'|'ingested', product_slug, category_slug, variant_id }
+-- Returns: { status: 'resolved'|'ingested', product_slug, category_slug, variant_id }
 --
--- Chưa làm matcher v0 (spec §11 bước 7): mọi offer đi thẳng vào product
--- draft (bước 8). Admin (1.8) sẽ merge draft vào product đã verify.
+-- Matcher v0 not built yet (spec §11 step 7): every offer goes straight into a draft
+-- product (step 8). Admin (1.8) will merge drafts into verified products.
 create or replace function public.ingest_shopee_item(p jsonb)
 returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -114,8 +114,8 @@ begin
     raise exception 'ingest_shopee_item: model thiếu model_id';
   end if;
 
-  -- Hai request đồng thời cho cùng một item: request sau chờ request trước
-  -- xong rồi đi nhánh 'resolved' bên dưới, không tạo product trùng.
+  -- Two concurrent requests for the same item: the later one waits for the earlier
+  -- to finish, then takes the 'resolved' branch below — no duplicate product.
   perform pg_advisory_xact_lock(hashtext('ingest:shopee:' || v_ext));
 
   select o.variant_id, pr.slug as product_slug, c.slug as category_slug
@@ -157,8 +157,8 @@ begin
     last_observed_at = excluded.last_observed_at
   returning l.id into v_listing_id;
 
-  -- Slug chống trùng. Bắt unique_violation thay vì kiểm-rồi-chèn: hai item
-  -- khác nhau cùng tiêu đề có thể ingest đồng thời.
+  -- Collision-proof slug. Catch unique_violation instead of check-then-insert: two
+  -- different items with the same title may be ingested concurrently.
   loop
     v_slug := case when v_n = 1 then v_base else v_base || '-' || v_n end;
     begin
@@ -180,8 +180,8 @@ begin
     returning id into v_variant_id;
     v_first_variant := coalesce(v_first_variant, v_variant_id);
 
-    -- Offer có thể đã tồn tại mà chưa ghép variant (vd admin từ chối ghép):
-    -- gắn nó vào variant draft mới thay vì tạo offer thứ hai.
+    -- The offer may already exist without a matched variant (e.g. admin rejected the match):
+    -- attach it to the new draft variant instead of creating a second offer.
     insert into offers as o (listing_id, external_model_id, variant_id, match_status)
     values (v_listing_id, m->>'model_id', v_variant_id, 'pending')
     on conflict (listing_id, external_model_id) do update set
@@ -225,17 +225,17 @@ revoke execute on function public.ingest_shopee_item(jsonb) from public, anon, a
 grant execute on function public.ingest_shopee_item(jsonb) to service_role;
 
 -- ============================================================================
--- 4. Rate limit nguyên tử
+-- 4. Atomic rate limit
 -- ============================================================================
 --
--- Kiểm-rồi-ghi ở tầng ứng dụng không chặn được một loạt request đồng thời:
--- tất cả cùng đếm thấy 0 rồi cùng qua. Ở đây kiểm và ghi nằm trong một
--- transaction, dưới advisory lock theo IP (và lock toàn cục cho ingest).
+-- Check-then-write in the app cannot stop a burst of concurrent requests:
+-- they all count 0 and all pass. Here check and write sit in one
+-- transaction, under a per-IP advisory lock (and a global lock for ingest).
 --
--- Một lượt tra cứu = MỘT dòng lookup_requests:
---   lookup_begin()        → dòng 'pending', kiểm hạn mức chống quét
---   lookup_begin_ingest() → đánh dấu is_ingest, kiểm hạn mức ingest
---   tầng ứng dụng UPDATE outcome khi xong.
+-- One lookup = ONE lookup_requests row:
+--   lookup_begin()        → 'pending' row, checks the anti-scraping quota
+--   lookup_begin_ingest() → marks is_ingest, checks the ingest quota
+--   the app UPDATEs the outcome when done.
 
 alter table public.lookup_requests
   add column if not exists is_ingest boolean not null default false;
@@ -250,7 +250,7 @@ create index if not exists idx_lookup_req_user
 create index if not exists idx_lookup_req_ingest_time
   on public.lookup_requests (created_at desc) where is_ingest;
 
--- Hạn mức (spec §10): tra cứu 120/giờ/IP.
+-- Quota (spec §10): 120 lookups/hour/IP.
 create or replace function public.lookup_begin(p_ip_hash text, p_user_id uuid)
 returns table (allowed boolean, reason text, request_id bigint)
 language plpgsql set search_path = public as $$
@@ -274,8 +274,8 @@ begin
   return query select true, null::text, v_id;
 end $$;
 
--- Hạn mức ingest mới (spec §10): khách 10/giờ/IP · user 60/giờ · toàn hệ thống
--- p_global_cap/ngày. Lượt đang chạy ('pending') cũng tính.
+-- New-ingest quota (spec §10): guest 10/hour/IP · user 60/hour · system-wide
+-- p_global_cap/day. In-flight ('pending') lookups count too.
 create or replace function public.lookup_begin_ingest(p_request_id bigint, p_global_cap integer)
 returns table (allowed boolean, reason text)
 language plpgsql set search_path = public as $$
@@ -330,23 +330,23 @@ grant execute on function public.lookup_begin_ingest(bigint, integer) to service
 -- 5. search_products v3
 -- ============================================================================
 --
--- So với 0003:
---  * Lọc sơ bộ bằng @@ (index FTS) hoặc %> (index trigram) TRƯỚC khi chạy các
---    lateral giá/điểm. Bản cũ tính to_tsvector + word_similarity + 2 lateral
---    cho MỌI dòng products ở mỗi lần gõ phím.
---  * Giá và Deal Score lấy từ CÙNG một variant đại diện (còn hàng, rẻ nhất).
---    Bản cũ lấy giá của variant rẻ nhất cạnh điểm của variant điểm cao nhất —
---    card hiện "Nên mua 85" cạnh một mức giá không phải giá được chấm.
---  * Brand so khớp không phân biệt hoa thường.
---  * Token có '-' hoặc '.' (wh-1000xm5, m.2) được tách thay vì bị bỏ hẳn.
+-- Compared with 0003:
+--  * Prefilter with @@ (FTS index) or %> (trigram index) BEFORE running the
+--    price/score laterals. The old version computed to_tsvector + word_similarity + 2 laterals
+--    for EVERY products row on every keystroke.
+--  * Price and Deal Score come from the SAME representative variant (in stock, cheapest).
+--    The old version paired the cheapest variant's price with the highest-scoring variant's score —
+--    a card showed "Nên mua 85" next to a price that wasn't the one scored.
+--  * Case-insensitive brand matching.
+--  * Tokens containing '-' or '.' (wh-1000xm5, m.2) are split instead of dropped.
 --
--- Hàm cũ bị DROP trước vì Postgres không cho đổi hàm qua create or replace
--- khi kèm thuộc tính SET khác.
+-- The old function is DROPped first because Postgres won't change a function via create or replace
+-- when a different SET attribute is attached.
 drop function if exists public.search_products(text, uuid, text[], numeric, numeric, text, integer, integer);
 
--- Gọi một hàm của pg_trgm để nạp thư viện: khi chưa nạp, tham số
--- pg_trgm.word_similarity_threshold chỉ là placeholder và role không phải
--- superuser bị từ chối quyền đặt nó trong mệnh đề SET bên dưới.
+-- Call a pg_trgm function to load the library: until it's loaded, the
+-- pg_trgm.word_similarity_threshold parameter is only a placeholder and non-superuser
+-- roles are denied permission to set it in the SET clause below.
 select public.show_limit();
 
 create function public.search_products(
@@ -364,16 +364,16 @@ create function public.search_products(
   score smallint, recommendation text, last_observed_at timestamptz,
   relevance real, total_count bigint
 ) language sql stable
--- Ngưỡng của toán tử %> — cùng ngưỡng 0.4 đã đo ở 0003.
+-- Threshold of the %> operator — the same 0.4 threshold measured in 0003.
 set pg_trgm.word_similarity_threshold = 0.4
 as $$
   with norm as (
     select btrim(public.f_unaccent(lower(coalesce(p_q, '')))) as q
   ),
   tsq as (
-    -- Ghép tsquery AN TOÀN: thay mọi ký tự ngoài [a-z0-9] bằng khoảng trắng,
-    -- tách token, thêm :* rồi nối bằng &. Không bao giờ nối thẳng chuỗi
-    -- người dùng vào to_tsquery.
+    -- Build the tsquery SAFELY: replace every character outside [a-z0-9] with a space,
+    -- split into tokens, append :* and join with &. Never concatenate user input
+    -- straight into to_tsquery.
     select case when (select q from norm) = '' then null
            else to_tsquery('simple',
                   array_to_string(
@@ -390,7 +390,7 @@ as $$
              when (select tq from tsq) is not null
                   and to_tsvector('simple', p.search_text) @@ (select tq from tsq)
                then ts_rank(to_tsvector('simple', p.search_text), (select tq from tsq)) + 1.0
-             -- word_similarity(<truy vấn>, <tài liệu>) — thứ tự tham số quan trọng.
+             -- word_similarity(<query>, <document>) — argument order matters.
              else word_similarity((select q from norm), p.search_text)
            end as rel
     from products p
@@ -409,7 +409,7 @@ as $$
     from matched m
     left join categories c on c.id = m.category_id
     left join lateral (
-      -- Variant đại diện: còn hàng trước, rồi rẻ nhất.
+      -- Representative variant: in stock first, then cheapest.
       select v.id as variant_id, vcp.price, vcp.original_price, vcp.observed_at
       from product_variants v
       join variant_current_price vcp on vcp.variant_id = v.id
@@ -435,8 +435,8 @@ as $$
   limit p_limit offset p_offset
 $$;
 
--- Danh sách brand distinct cho bộ lọc. Đọc cả cột brand về tầng ứng dụng thì
--- bị PostgREST cắt âm thầm ở 1000 dòng.
+-- Distinct brand list for filters. Reading the whole brand column into the app
+-- gets silently truncated by PostgREST at 1000 rows.
 create or replace function public.product_brands()
 returns table (brand text) language sql stable as $$
   select distinct p.brand from products p where p.brand is not null order by 1

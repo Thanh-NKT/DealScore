@@ -39,7 +39,7 @@ export function OfferList({ offers }: OfferListProps) {
                 !offer.inStock ? "opacity-50 bg-black/[0.01] dark:bg-white/[0.01]" : ""
               }`}
             >
-              {/* Thông tin Seller */}
+              {/* Seller info */}
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold text-foreground text-sm">
@@ -75,7 +75,7 @@ export function OfferList({ offers }: OfferListProps) {
                 </div>
               </div>
 
-              {/* Điểm riêng + Giá + Nút mua */}
+              {/* Own score + price + buy button */}
               <div className="flex items-center justify-between sm:justify-end gap-4">
                 {offer.dealScore && offer.dealScore.score != null && (
                   <div className="text-right">
@@ -110,7 +110,7 @@ export function OfferList({ offers }: OfferListProps) {
         })}
       </div>
 
-      {/* Dòng disclosure affiliate bắt buộc */}
+      {/* Mandatory affiliate disclosure line */}
       <p className="text-[11px] text-muted leading-relaxed">
         Chúng tôi có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.
       </p>

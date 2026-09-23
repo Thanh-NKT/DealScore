@@ -44,7 +44,7 @@ export function WatchModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
-  // Khởi tạo các trạng thái checkbox điều kiện
+  // Initialize the condition checkbox states
   const initialConfig = existingWatch?.config;
   const suggestedTarget = suggestTargetPrice(currentPrice);
 
@@ -134,7 +134,7 @@ export function WatchModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
     >
       <div className="relative w-full max-w-lg rounded-3xl border border-border bg-background p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
-        {/* Nút đóng */}
+        {/* Close button */}
         <button
           type="button"
           onClick={onClose}
@@ -195,20 +195,20 @@ export function WatchModal({
             <input type="hidden" name="variantId" value={variantId} />
             <input type="hidden" name="path" value={currentPath} />
 
-            {/* Báo lỗi tổng quát */}
+            {/* General error */}
             {errors._form && (
               <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs font-medium text-red-600 dark:text-red-400">
                 {errors._form}
               </div>
             )}
 
-            {/* Các điều kiện báo giá */}
+            {/* Price alert conditions */}
             <div className="space-y-4">
               <span className="text-xs font-bold uppercase tracking-wider text-muted">
                 Điều kiện nhận thông báo (chọn ít nhất 1)
               </span>
 
-              {/* 1. Giá mục tiêu */}
+              {/* 1. Target price */}
               <div className="rounded-2xl border border-border p-3.5 space-y-2">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -248,7 +248,7 @@ export function WatchModal({
                 )}
               </div>
 
-              {/* 2. Giảm theo % */}
+              {/* 2. Percentage drop */}
               <div className="rounded-2xl border border-border p-3.5 space-y-2">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -285,7 +285,7 @@ export function WatchModal({
                 )}
               </div>
 
-              {/* 3. Chạm đáy 90 ngày */}
+              {/* 3. Hits the 90-day low */}
               <div className="rounded-2xl border border-border p-3.5">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -343,7 +343,7 @@ export function WatchModal({
                 )}
               </div>
 
-              {/* 5. Có hàng lại */}
+              {/* 5. Back in stock */}
               <div className="rounded-2xl border border-border p-3.5">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
@@ -366,7 +366,7 @@ export function WatchModal({
               </div>
             </div>
 
-            {/* Kênh thông báo ghi đè */}
+            {/* Channel override */}
             <div className="space-y-2 pt-2 border-t border-border">
               <label className="text-xs font-bold uppercase tracking-wider text-muted">
                 Kênh nhận cảnh báo
@@ -384,7 +384,7 @@ export function WatchModal({
                 <option value="both">Gửi cả Email và Web Push</option>
               </select>
 
-              {/* Input ngầm gửi channel theo mode */}
+              {/* Hidden input carrying the channel for the selected mode */}
               {channelMode === "account" && (
                 <input type="hidden" name="channel" value="account" />
               )}
@@ -402,7 +402,7 @@ export function WatchModal({
               )}
             </div>
 
-            {/* Các nút bấm */}
+            {/* Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border">
               {existingWatch ? (
                 <div className="flex items-center gap-2 w-full sm:w-auto">

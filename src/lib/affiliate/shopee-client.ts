@@ -8,7 +8,7 @@ export interface ShopeeAffiliateClient {
     orders: ApiOrderWithItems[];
     nextScrollId: string | null;
   }>;
-  /** Chỉ cho mode short_link (G1 sai). */
+  /** Only for short_link mode (if G1 turns out wrong). */
   generateShortLink(input: { originUrl: string; subIds: string[] }): Promise<string>;
 }
 
@@ -25,7 +25,7 @@ export class ShopeeAffiliateError extends Error {
 const DEFAULT_API_URL = "https://open-api.affiliate.shopee.vn/graphql"; // G3
 const TIMEOUT_MS = 15_000;
 
-/** G4 — giá trị header Authorization. */
+/** G4 — Authorization header value. */
 export function signRequest(input: { appId: string; secret: string; timestamp: number; payload: string }): string {
   const signature = createHash("sha256")
     .update(`${input.appId}${input.timestamp}${input.payload}${input.secret}`)
@@ -33,7 +33,7 @@ export function signRequest(input: { appId: string; secret: string; timestamp: n
   return `SHA256 Credential=${input.appId}, Timestamp=${input.timestamp}, Signature=${signature}`;
 }
 
-// G3 — truy vấn GraphQL. Sửa sau spike.
+// G3 — GraphQL query. Revise after the spike.
 const CONVERSION_REPORT_QUERY = `query ($start: Int64!, $end: Int64!, $scrollId: String, $limit: Int) {
   conversionReport(purchaseTimeStart: $start, purchaseTimeEnd: $end, scrollId: $scrollId, limit: $limit) {
     nodes {
@@ -64,25 +64,25 @@ export function createShopeeAffiliateClient(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Không bao giờ log header này.
+          // Never log this header.
           Authorization: signRequest({ appId: appId!, secret: secret!, timestamp: Math.floor(Date.now() / 1000), payload }),
         },
         body: payload,
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (err) {
-      throw new ShopeeAffiliateError(`Không gọi được Shopee Affiliate API: ${(err as Error).name}`, true);
+      throw new ShopeeAffiliateError(`Could not reach Shopee Affiliate API: ${(err as Error).name}`, true);
     }
     if (res.status === 429 || res.status >= 500) {
-      throw new ShopeeAffiliateError(`Shopee Affiliate API trả ${res.status}`, true);
+      throw new ShopeeAffiliateError(`Shopee Affiliate API returned ${res.status}`, true);
     }
-    if (!res.ok) throw new ShopeeAffiliateError(`Shopee Affiliate API trả ${res.status}`, false);
+    if (!res.ok) throw new ShopeeAffiliateError(`Shopee Affiliate API returned ${res.status}`, false);
 
     const body = (await res.json()) as { data?: T; errors?: Array<{ message?: string }> };
     if (body.errors?.length) {
-      throw new ShopeeAffiliateError(`Lỗi GraphQL: ${body.errors.map((e) => e.message).join("; ")}`, false);
+      throw new ShopeeAffiliateError(`GraphQL error: ${body.errors.map((e) => e.message).join("; ")}`, false);
     }
-    if (!body.data) throw new ShopeeAffiliateError("Phản hồi không có data", false);
+    if (!body.data) throw new ShopeeAffiliateError("Response has no data", false);
     return body.data;
   }
 
@@ -100,7 +100,7 @@ export function createShopeeAffiliateClient(
         limit,
       });
       const report = data.conversionReport;
-      // Trải node → đơn, mang theo purchaseTime và utmContent của node.
+      // Flatten node → orders, carrying the node's purchaseTime and utmContent.
       const orders: ApiOrderWithItems[] = (report.nodes ?? []).flatMap((node) =>
         (node.orders ?? []).map((o) => ({
           ...o,
@@ -120,7 +120,7 @@ export function createShopeeAffiliateClient(
   };
 }
 
-/** Dùng cho test: mỗi phần tử của `pages` là một trang. `failWith` → trang đầu ném lỗi này. */
+/** For tests: each element of `pages` is one page. `failWith` → the first page throws it. */
 export class FakeShopeeAffiliateClient implements ShopeeAffiliateClient {
   constructor(
     private readonly pages: ApiOrderWithItems[][],

@@ -13,9 +13,9 @@ export interface CurrentUser {
 }
 
 /**
- * Lấy thông tin người dùng hiện tại từ session server (cookie).
- * Trả về null nếu chưa đăng nhập.
- * Ném lỗi nếu đã có auth.user nhưng không đọc được hồ sơ public.users.
+ * Current user from the server session (cookies).
+ * Returns null when not signed in.
+ * Throws if an auth.user exists but its public.users profile cannot be read.
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = await createClient();
@@ -37,7 +37,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   if (profileError || !profile) {
     throw new Error(
-      `Không thể tải hồ sơ người dùng ${user.id}: ${profileError?.message ?? "hồ sơ không tồn tại"}`,
+      `Could not load user profile ${user.id}: ${profileError?.message ?? "profile does not exist"}`,
     );
   }
 
@@ -51,8 +51,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 }
 
 /**
- * Bắt buộc người dùng phải đăng nhập và thỏa mãn các cổng kiểm tra (AuthGate).
- * Nếu không thỏa mãn, tự động redirect() tới cổng tương ứng.
+ * Requires the user to be signed in and pass every AuthGate check.
+ * Otherwise redirect()s to the matching gate automatically.
  */
 export async function requireUser(opts: {
   path?: string;
@@ -83,12 +83,12 @@ export async function requireUser(opts: {
 }
 
 /**
- * Điều hướng người dùng sau khi xác thực OTP thành công.
- * Kiểm tra xem tài khoản có đang chờ xóa hoặc cần đồng ý điều khoản trước khi về `next`.
+ * Route the user after a successful OTP verification.
+ * Checks whether the account is pending deletion or needs consent before going to `next`.
  *
- * Dùng CHÍNH client vừa verifyOtp: session mới ghi vào cookie trong cùng request
- * chưa chắc đã được một createClient() khác đọc lại — khi đó người dùng vừa đăng
- * nhập xong lại bị coi là chưa đăng nhập.
+ * Uses the SAME client that called verifyOtp: the new session written to cookies in this
+ * request is not guaranteed to be visible to another createClient() — the user who just
+ * signed in would then be treated as signed out.
  */
 export async function redirectAfterLogin(
   supabase: SupabaseClient<Database>,
@@ -102,7 +102,7 @@ export async function redirectAfterLogin(
     .select("consent_version, deleted_at")
     .eq("id", userId)
     .maybeSingle();
-  if (error) throw new Error(`Không thể tải hồ sơ người dùng ${userId}: ${error.message}`);
+  if (error) throw new Error(`Could not load user profile ${userId}: ${error.message}`);
 
   const gate = decideAuthGate({
     userId,

@@ -27,8 +27,8 @@ export function LoginForm({ initialNext, initialError }: LoginFormProps) {
   const [countdown, setCountdown] = useState<number>(0);
   const [emailInput, setEmailInput] = useState<string>("");
 
-  // Bắt đầu đếm ngược khi requestState đổi (gửi mã thành công hoặc bị giới hạn).
-  // Điều chỉnh state ngay trong render thay vì setState trong effect.
+  // Start the countdown when requestState changes (code sent successfully or rate-limited).
+  // Adjust state during render instead of calling setState in an effect.
   const [seenRequestState, setSeenRequestState] = useState(requestState);
   if (requestState !== seenRequestState) {
     setSeenRequestState(requestState);
@@ -54,7 +54,7 @@ export function LoginForm({ initialNext, initialError }: LoginFormProps) {
     requestState.status === "sent" ? requestState.email : emailInput;
   const isSent = requestState.status === "sent";
 
-  // Thông báo lỗi ưu tiên: verifyState lỗi > requestState lỗi > initialError
+  // Error priority: verifyState error > requestState error > initialError
   let errorMessage: string | null = null;
   if (verifyState.status === "error") {
     errorMessage = verifyState.error.message;
@@ -68,7 +68,7 @@ export function LoginForm({ initialNext, initialError }: LoginFormProps) {
 
   return (
     <div className="w-full space-y-6">
-      {/* Banner thông báo lỗi nếu có */}
+      {/* Error banner, if any */}
       {errorMessage && (
         <div
           role="alert"
@@ -79,7 +79,7 @@ export function LoginForm({ initialNext, initialError }: LoginFormProps) {
       )}
 
       {!isSent ? (
-        /* BƯỚC 1: NHẬP EMAIL */
+        /* STEP 1: ENTER EMAIL */
         <form action={requestAction} className="space-y-4">
           <input type="hidden" name="next" value={initialNext} />
 
@@ -113,7 +113,7 @@ export function LoginForm({ initialNext, initialError }: LoginFormProps) {
           </button>
         </form>
       ) : (
-        /* BƯỚC 2: NHẬP MÃ 6 SỐ HOẶC BẤM LINK TRONG EMAIL */
+        /* STEP 2: ENTER THE 6-DIGIT CODE OR CLICK THE LINK IN THE EMAIL */
         <div className="space-y-6">
           <div className="rounded-xl border border-border bg-black/[0.02] p-4 text-xs leading-relaxed text-muted dark:bg-white/[0.02]">
             <p>
@@ -160,7 +160,7 @@ export function LoginForm({ initialNext, initialError }: LoginFormProps) {
             </button>
           </form>
 
-          {/* Gửi lại mã & Đổi email */}
+          {/* Resend code & change email */}
           <div className="flex items-center justify-between text-xs text-muted pt-2 border-t border-border">
             <form action={requestAction}>
               <input type="hidden" name="email" value={activeEmail} />
@@ -179,7 +179,7 @@ export function LoginForm({ initialNext, initialError }: LoginFormProps) {
             <button
               type="button"
               onClick={() => {
-                // Quay lại bước nhập email
+                // Back to the email step
                 window.location.reload();
               }}
               className="hover:text-foreground"

@@ -4,15 +4,15 @@ import type { Database } from "@/lib/database.types";
 
 function env(name: string): string {
   const v = process.env[name];
-  if (!v) throw new Error(`test:db thiếu biến ${name} (đọc từ .env.local)`);
+  if (!v) throw new Error(`test:db missing variable ${name} (read from .env.local)`);
   return v;
 }
 
 export const SUPABASE_URL = env("NEXT_PUBLIC_SUPABASE_URL").replace(/\/+$/, "");
 
-// Chặn cứng: test tạo / xóa user thật — không bao giờ chạy trên project thật.
+// Hard stop: these tests create / delete real users — never run against a real project.
 if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(SUPABASE_URL)) {
-  throw new Error(`test:db chỉ chạy trên Supabase local, đang trỏ tới ${SUPABASE_URL}`);
+  throw new Error(`test:db only runs against a local Supabase, currently pointing at ${SUPABASE_URL}`);
 }
 
 const noSession = { auth: { persistSession: false, autoRefreshToken: false } };
@@ -22,19 +22,19 @@ export const admin = createClient<Database>(SUPABASE_URL, env("SUPABASE_SERVICE_
 export interface TestUser {
   id: string;
   email: string;
-  /** Client anon đã đăng nhập bằng user này — mọi query đi qua RLS. */
+  /** Anon client signed in as this user — every query goes through RLS. */
   client: SupabaseClient<Database>;
 }
 
 /**
- * Tạo user thật trong auth.users (trigger tạo luôn users + notification_settings).
- * Mật khẩu CHỈ dùng trong test; sản phẩm không có đăng nhập bằng mật khẩu.
+ * Create a real user in auth.users (the trigger also creates users + notification_settings).
+ * The password is ONLY for tests; the product has no password sign-in.
  */
 export async function createTestUser(): Promise<TestUser> {
   const email = `test-${randomUUID()}@kairo.test`;
   const password = `Pw-${randomUUID()}`;
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-  if (error || !data.user) throw error ?? new Error("createUser thất bại");
+  if (error || !data.user) throw error ?? new Error("createUser failed");
 
   const client = createClient<Database>(SUPABASE_URL, env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), noSession);
   const { error: signInError } = await client.auth.signInWithPassword({ email, password });
@@ -44,6 +44,6 @@ export async function createTestUser(): Promise<TestUser> {
 }
 
 export async function deleteTestUser(id: string): Promise<void> {
-  // Có thể đã bị job purge xóa trước — bỏ qua lỗi "không tìm thấy".
+  // May already have been removed by the purge job — ignore "not found" errors.
   await admin.auth.admin.deleteUser(id).catch(() => undefined);
 }

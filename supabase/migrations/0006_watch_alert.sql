@@ -1,4 +1,4 @@
--- 0006_watch_alert.sql: Watches mới, alert_events, alert_deliveries, push_subscriptions, job_locks, RPCs
+-- 0006_watch_alert.sql: new watches, alert_events, alert_deliveries, push_subscriptions, job_locks, RPCs
 
 alter table public.watches drop column if exists trigger_rules;
 
@@ -9,7 +9,7 @@ alter table public.watches
   add column if not exists notify_low           boolean not null default false,
   add column if not exists min_deal_score       smallint check (min_deal_score between 1 and 100),
   add column if not exists notify_back_in_stock boolean not null default false,
-  -- Trạng thái engine — chỉ service role ghi.
+  -- Engine state — written only by the service role.
   add column if not exists baseline_price    numeric(14,2),
   add column if not exists cond_state        jsonb not null default '{}'::jsonb,
   add column if not exists last_alert_price  numeric(14,2),
@@ -59,7 +59,7 @@ end $$;
 create or replace function public.watches_before_update()
 returns trigger language plpgsql as $$
 begin
-  -- updated_at chỉ đổi khi NGƯỜI DÙNG đổi cấu hình — engine ghi trạng thái không làm nó đổi.
+  -- updated_at changes only when the USER changes the config — engine state writes don't touch it.
   if (new.target_price, new.drop_pct, new.notify_low, new.min_deal_score, new.notify_back_in_stock)
      is distinct from
      (old.target_price, old.drop_pct, old.notify_low, old.min_deal_score, old.notify_back_in_stock)
@@ -287,9 +287,9 @@ grant execute on function public.record_watch_evaluation(uuid, integer, timestam
 create extension if not exists pg_cron with schema pg_catalog;
 create extension if not exists pg_net  with schema extensions;
 
--- Alert Engine mỗi 15 phút.
--- URL và secret đọc từ Vault LÚC CHẠY: mỗi môi trường tự đặt, không nằm trong repo.
--- Thiếu secret → http_post lỗi, job ghi lỗi vào cron.job_run_details, không ảnh hưởng gì khác.
+-- Alert Engine every 15 minutes.
+-- URL and secret are read from Vault AT RUN TIME: each environment sets its own, nothing in the repo.
+-- Missing secret → http_post fails, the job logs the error to cron.job_run_details, nothing else is affected.
 select cron.schedule('kairo-alerts', '*/15 * * * *', $job$
   select net.http_post(
     url     := (select decrypted_secret from vault.decrypted_secrets where name = 'kairo_app_url')

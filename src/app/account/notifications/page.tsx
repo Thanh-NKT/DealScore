@@ -25,7 +25,7 @@ export default async function NotificationSettingsPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:py-12 space-y-8">
-      {/* Breadcrumb & Tiêu đề */}
+      {/* Breadcrumb & title */}
       <div className="space-y-2">
         <nav aria-label="Đường dẫn" className="text-xs text-muted flex items-center gap-2">
           <Link href="/account" className="hover:text-foreground">

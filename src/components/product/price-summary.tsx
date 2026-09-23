@@ -3,7 +3,7 @@ import { formatVnd } from "@/lib/format";
 import { UpdatedAt } from "./updated-at";
 
 interface PriceSummaryProps {
-  /** Offer còn hàng rẻ nhất, hoặc — khi hết hàng ở mọi nơi — offer có giá ghi nhận gần nhất. */
+  /** Cheapest in-stock offer, or — when out of stock everywhere — the offer with the most recent recorded price. */
   cheapest: PricedOffer | null;
   offerCount: number;
   updatedAt?: string | null;
@@ -24,7 +24,7 @@ export function PriceSummary({
     );
   }
 
-  // Nếu tất cả đều hết hàng
+  // If everything is out of stock
   if (!cheapest.inStock) {
     return (
       <div className="space-y-1">

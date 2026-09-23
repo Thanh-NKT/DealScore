@@ -1,5 +1,5 @@
 -- ============================================================================
--- Personal Shopping Intelligence — Database schema (Backlog v2, mục D)
+-- Personal Shopping Intelligence — Database schema (Backlog v2, section D)
 -- Target: Supabase / PostgreSQL
 -- Run in Supabase SQL Editor, or via `supabase db push` with this migration.
 -- ============================================================================
@@ -7,7 +7,7 @@
 create extension if not exists "pgcrypto";
 
 -- ----------------------------------------------------------------------------
--- products — sản phẩm chuẩn hóa
+-- products — normalized products
 -- ----------------------------------------------------------------------------
 create table if not exists public.products (
   id            uuid primary key default gen_random_uuid(),
@@ -26,7 +26,7 @@ create index if not exists idx_products_brand on public.products (brand);
 create index if not exists idx_products_category on public.products (category_id);
 
 -- ----------------------------------------------------------------------------
--- product_variants — biến thể chuẩn hóa
+-- product_variants — normalized variants
 -- ----------------------------------------------------------------------------
 create table if not exists public.product_variants (
   id          uuid primary key default gen_random_uuid(),
@@ -54,7 +54,7 @@ create table if not exists public.sellers (
 );
 
 -- ----------------------------------------------------------------------------
--- listings — listing trên sàn
+-- listings — marketplace listings
 -- ----------------------------------------------------------------------------
 create table if not exists public.listings (
   id               uuid primary key default gen_random_uuid(),
@@ -66,20 +66,20 @@ create table if not exists public.listings (
   status           text not null default 'active',
   first_seen_at    timestamptz not null default now(),
   last_observed_at timestamptz,
-  refresh_priority integer not null default 3,      -- 1 = cao nhất
+  refresh_priority integer not null default 3,      -- 1 = highest
   unique (marketplace, external_item_id)
 );
 
 create index if not exists idx_listings_refresh on public.listings (refresh_priority, last_observed_at);
 
 -- ----------------------------------------------------------------------------
--- offers — một variant cụ thể trong một listing (đơn vị để lưu giá)
+-- offers — one specific variant within one listing (the unit of price storage)
 -- ----------------------------------------------------------------------------
 create table if not exists public.offers (
   id                uuid primary key default gen_random_uuid(),
   listing_id        uuid not null references public.listings(id) on delete cascade,
   external_model_id text,
-  variant_id        uuid references public.product_variants(id) on delete set null, -- nullable nếu chưa match
+  variant_id        uuid references public.product_variants(id) on delete set null, -- nullable until matched
   match_confidence  numeric(5,4),
   match_status      text not null default 'pending'
                     check (match_status in ('auto','manual','rejected','pending'))
@@ -90,7 +90,7 @@ create index if not exists idx_offers_variant on public.offers (variant_id);
 create index if not exists idx_offers_match_status on public.offers (match_status);
 
 -- ----------------------------------------------------------------------------
--- price_observations — dữ liệu time-series (đơn vị lưu giá là offer)
+-- price_observations — time-series data (prices are stored per offer)
 -- ----------------------------------------------------------------------------
 create table if not exists public.price_observations (
   id             bigint generated always as identity,
@@ -106,12 +106,12 @@ create table if not exists public.price_observations (
   collector_run_id uuid,
   primary key (id, observed_at)
 );
--- Gợi ý: partition theo tháng hoặc dùng TimescaleDB cho bảng này.
+-- Note: partition by month or use TimescaleDB for this table.
 create index if not exists idx_price_obs_offer_time
   on public.price_observations (offer_id, observed_at desc);
 
 -- ----------------------------------------------------------------------------
--- match_candidates — hàng đợi duyệt matching
+-- match_candidates — matching review queue
 -- ----------------------------------------------------------------------------
 create table if not exists public.match_candidates (
   id                  uuid primary key default gen_random_uuid(),
@@ -141,7 +141,7 @@ create table if not exists public.affiliate_offers (
 );
 
 -- ----------------------------------------------------------------------------
--- users — hồ sơ ứng dụng (bổ trợ auth.users của Supabase)
+-- users — application profile (complements Supabase's auth.users)
 -- ----------------------------------------------------------------------------
 create table if not exists public.users (
   id               uuid primary key references auth.users(id) on delete cascade,
@@ -154,7 +154,7 @@ create table if not exists public.users (
 );
 
 -- ----------------------------------------------------------------------------
--- watches — gộp Wishlist + Target Price + Alert
+-- watches — Wishlist + Target Price + Alert combined
 -- ----------------------------------------------------------------------------
 create table if not exists public.watches (
   id            uuid primary key default gen_random_uuid(),
@@ -206,7 +206,7 @@ create table if not exists public.click_events (
 create index if not exists idx_click_events_offer on public.click_events (offer_id);
 
 -- ----------------------------------------------------------------------------
--- conversions — đối soát từ conversion report
+-- conversions — reconciliation from the conversion report
 -- ----------------------------------------------------------------------------
 create table if not exists public.conversions (
   id          uuid primary key default gen_random_uuid(),
@@ -233,8 +233,8 @@ create table if not exists public.collector_runs (
 );
 
 -- ============================================================================
--- Row Level Security — chỉ bật cho dữ liệu thuộc về người dùng.
--- Catalog & price data đọc công khai; ghi qua service role (bỏ qua RLS).
+-- Row Level Security — enabled only for data that belongs to users.
+-- Catalog & price data are publicly readable; writes go through the service role (bypasses RLS).
 -- ============================================================================
 
 alter table public.users        enable row level security;
@@ -242,7 +242,7 @@ alter table public.watches      enable row level security;
 alter table public.alert_events enable row level security;
 alter table public.click_events enable row level security;
 
--- users: mỗi người chỉ thấy/sửa hồ sơ của mình
+-- users: each user sees/edits only their own profile
 create policy "users_select_own" on public.users
   for select using (auth.uid() = id);
 create policy "users_update_own" on public.users
@@ -250,23 +250,23 @@ create policy "users_update_own" on public.users
 create policy "users_insert_self" on public.users
   for insert with check (auth.uid() = id);
 
--- watches: chủ sở hữu toàn quyền
+-- watches: full access for the owner
 create policy "watches_owner_all" on public.watches
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- alert_events: chỉ đọc alert của watch mình sở hữu
+-- alert_events: read only alerts of watches you own
 create policy "alerts_owner_select" on public.alert_events
   for select using (
     exists (select 1 from public.watches w
             where w.id = alert_events.watch_id and w.user_id = auth.uid())
   );
 
--- click_events: người dùng đọc được click của chính mình (ghi thường qua service role)
+-- click_events: users can read their own clicks (writes normally go through the service role)
 create policy "clicks_owner_select" on public.click_events
   for select using (auth.uid() = user_id);
 
 -- ----------------------------------------------------------------------------
--- Tự tạo hồ sơ public.users khi có auth.users mới
+-- Auto-create a public.users profile for every new auth.users row
 -- ----------------------------------------------------------------------------
 create or replace function public.handle_new_user()
 returns trigger

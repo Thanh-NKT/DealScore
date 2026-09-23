@@ -4,7 +4,7 @@ import type { Database } from "@/lib/database.types";
 
 /**
  * Supabase client cho Server Components / Route Handlers / Server Actions.
- * Đọc-ghi session qua cookies. Dùng anon key + RLS.
+ * Reads/writes the session via cookies. Uses the anon key + RLS.
  */
 export async function createClient() {
   const cookieStore = await cookies();
@@ -23,8 +23,8 @@ export async function createClient() {
               cookieStore.set(name, value, options),
             );
           } catch {
-            // Được gọi từ Server Component — bỏ qua.
-            // Middleware sẽ chịu trách nhiệm làm mới session cookie.
+            // Called from a Server Component — ignore.
+            // The proxy is responsible for refreshing the session cookie.
           }
         },
       },

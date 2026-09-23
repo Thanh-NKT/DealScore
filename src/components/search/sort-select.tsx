@@ -3,14 +3,14 @@
 import type { SearchParams } from "@/lib/search";
 
 /**
- * Chọn cách sắp xếp kết quả tìm kiếm.
+ * Sort selector for search results.
  *
- * Là Client Component vì cần onChange để tự submit khi có JS. Không có JS thì
- * nút trong <noscript> làm việc đó — trang vẫn dùng được đầy đủ (điều kiện để
- * SSR/SEO ở mục 1.7 có nghĩa).
+ * A Client Component because it needs onChange to auto-submit when JS is on. Without JS,
+ * the button inside <noscript> does it — the page stays fully usable (a requirement for
+ * SSR/SEO in section 1.7 to mean anything).
  *
- * Form phải mang theo MỌI tham số hiện tại dưới dạng input ẩn. Nếu chỉ gửi
- * `sort`, thao tác đổi sắp xếp sẽ âm thầm xóa từ khóa và toàn bộ bộ lọc.
+ * The form must carry EVERY current parameter as hidden inputs. Sending only
+ * `sort` would silently drop the query and every filter when the sort changes.
  */
 export function SortSelect({ params }: { params: SearchParams }) {
   const sort = params.sort ?? (params.q ? "relevance" : "updated");

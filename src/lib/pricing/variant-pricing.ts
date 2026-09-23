@@ -30,44 +30,44 @@ export interface OfferRow {
   originalPrice: number | null;
   stock: number | null;
   isFlashSale: boolean;
-  /** null = chưa có quan sát nào. KHÔNG thay bằng "bây giờ": dữ liệu sẽ trông tươi hơn thực tế. */
+  /** null = no observation yet. Do NOT substitute "now": the data would look fresher than it is. */
   observedAt: string | null;
 }
 
 export interface PricedOffer extends OfferRow {
   inStock: boolean;
   discountPercent: number | null;
-  /** Điểm riêng của offer này so với offer rẻ nhất. null nếu thiếu dữ liệu hoặc không tính được. */
+  /** This offer's own score relative to the cheapest offer. null when data is missing or it cannot be computed. */
   dealScore: DealScoreResult | null;
 }
 
 export interface VariantPricing {
-  offers: PricedOffer[]; // còn hàng theo giá tăng dần, rồi hết hàng
-  cheapest: PricedOffer | null; // offer còn hàng rẻ nhất
+  offers: PricedOffer[]; // in stock by ascending price, then out of stock
+  cheapest: PricedOffer | null; // cheapest in-stock offer
   /**
-   * Khi KHÔNG còn offer nào còn hàng: offer có giá ghi nhận gần nhất, để hiện
-   * "Tạm hết hàng" + giá lần cuối (1.2.a.4). null khi còn hàng, hoặc chưa có giá.
+   * When NO offer is in stock: the offer with the most recently recorded price, to show
+   * "Tạm hết hàng" + the last price (1.2.a.4). null when in stock, or no price yet.
    */
   lastKnown: PricedOffer | null;
-  /** true khi có offer có giá nhưng tất cả đều hết hàng — không chấm điểm (1.2.e). */
+  /** true when offers have prices but all are out of stock — no scoring (1.2.e). */
   allOutOfStock: boolean;
-  /** Điểm hiển thị đầu trang. Gọi KHÔNG truyền bestOffer (Quyết định Đ7). */
+  /** Header score. Called WITHOUT bestOffer (decision Đ7). */
   headline: DealScoreResult | null;
   /**
-   * Đáy / trung vị / đỉnh 90 ngày cho StatsRow. Luôn tính, kể cả khi Deal
-   * Score chưa đủ ngưỡng (1.2.d.3: "vẫn hiện các số đã có").
+   * 90-day low / median / high for StatsRow. Always computed, even when the Deal
+   * Score is below threshold (1.2.d.3: "still show the numbers we have").
    */
   stats: HistoryStats;
   fakeSaleMessage: string | null;
   trackingSince: string | null; // 'YYYY-MM-DD'
   updatedAt: string | null;
-  isStale: boolean; // updatedAt cũ hơn 48 giờ
+  isStale: boolean; // updatedAt older than 48 hours
 }
 
 export function isOfferVisible(offer: OfferRow, isDraftProduct: boolean): boolean {
   if (offer.listingStatus !== "active") return false;
   if (offer.matchStatus === "auto" || offer.matchStatus === "manual") return true;
-  // Product draft do ingest sinh ra có offer 'pending' trỏ vào chính variant draft đó (Đ6).
+  // A draft product created by ingest has a 'pending' offer pointing at that same draft variant (Đ6).
   if (offer.matchStatus === "pending" && isDraftProduct) return true;
   return false;
 }
@@ -82,10 +82,10 @@ export function buildVariantPricing(input: {
   const { offers, history, trackingSince, isDraftProduct, now = new Date() } = input;
   const historyObs = expandRollup(history);
 
-  // 1. Lọc các offer hiển thị được
+  // 1. Keep only displayable offers
   const visibleOffers = offers.filter((o) => isOfferVisible(o, isDraftProduct));
 
-  // 2. Phân loại tồn kho và tính toán cơ bản
+  // 2. Classify stock and compute basics
   const mappedOffers: PricedOffer[] = visibleOffers.map((o) => {
     const inStock = o.stock == null || o.stock > 0;
     const disc = discountPercent(o.price, o.originalPrice);
@@ -97,7 +97,7 @@ export function buildVariantPricing(input: {
     };
   });
 
-  // 3. Sắp xếp: Còn hàng lên trước (giá tăng dần), rồi đến hết hàng (giá tăng dần). Giá null xếp cuối.
+  // 3. Sort: in stock first (ascending price), then out of stock (ascending price). Null prices last.
   mappedOffers.sort((a, b) => {
     if (a.inStock && !b.inStock) return -1;
     if (!a.inStock && b.inStock) return 1;
@@ -108,10 +108,10 @@ export function buildVariantPricing(input: {
     return 0;
   });
 
-  // 4. Offer rẻ nhất còn hàng
+  // 4. Cheapest in-stock offer
   const cheapest = mappedOffers.find((o) => o.inStock && o.price != null && o.price > 0) ?? null;
 
-  // Hết hàng ở mọi người bán: giá lần cuối lấy từ quan sát MỚI nhất.
+  // Out of stock at every seller: last price comes from the NEWEST observation.
   const pricedOffers = mappedOffers.filter((o) => o.price != null && o.price > 0);
   const lastKnown =
     cheapest == null
@@ -122,7 +122,7 @@ export function buildVariantPricing(input: {
         )[0] ?? null)
       : null;
 
-  // 5. Tính Deal Score đầu trang (Đ7: KHÔNG truyền bestOffer)
+  // 5. Header Deal Score (Đ7: do NOT pass bestOffer)
   let headline: DealScoreResult | null = null;
   if (cheapest && cheapest.price != null) {
     headline = computeDealScore({
@@ -130,8 +130,8 @@ export function buildVariantPricing(input: {
       history: historyObs,
       now,
     });
-    // Lịch sử đã loại flash sale nên giá flash hiện tại gần như luôn "Nên mua".
-    // Không đổi điểm, nhưng phải nói rõ giá này chỉ tạm thời.
+    // History excludes flash sales, so a current flash price is almost always "Buy".
+    // Keep the score, but make clear this price is temporary.
     if (cheapest.isFlashSale && headline.score != null) {
       headline = {
         ...headline,
@@ -140,12 +140,12 @@ export function buildVariantPricing(input: {
     }
   }
 
-  // 6. Tính Deal Score riêng cho từng offer (so với offer rẻ nhất).
+  // 6. Per-offer Deal Score (relative to the cheapest offer).
   //
-  // Với CHÍNH offer rẻ nhất thì phép so sánh này là so với chính nó: cBetween
-  // luôn bằng 100 và dòng đó sẽ hiện cao hơn điểm đầu trang tới 20 điểm.
-  // Người dùng nhìn thấy hai con số mâu thuẫn trên cùng một màn hình.
-  // Vì vậy offer rẻ nhất dùng lại đúng điểm đầu trang (nhánh reweight 62.5/37.5).
+  // For the cheapest offer ITSELF this comparison is against itself: cBetween
+  // is always 100 and that row would show up to 20 points above the header score.
+  // The user would see two contradicting numbers on the same screen.
+  // So the cheapest offer reuses the exact header score (62.5/37.5 reweight branch).
   for (const offer of mappedOffers) {
     if (offer.price == null || offer.price <= 0) continue;
 
@@ -167,16 +167,16 @@ export function buildVariantPricing(input: {
     const m14 = medianWindow(history, 14, 0, now);
     const m60 = medianWindow(history, 74, 14, now);
 
-    // Heuristic #2 ("tăng giá trước đợt giảm") chỉ có nghĩa khi ĐANG có đợt
-    // giảm: có giá niêm yết gạch ngang, hoặc giá hiện tại thấp hơn trung vị 14
-    // ngày. Không thì một sản phẩm chỉ vừa tăng giá cũng bị gắn nhãn — một phát
-    // ngôn về người bán mà "thà bỏ sót" (design §13) không cho phép.
+    // Heuristic #2 ("price hike before the sale") only makes sense when a sale IS
+    // running: a struck-through list price, or a current price below the 14-day
+    // median. Otherwise a product that merely raised its price gets labelled — a
+    // claim about the seller that "better to miss" (design §13) does not allow.
     const onSale =
       cheapest.discountPercent != null ||
       (m14.value != null && cheapest.price < m14.value);
     const priceHikeCheckable = onSale && m14.dayCount >= 10 && m60.dayCount >= 30;
 
-    // Heuristic #1 chỉ chạy khi m30.dayCount >= 14
+    // Heuristic #1 only runs when m30.dayCount >= 14
     if (m30.dayCount >= 14) {
       fakeSaleMessage = detectFakeSale({
         currentPrice: cheapest.price,
@@ -188,9 +188,9 @@ export function buildVariantPricing(input: {
     }
   }
 
-  // 8. Thời điểm cập nhật & Cảnh báo dữ liệu cũ (> 48h)
-  // Chỉ tính trên offer hiển thị được: một offer đã bị ẩn (listing inactive,
-  // matching chưa chắc) không được làm dữ liệu trông tươi hơn thực tế.
+  // 8. Update time & stale-data warning (> 48h)
+  // Only counts displayable offers: a hidden offer (inactive listing,
+  // uncertain matching) must not make the data look fresher than it is.
   let latestObservedAt: string | null = null;
   for (const o of mappedOffers) {
     if (o.observedAt) {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { computeDealScore, detectFakeSale, type PriceObservation } from "@/lib/pricing/deal-score";
 
-const NOW = new Date("2026-06-15T03:00:00Z"); // 10:00 giờ VN
+const NOW = new Date("2026-06-15T03:00:00Z"); // 10:00 Vietnam time
 
-/** Một quan sát mỗi ngày, lúc 12:00 giờ VN, từ `days - 1` ngày trước tới hôm nay. */
+/** One observation per day, at 12:00 Vietnam time, from `days - 1` days ago to today. */
 function daily(days: number, price: (i: number) => number, base = NOW): PriceObservation[] {
   return Array.from({ length: days }, (_, i) => {
     const d = new Date(base.getTime() - (days - 1 - i) * 86_400_000);
@@ -12,39 +12,39 @@ function daily(days: number, price: (i: number) => number, base = NOW): PriceObs
 }
 
 describe("computeDealScore — percentile mid-rank", () => {
-  it("giá đứng yên KHÔNG bị chấm 🔴 Chưa nên mua", () => {
+  it("a flat price is NOT scored 🔴 Don't buy yet", () => {
     const r = computeDealScore({ price: 1000, history: daily(30, () => 1000), now: NOW });
     expect(r.stats.percentileRank).toBe(0.5);
     expect(r.recommendation).not.toBe("avoid");
     expect(r.reasons).toContain("✓ Đang ở mức đáy ghi nhận");
   });
 
-  it("giá dưới mọi giá lịch sử có rank 0, trên mọi giá lịch sử có rank 1", () => {
+  it("a price below all history has rank 0, above all history rank 1", () => {
     const hist = daily(30, (i) => 1000 + i * 10);
     expect(computeDealScore({ price: 900, history: hist, now: NOW }).stats.percentileRank).toBe(0);
     expect(computeDealScore({ price: 5000, history: hist, now: NOW }).stats.percentileRank).toBe(1);
   });
 
-  it("giá bằng đúng một mức lịch sử chỉ tính một nửa phần bằng nhau", () => {
-    // 1000, 1100, 1200, 1300 ×(mỗi mức nhiều ngày) — giá 1100 có 1/4 thấp hơn, 1/4 bằng.
+  it("a price equal to one historical level counts only half of the ties", () => {
+    // 1000, 1100, 1200, 1300 ×(several days each) — price 1100 has 1/4 below, 1/4 equal.
     const hist = daily(40, (i) => 1000 + Math.floor(i / 10) * 100);
     const r = computeDealScore({ price: 1100, history: hist, now: NOW });
     expect(r.stats.percentileRank).toBeCloseTo(0.25 + 0.125);
   });
 });
 
-describe("computeDealScore — tham số now", () => {
-  it("backtest được tại một thời điểm trong quá khứ", () => {
+describe("computeDealScore — the now parameter", () => {
+  it("can backtest at a point in the past", () => {
     const past = new Date("2025-01-10T03:00:00Z");
     const hist = daily(30, (i) => 1000 + i, past);
     expect(computeDealScore({ price: 990, history: hist, now: past }).score).not.toBeNull();
-    // Cùng dữ liệu, tính "hôm nay" thì đã rơi ngoài cửa sổ 90 ngày.
+    // Same data, computed as of "today" it has fallen outside the 90-day window.
     expect(computeDealScore({ price: 990, history: hist, now: NOW }).recommendation).toBe(
       "insufficient_data",
     );
   });
 
-  it("bỏ quan sát nằm sau thời điểm now", () => {
+  it("ignores observations after now", () => {
     const hist = daily(30, () => 1000);
     const earlier = new Date(NOW.getTime() - 5 * 86_400_000);
     expect(computeDealScore({ price: 1000, history: hist, now: earlier }).stats.observations).toBe(
@@ -54,15 +54,15 @@ describe("computeDealScore — tham số now", () => {
 });
 
 describe("detectFakeSale", () => {
-  it("giảm ≥20% so với giá niêm yết mà giá vẫn quanh trung vị → cảnh báo", () => {
+  it("≥20% off the list price while the price is around the median → warning", () => {
     expect(detectFakeSale({ currentPrice: 1000, listedPrice: 1400, median30d: 1000 })).not.toBeNull();
   });
 
-  it("giảm thật (giá dưới trung vị rõ rệt) → không cảnh báo", () => {
+  it("real discount (price clearly below median) → no warning", () => {
     expect(detectFakeSale({ currentPrice: 800, listedPrice: 1400, median30d: 1000 })).toBeNull();
   });
 
-  it("trung vị 14 ngày cao hơn 60 ngày trước đó >15% → cảnh báo tăng giá trước sale", () => {
+  it("14-day median >15% above the preceding 60 days → pre-sale price hike warning", () => {
     expect(
       detectFakeSale({
         currentPrice: 1000,

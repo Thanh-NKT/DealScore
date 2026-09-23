@@ -6,7 +6,7 @@ import { listUnsubscribeHeaders, renderAlertEmail, type AlertEmailItem } from "@
 
 describe("describeTriggers", () => {
   const ctx = { price: 850_000, targetPrice: 900_000, baselinePrice: 1_000_000, lastAlertPrice: 880_000, dealScore: 82 };
-  it("mỗi loại một câu; % làm tròn xuống", () => {
+  it("one sentence per type; % rounded down", () => {
     expect(describeTriggers(["target_price", "drop_pct", "low", "deal_score", "back_in_stock", "deeper_drop"], ctx)).toEqual([
       `Giá đã xuống dưới mức bạn đặt (${formatVnd(900_000)})`,
       "Giảm 15% so với lúc bạn bắt đầu theo dõi",
@@ -18,15 +18,15 @@ describe("describeTriggers", () => {
   });
 });
 
-describe("token hủy đăng ký", () => {
+describe("unsubscribe token", () => {
   const S = "secret";
-  it("ký rồi xác minh khứ hồi", () => {
+  it("sign then verify round trip", () => {
     const scope = { kind: "watch" as const, userId: "u", watchId: "w" };
     expect(verifyUnsubscribeToken(signUnsubscribeToken(scope, S), S)).toEqual(scope);
     const all = { kind: "email" as const, userId: "u" };
     expect(verifyUnsubscribeToken(signUnsubscribeToken(all, S), S)).toEqual(all);
   });
-  it("sửa payload / sai secret / rác → null, không ném", () => {
+  it("tampered payload / wrong secret / junk → null, never throws", () => {
     const t = signUnsubscribeToken({ kind: "email", userId: "u" }, S);
     const [v, payload, sig] = t.split(".");
     const tampered = `${v}.${payload.slice(0, -1)}${payload.endsWith("A") ? "B" : "A"}.${sig}`;
@@ -60,12 +60,12 @@ describe("renderAlertEmail", () => {
     siteUrl: "https://kairo.vn",
   });
 
-  it("1 item → tiêu đề tên + giá; 3 item → số lượng", () => {
+  it("1 item → name + price subject; 3 items → count", () => {
     expect(renderAlertEmail(input([item()])).subject).toBe(`SSD Samsung 990 còn ${formatVnd(2_500_000)}`);
     expect(renderAlertEmail(input([item(), item(), item()])).subject).toBe("3 sản phẩm bạn theo dõi vừa có tin mới");
   });
 
-  it("escape tên sản phẩm; có link mua, disclosure, link tắt email ở cả html và text", () => {
+  it("escapes the product name; buy link, disclosure and email opt-out link in both html and text", () => {
     const e = renderAlertEmail(input([item({ productName: "<script>x</script>" })]));
     expect(e.html).not.toContain("<script>x</script>");
     expect(e.html).toContain("&lt;script&gt;");
@@ -79,7 +79,7 @@ describe("renderAlertEmail", () => {
 });
 
 describe("listUnsubscribeHeaders", () => {
-  it("đúng RFC 8058", () => {
+  it("RFC 8058 compliant", () => {
     expect(listUnsubscribeHeaders("https://kairo.vn/api/unsubscribe?t=a", "https://kairo.vn/unsubscribe?t=a")).toEqual({
       "List-Unsubscribe": "<https://kairo.vn/api/unsubscribe?t=a>, <https://kairo.vn/unsubscribe?t=a>",
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

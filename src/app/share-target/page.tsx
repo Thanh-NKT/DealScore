@@ -22,8 +22,8 @@ export default async function ShareTargetPage({
   const extractedUrl = extractFirstUrl(candidateText);
 
   if (extractedUrl) {
-    // Cùng luồng với /api/lookup — cùng hạn mức. Trang này là GET công khai,
-    // thiếu rate limit ở đây là một đường ingest không giới hạn.
+    // Same flow as /api/lookup — same quota. This page is a public GET;
+    // without a rate limit here it would be an unlimited ingest path.
     let productUrl: string | null = null;
     try {
       const supabase = await createClient();
@@ -35,14 +35,14 @@ export default async function ShareTargetPage({
       });
       if (result.status !== "error") productUrl = result.productUrl;
     } catch (err) {
-      console.error("Lỗi share-target:", err);
+      console.error("share-target error:", err);
     }
-    // redirect() ném lỗi điều hướng — gọi NGOÀI try để không bị catch nuốt.
+    // redirect() throws a navigation error — call it OUTSIDE the try so catch doesn't swallow it.
     if (productUrl) redirect(productUrl);
   }
 
-  // Không trích được link Shopee hợp lệ (hoặc tra cứu thất bại): chuyển sang
-  // trang tìm kiếm với phần chữ được chia sẻ.
+  // No valid Shopee link could be extracted (or the lookup failed): fall back to
+  // the search page with the shared text.
   const fallbackQuery = text || title || candidateText;
   redirect(
     fallbackQuery

@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-/** subscription = PushSubscription.toJSON() từ trình duyệt. */
+/** subscription = PushSubscription.toJSON() from the browser. */
 export async function savePushSubscription(
   subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
   userAgent: string | null,
@@ -20,15 +20,15 @@ export async function savePushSubscription(
     return { ok: false, error: "Đăng ký thông báo không hợp lệ." };
   }
 
-  // Một thiết bị có thể đổi người đăng nhập: endpoint thuộc user khác thì xóa bản cũ.
-  // Chỉ admin xóa được hàng của user khác — danh tính đã được requireUser xác định ở trên.
+  // A device can switch signed-in users: if the endpoint belongs to another user, delete the old row.
+  // Only admin can delete another user's row — identity was established by requireUser above.
   const admin = createAdminClient();
   const { error: delError } = await admin
     .from("push_subscriptions")
     .delete()
     .eq("endpoint", subscription.endpoint)
     .neq("user_id", user.id);
-  if (delError) throw new Error(`Dọn đăng ký cũ thất bại: ${delError.message}`);
+  if (delError) throw new Error(`Failed to clean up old subscription: ${delError.message}`);
 
   const { error } = await admin.from("push_subscriptions").upsert(
     {
@@ -40,7 +40,7 @@ export async function savePushSubscription(
     },
     { onConflict: "endpoint" },
   );
-  if (error) throw new Error(`Lưu đăng ký thông báo thất bại: ${error.message}`);
+  if (error) throw new Error(`Failed to save push subscription: ${error.message}`);
   return { ok: true };
 }
 
@@ -48,5 +48,5 @@ export async function deletePushSubscription(endpoint: string): Promise<void> {
   await requireUser({ path: "/account/notifications" });
   const supabase = await createClient();
   const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
-  if (error) throw new Error(`Xóa đăng ký thông báo thất bại: ${error.message}`);
+  if (error) throw new Error(`Failed to delete push subscription: ${error.message}`);
 }

@@ -10,7 +10,7 @@ export default async function AccountPage() {
   const user = await requireUser({ path: "/account" });
   const supabase = await createClient();
 
-  // Đếm số watch đang theo dõi
+  // Count active watches
   const { count: activeWatchCount } = await supabase
     .from("watches")
     .select("*", { count: "exact", head: true })
@@ -34,7 +34,7 @@ export default async function AccountPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:py-12 space-y-8">
-      {/* Header tài khoản */}
+      {/* Account header */}
       <div className="flex flex-col gap-2 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -57,9 +57,9 @@ export default async function AccountPage() {
         </form>
       </div>
 
-      {/* Grid các mục quản lý */}
+      {/* Management sections grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {/* Card: Watch của tôi */}
+        {/* Card: My Watches */}
         <section className="flex flex-col justify-between rounded-3xl border border-border bg-black/[0.01] p-6 shadow-sm dark:bg-white/[0.01]">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -91,7 +91,7 @@ export default async function AccountPage() {
           </div>
         </section>
 
-        {/* Card: Cài đặt thông báo */}
+        {/* Card: Notification settings */}
         <section className="flex flex-col justify-between rounded-3xl border border-border bg-black/[0.01] p-6 shadow-sm dark:bg-white/[0.01]">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -121,7 +121,7 @@ export default async function AccountPage() {
         </section>
       </div>
 
-      {/* Tùy chọn Marketing */}
+      {/* Marketing preferences */}
       <section className="rounded-3xl border border-border bg-black/[0.01] p-6 shadow-sm dark:bg-white/[0.01] space-y-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
           Tùy chọn bản tin & Khuyến mãi
@@ -129,7 +129,7 @@ export default async function AccountPage() {
         <MarketingToggle initialOptIn={user.marketingOptIn} />
       </section>
 
-      {/* Dữ liệu & Quyền riêng tư */}
+      {/* Data & privacy */}
       <section className="rounded-3xl border border-border bg-black/[0.01] p-6 shadow-sm dark:bg-white/[0.01] space-y-6">
         <div>
           <h2 className="text-base font-bold text-foreground">

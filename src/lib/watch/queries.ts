@@ -32,7 +32,7 @@ export interface MyWatchItem {
   createdAt: string;
 }
 
-/** `client` truyền vào để test bằng DB thật; mặc định là server client (RLS). */
+/** `client` is injectable so tests can use a real DB; defaults to the server client (RLS). */
 export async function listMyWatches(
   userId: string,
   now: Date,
@@ -40,7 +40,7 @@ export async function listMyWatches(
 ): Promise<MyWatchItem[]> {
   const supabase = client ?? (await createClient());
 
-  // 1. Lấy danh sách watches của user kèm quan hệ product_variants, products, categories
+  // 1. Load the user's watches with product_variants, products, categories
   const { data: watchRows, error: watchError } = await supabase
     .from("watches")
     .select(
@@ -66,28 +66,28 @@ export async function listMyWatches(
     .eq("user_id", userId);
 
   if (watchError) {
-    throw new Error(`Lỗi khi tải danh sách Watch: ${watchError.message}`);
+    throw new Error(`Failed to load Watch list: ${watchError.message}`);
   }
 
   if (!watchRows || watchRows.length === 0) {
     return [];
   }
 
-  // 2. Lấy cài đặt thông báo của user
+  // 2. Load the user's notification settings
   const { data: settingsRow, error: settingsError } = await supabase
     .from("notification_settings")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
-  if (settingsError) throw new Error(`Lỗi khi tải cài đặt thông báo: ${settingsError.message}`);
+  if (settingsError) throw new Error(`Failed to load notification settings: ${settingsError.message}`);
 
   const settings = settingsRow ? fromRow(settingsRow) : DEFAULT_NOTIFICATION_SETTINGS;
 
-  // 3. Lấy snapshots cho các variantIds
+  // 3. Load snapshots for the variantIds
   const variantIds = Array.from(new Set(watchRows.map((w) => w.variant_id)));
   const snapshotMap = await loadVariantSnapshots(supabase, variantIds, now);
 
-  // 4. Lấy alert gần nhất cho mỗi watch (kèm deliveries)
+  // 4. Load the latest alert per watch (with deliveries)
   const watchIds = watchRows.map((w) => w.id);
   const { data: alertRows, error: alertError } = await supabase
     .from("alert_events")
@@ -101,7 +101,7 @@ export async function listMyWatches(
     )
     .in("watch_id", watchIds)
     .order("created_at", { ascending: false });
-  if (alertError) throw new Error(`Lỗi khi tải alert: ${alertError.message}`);
+  if (alertError) throw new Error(`Failed to load alerts: ${alertError.message}`);
 
   const latestAlertByWatch = new Map<string, LatestAlert>();
   for (const a of alertRows ?? []) {
@@ -119,7 +119,7 @@ export async function listMyWatches(
     }
   }
 
-  // 5. Chuyển đổi sang MyWatchItem
+  // 5. Map to MyWatchItem
   const items: MyWatchItem[] = [];
 
   for (const row of watchRows) {
@@ -192,11 +192,11 @@ export async function listMyWatches(
     });
   }
 
-  // 6. Sắp xếp:
-  // - active trước (sắp theo view.sortKey tăng dần)
-  // - rồi paused
-  // - rồi done
-  // Trong cùng nhóm: createdAt mới hơn lên trước
+  // 6. Sort:
+  // - active first (by view.sortKey ascending)
+  // - then paused
+  // - then done
+  // Within a group: newer createdAt first
   const statusWeight = { active: 1, paused: 2, done: 3 };
 
   items.sort((a, b) => {
@@ -230,9 +230,9 @@ export async function getMyWatchForVariant(
     .eq("variant_id", variantId)
     .maybeSingle();
 
-  // Lỗi DB KHÔNG phải "chưa có Watch": trả null ở đây làm saveWatch chèn Watch
-  // thứ hai và đâm vào unique (user_id, variant_id).
-  if (error) throw new Error(`Lỗi khi tải Watch: ${error.message}`);
+  // A DB error is NOT "no Watch yet": returning null here makes saveWatch insert a second
+  // Watch and hit the unique (user_id, variant_id) constraint.
+  if (error) throw new Error(`Failed to load Watch: ${error.message}`);
   if (!data) return null;
 
   return {
@@ -249,7 +249,7 @@ export async function getMyWatchForVariant(
   };
 }
 
-/** Lõi của action saveWatch. `supabase` là client của CHÍNH user (RLS). */
+/** Core of the saveWatch action. `supabase` is the user's OWN client (RLS). */
 export async function saveWatchForUser(
   supabase: Client,
   userId: string,
@@ -265,7 +265,7 @@ export async function saveWatchForUser(
 
   const { variantId, config } = parsed;
 
-  // Kiểm tra xem đã có Watch cho variant này chưa
+  // Check whether a Watch already exists for this variant
   const existing = await getMyWatchForVariant(userId, variantId, supabase);
 
   let watchId = "";
@@ -281,7 +281,7 @@ export async function saveWatchForUser(
         min_deal_score: config.minDealScore,
         notify_back_in_stock: config.notifyBackInStock,
         channels: config.channels,
-        // Nếu trước đó là paused/done thì khi sửa ta có thể giữ nguyên hoặc kích hoạt lại nếu được yêu cầu
+        // If it was paused/done, editing may keep it as is or reactivate it when requested
       })
       .eq("id", existing.id)
       .eq("user_id", userId);
@@ -296,7 +296,7 @@ export async function saveWatchForUser(
           },
         };
       }
-      throw new Error(`Lỗi cập nhật Watch: ${error.message}`);
+      throw new Error(`Failed to update Watch: ${error.message}`);
     }
   } else {
     const { data, error } = await supabase
@@ -333,7 +333,7 @@ export async function saveWatchForUser(
           },
         };
       }
-      throw new Error(`Lỗi tạo Watch: ${error.message}`);
+      throw new Error(`Failed to create Watch: ${error.message}`);
     }
 
     watchId = data.id;

@@ -30,7 +30,7 @@ export function UrlLookupForm({ autoFocus = false }: UrlLookupFormProps) {
     setErrorInfo(null);
     setIsSlow(false);
 
-    // Sau 2 giây hiện thông báo cần thêm thời gian nếu phải Ingest
+    // After 2 seconds, show a "needs more time" notice in case an ingest is required
     const slowTimer = setTimeout(() => {
       setIsSlow(true);
     }, 2000);
@@ -71,7 +71,7 @@ export function UrlLookupForm({ autoFocus = false }: UrlLookupFormProps) {
 
   const getErrorMessage = () => {
     if (!errorInfo) return null;
-    // "internal" và mã lạ: dùng thông điệp server trả về nếu có.
+    // "internal" and unknown codes: use the server-provided message if any.
     if (errorInfo.code === "internal" && errorInfo.message) return errorInfo.message;
     return lookupErrorMessage(errorInfo.code, errorInfo.retryAfter);
   };
@@ -100,14 +100,14 @@ export function UrlLookupForm({ autoFocus = false }: UrlLookupFormProps) {
         </button>
       </form>
 
-      {/* Thông báo tiến độ khi cần thêm thời gian ingest */}
+      {/* Progress notice when the ingest needs more time */}
       {isSlow && loading && (
         <p className="text-xs text-muted animate-pulse">
           Lần đầu theo dõi sản phẩm này, cần thêm chút thời gian…
         </p>
       )}
 
-      {/* Vùng thông báo lỗi chi tiết */}
+      {/* Detailed error area */}
       {errorInfo && (
         <div
           role="alert"

@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * Xếp hạng và khuyến nghị chỉ dựa trên giá. Các module này không được đọc bất
- * kỳ thứ gì liên quan tới hoa hồng — đừng "sửa" test này để nó xanh.
+ * Ranking and recommendations are based on price only. These modules must not read anything
+ * related to commission — don't "fix" this test to make it green.
  */
 const GUARDED = [
   "src/lib/pricing/deal-score.ts",
@@ -19,9 +19,9 @@ function files(path: string): string[] {
   return statSync(path).isDirectory() ? readdirSync(path).flatMap((f) => files(join(path, f))) : [path];
 }
 
-describe("chống thiên vị theo hoa hồng", () => {
+describe("no commission bias", () => {
   for (const f of GUARDED.flatMap(files).filter((f) => f.endsWith(".ts"))) {
-    it(`${f} không đọc dữ liệu affiliate`, () => {
+    it(`${f} does not read affiliate data`, () => {
       expect(readFileSync(f, "utf8")).not.toMatch(FORBIDDEN);
     });
   }

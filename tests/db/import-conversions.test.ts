@@ -29,7 +29,7 @@ const row = (i: number): NormalizedConversion => ({
 });
 
 describe("upsertNormalizedConversions", () => {
-  it("chia lô 500 và cộng dồn kết quả", async () => {
+  it("batches of 500 with accumulated results", async () => {
     const rows = Array.from({ length: 1203 }, (_, i) => row(i));
     const r1 = await upsertNormalizedConversions(rows, admin);
     expect(r1).toEqual({ inserted: 1203, updated: 0, matched: 0 });

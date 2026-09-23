@@ -10,7 +10,7 @@ export default async function RestoreAccountPage() {
     allowPendingDeletion: true,
   });
 
-  // Nếu tài khoản không ở trạng thái chờ xóa thì chuyển về /account
+  // If the account is not pending deletion, go back to /account
   if (!user.deletedAt) {
     redirect("/account");
   }

@@ -7,7 +7,7 @@ import type {
   WatchState,
 } from "@/lib/watch/types";
 
-/** Các điều kiện Watch có bật, theo thứ tự cố định. */
+/** Enabled Watch conditions, in a fixed order. */
 export function enabledConditions(config: WatchConfig): ConditionKey[] {
   const keys: ConditionKey[] = [];
   if (config.targetPrice !== null) keys.push("target_price");
@@ -25,7 +25,7 @@ export function evaluateConditions(
 ): Partial<Record<ConditionKey, Tri>> {
   const result: Partial<Record<ConditionKey, Tri>> = {};
 
-  // Nếu dữ liệu stale (cũ hơn 48h) → mọi điều kiện đã bật đều là "unknown"
+  // If the data is stale (older than 48h) → every enabled condition is "unknown"
   if (snap.isStale) {
     if (config.targetPrice !== null) result.target_price = "unknown";
     if (config.dropPct !== null) result.drop_pct = "unknown";
@@ -72,7 +72,7 @@ export function evaluateConditions(
     }
   }
 
-  // 3. low (đáy 90 ngày)
+  // 3. low (90-day low)
   if (config.notifyLow) {
     const low = snap.deal?.stats.low ?? null;
     if (low === null) {

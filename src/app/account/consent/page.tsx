@@ -14,13 +14,13 @@ export default async function ConsentPage({ searchParams }: ConsentPageProps) {
   const { next: rawNext } = await searchParams;
   const next = safeNextPath(rawNext, "/account");
 
-  // Kiểm tra user hiện tại (cho phép thiếu consent để hiển thị form)
+  // Check the current user (missing consent allowed so the form can render)
   const user = await requireUser({
     path: `/account/consent?next=${encodeURIComponent(next)}`,
     allowMissingConsent: true,
   });
 
-  // Nếu người dùng đã đồng ý phiên bản hiện tại rồi thì chuyển hướng về next luôn
+  // If the user already accepted the current version, go straight to next
   if (!needsConsent(user.consentVersion)) {
     redirect(next);
   }

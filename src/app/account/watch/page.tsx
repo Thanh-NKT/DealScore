@@ -38,7 +38,7 @@ export default async function MyWatchesPage() {
 
       <WatchList initialItems={items} />
 
-      {/* Chân trang với disclosure tiếp thị liên kết theo spec 1.5 */}
+      {/* Footer with the affiliate disclosure required by spec 1.5 */}
       <footer className="border-t border-border pt-6 text-center text-xs text-muted leading-relaxed">
         Kairo có thể nhận hoa hồng khi bạn mua qua liên kết. Điều này không làm
         thay đổi giá bạn trả và không ảnh hưởng đến đánh giá Deal Score.

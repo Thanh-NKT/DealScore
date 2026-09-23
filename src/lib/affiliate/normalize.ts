@@ -2,11 +2,11 @@ import { parseSubId, type ClickSource } from "@/lib/affiliate/link";
 
 export type ConversionStatus = "pending" | "completed" | "cancelled" | "unknown";
 
-/** Đúng khóa của RPC upsert_conversions (0007). */
+/** Exactly the keys of the upsert_conversions RPC (0007). */
 export interface NormalizedConversion {
   order_id: string;
   item_id: string;
-  model_id: string; // '' khi không có
+  model_id: string; // '' when absent
   click_event_id: string | null;
   sub_ids: string[];
   source_channel: ClickSource | "unknown";
@@ -22,7 +22,7 @@ export interface NormalizedConversion {
   raw: Record<string, unknown>;
 }
 
-/** G3 — tối thiểu các field dùng tới; mọi field chưa chắc chắn đều optional. */
+/** G3 — the minimum set of fields we use; every uncertain field is optional. */
 export interface ApiOrder {
   orderId?: string | number;
   orderStatus?: string;
@@ -42,7 +42,7 @@ export interface ApiItem {
   completeTime?: string | number;
 }
 
-// ------------------------------------------------------------- trạng thái (G3)
+// ------------------------------------------------------------- status (G3)
 const STATUS_MAP: Record<string, ConversionStatus> = {
   pending: "pending",
   unpaid: "pending",
@@ -65,7 +65,7 @@ export function normalizeStatus(raw: string): ConversionStatus {
   return STATUS_MAP[key] ?? "unknown";
 }
 
-// ------------------------------------------------------------------- tiền
+// ------------------------------------------------------------------- money
 export function parseMoney(raw: unknown): number | null {
   if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
   if (typeof raw !== "string") return null;
@@ -75,7 +75,7 @@ export function parseMoney(raw: unknown): number | null {
   const lastDot = s.lastIndexOf(".");
   const lastComma = s.lastIndexOf(",");
   if (lastDot >= 0 && lastComma >= 0) {
-    // Ký tự xuất hiện sau cùng là dấu thập phân.
+    // The last separator to appear is the decimal mark.
     const dec = lastDot > lastComma ? "." : ",";
     const thousands = dec === "." ? "," : ".";
     s = s.split(thousands).join("").replace(dec, ".");
@@ -83,14 +83,14 @@ export function parseMoney(raw: unknown): number | null {
     const sep = lastDot >= 0 ? "." : lastComma >= 0 ? "," : null;
     if (sep) {
       const parts = s.split(sep);
-      // Nhiều dấu, hoặc nhóm cuối đúng 3 chữ số → phân nhóm hàng nghìn (VND không có phần lẻ).
+      // Several separators, or a final group of exactly 3 digits → thousands grouping (VND has no minor unit).
       s = parts.length > 2 || parts[parts.length - 1].length === 3 ? parts.join("") : parts.join(".");
     }
   }
   return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : null;
 }
 
-// ------------------------------------------------------------- thời gian
+// ------------------------------------------------------------- time
 const VN_OFFSET_MS = 7 * 3_600_000;
 
 export function parseTime(raw: unknown): string | null {
@@ -116,7 +116,7 @@ export function parseTime(raw: unknown): string | null {
   return null;
 }
 
-// ------------------------------------------------------------------- dòng API
+// ------------------------------------------------------------------- API row
 const str = (v: unknown) => (v == null || v === "" ? null : String(v).trim());
 const int = (v: unknown) => {
   const n = parseMoney(v);
@@ -139,9 +139,9 @@ export function normalizeApiRow(
   const orderId = str(order.orderId);
   const itemId = str(item.itemId);
   const purchase = parseTime(order.purchaseTime);
-  if (!orderId) return { ok: false, reason: "thiếu orderId" };
-  if (!itemId) return { ok: false, reason: `đơn ${orderId}: thiếu itemId` };
-  if (!purchase) return { ok: false, reason: `đơn ${orderId}: thiếu / sai purchaseTime` };
+  if (!orderId) return { ok: false, reason: "missing orderId" };
+  if (!itemId) return { ok: false, reason: `order ${orderId}: missing itemId` };
+  if (!purchase) return { ok: false, reason: `order ${orderId}: missing / invalid purchaseTime` };
 
   const rawStatus = str(item.displayItemStatus) ?? str(order.orderStatus) ?? "";
   return {
@@ -165,8 +165,8 @@ export function normalizeApiRow(
   };
 }
 
-// ------------------------------------------------------------------- dòng CSV
-/** G5 — MỘT chỗ duy nhất chứa tên cột CSV. Mỗi trường là danh sách tên chấp nhận được. */
+// ------------------------------------------------------------------- CSV row
+/** G5 — the ONE place holding CSV column names. Each field lists its accepted header names. */
 export const CSV_COLUMNS = {
   orderId: ["Order ID", "Mã đơn hàng"],
   itemId: ["Item ID", "ID sản phẩm"],
@@ -191,7 +191,7 @@ function pick(record: Record<string, string>, names: readonly string[]): string 
   return null;
 }
 
-/** Tên cột thật của file CSV có khớp đủ trường bắt buộc không — dùng để báo lỗi sớm. */
+/** Whether the CSV's actual headers cover every required field — used to fail early. */
 export function missingCsvFields(headers: string[]): string[] {
   const have = new Set(headers.map((h) => h.trim().toLowerCase()));
   return REQUIRED_CSV_FIELDS.filter((f) => !CSV_COLUMNS[f].some((n) => have.has(n.toLowerCase())));
@@ -203,9 +203,9 @@ export function normalizeCsvRow(
   const orderId = pick(record, CSV_COLUMNS.orderId);
   const itemId = pick(record, CSV_COLUMNS.itemId);
   const purchase = parseTime(pick(record, CSV_COLUMNS.purchaseTime));
-  if (!orderId) return { ok: false, reason: "thiếu Order ID" };
-  if (!itemId) return { ok: false, reason: `đơn ${orderId}: thiếu Item ID` };
-  if (!purchase) return { ok: false, reason: `đơn ${orderId}: thiếu / sai Purchase Time` };
+  if (!orderId) return { ok: false, reason: "missing Order ID" };
+  if (!itemId) return { ok: false, reason: `order ${orderId}: missing Item ID` };
+  if (!purchase) return { ok: false, reason: `order ${orderId}: missing / invalid Purchase Time` };
 
   const rawStatus = pick(record, CSV_COLUMNS.status) ?? "";
   const subIds = CSV_COLUMNS.subIds.map((c) => pick(record, [c])).filter((v): v is string => !!v);

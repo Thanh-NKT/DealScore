@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 
-// Next.js 16: convention "proxy" (thay cho "middleware" đã deprecated).
+// Next.js 16: the "proxy" convention (replaces the deprecated "middleware").
 export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }
@@ -9,9 +9,9 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Áp dụng cho mọi request trừ:
+     * Applies to every request except:
      * - _next/static, _next/image
-     * - favicon.ico, các file ảnh tĩnh
+     * - favicon.ico, static image files
      */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],

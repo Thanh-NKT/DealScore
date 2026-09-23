@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { daysBetween, discountPercent, formatVnd, toVnDate } from "@/lib/format";
 
-/** Intl chèn non-breaking space trước ký hiệu tiền tệ. */
+/** Intl inserts a non-breaking space before the currency symbol. */
 const nbsp = (s: string) => s.replace(/ /g, " ");
 
 describe("formatVnd", () => {
-  it("định dạng theo kiểu Việt Nam", () => {
+  it("formats Vietnamese-style", () => {
     expect(nbsp(formatVnd(1_234_000))).toBe("1.234.000 ₫");
   });
 
-  it("làm tròn về số nguyên", () => {
+  it("rounds to an integer", () => {
     expect(nbsp(formatVnd(1000.6))).toBe("1.001 ₫");
   });
 
-  it("trả dấu gạch khi không có giá trị — không bao giờ hiện 0 ₫", () => {
+  it("returns a dash when there is no value — never shows 0 ₫", () => {
     expect(formatVnd(null)).toBe("—");
     expect(formatVnd(undefined)).toBe("—");
     expect(formatVnd(Number.NaN)).toBe("—");
@@ -21,24 +21,24 @@ describe("formatVnd", () => {
 });
 
 describe("discountPercent", () => {
-  it("tính phần trăm giảm", () => {
+  it("computes the discount percentage", () => {
     expect(discountPercent(80, 100)).toBe(20);
   });
 
-  it("làm tròn XUỐNG, không làm tròn lên một con số khuyến mãi", () => {
+  it("rounds DOWN, never rounds a promotion up", () => {
     expect(discountPercent(99, 100)).toBe(1);
   });
 
-  it("trả null khi làm tròn xuống ra 0 — '−0%' là vô nghĩa", () => {
+  it("returns null when rounding down yields 0 — '−0%' is meaningless", () => {
     expect(discountPercent(999, 1000)).toBeNull();
   });
 
-  it("trả null khi không giảm hoặc đắt hơn niêm yết", () => {
+  it("returns null when there is no discount or it costs more than list", () => {
     expect(discountPercent(100, 100)).toBeNull();
     expect(discountPercent(120, 100)).toBeNull();
   });
 
-  it("trả null khi thiếu dữ liệu", () => {
+  it("returns null when data is missing", () => {
     expect(discountPercent(null, 100)).toBeNull();
     expect(discountPercent(100, null)).toBeNull();
     expect(discountPercent(undefined, undefined)).toBeNull();
@@ -46,18 +46,18 @@ describe("discountPercent", () => {
 });
 
 describe("toVnDate", () => {
-  it("dùng giờ Việt Nam chứ không phải UTC", () => {
-    // 17:30Z ngày 10 = 00:30 ngày 11 giờ VN.
+  it("uses Vietnam time, not UTC", () => {
+    // 17:30Z on the 10th = 00:30 on the 11th in Vietnam time.
     expect(toVnDate("2026-03-10T17:30:00Z")).toBe("2026-03-11");
   });
 
-  it("giữ nguyên ngày khi còn trong ngày theo giờ VN", () => {
+  it("keeps the date when still within the same Vietnam day", () => {
     expect(toVnDate("2026-03-10T05:00:00Z")).toBe("2026-03-10");
   });
 });
 
 describe("daysBetween", () => {
-  it("trả số ngày dương bất kể thứ tự", () => {
+  it("returns a positive day count regardless of order", () => {
     expect(daysBetween("2026-03-10T00:00:00Z", "2026-03-12T00:00:00Z")).toBe(2);
     expect(daysBetween("2026-03-12T00:00:00Z", "2026-03-10T00:00:00Z")).toBe(2);
   });

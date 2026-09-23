@@ -40,14 +40,14 @@ export async function GET() {
     supabase.from("push_subscriptions").select("created_at, user_agent").eq("user_id", user.id),
   ]);
 
-  // BẤT KỲ truy vấn nào lỗi → ném. Bỏ qua lỗi là đưa cho người dùng một file
-  // thiếu dữ liệu mà trông như đầy đủ.
+  // ANY failing query → throw. Ignoring errors hands the user a file that is
+  // missing data yet looks complete.
   const results = { profileRes, settingsRes, watchesRes, alertsRes, clicksRes, lookupsRes, pushRes };
   for (const [name, res] of Object.entries(results)) {
-    if (res.error) throw new Error(`Xuất dữ liệu: đọc ${name} thất bại: ${res.error.message}`);
+    if (res.error) throw new Error(`Data export: failed to read ${name}: ${res.error.message}`);
   }
 
-  // Đơn hàng gắn với click của CHÍNH user — conversions chỉ service role đọc được.
+  // Orders tied to the user's OWN clicks — conversions are readable only by the service role.
   const clickIds = (clicksRes.data ?? []).map((c) => c.id);
   const orders: Array<{ purchase_time: string; status: string; order_value: number | null; item_id: string }> = [];
   for (let i = 0; i < clickIds.length; i += 500) {
@@ -55,7 +55,7 @@ export async function GET() {
       .from("conversions")
       .select("purchase_time, status, order_value, item_id")
       .in("click_event_id", clickIds.slice(i, i + 500));
-    if (error) throw new Error(`Xuất dữ liệu: đọc đơn hàng thất bại: ${error.message}`);
+    if (error) throw new Error(`Data export: failed to read orders: ${error.message}`);
     orders.push(...(data ?? []));
   }
 

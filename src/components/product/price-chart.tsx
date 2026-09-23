@@ -27,7 +27,7 @@ export function PriceChart({
   const PLOT_WIDTH = WIDTH - PADDING_LEFT - PADDING_RIGHT; // 640
   const PLOT_HEIGHT = HEIGHT - PADDING_TOP - PADDING_BOTTOM; // 212
 
-  // Nếu không đủ 2 điểm để vẽ
+  // Not enough points (2) to draw
   if (!series.renderable || series.min == null || series.max == null) {
     return (
       <section className="rounded-2xl border border-border p-6 text-center">
@@ -44,7 +44,7 @@ export function PriceChart({
     );
   }
 
-  // Biên độ Y: [min * 0.98, max * 1.02]
+  // Y range: [min * 0.98, max * 1.02]
   const yMin = series.min * 0.98;
   const yMax = series.max === series.min ? series.max * 1.05 : series.max * 1.02;
   const yDiff = yMax - yMin;
@@ -57,7 +57,7 @@ export function PriceChart({
     );
   };
 
-  // Xác định ngày bắt đầu và kết thúc của cửa sổ
+  // Window start and end dates
   const allPoints = series.segments.flat();
   const sortedDays = Array.from(new Set(allPoints.map((p) => p.day))).sort();
   const startDay = sortedDays[0];
@@ -72,14 +72,14 @@ export function PriceChart({
     return PADDING_LEFT + ((t - startTime) / timeDiff) * PLOT_WIDTH;
   };
 
-  // Tính tọa độ cho từng segment
+  // Coordinates for each segment
   const segmentPolylines = series.segments.map((seg) => {
     return seg
       .map((pt) => `${scaleX(pt.day).toFixed(1)},${scaleY(pt.price).toFixed(1)}`)
       .join(" ");
   });
 
-  // Tọa độ cho hover
+  // Coordinates for hover
   const hoverPoints = allPoints.map((pt) => ({
     x: scaleX(pt.day),
     y: scaleY(pt.price),
@@ -87,7 +87,7 @@ export function PriceChart({
     price: pt.price,
   }));
 
-  // Lưới và nhãn trục Y: low, median, high
+  // Y-axis grid and labels: low, median, high
   const yLevels = [
     { label: formatVnd(series.min), y: scaleY(series.min) },
     {
@@ -97,7 +97,7 @@ export function PriceChart({
     { label: formatVnd(series.max), y: scaleY(series.max) },
   ];
 
-  // Nhãn trục X
+  // X-axis labels
   const step = range === 7 ? 1 : range === 30 ? 5 : 15;
   const xLabels: Array<{ text: string; x: number }> = [];
   for (let i = 0; i < sortedDays.length; i += step) {
@@ -123,13 +123,13 @@ export function PriceChart({
           aria-labelledby="chart-title chart-desc"
           className="h-auto w-full select-none"
         >
-          {/* Một chuỗi duy nhất: <title>/<desc> trong SVG ghép nhiều text node thì HTML từ server không khớp lúc hydrate. */}
+          {/* A single string: <title>/<desc> in SVG made of several text nodes makes the server HTML mismatch on hydration. */}
           <title id="chart-title">{`Biểu đồ giá ${range} ngày`}</title>
           <desc id="chart-desc">
             {`Giá thấp nhất từ ${formatVnd(series.min)} đến ${formatVnd(series.max)}, theo dõi ${range} ngày.`}
           </desc>
 
-          {/* Đường lưới và nhãn Y */}
+          {/* Grid lines and Y labels */}
           {yLevels.map((lvl, idx) => (
             <g key={idx}>
               <line
@@ -153,7 +153,7 @@ export function PriceChart({
             </g>
           ))}
 
-          {/* Nhãn X */}
+          {/* X labels */}
           {xLabels.map((lbl, idx) => (
             <text
               key={idx}
@@ -166,7 +166,7 @@ export function PriceChart({
             </text>
           ))}
 
-          {/* Các phân đoạn polyline (ngắt đoạn khi thiếu dữ liệu) */}
+          {/* Polyline segments (broken where data is missing) */}
           {segmentPolylines.map((pointsStr, idx) => (
             <polyline
               key={idx}
@@ -195,7 +195,7 @@ export function PriceChart({
           ))}
         </svg>
 
-        {/* Client hover tooltip phủ lên */}
+        {/* Client hover tooltip overlay */}
         <PriceChartHover
           points={hoverPoints}
           width={WIDTH}
@@ -210,7 +210,7 @@ export function PriceChart({
         </div>
       )}
 
-      {/* Bảng ẩn hiển thị toàn bộ dữ liệu cho SEO & trình đọc màn hình */}
+      {/* Hidden table exposing all data for SEO & screen readers */}
       <table className="sr-only">
         <caption>Lịch sử giá chi tiết</caption>
         <thead>

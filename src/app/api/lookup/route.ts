@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Người đã đăng nhập có hạn mức riêng (60 ingest/giờ) thay vì chung theo IP.
+    // Signed-in users get their own quota (60 ingests/hour) instead of the shared per-IP one.
     const supabase = await createClient();
     const { data: auth } = await supabase.auth.getUser();
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       { headers: NO_STORE },
     );
   } catch (err) {
-    console.error("Lỗi api/lookup:", err);
+    console.error("api/lookup error:", err);
     return errorResponse("internal");
   }
 }

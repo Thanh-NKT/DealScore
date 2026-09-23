@@ -33,7 +33,7 @@ describe("decideAlert", () => {
     });
   });
 
-  it("cạnh sai → đúng → alert", () => {
+  it("false → true edge → alert", () => {
     const d = decideAlert(cfg, base, snap(990), NOW);
     expect(d.kind).toBe("alert");
     expect(d.triggerTypes).toEqual(["target_price"]);
@@ -41,18 +41,18 @@ describe("decideAlert", () => {
     expect(d.nextState?.condState).toEqual({ target_price: true });
   });
 
-  it("đã true, giá đứng yên → không báo", () => {
+  it("already true, flat price → no alert", () => {
     const s = { ...base, condState: { target_price: true }, lastAlertPrice: 990, lastAlertedAt: hoursAgo(48) };
     expect(decideAlert(cfg, s, snap(990), NOW).kind).toBe("no_alert");
   });
 
-  it("xuống thêm đúng 3% → deeper_drop; 2.9% → không", () => {
+  it("exactly 3% further → deeper_drop; 2.9% → none", () => {
     const s = { ...base, condState: { target_price: true }, lastAlertPrice: 1000, lastAlertedAt: hoursAgo(48) };
     expect(decideAlert({ ...cfg, targetPrice: 1100 }, s, snap(970), NOW).triggerTypes).toEqual(["deeper_drop"]);
     expect(decideAlert({ ...cfg, targetPrice: 1100 }, s, snap(971), NOW).kind).toBe("no_alert");
   });
 
-  it("cooldown: cạnh mới bị hoãn và KHÔNG ghi true", () => {
+  it("cooldown: the new edge is deferred and NOT recorded as true", () => {
     const s = { ...base, condState: { target_price: false }, lastAlertPrice: 990, lastAlertedAt: hoursAgo(3) };
     const d = decideAlert(cfg, s, snap(990), NOW);
     expect(d.kind).toBe("suppressed_cooldown");
@@ -60,27 +60,27 @@ describe("decideAlert", () => {
     expect(d.nextState?.alerted).toBeUndefined();
   });
 
-  it("cooldown với điều kiện chưa từng có state → xóa key, không ghi true", () => {
+  it("cooldown on a condition with no prior state → key removed, not recorded as true", () => {
     const s = { ...base, lastAlertedAt: hoursAgo(3) };
     const d = decideAlert(cfg, s, snap(990), NOW);
     expect(d.nextState?.condState).toEqual({});
   });
 
-  it("drop_pct bắn → dời baseline về giá vừa báo", () => {
+  it("drop_pct fires → baseline moves to the alerted price", () => {
     const c = { ...cfg, targetPrice: null, dropPct: 10 };
     const d = decideAlert(c, { ...base, baselinePrice: 1000 }, snap(900), NOW);
     expect(d.triggerTypes).toEqual(["drop_pct"]);
     expect(d.nextState?.baselinePrice).toBe(900);
   });
 
-  it("baseline null + có giá → đặt baseline, không báo", () => {
+  it("null baseline + a price → sets the baseline, no alert", () => {
     const c = { ...cfg, targetPrice: null, dropPct: 10 };
     const d = decideAlert(c, { ...base, baselinePrice: null }, snap(900), NOW);
     expect(d.kind).toBe("no_alert");
     expect(d.nextState?.baselinePrice).toBe(900);
   });
 
-  it("unknown không ghi đè condState cũ", () => {
+  it("unknown does not overwrite the old condState", () => {
     const c = { ...cfg, targetPrice: null, notifyLow: true };
     const s = { ...base, condState: { low: true } };
     const d = decideAlert(c, s, snap(900, { deal: null }), NOW);

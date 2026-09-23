@@ -39,7 +39,7 @@ export async function loadProductPageData(params: {
   try {
     const supabase = await createClient();
 
-    // 1. Lấy thông tin product + categories + product_variants + variant_current_price
+    // 1. Load product + categories + product_variants + variant_current_price
     const { data: product, error: prodError } = await supabase
       .from("products")
       .select(`
@@ -53,9 +53,9 @@ export async function loadProductPageData(params: {
       .eq("slug", productSlug)
       .maybeSingle();
 
-    // Lỗi DB phải nổi lên — biến nó thành 404 là nói dối rằng sản phẩm không có.
-    if (prodError) throw new Error(`Đọc sản phẩm thất bại: ${prodError.message}`);
-    // Không tìm thấy là trạng thái hợp lệ — trang sẽ trả notFound().
+    // DB errors must surface — turning them into a 404 lies that the product doesn't exist.
+    if (prodError) throw new Error(`Failed to read product: ${prodError.message}`);
+    // Not found is a valid state — the page will return notFound().
     if (!product) return null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,7 +77,7 @@ export async function loadProductPageData(params: {
       };
     });
 
-    // Chọn variant: ưu tiên variantId truyền vào, hoặc variant rẻ nhất còn hàng
+    // Pick the variant: the given variantId first, otherwise the cheapest in-stock variant
     let targetVariantId = variantId;
     if (!targetVariantId || !variants.some((v) => v.id === targetVariantId)) {
       const cheapestInStock = variants
@@ -86,11 +86,11 @@ export async function loadProductPageData(params: {
       targetVariantId = cheapestInStock ? cheapestInStock.id : variants[0].id;
     }
 
-    // Ngày 90 ngày trước theo giờ VN
+    // The date 90 days ago in Vietnam time
     const ninetyDaysAgo = new Date(Date.now() - 90 * 86400 * 1000);
     const ninetyDaysAgoStr = toVnDate(ninetyDaysAgo);
 
-    // 2-5. Chạy 4 query song song
+    // 2-5. Run 4 queries in parallel
     const [offersRes, historyRes, latestPricesRes, trackingSinceRes] = await Promise.all([
       supabase
         .from("offers")
@@ -116,15 +116,15 @@ export async function loadProductPageData(params: {
       supabase.rpc("variant_tracking_since", { p_variant_id: targetVariantId }),
     ]);
 
-    // Bất kỳ query nào lỗi thì cả trang lỗi. Nuốt lỗi ở đây thì trang hiện
-    // "Chưa có người bán" hoặc ⚪ như thể đó là dữ liệu thật.
+    // Any failing query fails the whole page. Swallowing errors here makes the page show
+    // "Chưa có người bán" or ⚪ as if that were real data.
     for (const [name, res] of [
       ["offers", offersRes],
       ["variant_daily_prices", historyRes],
       ["latest_price_per_offer", latestPricesRes],
       ["variant_tracking_since", trackingSinceRes],
     ] as const) {
-      if (res.error) throw new Error(`Đọc ${name} thất bại: ${res.error.message}`);
+      if (res.error) throw new Error(`Failed to read ${name}: ${res.error.message}`);
     }
 
     // Map offer rows
@@ -205,8 +205,8 @@ export async function loadProductPageData(params: {
       dailyPrices,
     };
   } catch (err) {
-    // Lỗi hạ tầng phải nổi lên, không được ngụy trang thành "không tìm thấy".
-    console.error("Lỗi loadProductPageData:", err);
+    // Infrastructure errors must surface, never disguised as "not found".
+    console.error("loadProductPageData error:", err);
     throw err;
   }
 }

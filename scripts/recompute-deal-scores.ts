@@ -1,17 +1,17 @@
 /**
- * Ghi cache Deal Score cho danh sách tìm kiếm (quyết định Đ5).
+ * Write the Deal Score cache for search listings (decision Đ5).
  *
- * Trang chi tiết vẫn tính live từ rollup và là nguồn sự thật; bảng
- * variant_deal_scores chỉ tồn tại vì không thể sort theo điểm trước khi phân
- * trang nếu điểm chỉ có trong Node.
+ * The detail page still computes live from the rollup and is the source of truth; the
+ * variant_deal_scores table only exists because you can't sort by score before
+ * paginating if the score only lives in Node.
  *
- * BẮT BUỘC dùng computeDealScore() từ src/lib/pricing/deal-score.ts. Cấm cài đặt lại
- * logic tính điểm bằng SQL — hai bản cài đặt sẽ trôi khỏi nhau.
+ * MUST use computeDealScore() from src/lib/pricing/deal-score.ts. Never re-implement
+ * the scoring logic in SQL — two implementations will drift apart.
  *
- * Không truyền bestOffer, giống hệt điểm đầu trang (Đ7) — nếu khác thì danh
- * sách và trang chi tiết sẽ hiện hai con số khác nhau cho cùng một sản phẩm.
+ * No bestOffer is passed, exactly like the header score (Đ7) — otherwise the listing
+ * and the detail page would show two different numbers for the same product.
  *
- * Chạy sau mỗi collector run: pnpm scores:recompute
+ * Run after every collector run: pnpm scores:recompute
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -22,7 +22,7 @@ import { toVnDate } from "../src/lib/format";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !serviceKey) {
-  throw new Error("Thiếu NEXT_PUBLIC_SUPABASE_URL hoặc SUPABASE_SERVICE_ROLE_KEY");
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
 }
 const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 
@@ -35,7 +35,7 @@ async function main() {
     .select("variant_id, price");
   if (curErr) throw curErr;
 
-  // Một mốc now cho cả lượt chạy; cửa sổ theo ngày lịch VN, giống trang chi tiết.
+  // One `now` for the whole run; windows use Vietnam calendar days, same as the detail page.
   const now = new Date();
   const since = toVnDate(new Date(now.getTime() - WINDOW_DAYS * 86_400_000));
 
@@ -77,7 +77,7 @@ async function main() {
     if (error) throw error;
   }
 
-  console.log(`Đã tính điểm cho ${rows.length} variant.`);
+  console.log(`Scored ${rows.length} variants.`);
   for (const [k, n] of Object.entries(tally).sort()) {
     console.log(`  ${k.padEnd(18)} ${n}`);
   }

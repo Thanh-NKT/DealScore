@@ -11,12 +11,12 @@ export interface FlashMarker {
 }
 
 export interface ChartSeries {
-  /** Các đoạn liên tục. Ngày thiếu dữ liệu NGẮT đoạn — không nội suy. */
+  /** Continuous segments. A day without data BREAKS the segment — no interpolation. */
   segments: ChartPoint[][];
   flashMarkers: FlashMarker[];
   min: number | null;
   max: number | null;
-  /** false khi có dưới 2 điểm — chưa đủ để vẽ. */
+  /** false with fewer than 2 points — not enough to draw. */
   renderable: boolean;
 }
 
@@ -34,7 +34,7 @@ export function buildChartSeries(
   const nowMs = now.getTime();
   const windowStartMs = nowMs - rangeDays * ONE_DAY_MS;
 
-  // Lọc các bản ghi trong cửa sổ rangeDays và sắp xếp theo ngày tăng dần
+  // Keep rows inside the rangeDays window and sort by day ascending
   const inWindow = rows
     .filter((r) => {
       const rTime = parseDay(r.day);
@@ -53,7 +53,7 @@ export function buildChartSeries(
   for (let i = 0; i < inWindow.length; i++) {
     const row = inWindow[i];
 
-    // Thu thập flash sale marker
+    // Collect flash sale markers
     if (row.has_flash_sale && row.flash_min_price != null && Number.isFinite(row.flash_min_price)) {
       flashMarkers.push({ day: row.day, price: row.flash_min_price });
       if (minVal == null || row.flash_min_price < minVal) minVal = row.flash_min_price;
@@ -74,16 +74,16 @@ export function buildChartSeries(
         const diffDays = Math.round((parseDay(point.day) - parseDay(prevDay)) / ONE_DAY_MS);
 
         if (diffDays === 1) {
-          // Ngày liên tiếp liền kề -> cùng segment
+          // Consecutive day -> same segment
           currentSegment.push(point);
         } else {
-          // Ngắt đoạn (có ngày trống ở giữa)
+          // Break the segment (gap day in between)
           segments.push(currentSegment);
           currentSegment = [point];
         }
       }
     } else {
-      // Ngày thiếu min_price -> ngắt segment nếu đang có
+      // Day without min_price -> break the current segment, if any
       if (currentSegment.length > 0) {
         segments.push(currentSegment);
         currentSegment = [];

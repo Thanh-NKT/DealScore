@@ -5,7 +5,7 @@ import {
   RECOMMENDATION_LABEL,
 } from "@/lib/pricing/deal-score";
 
-/** Nói rõ còn thiếu gì (design §12.3): thiếu số ngày theo dõi, hay thiếu số ngày có dữ liệu. */
+/** Say exactly what is missing (design §12.3): not enough tracked days, or not enough days with data. */
 function insufficientDetail(stats: DealScoreResult["stats"]): string {
   if (stats.daysCovered < MIN_DAYS_FOR_SCORE) {
     return `Đã theo dõi ${stats.daysCovered} ngày (cần tối thiểu ${MIN_DAYS_FOR_SCORE} ngày)`;
@@ -21,7 +21,7 @@ export function DealScoreBadge({ result }: DealScoreBadgeProps) {
   const { score, recommendation, stats } = result;
   const label = RECOMMENDATION_LABEL[recommendation];
 
-  // Màu sắc theo token CSS đã định nghĩa trong globals.css
+  // Colors from the CSS tokens defined in globals.css
   const colorMap = {
     buy: "text-rec-buy bg-rec-buy-bg border-rec-buy/30",
     wait: "text-rec-wait bg-rec-wait-bg border-rec-wait/30",
@@ -68,7 +68,7 @@ export function DealScoreBadge({ result }: DealScoreBadgeProps) {
         )}
       </div>
 
-      {/* Phần giải thích mở rộng (dùng thẻ native <details> hoạt động không cần JS) */}
+      {/* Expandable explanation (native <details>, works without JS) */}
       <details className="group rounded-xl border border-border bg-black/[0.02] p-3 text-xs text-muted dark:bg-white/[0.02]">
         <summary className="cursor-pointer font-medium text-foreground hover:underline">
           Cách Kairo chấm điểm Deal Score?

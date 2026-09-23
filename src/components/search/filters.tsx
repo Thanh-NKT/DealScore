@@ -3,8 +3,8 @@ import { toSearchParams, type SearchParams } from "@/lib/search";
 
 interface FiltersProps {
   params: SearchParams;
-  // Bắt buộc truyền: lấy từ getFilterFacets(). Hard-code danh sách này sẽ sinh
-  // ra link lọc không khớp slug thật và luôn trả 0 kết quả.
+  // Required: comes from getFilterFacets(). Hard-coding this list produces
+  // filter links that don't match real slugs and always return 0 results.
   availableCategories: Array<{ slug: string; name: string }>;
   availableBrands: string[];
 }
@@ -14,12 +14,12 @@ export function Filters({
   availableCategories,
   availableBrands,
 }: FiltersProps) {
-  // Helper tạo link thay đổi params
+  // Helper building links that change params
   const createFilterHref = (patch: Partial<SearchParams>) => {
     const updated: SearchParams = {
       ...params,
       ...patch,
-      page: 1, // Đổi filter luôn reset về trang 1
+      page: 1, // Changing a filter always resets to page 1
     };
     const sp = toSearchParams(updated);
     return `/search?${sp.toString()}`;
@@ -34,7 +34,7 @@ export function Filters({
     if (existsIndex >= 0) {
       current.splice(existsIndex, 1);
     } else {
-      // Giữ nguyên chữ hoa/thường như trong catalog ("Samsung", "WD").
+      // Keep the catalog's casing ("Samsung", "WD").
       current.push(brand);
     }
 
@@ -43,7 +43,7 @@ export function Filters({
 
   return (
     <aside className="w-full space-y-6 md:w-64 shrink-0">
-      {/* 1. Lọc theo Danh mục */}
+      {/* 1. Filter by category */}
       <div className="space-y-3">
         <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
           Danh mục
@@ -78,7 +78,7 @@ export function Filters({
         </div>
       </div>
 
-      {/* 2. Lọc theo Thương hiệu (nhiều lựa chọn) */}
+      {/* 2. Filter by brand (multi-select) */}
       <div className="space-y-3">
         <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
           Thương hiệu
@@ -105,7 +105,7 @@ export function Filters({
         </div>
       </div>
 
-      {/* 3. Lọc theo Khoảng giá */}
+      {/* 3. Filter by price range */}
       <div className="space-y-3">
         <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
           Khoảng giá (₫)
@@ -121,7 +121,7 @@ export function Filters({
           {params.categoryId && (
             <input type="hidden" name="catId" value={params.categoryId} />
           )}
-          {/* Như toSearchParams: không ghi sort mặc định vào URL. */}
+          {/* Like toSearchParams: never write the default sort into the URL. */}
           {params.sort && params.sort !== (params.q ? "relevance" : "updated") && (
             <input type="hidden" name="sort" value={params.sort} />
           )}

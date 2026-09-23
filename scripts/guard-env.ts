@@ -1,9 +1,9 @@
 /**
- * Chặn mọi script phá hủy dữ liệu chạy nhầm vào môi trường thật.
+ * Stop any destructive script from accidentally running against a real environment.
  *
- * seed-dev xóa sạch catalog trước khi chạy. Nếu lỡ chạy khi .env.local đang
- * trỏ sang project production thì mất toàn bộ dữ liệu — và không có bản sao.
- * Vì vậy chặn ở tầng code, không dựa vào việc người chạy nhớ kiểm tra.
+ * seed-dev wipes the catalog before running. Running it while .env.local
+ * points at the production project would lose all data — and there is no backup.
+ * So it is blocked in code, rather than relying on whoever runs it to remember to check.
  */
 
 const LOCAL_HOST_PATTERNS = [
@@ -18,8 +18,8 @@ export interface LocalEnv {
 }
 
 /**
- * Trả về URL + service key, hoặc thoát tiến trình nếu không phải môi trường local.
- * Đặt ALLOW_DESTRUCTIVE_REMOTE=1 để bỏ qua — chỉ dùng khi thực sự có chủ đích.
+ * Returns URL + service key, or exits the process if this is not a local environment.
+ * Set ALLOW_DESTRUCTIVE_REMOTE=1 to bypass — only when you truly mean it.
  */
 export function requireLocalSupabase(scriptName: string): LocalEnv {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,7 +27,7 @@ export function requireLocalSupabase(scriptName: string): LocalEnv {
 
   if (!url || !serviceKey) {
     console.error(
-      `[${scriptName}] Thiếu NEXT_PUBLIC_SUPABASE_URL hoặc SUPABASE_SERVICE_ROLE_KEY.`,
+      `[${scriptName}] Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.`,
     );
     process.exit(1);
   }
@@ -37,11 +37,11 @@ export function requireLocalSupabase(scriptName: string): LocalEnv {
 
   if (!isLocal && process.env.ALLOW_DESTRUCTIVE_REMOTE !== "1") {
     console.error(
-      `\n[${scriptName}] TỪ CHỐI CHẠY.\n\n` +
-        `  Script này XÓA SẠCH catalog trước khi chạy.\n` +
-        `  NEXT_PUBLIC_SUPABASE_URL đang trỏ tới: ${origin}\n` +
-        `  Đây không phải Supabase local.\n\n` +
-        `  Nếu thực sự muốn, đặt ALLOW_DESTRUCTIVE_REMOTE=1.\n`,
+      `\n[${scriptName}] REFUSING TO RUN.\n\n` +
+        `  This script WIPES the catalog before running.\n` +
+        `  NEXT_PUBLIC_SUPABASE_URL points at: ${origin}\n` +
+        `  This is not a local Supabase.\n\n` +
+        `  If you really mean it, set ALLOW_DESTRUCTIVE_REMOTE=1.\n`,
     );
     process.exit(1);
   }

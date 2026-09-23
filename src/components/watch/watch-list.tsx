@@ -55,7 +55,7 @@ export function WatchList({ initialItems }: WatchListProps) {
 
   return (
     <div className="space-y-6">
-      {/* Tabs chuyển đổi trạng thái */}
+      {/* Status tabs */}
       <div className="flex items-center gap-2 border-b border-border pb-3">
         <button
           type="button"
@@ -103,7 +103,7 @@ export function WatchList({ initialItems }: WatchListProps) {
         </button>
       </div>
 
-      {/* Danh sách Watch */}
+      {/* Watch list */}
       {filteredItems.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border p-12 text-center space-y-4">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-black/5 dark:bg-white/5 text-2xl">
@@ -141,11 +141,11 @@ export function WatchList({ initialItems }: WatchListProps) {
             return (
               <div
                 key={item.id}
-                // Email alert trỏ tới /account/watch#{watchId} — anchor cuộn tới đúng Watch.
+                // Alert emails link to /account/watch#{watchId} — the anchor scrolls to that Watch.
                 id={item.id}
                 className="scroll-mt-6 flex flex-col md:flex-row md:items-center justify-between gap-6 rounded-3xl border border-border bg-black/[0.01] p-5 sm:p-6 shadow-sm dark:bg-white/[0.01]"
               >
-                {/* Thông tin sản phẩm */}
+                {/* Product info */}
                 <div className="flex items-start gap-4 flex-1">
                   {product.image && (
                     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border bg-black/5 dark:bg-white/5">
@@ -172,7 +172,7 @@ export function WatchList({ initialItems }: WatchListProps) {
                       </p>
                     )}
 
-                    {/* Giá & khoảng cách tới target */}
+                    {/* Price & distance to target */}
                     <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
                       {view.price !== null ? (
                         <span className="font-bold text-foreground">
@@ -209,7 +209,7 @@ export function WatchList({ initialItems }: WatchListProps) {
                       )}
                     </div>
 
-                    {/* Chips trạng thái các điều kiện */}
+                    {/* Condition status chips */}
                     <div className="flex flex-wrap gap-1.5 pt-2">
                       {view.conditions.map((c) => (
                         <span
@@ -234,7 +234,7 @@ export function WatchList({ initialItems }: WatchListProps) {
                       ))}
                     </div>
 
-                    {/* Trạng thái alert gần nhất */}
+                    {/* Latest alert status */}
                     <div className="pt-1 text-[11px] text-muted">
                       {view.alertStatus.kind === "sent" ? (
                         <span>
@@ -261,9 +261,9 @@ export function WatchList({ initialItems }: WatchListProps) {
                   </div>
                 </div>
 
-                {/* Các nút hành động */}
+                {/* Action buttons */}
                 <div className="flex flex-wrap md:flex-col items-center md:items-end justify-between gap-2 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 shrink-0">
-                  {/* Nút Mua trên Shopee */}
+                  {/* Buy on Shopee button */}
                   <a
                     href={`/go/shopee/offer?src=web&watch=${item.id}`}
                     target="_blank"
@@ -329,7 +329,7 @@ export function WatchList({ initialItems }: WatchListProps) {
         </div>
       )}
 
-      {/* Modal chỉnh sửa Watch */}
+      {/* Edit Watch modal */}
       {editingWatch && (
         <WatchModal
           isOpen={Boolean(editingWatch)}

@@ -20,7 +20,7 @@ function form(entries: Record<string, string>) {
 }
 
 describe("saveWatchForUser", () => {
-  it("tạo mới rồi lưu lần hai thì cập nhật, không tạo thêm", async () => {
+  it("creates, then a second save updates instead of inserting", async () => {
     const u = await createTestUser();
     created.push(u);
     const r1 = await saveWatchForUser(u.client, u.id, form({ variantId: variantIds[0], targetPrice: "1000" }));
@@ -31,7 +31,7 @@ describe("saveWatchForUser", () => {
     expect(data?.map((w) => Number(w.target_price))).toEqual([2000]);
   });
 
-  it("variant không tồn tại → lỗi variantId", async () => {
+  it("non-existent variant → variantId error", async () => {
     const u = await createTestUser();
     created.push(u);
     const r = await saveWatchForUser(
@@ -44,7 +44,7 @@ describe("saveWatchForUser", () => {
 });
 
 describe("listMyWatches", () => {
-  it("trả view cho từng Watch, active trước paused", async () => {
+  it("returns a view per Watch, active before paused", async () => {
     const u = await createTestUser();
     created.push(u);
     await saveWatchForUser(u.client, u.id, form({ variantId: variantIds[0], targetPrice: "1000" }));

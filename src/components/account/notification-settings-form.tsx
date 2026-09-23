@@ -43,7 +43,7 @@ export function NotificationSettingsForm({
         </div>
       )}
 
-      {/* 1. Kênh nhận thông báo */}
+      {/* 1. Notification channels */}
       <section className="space-y-4">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
           1. Kênh nhận thông báo
@@ -88,7 +88,7 @@ export function NotificationSettingsForm({
         </div>
       </section>
 
-      {/* 2. Tần suất gửi */}
+      {/* 2. Frequency */}
       <section className="space-y-4">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
           2. Tần suất gửi thông báo
@@ -132,7 +132,7 @@ export function NotificationSettingsForm({
             </div>
           </label>
 
-          {/* Giờ gửi tóm tắt (khi chọn daily_digest) */}
+          {/* Digest hour (when daily_digest is selected) */}
           {frequency === "daily_digest" && (
             <div className="pt-3 border-t border-border flex items-center gap-3">
               <label htmlFor="digestHour" className="text-xs text-muted">
@@ -160,7 +160,7 @@ export function NotificationSettingsForm({
         </div>
       </section>
 
-      {/* 3. Giờ im lặng */}
+      {/* 3. Quiet hours */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted">

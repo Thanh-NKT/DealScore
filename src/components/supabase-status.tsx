@@ -11,12 +11,12 @@ async function getStatus(): Promise<Status> {
   if (!url || !key) {
     return {
       tone: "warn",
-      title: "Chưa kết nối Supabase",
+      title: "Supabase not connected",
       body: (
         <>
-          Điền <code>NEXT_PUBLIC_SUPABASE_URL</code> và{" "}
-          <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> vào <code>.env.local</code>,
-          sau đó khởi động lại dev server.
+          Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+          <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in <code>.env.local</code>,
+          then restart the dev server.
         </>
       ),
     };
@@ -31,11 +31,11 @@ async function getStatus(): Promise<Status> {
     if (error) {
       return {
         tone: "warn",
-        title: "Đã kết nối, nhưng chưa có schema",
+        title: "Connected, but no schema yet",
         body: (
           <>
-            Kết nối OK nhưng truy vấn bảng <code>products</code> lỗi:{" "}
-            <span className="opacity-80">{error.message}</span>. Hãy chạy
+            Connected, but querying the <code>products</code> table failed:{" "}
+            <span className="opacity-80">{error.message}</span>. Run the
             migration <code>supabase/migrations/0001_init.sql</code>.
           </>
         ),
@@ -44,25 +44,25 @@ async function getStatus(): Promise<Status> {
 
     return {
       tone: "ok",
-      title: "Supabase đã sẵn sàng",
+      title: "Supabase is ready",
       body: (
         <>
-          Kết nối thành công. Catalog hiện có <strong>{count ?? 0}</strong> sản
-          phẩm chuẩn hóa.
+          Connected. The catalog has <strong>{count ?? 0}</strong> normalized
+          products.
         </>
       ),
     };
   } catch (e) {
     return {
       tone: "warn",
-      title: "Không gọi được Supabase",
+      title: "Could not reach Supabase",
       body: <>{(e as Error).message}</>,
     };
   }
 }
 
 /**
- * Server Component: kiểm tra kết nối Supabase và hiển thị trạng thái.
+ * Server Component: checks the Supabase connection and renders its status (dev only).
  */
 export default async function SupabaseStatus() {
   const status = await getStatus();

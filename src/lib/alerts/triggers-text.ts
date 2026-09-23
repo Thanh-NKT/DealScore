@@ -4,7 +4,7 @@ import type { TriggerType } from "@/lib/watch/types";
 const pctDown = (from: number | null, to: number) =>
   from != null && from > 0 ? Math.floor(((from - to) / from) * 100) : 0;
 
-/** ctx lấy từ CHÍNH dòng alert_events (baseline_price, previous_alert_price) — watches đã bị ghi đè. */
+/** ctx comes from the alert_events row ITSELF (baseline_price, previous_alert_price) — watches has since been overwritten. */
 export function describeTriggers(
   types: TriggerType[],
   ctx: { price: number; targetPrice: number | null; baselinePrice: number | null; lastAlertPrice: number | null; dealScore: number | null },

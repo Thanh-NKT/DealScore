@@ -1,8 +1,8 @@
 import { needsConsent } from "@/lib/account/consent";
 
 /**
- * Đường dẫn nội bộ an toàn để quay về sau đăng nhập.
- * Ngăn chặn lỗ hổng Open Redirect. Không hợp lệ → trả về fallback.
+ * Safe internal path to return to after login.
+ * Prevents open redirects. Invalid → returns the fallback.
  */
 export function safeNextPath(
   raw: string | null | undefined,
@@ -21,7 +21,7 @@ export function safeNextPath(
     return fallback;
   }
 
-  // Kiểm tra ký tự điều khiển (ASCII 0-31 hoặc 127)
+  // Reject control characters (ASCII 0-31 or 127)
   if (/[\x00-\x1F\x7F]/.test(trimmed)) {
     return fallback;
   }
@@ -32,7 +32,7 @@ export function safeNextPath(
       return fallback;
     }
 
-    // Không chuyển hướng lặp vòng về luồng đăng nhập hoặc xác thực
+    // Never redirect back into the login or auth flow (loop)
     const pathname = url.pathname;
     if (
       pathname === "/login" ||
@@ -69,7 +69,7 @@ export function decideAuthGate(input: {
     allowMissingConsent = false,
   } = input;
 
-  // 1. Chưa đăng nhập → login
+  // 1. Not signed in → login
   if (!userId) {
     const safePath = safeNextPath(path, "/");
     return {
@@ -78,17 +78,17 @@ export function decideAuthGate(input: {
     };
   }
 
-  // 2. Profile null → ném lỗi hạ tầng (trigger phải luôn tạo hồ sơ)
+  // 2. Null profile → infrastructure error (the trigger must always create one)
   if (!profile) {
-    throw new Error(`Không tìm thấy hồ sơ người dùng cho ID: ${userId}`);
+    throw new Error(`User profile not found for ID: ${userId}`);
   }
 
-  // 3. Đang chờ xóa (deletedAt != null) và không cho phép → restore
+  // 3. Pending deletion (deletedAt != null) and not allowed → restore
   if (profile.deletedAt && !allowPendingDeletion) {
     return { kind: "restore", to: "/account/restore" };
   }
 
-  // 4. Cần đồng ý điều khoản mới/lần đầu và không cho phép bỏ qua → consent
+  // 4. Needs to accept new/first-time terms and skipping is not allowed → consent
   if (needsConsent(profile.consentVersion) && !allowMissingConsent) {
     const safePath = safeNextPath(path, "/account");
     return {
@@ -97,6 +97,6 @@ export function decideAuthGate(input: {
     };
   }
 
-  // 5. Đủ điều kiện truy cập
+  // 5. Access granted
   return { kind: "ok" };
 }

@@ -34,7 +34,7 @@ async function statusesOf(userId: string) {
 }
 
 describe("dispatchDueDeliveries (email)", () => {
-  it("gửi ở chế độ console → sent", async () => {
+  it("sends in console mode → sent", async () => {
     vi.stubEnv("RESEND_API_KEY", "");
     vi.stubEnv("UNSUBSCRIBE_SECRET", "test-secret");
     vi.spyOn(console, "info").mockImplementation(() => undefined);
@@ -43,7 +43,7 @@ describe("dispatchDueDeliveries (email)", () => {
     expect(await statusesOf(u.id)).toEqual([["sent", null]]);
   });
 
-  it("Watch đã tạm dừng trước khi gửi → skipped/watch_inactive", async () => {
+  it("Watch paused before sending → skipped/watch_inactive", async () => {
     vi.stubEnv("UNSUBSCRIBE_SECRET", "test-secret");
     const u = await userWithAlert();
     await admin.from("watches").update({ status: "paused" }).eq("user_id", u.id);

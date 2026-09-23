@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveShopeeRedirect } from "@/lib/shopee/resolve-redirect";
 
-/** Giả lập chuỗi redirect: mỗi URL gọi tới trả về Location kế tiếp (hoặc 200). */
+/** Simulated redirect chain: each requested URL returns the next Location (or 200). */
 function mockRedirects(chain: Record<string, string | null>) {
   const fetchMock = vi.fn(async (input: string | URL | Request) => {
     const url = String(input);
-    if (!(url in chain)) throw new Error(`request ngoài dự kiến: ${url}`);
+    if (!(url in chain)) throw new Error(`unexpected request: ${url}`);
     const next = chain[url];
     return next
       ? new Response(null, { status: 302, headers: { location: next } })
@@ -22,17 +22,17 @@ afterEach(() => {
 const PRODUCT = "https://shopee.vn/product/123456/789012";
 
 describe("resolveShopeeRedirect", () => {
-  it("theo link rút gọn tới trang sản phẩm và dừng ngay khi đọc được", async () => {
+  it("follows the short link to the product page and stops as soon as it's readable", async () => {
     const f = mockRedirects({ "https://shope.ee/abc": PRODUCT });
     await expect(resolveShopeeRedirect("https://shope.ee/abc")).resolves.toEqual({
       ok: true,
       finalUrl: PRODUCT,
     });
-    // Không gọi thêm request tới chính trang sản phẩm.
+    // No extra request to the product page itself.
     expect(f).toHaveBeenCalledTimes(1);
   });
 
-  it("chặn host lạ ngay từ đầu, không gửi request nào", async () => {
+  it("blocks unknown hosts from the start, sends no request", async () => {
     const f = mockRedirects({});
     await expect(resolveShopeeRedirect("https://evil.com/x")).resolves.toEqual({
       ok: false,
@@ -41,21 +41,21 @@ describe("resolveShopeeRedirect", () => {
     expect(f).not.toHaveBeenCalled();
   });
 
-  it("chặn shopee.vn.evil.com — so khớp host chính xác", async () => {
+  it("blocks shopee.vn.evil.com — exact host matching", async () => {
     mockRedirects({});
     await expect(resolveShopeeRedirect("https://shopee.vn.evil.com/x")).resolves.toMatchObject({
       reason: "host_not_allowed",
     });
   });
 
-  it("chặn subdomain không có trong allowlist", async () => {
+  it("blocks subdomains not in the allowlist", async () => {
     mockRedirects({});
     await expect(resolveShopeeRedirect("https://internal.shopee.vn/x")).resolves.toMatchObject({
       reason: "host_not_allowed",
     });
   });
 
-  it("chặn ở hop thứ 2 khi redirect trỏ ra ngoài allowlist", async () => {
+  it("blocks at hop 2 when the redirect points outside the allowlist", async () => {
     const f = mockRedirects({ "https://shope.ee/abc": "https://169.254.169.254/latest" });
     await expect(resolveShopeeRedirect("https://shope.ee/abc")).resolves.toMatchObject({
       reason: "host_not_allowed",
@@ -63,21 +63,21 @@ describe("resolveShopeeRedirect", () => {
     expect(f).toHaveBeenCalledTimes(1);
   });
 
-  it("chặn http://", async () => {
+  it("blocks http://", async () => {
     mockRedirects({ "https://shope.ee/abc": "http://shopee.vn/product/1/2" });
     await expect(resolveShopeeRedirect("https://shope.ee/abc")).resolves.toMatchObject({
       reason: "insecure",
     });
   });
 
-  it("chặn cổng khác mặc định", async () => {
+  it("blocks non-default ports", async () => {
     mockRedirects({});
     await expect(resolveShopeeRedirect("https://shope.ee:8443/abc")).resolves.toMatchObject({
       reason: "host_not_allowed",
     });
   });
 
-  it("quá 3 hop thì dừng", async () => {
+  it("stops after more than 3 hops", async () => {
     mockRedirects({
       "https://shope.ee/1": "https://shope.ee/2",
       "https://shope.ee/2": "https://shope.ee/3",
@@ -89,7 +89,7 @@ describe("resolveShopeeRedirect", () => {
     });
   });
 
-  it("đúng 3 hop vẫn tới đích", async () => {
+  it("exactly 3 hops still reaches the target", async () => {
     mockRedirects({
       "https://shope.ee/1": "https://shope.ee/2",
       "https://shope.ee/2": "https://s.shopee.vn/3",

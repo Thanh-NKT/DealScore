@@ -1,11 +1,11 @@
 /**
- * Sinh dữ liệu giả để dựng và kiểm chứng 1.1/1.2 trước khi có Shopee API
- * và collector thật (Giai đoạn 0).
+ * Generate fake data to build and verify 1.1/1.2 before the Shopee API
+ * and the real collector exist (Phase 0).
  *
- * Chạy: pnpm seed:dev
+ * Run: pnpm seed:dev
  *
- * CẢNH BÁO: xóa sạch catalog hiện có. guard-env.ts chặn không cho chạy khi
- * NEXT_PUBLIC_SUPABASE_URL không trỏ về Supabase local.
+ * WARNING: wipes the existing catalog. guard-env.ts refuses to run when
+ * NEXT_PUBLIC_SUPABASE_URL does not point at a local Supabase.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -35,7 +35,7 @@ const BRANDS = ["Samsung", "WD", "Logitech", "Keychron", "Dell", "Sony", "Anker"
 const SUFFIX = ["Pro", "Plus", "Air", "Max", "Lite"];
 const CAPACITY = ["512GB", "1TB", "2TB"];
 
-/** PRNG có hạt giống cố định — mỗi lần seed ra cùng dữ liệu, dễ so sánh giữa các lần chạy. */
+/** PRNG with a fixed seed — every seed produces the same data, easy to compare across runs. */
 function makeRng(seed: number) {
   let s = seed;
   return () => {
@@ -63,23 +63,23 @@ async function insertBatched(table: string, rows: unknown[]) {
 }
 
 async function main() {
-  console.log(`Seed vào ${url}`);
+  console.log(`Seeding ${url}`);
 
-  console.log("Xóa catalog cũ…");
-  // products xóa cascade xuống variants -> offers -> price_observations.
+  console.log("Deleting old catalog…");
+  // Deleting products cascades to variants -> offers -> price_observations.
   for (const t of ["products", "categories", "listings", "sellers"]) {
     const { error } = await db.from(t).delete().neq("id", ZERO_UUID);
     if (error) throw new Error(`delete ${t}: ${error.message}`);
   }
 
-  console.log("Tạo categories…");
+  console.log("Creating categories…");
   const { data: cats, error: catErr } = await db
     .from("categories")
     .insert(CATEGORIES.map(([slug, name], i) => ({ slug, name, sort_order: i })))
     .select();
   if (catErr) throw catErr;
 
-  console.log("Tạo sellers…");
+  console.log("Creating sellers…");
   const { data: sellers, error: sellerErr } = await db
     .from("sellers")
     .insert(
@@ -104,7 +104,7 @@ async function main() {
     const cat = pick(cats!);
     const model = `${pick(SUFFIX)} ${100 + p}`;
     const name = `${cat.name} ${brand} ${model}`;
-    // 10% để trạng thái draft, mô phỏng hàng do luồng dán URL sinh ra (Đ6).
+    // 10% stay draft, mimicking products created by the paste-URL flow (Đ6).
     const isDraft = p % 10 === 9;
 
     const { data: prod, error: prodErr } = await db
@@ -121,14 +121,14 @@ async function main() {
       .single();
     if (prodErr) throw prodErr;
 
-    // Tối đa 3: CAPACITY chỉ có 3 mức, nhiều hơn sẽ sinh hai variant trùng khóa
-    // trong cùng một sản phẩm.
+    // At most 3: CAPACITY has only 3 levels, more would create two variants with the same key
+    // in one product.
     const nVariants = 2 + Math.floor(rnd() * 2);
-    // Giá gốc theo SẢN PHẨM. Trước đây bốc riêng cho từng variant nên bản 512GB
-    // có thể đắt hơn bản 2TB — dữ liệu vô lý, và làm bộ lọc khoảng giá không
-    // kiểm chứng được gì vì giá sản phẩm lấy theo variant rẻ nhất.
+    // Base price per PRODUCT. It used to be drawn per variant, so the 512GB version
+    // could cost more than the 2TB one — nonsensical data, and it made the price-range filter
+    // unverifiable since product price comes from the cheapest variant.
     const productBasePrice = 500_000 + Math.floor(rnd() * 4_500_000);
-    // Hệ số theo dung lượng: 512GB < 1TB < 2TB.
+    // Capacity multiplier: 512GB < 1TB < 2TB.
     const CAPACITY_MULT = [1, 1.7, 2.9];
 
     for (let v = 0; v < nVariants; v++) {
@@ -141,10 +141,10 @@ async function main() {
       variantCount++;
 
       const basePrice = Math.round(productBasePrice * CAPACITY_MULT[v % 3]);
-      // Mỗi variant một xu hướng riêng: âm = giá giảm dần (hôm nay rẻ -> buy),
-      // dương = giá tăng dần (hôm nay đắt -> avoid), quanh 0 -> wait.
-      // Nếu mọi variant cùng giảm thì mọi sản phẩm đều ra "buy" và dữ liệu seed
-      // không kiểm chứng được nhánh nào khác.
+      // Each variant gets its own trend: negative = falling price (cheap today -> buy),
+      // positive = rising price (expensive today -> avoid), around 0 -> wait.
+      // If every variant fell, every product would come out "buy" and the seed data
+      // could not exercise any other branch.
       const driftPerDay = (rnd() - 0.5) * 0.0024;
       const nOffers = 1 + Math.floor(rnd() * 4);
       const observations: Record<string, unknown>[] = [];
@@ -179,18 +179,18 @@ async function main() {
           .single();
         if (oErr) throw oErr;
 
-        // Giá của offer này lệch 0–8% so với giá gốc của variant.
+        // This offer's price deviates 0–8% from the variant's base price.
         const offerBase = Math.round(basePrice * (1 + rnd() * 0.08));
 
         for (let d = DAYS - 1; d >= 0; d--) {
-          // Vài ngày hụt dữ liệu — để kiểm chứng ngắt đoạn chart và ngưỡng
-          // 10 quan sát của deal-score.
+          // A few days with missing data — to exercise chart segment breaks and the
+          // 10-observation threshold of deal-score.
           if (d % 17 === 3) continue;
 
           const at = new Date(today.getTime() - d * 86_400_000);
           at.setUTCHours(5, 0, 0, 0);
 
-          const elapsed = DAYS - 1 - d; // 0 = ngày xa nhất, tăng dần tới hôm nay
+          const elapsed = DAYS - 1 - d; // 0 = oldest day, increasing to today
           const trend = 1 + driftPerDay * elapsed;
           const noise = 1 + (rnd() - 0.5) * 0.04;
           // d = 0 la hom nay: khong de hom nay luon roi vao flash sale, neu khong
@@ -209,13 +209,13 @@ async function main() {
             stock,
             is_flash_sale: isFlash,
             is_valid: true,
-            // Dữ liệu tổng hợp, không phải giá thật — không được lẫn với 'api'.
+            // Synthetic data, not real prices — must never mix with 'api'.
             source: "seed",
           });
 
-          // Offer đại diện: còn hàng trước, rồi rẻ nhất — giống cách trang chi tiết
-          // chọn. Chọn offer rẻ nhất bất kể tồn kho thì variant bị ghi "hết hàng"
-          // trong khi vẫn còn người bán có hàng.
+          // Representative offer: in stock first, then cheapest — same as how the detail page
+          // picks. Picking the cheapest regardless of stock would mark the variant "out of stock"
+          // while some seller still has it.
           const better =
             bestLatest === null ||
             (stock > 0 && bestLatest.stock <= 0) ||
@@ -251,10 +251,10 @@ async function main() {
       }
     }
 
-    if ((p + 1) % 10 === 0) console.log(`  …${p + 1}/${PRODUCTS} sản phẩm`);
+    if ((p + 1) % 10 === 0) console.log(`  …${p + 1}/${PRODUCTS} products`);
   }
 
-  console.log("Tính rollup theo ngày…");
+  console.log("Computing daily rollup…");
   const from = new Date(today.getTime() - DAYS * 86_400_000).toISOString().slice(0, 10);
   const to = today.toISOString().slice(0, 10);
   const { error: rollupErr } = await db.rpc("refresh_variant_daily_prices", {
@@ -264,9 +264,9 @@ async function main() {
   if (rollupErr) throw rollupErr;
 
   console.log(
-    `Xong: ${PRODUCTS} sản phẩm, ${variantCount} variant, ${obsCount} quan sát, ${DAYS} ngày.`,
+    `Done: ${PRODUCTS} products, ${variantCount} variants, ${obsCount} observations, ${DAYS} days.`,
   );
-  console.log("Chạy tiếp: pnpm scores:recompute");
+  console.log("Next: pnpm scores:recompute");
 }
 
 main().catch((e) => {

@@ -7,8 +7,8 @@ export interface NotificationSettings {
   emailEnabled: boolean;
   pushEnabled: boolean;
   frequency: Frequency;
-  digestHour: number; // 0–23, giờ VN
-  quietStart: number | null; // 0–23, giờ VN; cùng null hoặc cùng có giá trị
+  digestHour: number; // 0–23, Vietnam time
+  quietStart: number | null; // 0–23, Vietnam time; both null or both set
   quietEnd: number | null;
 }
 
@@ -64,14 +64,14 @@ export function parseNotificationSettings(
 
   const errors: Partial<Record<SettingsField, string>> = {};
 
-  // Checkbox: "on" hoặc "true" → true, vắng mặt → false
+  // Checkbox: "on" or "true" → true, absent → false
   const emailVal = get("emailEnabled");
   const emailEnabled = emailVal === "on" || emailVal === "true";
 
   const pushVal = get("pushEnabled");
   const pushEnabled = pushVal === "on" || pushVal === "true";
 
-  // Tần suất
+  // Frequency
   const freqRaw = get("frequency") ?? "instant";
   let frequency: Frequency = "instant";
   if (freqRaw === "instant" || freqRaw === "daily_digest") {
@@ -80,7 +80,7 @@ export function parseNotificationSettings(
     errors.frequency = "Tần suất không hợp lệ (chọn Tức thì hoặc Tóm tắt hằng ngày).";
   }
 
-  // Giờ gửi tóm tắt (0-23)
+  // Digest hour (0-23)
   const digestHourRaw = get("digestHour");
   let digestHour = 8;
   if (digestHourRaw !== undefined && digestHourRaw.trim() !== "") {
@@ -92,7 +92,7 @@ export function parseNotificationSettings(
     }
   }
 
-  // Giờ im lặng (quietStart, quietEnd)
+  // Quiet hours (quietStart, quietEnd)
   const quietStartRaw = get("quietStart")?.trim() ?? "";
   const quietEndRaw = get("quietEnd")?.trim() ?? "";
 
@@ -150,9 +150,9 @@ export function parseNotificationSettings(
 }
 
 /**
- * Xác định danh sách kênh thực tế nhận thông báo cho một Watch.
- * Công tắc tài khoản là công tắc tổng: Watch chỉ thu hẹp được, không mở lại kênh đã tắt.
- * Thứ tự kết quả cố định: email trước, push sau.
+ * Resolve the channels that actually receive notifications for a Watch.
+ * The account switch is the master switch: a Watch can only narrow it, never re-enable a disabled channel.
+ * Result order is fixed: email first, then push.
  */
 export function resolveChannels(
   settings: NotificationSettings,
@@ -172,14 +172,14 @@ export function resolveChannels(
 }
 
 /**
- * Kiểm tra xem thời điểm hiện tại có rơi vào giờ im lặng không (tính theo giờ Việt Nam UTC+7).
+ * Whether the current moment falls inside quiet hours (Vietnam time, UTC+7).
  */
 export function isQuietHour(settings: NotificationSettings, now: Date): boolean {
   if (settings.quietStart === null || settings.quietEnd === null) {
     return false;
   }
 
-  // Chuyển `now` sang giờ Việt Nam (UTC+7)
+  // Convert `now` to Vietnam time (UTC+7)
   const vnTimeString = now.toLocaleString("en-US", {
     timeZone: "Asia/Ho_Chi_Minh",
     hour: "numeric",
@@ -192,7 +192,7 @@ export function isQuietHour(settings: NotificationSettings, now: Date): boolean 
   if (s < e) {
     return h >= s && h < e;
   } else {
-    // Vắt qua nửa đêm (ví dụ: 22h tối đến 7h sáng)
+    // Wraps past midnight (e.g. 22:00 to 07:00)
     return h >= s || h < e;
   }
 }

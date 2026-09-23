@@ -1,18 +1,18 @@
 /**
- * Xử lý tạo slug URL thân thiện với tiếng Việt và chống trùng lặp.
+ * Vietnamese-friendly URL slug generation with collision handling.
  */
 
 /**
- * Bỏ dấu tiếng Việt, lowercase, thay khoảng trắng/ký tự lạ bằng '-', gộp '-' liền nhau.
+ * Strip Vietnamese diacritics, lowercase, replace whitespace/odd characters with '-', collapse repeated '-'.
  */
 export function slugify(input: string, maxLength?: number): string {
   let str = input
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Bỏ dấu tổ hợp
+    .replace(/[\u0300-\u036f]/g, "") // strip combining marks
     .replace(/[đĐ]/g, "d") // đ/Đ -> d
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-") // Ký tự lạ -> '-'
-    .replace(/^-+|-+$/g, ""); // Cắt '-' ở đầu và cuối
+    .replace(/[^a-z0-9]+/g, "-") // odd characters -> '-'
+    .replace(/^-+|-+$/g, ""); // trim leading and trailing '-'
 
   if (maxLength && maxLength > 0 && str.length > maxLength) {
     str = str.slice(0, maxLength).replace(/-+$/, "");
@@ -22,8 +22,8 @@ export function slugify(input: string, maxLength?: number): string {
 }
 
 /**
- * Sinh slug chưa trùng. `exists` trả true nếu slug đã tồn tại trong DB.
- * Trùng thì thêm hậu tố -2, -3, … cho tới khi trống.
+ * Generate an unused slug. `exists` returns true if the slug already exists in the DB.
+ * On collision append -2, -3, … until one is free.
  */
 export async function uniqueSlug(
   base: string,

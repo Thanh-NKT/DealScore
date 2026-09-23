@@ -26,7 +26,7 @@ export function ProductCard({ item }: ProductCardProps) {
       className="group flex flex-col justify-between rounded-2xl border border-border bg-background p-4 transition hover:border-foreground/40 hover:shadow-md"
     >
       <div className="space-y-3">
-        {/* Ảnh sản phẩm */}
+        {/* Product image */}
         <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-border bg-black/[0.02] dark:bg-white/[0.02]">
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -42,7 +42,7 @@ export function ProductCard({ item }: ProductCardProps) {
           )}
         </div>
 
-        {/* Thông tin thương hiệu + tên */}
+        {/* Brand + name */}
         <div>
           {brand && (
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
@@ -55,7 +55,7 @@ export function ProductCard({ item }: ProductCardProps) {
         </div>
       </div>
 
-      {/* Giá + Điểm Deal Score */}
+      {/* Price + Deal Score */}
       <div className="mt-4 border-t border-border pt-3">
         <div className="flex items-center justify-between gap-2">
           <div>

@@ -32,7 +32,7 @@ export function stateFromRow(row: WatchRow): WatchState {
   };
 }
 
-/** Đúng tên khóa p_state của record_watch_evaluation. */
+/** Exactly the p_state key names of record_watch_evaluation. */
 export function toRpcState(next: NextState): Record<string, unknown> {
   const out: Record<string, unknown> = { cond_state: next.condState };
   if (next.lastInStock !== null) out.last_in_stock = next.lastInStock;

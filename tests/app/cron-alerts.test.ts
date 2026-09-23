@@ -18,20 +18,20 @@ beforeEach(() => {
 });
 
 describe("POST /api/cron/alerts", () => {
-  it("thiếu CRON_SECRET → 500", async () => {
+  it("missing CRON_SECRET → 500", async () => {
     vi.stubEnv("CRON_SECRET", "");
     expect((await POST(req("Bearer s") as never)).status).toBe(500);
   });
   it("sai header → 401", async () => {
     expect((await POST(req("Bearer x") as never)).status).toBe(401);
   });
-  it("không giành được lock → skipped", async () => {
+  it("lock not acquired → skipped", async () => {
     rpc.mockResolvedValueOnce({ data: null, error: null });
     const res = await POST(req("Bearer s") as never);
     expect(await res.json()).toEqual({ skipped: "locked" });
     expect(evaluateWatches).not.toHaveBeenCalled();
   });
-  it("chạy đủ hai tầng rồi nhả lock", async () => {
+  it("runs both stages then releases the lock", async () => {
     rpc.mockResolvedValueOnce({ data: true, error: null }).mockResolvedValueOnce({ data: null, error: null });
     const res = await POST(req("Bearer s") as never);
     expect(res.status).toBe(200);

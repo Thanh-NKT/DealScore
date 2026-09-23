@@ -21,11 +21,11 @@ beforeAll(async () => {
     .not("price", "is", null)
     .limit(60);
   variants = (data ?? []).map((v) => ({ variant_id: v.variant_id, price: Number(v.price) }));
-  if (variants.length < 52) throw new Error("Cần ≥ 52 variant có giá — chạy pnpm seed:dev");
+  if (variants.length < 52) throw new Error("Need ≥ 52 priced variants — run pnpm seed:dev");
 });
 
-describe("watches — trigger và quyền", () => {
-  it("user tạo Watch: trigger điền product_id và baseline_price", async () => {
+describe("watches — trigger and privileges", () => {
+  it("user creates a Watch: trigger fills product_id and baseline_price", async () => {
     const u = await user();
     const v = variants[0];
     const { data, error } = await u.client
@@ -39,7 +39,7 @@ describe("watches — trigger và quyền", () => {
     expect(data?.user_id).toBe(u.id);
   });
 
-  it("user không tự gửi baseline_price / cond_state", async () => {
+  it("a user cannot send baseline_price / cond_state themselves", async () => {
     const u = await user();
     const ins = await u.client
       .from("watches")
@@ -55,20 +55,20 @@ describe("watches — trigger và quyền", () => {
     expect(upd.error).not.toBeNull();
   });
 
-  it("không có điều kiện nào → vi phạm check", async () => {
+  it("no condition at all → check violation", async () => {
     const u = await user();
     const { error } = await u.client.from("watches").insert({ variant_id: variants[2].variant_id });
     expect(error).not.toBeNull();
   });
 
-  it("Watch thứ hai cho cùng variant → vi phạm unique", async () => {
+  it("second Watch for the same variant → unique violation", async () => {
     const u = await user();
     await u.client.from("watches").insert({ variant_id: variants[3].variant_id, target_price: 1000 });
     const { error } = await u.client.from("watches").insert({ variant_id: variants[3].variant_id, target_price: 2000 });
     expect(error?.code).toBe("23505");
   });
 
-  it(`Watch hoạt động thứ ${MAX_ACTIVE_WATCHES + 1} → P0050; kích hoạt lại khi đủ 50 → P0050`, async () => {
+  it(`active Watch number ${MAX_ACTIVE_WATCHES + 1} → P0050; reactivating at 50 → P0050`, async () => {
     const u = await user();
     for (let i = 0; i < MAX_ACTIVE_WATCHES; i++) {
       const { error } = await u.client.from("watches").insert({ variant_id: variants[i].variant_id, target_price: 1000 });
@@ -87,7 +87,7 @@ describe("watches — trigger và quyền", () => {
     expect(reactivate.error?.code).toBe("P0050");
   });
 
-  it("đổi điều kiện → reset cond_state, tăng config_version, giữ last_alerted_at", async () => {
+  it("changing conditions → resets cond_state, bumps config_version, keeps last_alerted_at", async () => {
     const u = await user();
     const { data: w } = await u.client
       .from("watches")
@@ -131,12 +131,12 @@ describe("record_watch_evaluation", () => {
     previous_alert_price: null,
     deal_score: 80,
     recommendation: "buy",
-    score_reasons: ["✓ lý do"],
+    score_reasons: ["✓ reason"],
     deliver_after: new Date().toISOString(),
     channels: ["email", "push"],
   };
 
-  it("event + 2 kênh → 1 alert_event + 2 deliveries, trạng thái watch được ghi", async () => {
+  it("event + 2 channels → 1 alert_event + 2 deliveries, watch state written", async () => {
     const w = await newWatch();
     const now = new Date().toISOString();
     const { data: id, error } = await admin.rpc("record_watch_evaluation", {
@@ -158,7 +158,7 @@ describe("record_watch_evaluation", () => {
     expect(after?.cond_state).toEqual({ target_price: true });
   });
 
-  it("config_version cũ → không ghi gì, trả null", async () => {
+  it("stale config_version → nothing written, returns null", async () => {
     const w = await newWatch();
     const { data } = await admin.rpc("record_watch_evaluation", {
       p_watch_id: w.id,
@@ -174,7 +174,7 @@ describe("record_watch_evaluation", () => {
 });
 
 describe("claim_due_deliveries + job lock", () => {
-  it("hai lượt nhận song song không trùng việc; 'sending' quá 15 phút nhận lại được", async () => {
+  it("two concurrent claims never overlap; 'sending' older than 15 minutes can be reclaimed", async () => {
     const u = await user();
     const { data: w } = await u.client
       .from("watches")
@@ -206,7 +206,7 @@ describe("claim_due_deliveries + job lock", () => {
     expect(mine(again).length).toBe(3);
   });
 
-  it("lease lock: lần 2 null; sau release thì giành lại được", async () => {
+  it("lease lock: second attempt null; acquirable again after release", async () => {
     const name = `test-${Date.now()}`;
     const r1 = await admin.rpc("try_acquire_job_lock", { p_name: name, p_owner: "a", p_ttl_seconds: 600 });
     const r2 = await admin.rpc("try_acquire_job_lock", { p_name: name, p_owner: "b", p_ttl_seconds: 600 });
@@ -219,8 +219,8 @@ describe("claim_due_deliveries + job lock", () => {
   });
 });
 
-describe("RLS và quyền hàm", () => {
-  it("user A không đọc được deliveries / push_subscriptions của B", async () => {
+describe("RLS and function privileges", () => {
+  it("user A cannot read B's deliveries / push_subscriptions", async () => {
     const a = await user();
     const b = await user();
     await b.client.from("push_subscriptions").insert({ endpoint: `https://push.test/${b.id}`, p256dh: "k", auth: "a" });
@@ -228,7 +228,7 @@ describe("RLS và quyền hàm", () => {
     expect(data).toEqual([]);
   });
 
-  it("anon / user không gọi được RPC của engine", async () => {
+  it("anon / users cannot call the engine RPCs", async () => {
     const u = await user();
     const r1 = await u.client.rpc("claim_due_deliveries", { p_now: new Date().toISOString(), p_limit: 1 });
     const r2 = await u.client.rpc("try_acquire_job_lock", { p_name: "x", p_owner: "x", p_ttl_seconds: 1 });
@@ -236,7 +236,7 @@ describe("RLS và quyền hàm", () => {
     expect(r2.error).not.toBeNull();
   });
 
-  it("xóa user → cascade watches, alert_events, deliveries, push_subscriptions", async () => {
+  it("deleting a user → cascades watches, alert_events, deliveries, push_subscriptions", async () => {
     const u = await user();
     const { data: w } = await u.client
       .from("watches")

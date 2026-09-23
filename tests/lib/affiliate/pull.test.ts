@@ -6,11 +6,11 @@ const order = (id: string) => ({
   orderId: id,
   orderStatus: "COMPLETED",
   purchaseTime: 1_790_000_000,
-  items: [{ itemId: 1, qty: 1, itemPrice: 100 }, { itemPrice: 1 }], // món 2 thiếu itemId → rejected
+  items: [{ itemId: 1, qty: 1, itemPrice: 100 }, { itemPrice: 1 }], // item 2 lacks itemId → rejected
 });
 
 describe("pullConversions", () => {
-  it("3 trang → upsert 3 lần; đếm rejected", async () => {
+  it("3 pages → 3 upserts; counts rejected", async () => {
     const client = new FakeShopeeAffiliateClient([[order("A")], [order("B")], [order("C")]]);
     const upsert = vi.fn(async (rows: unknown[]) => ({ inserted: rows.length, updated: 0, matched: 0 }));
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -19,7 +19,7 @@ describe("pullConversions", () => {
     expect(r).toMatchObject({ pages: 3, rows: 3, rejected: 3, inserted: 3, complete: true });
   });
 
-  it("quá deadline giữa chừng → complete = false", async () => {
+  it("deadline passed midway → complete = false", async () => {
     const client = new FakeShopeeAffiliateClient([[order("A")], [order("B")]]);
     const upsert = vi.fn(async () => ({ inserted: 0, updated: 0, matched: 0 }));
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -28,7 +28,7 @@ describe("pullConversions", () => {
     expect(upsert).not.toHaveBeenCalled();
   });
 
-  it("lỗi retryable từ API → ném đúng loại", async () => {
+  it("retryable API error → throws the right type", async () => {
     const client = new FakeShopeeAffiliateClient([], new ShopeeAffiliateError("rate limited", true));
     await expect(pullConversions({ client, now: new Date() }, vi.fn())).rejects.toMatchObject({ retryable: true });
   });

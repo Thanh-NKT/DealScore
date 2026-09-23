@@ -3,12 +3,12 @@ import { parseShopeeUrl } from "@/lib/shopee/parse-url";
 export type ClickSource = "web" | "extension" | "email" | "push";
 const SOURCES: ReadonlySet<string> = new Set(["web", "extension", "email", "push"]);
 
-/** G1 — dạng link dài của Shopee Affiliate. */
+/** G1 — Shopee Affiliate long-link format. */
 const AN_REDIR_BASE = "https://s.shopee.vn/an_redir";
-/** G2 — ký tự tách các sub id. */
+/** G2 — sub id separator. */
 const SUB_ID_SEPARATOR = "-";
 
-/** UUID → 32 hex thường, bỏ gạch (G2: "-" là ký tự tách sub id). */
+/** UUID → 32 lowercase hex, dashes removed (G2: "-" is the sub id separator). */
 export function encodeClickId(clickId: string): string {
   return clickId.replace(/-/g, "").toLowerCase();
 }
@@ -19,12 +19,12 @@ export function decodeClickId(hex: string): string | null {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-/** "{clickHex}-{source}"; clickId null (ghi click lỗi) → chỉ "{source}". */
+/** "{clickHex}-{source}"; null clickId (click write failed) → just "{source}". */
 export function encodeSubId(clickId: string | null, source: ClickSource): string {
   return clickId ? `${encodeClickId(clickId)}${SUB_ID_SEPARATOR}${source}` : source;
 }
 
-/** Nhận chuỗi "a-b" hoặc mảng đã tách sẵn (Sub_id1..5). Không bao giờ ném. */
+/** Accepts an "a-b" string or an already-split array (Sub_id1..5). Never throws. */
 export function parseSubId(raw: string | string[] | null | undefined): {
   clickId: string | null;
   source: ClickSource | "unknown";
@@ -51,9 +51,9 @@ export function buildAffiliateUrl(input: {
   shortLink: string | null;
   eligible: boolean;
 }): { url: string; kind: "affiliate" | "origin" } {
-  // Dữ liệu trong DB — sai là lỗi dữ liệu, không phải lỗi người dùng.
+  // Data comes from the DB — a bad value is a data bug, not a user error.
   if (!parseShopeeUrl(input.originUrl).ok) {
-    throw new Error(`originUrl không phải URL sản phẩm Shopee: ${input.originUrl}`);
+    throw new Error(`originUrl is not a Shopee product URL: ${input.originUrl}`);
   }
   const origin = { url: input.originUrl, kind: "origin" as const };
   if (!input.eligible) return origin;

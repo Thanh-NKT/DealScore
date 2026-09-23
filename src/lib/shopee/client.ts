@@ -1,10 +1,10 @@
 /**
- * Client bọc Shopee Open API.
+ * Client wrapping the Shopee Open API.
  *
- * Chưa có token thật (spike Giai đoạn 0), nên chưa có lời gọi HTTP nào.
- * Dữ liệu giả lập CHỈ bật khi SHOPEE_CLIENT=fake và không phải production:
- * giá giả ghi vào catalog như giá thật là phá hỏng đúng thứ khiến người dùng
- * tin sản phẩm này.
+ * No real token yet (Phase 0 spike), so there are no HTTP calls yet.
+ * Fake data is ONLY enabled when SHOPEE_CLIENT=fake and not in production:
+ * fake prices written to the catalog as real ones would destroy the very thing that makes users
+ * trust this product.
  */
 
 export interface ShopeeItemDetail {
@@ -17,17 +17,17 @@ export interface ShopeeItemDetail {
   sellerIsOfficial: boolean;
   models: Array<{
     modelId: string;
-    name: string; // vd "2TB, Đen"
+    name: string; // e.g. "2TB, Đen"
     price: number | null;
     originalPrice: number | null;
     stock: number | null;
     isFlashSale: boolean;
   }>;
-  /** 'seed' = dữ liệu giả lập, ghi vào price_observations.source để không lẫn với giá thật. */
+  /** 'seed' = fake data, written to price_observations.source so it never mixes with real prices. */
   source: "api" | "seed";
 }
 
-/** Không lấy được dữ liệu từ Shopee — route trả `upstream_unavailable`. */
+/** Could not get data from Shopee — the route returns `upstream_unavailable`. */
 export class ShopeeUnavailableError extends Error {
   constructor(message: string) {
     super(message);
@@ -46,7 +46,7 @@ export async function getItemDetail(
   if (isFakeClientEnabled()) {
     return fakeItemDetail(shopId, itemId);
   }
-  throw new ShopeeUnavailableError("Chưa cấu hình Shopee Open API");
+  throw new ShopeeUnavailableError("Shopee Open API is not configured");
 }
 
 function fakeItemDetail(shopId: string, itemId: string): ShopeeItemDetail {

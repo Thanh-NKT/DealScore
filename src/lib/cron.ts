@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
-/** true khi Authorization đúng "Bearer ${secret}". So sánh thời gian hằng. */
+/** true when Authorization is exactly "Bearer ${secret}". Constant-time comparison. */
 export function isAuthorizedCronRequest(headers: Headers, secret: string | undefined): boolean {
   if (!secret) return false;
   const got = Buffer.from(headers.get("authorization") ?? "");

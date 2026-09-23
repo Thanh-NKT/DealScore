@@ -38,19 +38,19 @@ const req = (t: string, accept = "*/*") =>
   });
 
 describe("POST /api/unsubscribe", () => {
-  it("token sai → 400, không ghi", async () => {
+  it("bad token → 400, nothing written", async () => {
     const res = await POST(req("rac") as never);
     expect(res.status).toBe(400);
     expect(updates).toEqual([]);
   });
 
-  it("email → tắt email_enabled của đúng user; One-Click trả 200", async () => {
+  it("email → disables email_enabled for the right user; One-Click returns 200", async () => {
     const res = await POST(req(signUnsubscribeToken({ kind: "email", userId: "u1" }, "s")) as never);
     expect(res.status).toBe(200);
     expect(updates).toEqual([["notification_settings", { email_enabled: false }, { user_id: "u1" }]]);
   });
 
-  it("watch → paused theo cả id và user_id; form HTML → redirect", async () => {
+  it("watch → paused by both id and user_id; HTML form → redirect", async () => {
     const res = await POST(
       req(signUnsubscribeToken({ kind: "watch", userId: "u1", watchId: "w1" }, "s"), "text/html") as never,
     );

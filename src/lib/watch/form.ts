@@ -10,9 +10,9 @@ export type WatchField =
   | "_form";
 
 /**
- * Gợi ý giá mục tiêu mặc định:
- * Giá hiện tại − 10%, làm tròn xuống tới 1.000 ₫.
- * Trả về null nếu chưa có giá.
+ * Default target price suggestion:
+ * current price − 10%, rounded down to 1,000 ₫.
+ * Returns null when there is no price yet.
  */
 export function suggestTargetPrice(currentPrice: number | null): number | null {
   if (currentPrice === null || currentPrice <= 0) return null;
@@ -46,7 +46,7 @@ export function parseWatchForm(
 
   const errors: Partial<Record<WatchField, string>> = {};
 
-  // 1. variantId (phải là UUID)
+  // 1. variantId (must be a UUID)
   const variantId = getSingle("variantId")?.trim();
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -54,7 +54,7 @@ export function parseWatchForm(
     errors.variantId = "ID phiên bản sản phẩm không hợp lệ.";
   }
 
-  // 2. targetPrice (số nguyên dương, chấp nhận dấu chấm ngăn cách)
+  // 2. targetPrice (positive integer, dot thousands separators accepted)
   let targetPrice: number | null = null;
   const targetPriceRaw = getSingle("targetPrice")?.trim();
   if (targetPriceRaw && targetPriceRaw !== "") {
@@ -79,7 +79,7 @@ export function parseWatchForm(
     }
   }
 
-  // 4. notifyLow (chạm đáy)
+  // 4. notifyLow (hits the low)
   const notifyLowVal = getSingle("notifyLow");
   const notifyLow = notifyLowVal === "on" || notifyLowVal === "true";
 
@@ -95,12 +95,12 @@ export function parseWatchForm(
     }
   }
 
-  // 6. notifyBackInStock (có hàng lại)
+  // 6. notifyBackInStock (back in stock)
   const notifyBackInStockVal = getSingle("notifyBackInStock");
   const notifyBackInStock =
     notifyBackInStockVal === "on" || notifyBackInStockVal === "true";
 
-  // Kiểm tra ít nhất 1 điều kiện được chọn
+  // Require at least one condition
   const hasCondition =
     targetPrice !== null ||
     dropPct !== null ||
@@ -117,8 +117,8 @@ export function parseWatchForm(
   let channels: Channel[] | null = null;
 
   if (rawChannels.some((c) => c !== "email" && c !== "push" && c !== "account")) {
-    // Không lặng lẽ đổi giá trị lạ thành "theo tài khoản": làm vậy có thể bật
-    // lại một kênh người dùng muốn loại khỏi Watch này.
+    // Don't silently turn an unknown value into "follow the account": that could
+    // re-enable a channel the user wanted excluded from this Watch.
     errors.channels = "Kênh không hợp lệ.";
   } else if (rawChannels.includes("account") || rawChannels.length === 0) {
     channels = null;

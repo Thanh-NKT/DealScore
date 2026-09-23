@@ -36,7 +36,7 @@ const input = {
       notify_back_in_stock: false,
       channels: null,
       folder: null,
-      note: "quà sinh nhật",
+      note: "birthday gift",
       status: "active",
       created_at: "2026-09-02T00:00:00Z",
       baseline_price: 1200,
@@ -47,7 +47,7 @@ const input = {
       last_evaluated_at: null,
       config_version: 1,
       updated_at: "2026-09-02T00:00:00Z",
-      cot_moi_sau_nay: "không được lọt ra",
+      future_column: "must not leak",
     },
   ],
   alertEvents: [
@@ -86,46 +86,46 @@ const input = {
 describe("buildAccountExport", () => {
   const out = buildAccountExport(input as never);
 
-  it("có schema_version và exported_at", () => {
+  it("has schema_version and exported_at", () => {
     expect(out.schema_version).toBe(1);
     expect(out.exported_at).toBe("2026-09-23T20:00:00.000Z");
   });
-  it("chọn cột tường minh — cột lạ và trạng thái engine không lọt ra", () => {
+  it("explicit column selection — unknown columns and engine state don't leak", () => {
     const s = JSON.stringify(out);
-    expect(s).not.toContain("cot_moi_sau_nay");
+    expect(s).not.toContain("future_column");
     expect(out.watches[0]).not.toHaveProperty("cond_state");
     expect(out.watches[0]).not.toHaveProperty("config_version");
   });
-  it("watch có cột điều kiện mới và ghi chú của người dùng", () => {
-    expect(out.watches[0]).toMatchObject({ drop_pct: 10, notify_low: true, baseline_price: 1200, note: "quà sinh nhật" });
+  it("watch has the new condition columns and the user's note", () => {
+    expect(out.watches[0]).toMatchObject({ drop_pct: 10, notify_low: true, baseline_price: 1200, note: "birthday gift" });
   });
-  it("không có ip_hash, session_id, provider_message_id", () => {
+  it("no ip_hash, session_id, provider_message_id", () => {
     const s = JSON.stringify(out);
     expect(s).not.toContain("KHONG-DUOC-XUAT");
     expect(s).not.toContain("session_id");
     expect(s).not.toContain("provider_message_id");
   });
-  it("alert kèm deliveries", () => {
+  it("alerts include deliveries", () => {
     expect(out.alert_events[0].deliveries).toEqual([{ channel: "email", status: "sent", sent_at: "2026-09-05T00:01:00Z" }]);
   });
-  it("push chỉ có created_at + user_agent — không endpoint, không khóa", () => {
+  it("push has only created_at + user_agent — no endpoint, no keys", () => {
     expect(out.push_devices).toEqual([{ created_at: "2026-09-06T00:00:00Z", user_agent: "Chrome" }]);
     expect(JSON.stringify(out)).not.toContain("https://secret");
   });
-  it("đơn hàng: có thời điểm, trạng thái, giá trị — KHÔNG có hoa hồng hay raw", () => {
+  it("orders: timestamp, status, value — NO commission or raw", () => {
     expect(out.orders).toEqual([
       { purchase_time: "2026-09-10T00:00:00Z", status: "completed", order_value: 500000, product_item_id: "111" },
     ]);
     expect(JSON.stringify(out.orders)).not.toContain("25000");
   });
-  it("cài đặt ở dạng NotificationSettings", () => {
+  it("settings in NotificationSettings shape", () => {
     expect(out.notification_settings).toMatchObject({ emailEnabled: true, frequency: "instant" });
   });
 });
 
 describe("exportFileName", () => {
-  it("theo ngày VN", () => {
-    // 20:00Z ngày 23 = 03:00 VN ngày 24
+  it("dated in Vietnam time", () => {
+    // 20:00Z on the 23rd = 03:00 Vietnam time on the 24th
     expect(exportFileName(new Date("2026-09-23T20:00:00Z"))).toBe("kairo-du-lieu-2026-09-24.json");
   });
 });

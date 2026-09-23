@@ -1,9 +1,9 @@
-/** Một chỗ duy nhất cho các ngưỡng của Watch & Alert. */
-export const MAX_ACTIVE_WATCHES = 50; // trùng hằng số trong trigger watches_enforce_limit (0006)
+/** The one place for Watch & Alert thresholds. */
+export const MAX_ACTIVE_WATCHES = 50; // same constant as in the watches_enforce_limit trigger (0006)
 export const COOLDOWN_HOURS = 24;
-export const DEEPER_DROP_RATIO = 0.03; // giảm thêm ≥ 3% so với giá vừa báo
-export const HYSTERESIS_RATIO = 0.02; // điều kiện giá chỉ về "sai" khi vượt ngưỡng thêm 2%
-export const DEAL_SCORE_HYSTERESIS = 2; // điểm
-export const STALE_HOURS = 48; // trùng ngưỡng isStale của 1.2
+export const DEEPER_DROP_RATIO = 0.03; // a further drop of ≥ 3% below the last alerted price
+export const HYSTERESIS_RATIO = 0.02; // a price condition only flips back to "false" after crossing the threshold by another 2%
+export const DEAL_SCORE_HYSTERESIS = 2; // points
+export const STALE_HOURS = 48; // same as the isStale threshold from 1.2
 export const MAX_DELIVERY_ATTEMPTS = 3;
 export const RETRY_DELAYS_MINUTES = [5, 30, 120] as const;

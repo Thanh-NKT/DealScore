@@ -42,11 +42,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const { product, variants, selectedVariantId, pricing, dailyPrices } = data;
 
   const user = await getCurrentUser();
-  // getMyWatchForVariant ném khi lỗi DB. Trang sản phẩm công khai không được sập vì phần Watch:
-  // lỗi thì coi như chưa có Watch.
+  // getMyWatchForVariant throws on DB errors. The public product page must not crash because of the Watch part:
+  // on error, treat it as no Watch.
   const existingWatch = user
     ? await getMyWatchForVariant(user.id, selectedVariantId).catch((err) => {
-        console.error("getMyWatchForVariant thất bại", err);
+        console.error("getMyWatchForVariant failed", err);
         return null;
       })
     : null;
@@ -54,12 +54,12 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const currentVariant = variants.find((v) => v.id === selectedVariantId);
   const currentPath = `/${product.categorySlug}/${product.slug}?variant=${selectedVariantId}&range=${range}`;
 
-  // Chart series theo range (chỉ cắt chart, không ảnh hưởng Deal Score)
+  // Chart series for the selected range (only trims the chart, never affects the Deal Score)
   const chartSeries = buildChartSeries(dailyPrices, range);
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:py-12">
-      {/* Breadcrumb danh mục */}
+      {/* Category breadcrumb */}
       <nav aria-label="Đường dẫn trang" className="mb-6 flex items-center gap-2 text-xs text-muted">
         <Link href="/" className="hover:text-foreground">
           Trang chủ
@@ -75,7 +75,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       </nav>
 
       <article className="space-y-8">
-        {/* Header thông tin sản phẩm */}
+        {/* Product info header */}
         <header className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2 flex-1">
             {product.brand && (
@@ -103,14 +103,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           )}
         </header>
 
-        {/* Bộ chọn phiên bản Variant (nếu có > 1) */}
+        {/* Variant picker (when there is > 1) */}
         <VariantPicker
           variants={variants}
           selectedId={selectedVariantId}
           range={range}
         />
 
-        {/* Khối giá hiện tại & nút theo dõi giá */}
+        {/* Current price block & watch button */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <PriceSummary
             cheapest={pricing.cheapest ?? pricing.lastKnown}
@@ -133,14 +133,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* Hết hàng ở mọi người bán: không chấm điểm (1.2.e) */}
+        {/* Out of stock at every seller: no scoring (1.2.e) */}
         {pricing.allOutOfStock && (
           <p className="rounded-2xl border border-border p-4 text-sm text-muted">
             Tạm hết hàng ở mọi người bán đang theo dõi.
           </p>
         )}
 
-        {/* Deal Score đầu trang + Lý do */}
+        {/* Header Deal Score + reasons */}
         {pricing.headline && (
           <section className="space-y-4 rounded-2xl border border-border bg-black/[0.01] p-6 dark:bg-white/[0.01]">
             <DealScoreBadge result={pricing.headline} />
@@ -148,13 +148,13 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           </section>
         )}
 
-        {/* Cảnh báo Fake Sale (chỉ hiện khi có) */}
+        {/* Fake Sale warning (only when present) */}
         <FakeSaleNotice message={pricing.fakeSaleMessage} />
 
-        {/* Thông báo sản phẩm draft do ingest (nếu có) */}
+        {/* Notice for ingest-created draft products (if any) */}
         <DraftProductNotice isDraft={product.status === "draft"} />
 
-        {/* Biểu đồ giá SVG chuẩn server */}
+        {/* Server-rendered SVG price chart */}
         <PriceChart
           series={chartSeries}
           range={range}
@@ -162,7 +162,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           rows={dailyPrices}
         />
 
-        {/* 4 chỉ số thống kê (Đáy / Trung vị / Đỉnh / Bắt đầu theo dõi) */}
+        {/* 4 stats (Low / Median / High / Tracking since) */}
         {(pricing.stats.dayCount > 0 || pricing.trackingSince) && (
           <StatsRow
             stats={pricing.stats}
@@ -170,7 +170,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           />
         )}
 
-        {/* Danh sách người bán (Offer list) */}
+        {/* Seller list (offer list) */}
         <OfferList offers={pricing.offers} />
       </article>
     </main>

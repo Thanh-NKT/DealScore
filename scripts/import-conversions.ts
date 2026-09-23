@@ -1,11 +1,11 @@
 /**
- * Nhập conversion report tải từ dashboard Shopee Affiliate.
+ * Import a conversion report downloaded from the Shopee Affiliate dashboard.
  *   pnpm conversions:import <file.csv> [--dry-run] [--yes]
  *
- * Chạy được với cả production — nhập đơn thật là mục đích của nó. Vì vậy KHÔNG
- * dùng requireLocalSupabase; thay vào đó hỏi xác nhận khi URL không phải local.
+ * Works against production too — importing real orders is its purpose. So it does NOT
+ * use requireLocalSupabase; instead it asks for confirmation when the URL is not local.
  *
- * Bọc trong main(): tsx biên dịch file .ts sang CJS, không cho await cấp cao nhất.
+ * Wrapped in main(): tsx compiles .ts files to CJS, which forbids top-level await.
  */
 import { readFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
@@ -20,7 +20,7 @@ async function main() {
   const dryRun = args.includes("--dry-run");
   const yes = args.includes("--yes");
   if (!file) {
-    console.error("Dùng: pnpm conversions:import <file.csv> [--dry-run] [--yes]");
+    console.error("Usage: pnpm conversions:import <file.csv> [--dry-run] [--yes]");
     process.exit(1);
   }
 
@@ -34,8 +34,8 @@ async function main() {
   const headers = records.length > 0 ? Object.keys(records[0]) : [];
   const missing = missingCsvFields(headers);
   if (missing.length > 0) {
-    // In tên cột đang có để sửa CSV_COLUMNS (G5) nhanh.
-    console.error(`Thiếu cột bắt buộc: ${missing.join(", ")}\nCác cột trong file: ${headers.join(" | ")}`);
+    // Print the actual headers so CSV_COLUMNS (G5) can be fixed quickly.
+    console.error(`Missing required columns: ${missing.join(", ")}\nColumns in file: ${headers.join(" | ")}`);
     process.exit(1);
   }
 
@@ -47,7 +47,7 @@ async function main() {
     else errors.push(n.reason);
   }
   const withClick = valid.filter((r) => r.click_event_id);
-  console.log(`Hợp lệ: ${valid.length} · Lỗi: ${errors.length} · Có sub_id nhận ra được: ${withClick.length}`);
+  console.log(`Valid: ${valid.length} · Errors: ${errors.length} · With recognizable sub_id: ${withClick.length}`);
   for (const e of errors.slice(0, 10)) console.log(`  - ${e}`);
 
   const admin = createAdminClient();
@@ -60,7 +60,7 @@ async function main() {
       if (error) throw error;
       matched += data?.length ?? 0;
     }
-    console.log(`Khớp click có thật: ${matched}. --dry-run: không ghi gì.`);
+    console.log(`Matched existing clicks: ${matched}. --dry-run: nothing written.`);
     process.exit(0);
   }
 
@@ -68,16 +68,16 @@ async function main() {
   const isLocal = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url);
   if (!isLocal && !yes) {
     const rl = createInterface({ input: process.stdin, output: process.stdout });
-    const answer = await rl.question(`Ghi ${valid.length} dòng vào ${url}? Gõ "yes" để tiếp tục: `);
+    const answer = await rl.question(`Write ${valid.length} rows to ${url}? Type "yes" to continue: `);
     rl.close();
     if (answer.trim() !== "yes") {
-      console.log("Đã hủy.");
+      console.log("Cancelled.");
       process.exit(1);
     }
   }
 
   const result = await upsertNormalizedConversions(valid, admin);
-  console.log(`Chèn: ${result.inserted} · Cập nhật: ${result.updated} · Khớp click: ${result.matched}`);
+  console.log(`Inserted: ${result.inserted} · Updated: ${result.updated} · Matched clicks: ${result.matched}`);
 }
 
 main().catch((err) => {

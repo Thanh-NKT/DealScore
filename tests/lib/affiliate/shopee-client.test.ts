@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createShopeeAffiliateClient, ShopeeAffiliateError, signRequest } from "@/lib/affiliate/shopee-client";
 
 describe("signRequest (G4)", () => {
-  it("vector cố định", () => {
+  it("fixed vector", () => {
     expect(signRequest({ appId: "app123", secret: "s3cret", timestamp: 1700000000, payload: '{"query":"{ ping }"}' })).toBe(
       "SHA256 Credential=app123, Timestamp=1700000000, Signature=ebda1232379f7c692607e4787e2994dca9f58fc42c40f745adb00319b649595e",
     );
@@ -12,11 +12,11 @@ describe("signRequest (G4)", () => {
 describe("createShopeeAffiliateClient", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("thiếu khóa → null", () => {
+  it("missing key → null", () => {
     expect(createShopeeAffiliateClient({})).toBeNull();
   });
 
-  it("gửi đúng header, trải nodes thành đơn, trả scrollId kế tiếp", async () => {
+  it("sends the right header, flattens nodes into orders, returns the next scrollId", async () => {
     const fetchMock = vi.fn(async () =>
       new Response(
         JSON.stringify({
@@ -44,7 +44,7 @@ describe("createShopeeAffiliateClient", () => {
     expect((init.headers as Record<string, string>).Authorization).toMatch(/^SHA256 Credential=a, Timestamp=\d+, Signature=[0-9a-f]{64}$/);
   });
 
-  it("5xx → retryable; lỗi GraphQL → không retryable", async () => {
+  it("5xx → retryable; GraphQL error → not retryable", async () => {
     const c = createShopeeAffiliateClient({ SHOPEE_AFFILIATE_APP_ID: "a", SHOPEE_AFFILIATE_SECRET: "s" })!;
     const q = { start: new Date(0), end: new Date(1), scrollId: null, limit: 1 };
 

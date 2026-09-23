@@ -21,7 +21,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 const { GET } = await import("@/app/go/[marketplace]/[offerId]/route");
 const call = (qs = "?src=email") =>
-  // NextRequest (không phải Request): route đọc request.cookies.
+  // NextRequest (not Request): the route reads request.cookies.
   GET(new NextRequest(`https://kairo.vn/go/shopee/${OFFER}${qs}`), {
     params: Promise.resolve({ marketplace: "shopee", offerId: OFFER }),
   });
@@ -39,7 +39,7 @@ beforeEach(() => {
 });
 
 describe("GET /go", () => {
-  it("offer thường → 302 an_redir, sub_id giải ra đúng click + nguồn", async () => {
+  it("normal offer → 302 an_redir, sub_id decodes to the right click + source", async () => {
     const res = await call();
     expect(res.status).toBe(302);
     const loc = new URL(res.headers.get("location")!);
@@ -47,20 +47,20 @@ describe("GET /go", () => {
     expect(parseSubId(loc.searchParams.get("sub_id"))).toEqual({ clickId: CLICK, source: "email" });
   });
 
-  it("eligible = false → link gốc", async () => {
+  it("eligible = false → plain link", async () => {
     offerRow.affiliate_offers = { eligible: false, short_link: null };
     const res = await call();
     expect(res.headers.get("location")).toBe("https://shopee.vn/product/123/456");
   });
 
-  it("thiếu SHOPEE_AFFILIATE_ID → link gốc", async () => {
+  it("missing SHOPEE_AFFILIATE_ID → plain link", async () => {
     vi.stubEnv("SHOPEE_AFFILIATE_ID", "");
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const res = await call();
     expect(res.headers.get("location")).toBe("https://shopee.vn/product/123/456");
   });
 
-  it("ghi click lỗi → vẫn 302 an_redir, sub_id chỉ có nguồn", async () => {
+  it("click write fails → still 302 an_redir, sub_id carries only the source", async () => {
     clickResult = { data: null, error: { message: "db down" } };
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await call("?src=push");
@@ -68,7 +68,7 @@ describe("GET /go", () => {
     expect(loc.searchParams.get("sub_id")).toBe("push");
   });
 
-  it("marketplace không khớp → 404", async () => {
+  it("marketplace mismatch → 404", async () => {
     (offerRow.listings as Record<string, string>).marketplace = "lazada";
     expect((await call()).status).toBe(404);
   });

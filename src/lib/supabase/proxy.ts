@@ -3,8 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/database.types";
 
 /**
- * Làm mới session của Supabase trên mỗi request và đồng bộ cookie.
- * Được gọi từ src/middleware.ts.
+ * Refresh the Supabase session on every request and sync cookies.
+ * Called from src/proxy.ts.
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -30,8 +30,8 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // QUAN TRỌNG: gọi getUser() ngay sau khi tạo client để làm mới token.
-  // Không thêm logic giữa createServerClient và getUser().
+  // IMPORTANT: call getUser() right after creating the client to refresh the token.
+  // Do not add logic between createServerClient and getUser().
   await supabase.auth.getUser();
 
   return supabaseResponse;

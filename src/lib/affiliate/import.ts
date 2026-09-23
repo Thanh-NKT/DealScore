@@ -16,7 +16,7 @@ export async function upsertNormalizedConversions(
     const { data, error } = await client.rpc("upsert_conversions", {
       p_rows: rows.slice(i, i + UPSERT_BATCH) as never,
     });
-    if (error) throw new Error(`upsert_conversions thất bại: ${error.message}`);
+    if (error) throw new Error(`upsert_conversions failed: ${error.message}`);
     const r = data?.[0];
     total.inserted += r?.inserted ?? 0;
     total.updated += r?.updated ?? 0;
@@ -38,7 +38,7 @@ export async function pullConversions(
   let scrollId: string | null = null;
 
   do {
-    // Dừng giữa chừng vô hại: lượt sau kéo lại từ đầu, upsert là idempotent.
+    // Stopping midway is harmless: the next run pulls from the start again, and upsert is idempotent.
     if (opts.deadline && Date.now() > opts.deadline) return out;
 
     const page = await opts.client.conversionReport({ start, end: opts.now, scrollId, limit: PAGE_LIMIT });
@@ -50,7 +50,7 @@ export async function pullConversions(
         if (n.ok) rows.push(n.row);
         else {
           out.rejected++;
-          console.warn(`pullConversions: bỏ qua dòng — ${n.reason}`); // không log raw
+          console.warn(`pullConversions: skipping row — ${n.reason}`); // never log raw
         }
       }
     }

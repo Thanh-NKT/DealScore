@@ -5,15 +5,15 @@ import type { ConditionKey, TriggerType, VariantSnapshot, WatchConfig, WatchStat
 export interface NextState {
   condState: Partial<Record<ConditionKey, boolean>>;
   lastInStock: boolean | null;
-  /** Chỉ khi phải đặt (lần đầu thấy giá) hoặc dời mốc (drop_pct bắn). */
+  /** Only when it must be set (first price seen) or moved (drop_pct fired). */
   baselinePrice?: number;
   alerted?: { price: number; at: string };
 }
 
 export interface AlertDecision {
   kind: "skip_stale" | "no_alert" | "suppressed_cooldown" | "alert";
-  triggerTypes: TriggerType[]; // rỗng trừ khi kind = "alert"
-  nextState: NextState | null; // null = không ghi trạng thái (skip_stale)
+  triggerTypes: TriggerType[]; // empty unless kind = "alert"
+  nextState: NextState | null; // null = write no state (skip_stale)
 }
 
 const PRICE_CONDITIONS: ConditionKey[] = ["target_price", "drop_pct", "low"];
@@ -31,7 +31,7 @@ export function decideAlert(
   const p = snap.price;
   const ok = snap.inStock && p != null && p > 0;
 
-  // Có hàng lại tự nó đã là một cạnh; các điều kiện khác cần lần trước chưa true.
+  // Back in stock is an edge by itself; other conditions need the previous value to be not-true.
   const newlyTrue = keys.filter(
     (k) => tri[k] === true && (k === "back_in_stock" || state.condState[k] !== true),
   );
@@ -45,7 +45,7 @@ export function decideAlert(
   const condState: Partial<Record<ConditionKey, boolean>> = { ...state.condState };
   for (const k of keys) {
     const v = tri[k];
-    if (v === true || v === false) condState[k] = v; // "unknown" giữ giá trị cũ
+    if (v === true || v === false) condState[k] = v; // "unknown" keeps the old value
   }
 
   const next: NextState = { condState, lastInStock: snap.inStock };
@@ -58,8 +58,8 @@ export function decideAlert(
     now.getTime() - new Date(state.lastAlertedAt).getTime() < COOLDOWN_HOURS * 3_600_000;
 
   if (inCooldown) {
-    // KHÔNG ghi true cho cạnh vừa bắt được: ghi rồi thì hết cooldown không còn
-    // cạnh nào để báo, và alert mất vĩnh viễn (kịch bản B).
+    // Do NOT write true for the edge just caught: if we did, once the cooldown ends there
+    // is no edge left to report, and the alert is lost forever (scenario B).
     for (const k of newlyTrue) {
       if (state.condState[k] === undefined) delete condState[k];
       else condState[k] = state.condState[k];
@@ -69,11 +69,11 @@ export function decideAlert(
   }
 
   next.alerted = { price: p!, at: now.toISOString() };
-  if (triggers.includes("drop_pct")) next.baselinePrice = p!; // dời mốc (W3)
+  if (triggers.includes("drop_pct")) next.baselinePrice = p!; // move the baseline (W3)
   return { kind: "alert", triggerTypes: triggers, nextState: next };
 }
 
-/** Phản chiếu đúng những gì record_watch_evaluation ghi vào watches. */
+/** Mirrors exactly what record_watch_evaluation writes into watches. */
 export function applyNextState(state: WatchState, next: NextState | null): WatchState {
   if (!next) return state;
   return {

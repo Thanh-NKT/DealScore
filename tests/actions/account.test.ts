@@ -67,13 +67,13 @@ beforeEach(() => {
 });
 
 describe("acceptConsent", () => {
-  it("không tick đồng ý → lỗi ở agree, không ghi gì", async () => {
+  it("consent not ticked → error on agree, nothing written", async () => {
     const r = await actions.acceptConsent({ status: "idle" }, form({ next: "/" }));
     expect(r).toEqual({ status: "error", errors: { agree: expect.any(String) } });
     expect(adminUpdate).not.toHaveBeenCalled();
   });
 
-  it("đồng ý → ghi phiên bản hiện hành bằng admin rồi redirect next", async () => {
+  it("consent → writes the current version via admin, then redirects to next", async () => {
     await expect(
       actions.acceptConsent({ status: "idle" }, form({ agree: "on", marketing: "on", next: "/ssd/a" })),
     ).rejects.toMatchObject({ url: "/ssd/a" });
@@ -85,12 +85,12 @@ describe("acceptConsent", () => {
 });
 
 describe("updateNotificationSettings", () => {
-  it("dữ liệu sai → trả lỗi theo trường", async () => {
+  it("invalid data → per-field errors", async () => {
     const r = await actions.updateNotificationSettings({ status: "idle" }, form({ frequency: "x", digestHour: "8" }));
     expect(r.status).toBe("error");
     expect(serverUpdate).not.toHaveBeenCalled();
   });
-  it("hợp lệ → ghi bằng server client", async () => {
+  it("valid → written via the server client", async () => {
     const r = await actions.updateNotificationSettings(
       { status: "idle" },
       form({ emailEnabled: "on", frequency: "instant", digestHour: "8" }),
@@ -104,12 +104,12 @@ describe("updateNotificationSettings", () => {
 });
 
 describe("requestAccountDeletion", () => {
-  it("gõ sai chữ xác nhận → lỗi", async () => {
+  it("wrong confirmation word → error", async () => {
     const r = await actions.requestAccountDeletion({ status: "idle" }, form({ confirm: "xoa" }));
     expect(r).toEqual({ status: "error", errors: { confirm: expect.any(String) } });
   });
 
-  it("đúng thứ tự: ghi deleted_at → gửi email → đăng xuất mọi nơi → redirect", async () => {
+  it("strict order: write deleted_at → send email → sign out everywhere → redirect", async () => {
     await expect(actions.requestAccountDeletion({ status: "idle" }, form({ confirm: " xóa " }))).rejects.toMatchObject({
       url: "/?account=deleted",
     });
@@ -121,7 +121,7 @@ describe("requestAccountDeletion", () => {
     ]);
   });
 
-  it("gửi email lỗi vẫn xóa và đăng xuất", async () => {
+  it("email failure still deletes and signs out", async () => {
     const { sendEmail } = await import("@/lib/email");
     vi.mocked(sendEmail).mockRejectedValueOnce(new Error("smtp"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);

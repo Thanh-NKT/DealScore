@@ -14,9 +14,9 @@ function productUrl(categorySlug: string | null, productSlug: string, variantId:
 }
 
 /**
- * URL trang sản phẩm nếu listing đã có trong catalog và đã ghép variant.
- * Chỉ đọc, không gọi Shopee — dùng để quyết định lượt này có phải ingest không
- * trước khi tính hạn mức ingest.
+ * Product page URL if the listing is already in the catalog and matched to a variant.
+ * Read-only, never calls Shopee — used to decide whether this request needs an ingest
+ * before charging the ingest quota.
  */
 export async function findExistingProductUrl(params: {
   shopId: string;
@@ -36,7 +36,7 @@ export async function findExistingProductUrl(params: {
     .limit(1)
     .maybeSingle();
 
-  if (error) throw new Error(`Tra listing thất bại: ${error.message}`);
+  if (error) throw new Error(`Listing lookup failed: ${error.message}`);
   if (!data?.variant_id) return null;
 
   const product = data.product_variants?.products;
@@ -45,10 +45,10 @@ export async function findExistingProductUrl(params: {
 }
 
 /**
- * Lấy chi tiết từ Shopee rồi ghi toàn bộ vào catalog bằng RPC
- * ingest_shopee_item — một transaction: thất bại giữa chừng thì không để lại
- * listing thiếu offer hay offer thiếu quan sát. Hai request đồng thời cho cùng
- * một item được RPC tuần tự hóa; request sau nhận 'resolved'.
+ * Fetch details from Shopee and write everything to the catalog via the
+ * ingest_shopee_item RPC — one transaction: a mid-way failure never leaves a
+ * listing without an offer or an offer without observations. Two concurrent requests
+ * for the same item are serialized by the RPC; the later one gets 'resolved'.
  */
 export async function ingestShopeeItem(params: {
   shopId: string;
@@ -60,7 +60,7 @@ export async function ingestShopeeItem(params: {
   try {
     detail = await getItemDetail(shopId, itemId);
   } catch (err) {
-    if (!(err instanceof ShopeeUnavailableError)) console.error("Lỗi gọi Shopee:", err);
+    if (!(err instanceof ShopeeUnavailableError)) console.error("Shopee call failed:", err);
     return { status: "error", code: "upstream_unavailable" };
   }
   if (!detail.title || detail.models.length === 0) {
@@ -94,7 +94,7 @@ export async function ingestShopeeItem(params: {
   });
 
   if (error || !data) {
-    console.error("Lỗi ingest_shopee_item:", error?.message);
+    console.error("ingest_shopee_item error:", error?.message);
     return { status: "error", code: "internal" };
   }
 

@@ -24,10 +24,10 @@ export async function evaluateWatches(
     .limit(Math.min(opts.limit ?? 500, 999));
   if (opts.variantIds) q = q.in("variant_id", opts.variantIds);
   const { data: watches, error } = await q;
-  if (error) throw new Error(`Đọc Watch để đánh giá thất bại: ${error.message}`);
+  if (error) throw new Error(`Failed to read Watches for evaluation: ${error.message}`);
   if (!watches || watches.length === 0) return stats;
 
-  // Lỗi tải snapshot → cả lượt thất bại (route trả 500).
+  // Snapshot load failure → the whole run fails (route returns 500).
   const snaps = await loadVariantSnapshots(client, watches.map((w) => w.variant_id), opts.now);
 
   for (const w of watches) {
@@ -40,7 +40,7 @@ export async function evaluateWatches(
       const config = configFromRow(w as WatchRow);
       const state = stateFromRow(w as WatchRow);
 
-      // Không kênh nào → không ghi trạng thái: bật lại kênh thì điều kiện đang đúng vẫn được báo.
+      // No channel → write no state: re-enabling a channel still reports a condition that is currently true.
       const channels = resolveChannels(settings, config.channels);
       if (channels.length === 0) continue;
 
@@ -52,7 +52,7 @@ export async function evaluateWatches(
       let pEvent: Record<string, unknown> | null = null;
 
       if (d.kind === "skip_stale") {
-        stats.skippedStale++; // chỉ dời last_evaluated_at để luân phiên
+        stats.skippedStale++; // only bump last_evaluated_at so watches rotate
       } else {
         pState = toRpcState(d.nextState!);
         if (d.kind === "suppressed_cooldown") stats.suppressed++;
@@ -61,7 +61,7 @@ export async function evaluateWatches(
             trigger_types: d.triggerTypes,
             price: snap.price,
             offer_id: snap.offerId,
-            baseline_price: state.baselinePrice, // mốc TRƯỚC khi dời
+            baseline_price: state.baselinePrice, // baseline BEFORE it is moved
             previous_alert_price: state.lastAlertPrice,
             deal_score: snap.deal?.score ?? null,
             recommendation: snap.deal?.recommendation ?? null,
@@ -83,7 +83,7 @@ export async function evaluateWatches(
       if (eventId) stats.alerts++;
     } catch (err) {
       stats.errors++;
-      console.error(`evaluateWatches: lỗi ở watch ${w.id}:`, err);
+      console.error(`evaluateWatches: error on watch ${w.id}:`, err);
     }
   }
   return stats;

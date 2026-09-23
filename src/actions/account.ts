@@ -23,7 +23,7 @@ export type ActionResult<E extends string = string> =
   | { status: "error"; errors: Partial<Record<E, string>> };
 
 /**
- * Đồng ý điều khoản và chính sách (Cổng consent).
+ * Accept the terms and policy (consent gate).
  */
 export async function acceptConsent(
   prev: ActionResult<"agree">,
@@ -57,14 +57,14 @@ export async function acceptConsent(
     .eq("id", user.id);
 
   if (error) {
-    throw new Error(`Lỗi cập nhật đồng ý điều khoản: ${error.message}`);
+    throw new Error(`Failed to update terms consent: ${error.message}`);
   }
 
   redirect(next);
 }
 
 /**
- * Cập nhật cài đặt thông báo (Email, Push, Giờ im lặng, Tần suất).
+ * Update notification settings (Email, Push, quiet hours, frequency).
  */
 export async function updateNotificationSettings(
   prev: ActionResult<SettingsField>,
@@ -89,7 +89,7 @@ export async function updateNotificationSettings(
     .eq("user_id", user.id);
 
   if (error) {
-    throw new Error(`Lỗi cập nhật cài đặt thông báo: ${error.message}`);
+    throw new Error(`Failed to update notification settings: ${error.message}`);
   }
 
   revalidatePath("/account/notifications");
@@ -97,7 +97,7 @@ export async function updateNotificationSettings(
 }
 
 /**
- * Bật/tắt tùy chọn nhận email marketing.
+ * Toggle the marketing email opt-in.
  */
 export async function updateMarketingOptIn(
   prev: ActionResult,
@@ -113,7 +113,7 @@ export async function updateMarketingOptIn(
     .eq("id", user.id);
 
   if (error) {
-    throw new Error(`Lỗi cập nhật nhận email marketing: ${error.message}`);
+    throw new Error(`Failed to update marketing email opt-in: ${error.message}`);
   }
 
   revalidatePath("/account");
@@ -121,7 +121,7 @@ export async function updateMarketingOptIn(
 }
 
 /**
- * Yêu cầu xóa mềm tài khoản (giữ lại 30 ngày để khôi phục).
+ * Request a soft delete of the account (kept 30 days for restoration).
  */
 export async function requestAccountDeletion(
   prev: ActionResult<"confirm">,
@@ -143,7 +143,7 @@ export async function requestAccountDeletion(
   const purgeDate = computePurgeDate(now);
   const siteUrl = getSiteUrl();
 
-  // 1. Cập nhật deleted_at bằng admin client
+  // 1. Set deleted_at via the admin client
   const admin = createAdminClient();
   const { error } = await admin
     .from("users")
@@ -152,10 +152,10 @@ export async function requestAccountDeletion(
     .is("deleted_at", null);
 
   if (error) {
-    throw new Error(`Lỗi khi yêu cầu xóa tài khoản: ${error.message}`);
+    throw new Error(`Failed to request account deletion: ${error.message}`);
   }
 
-  // 2. Gửi email xác nhận (nếu lỗi chỉ log, không chặn quy trình xóa)
+  // 2. Send the confirmation email (errors are only logged, never block the deletion)
   if (user.email) {
     try {
       const emailContent = renderAccountDeletionEmail({ purgeDate, siteUrl });
@@ -166,11 +166,11 @@ export async function requestAccountDeletion(
         text: emailContent.text,
       });
     } catch (err) {
-      console.warn("Lỗi gửi email xác nhận xóa tài khoản:", err);
+      console.warn("Failed to send account-deletion confirmation email:", err);
     }
   }
 
-  // 3. Đăng xuất khỏi mọi thiết bị
+  // 3. Sign out of every device
   const supabase = await createClient();
   await supabase.auth.signOut({ scope: "global" });
 
@@ -178,7 +178,7 @@ export async function requestAccountDeletion(
 }
 
 /**
- * Khôi phục tài khoản đang trong trạng thái chờ xóa.
+ * Restore an account that is pending deletion.
  */
 export async function restoreAccount(): Promise<void> {
   const user = await requireUser({ path: "/account/restore", allowPendingDeletion: true });
@@ -190,7 +190,7 @@ export async function restoreAccount(): Promise<void> {
     .eq("id", user.id);
 
   if (error) {
-    throw new Error(`Lỗi khôi phục tài khoản: ${error.message}`);
+    throw new Error(`Failed to restore account: ${error.message}`);
   }
 
   revalidatePath("/account");
@@ -198,7 +198,7 @@ export async function restoreAccount(): Promise<void> {
 }
 
 /**
- * Đăng xuất khỏi phiên hiện tại trên thiết bị này.
+ * Sign out of the current session on this device.
  */
 export async function signOut(): Promise<void> {
   const supabase = await createClient();

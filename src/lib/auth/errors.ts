@@ -2,7 +2,7 @@ export type AuthErrorCode =
   | "invalid_email"
   | "rate_limited"
   | "otp_invalid"
-  | "otp_expired" // cả mã lẫn link đã hết hạn hoặc đã dùng — Supabase không phân biệt
+  | "otp_expired" // code or link expired or already used — Supabase does not distinguish
   | "send_failed"
   | "internal";
 
@@ -20,14 +20,14 @@ const MESSAGES: Record<Exclude<AuthErrorCode, "rate_limited">, string> = {
   internal: "Có lỗi xảy ra. Vui lòng thử lại.",
 };
 
-/** Bằng max_frequency của Supabase Auth. */
+/** Equal to Supabase Auth's max_frequency. */
 const DEFAULT_RETRY_SECONDS = 60;
 
 export function normalizeEmail(raw: string): string {
   return (raw ?? "").trim().toLowerCase();
 }
 
-/** Chỉ kiểm hình thức — không gọi mạng. */
+/** Format check only — no network call. */
 export function isValidEmail(email: string): boolean {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -47,8 +47,8 @@ function rateLimited(message?: string): AuthErrorInfo {
 }
 
 /**
- * `context` phân biệt lỗi khi GỬI mã với lỗi khi XÁC THỰC mã: lỗi 4xx lúc gửi
- * không phải "mã không đúng" — người dùng còn chưa nhận được mã nào.
+ * `context` separates errors when SENDING a code from errors when VERIFYING one: a 4xx
+ * while sending is not "wrong code" — the user has not received any code yet.
  */
 export function mapAuthError(
   err: { code?: string; status?: number; message?: string },
@@ -76,7 +76,7 @@ export function mapAuthError(
   return info("internal");
 }
 
-/** Dùng cho `?error=` trên URL — chỉ nhận mã đã biết, không bao giờ hiện chuỗi thô từ URL. */
+/** For `?error=` in the URL — accepts only known codes, never renders the raw URL string. */
 export function authErrorFromCode(code: string | null | undefined): AuthErrorInfo | null {
   if (!code) return null;
   if (code === "rate_limited") return rateLimited();

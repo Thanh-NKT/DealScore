@@ -1,8 +1,8 @@
 /**
  * Deal Score v0 + Buy/Wait/Avoid + Fake Sale Detector.
- * Bám sát spec ở mục C của product backlog v2.
+ * Follows section C of product backlog v2 closely.
  *
- * Thuần hàm, không phụ thuộc DB — dễ unit test và backtest.
+ * Pure functions, no DB dependency — easy to unit test and backtest.
  */
 
 export interface PriceObservation {
@@ -12,20 +12,20 @@ export interface PriceObservation {
   is_valid?: boolean;
 }
 
-/** Ngưỡng dữ liệu tối thiểu (mục B2). */
+/** Minimum data thresholds (section B2). */
 export const MIN_DAYS_FOR_SCORE = 14;
 export const MIN_OBSERVATIONS_FOR_SCORE = 10;
 
 export type Recommendation =
-  | "insufficient_data" // ⚪ Chưa đủ dữ liệu
-  | "buy" // 🟢 Nên mua
-  | "wait" // 🟡 Có thể chờ
-  | "avoid"; // 🔴 Chưa nên mua
+  | "insufficient_data" // ⚪ Not enough data
+  | "buy" // 🟢 Buy
+  | "wait" // 🟡 Can wait
+  | "avoid"; // 🔴 Don't buy yet
 
 export interface DealScoreResult {
-  score: number | null; // 0–100, null nếu không đủ dữ liệu
+  score: number | null; // 0–100, null when data is insufficient
   recommendation: Recommendation;
-  reasons: string[]; // 2–4 lý do sinh tự động
+  reasons: string[]; // 2–4 auto-generated reasons
   stats: {
     observations: number;
     daysCovered: number;
@@ -37,29 +37,29 @@ export interface DealScoreResult {
 }
 
 export interface DealScoreInput {
-  /** Giá hiện tại của offer (variant cụ thể, đã làm sạch, còn hàng). */
+  /** Current offer price (specific variant, cleaned, in stock). */
   price: number;
-  /** Lịch sử quan sát của sản phẩm chuẩn hóa + variant (gom mọi offer tương đương). */
+  /** Observation history of the normalized product + variant (all equivalent offers pooled). */
   history: PriceObservation[];
-  /** Giá thấp nhất hiện tại giữa các offer hợp lệ của cùng variant. */
+  /** Current lowest price among valid offers of the same variant. */
   bestOffer?: number;
-  /** Cửa sổ tính toán, mặc định 90 ngày. */
+  /** Computation window, 90 days by default. */
   windowDays?: number;
   /**
-   * Thời điểm tính điểm, mặc định là bây giờ. Truyền vào để backtest tại một
-   * thời điểm trong quá khứ và để test không phụ thuộc đồng hồ thật.
+   * Scoring instant, defaults to now. Pass it to backtest at a point in the
+   * past and to keep tests independent of the real clock.
    */
   now?: Date;
 }
 
 const MS_PER_DAY = 86_400_000;
-/** Việt Nam cố định UTC+7, không có giờ mùa hè. */
+/** Vietnam is fixed at UTC+7, no daylight saving. */
 const VN_OFFSET_MS = 7 * 3_600_000;
 
 /**
- * Số thứ tự NGÀY LỊCH theo giờ Việt Nam. Đếm độ phủ và cửa sổ bằng ngày lịch,
- * không bằng hiệu mili-giây: nếu không, cùng một lịch sử cho ra ⚪ khi mở trang
- * buổi sáng và có điểm khi mở buổi chiều.
+ * CALENDAR-DAY ordinal in Vietnam time. Coverage and windows are counted in calendar days,
+ * not millisecond differences: otherwise the same history yields ⚪ when the page is opened
+ * in the morning and a score in the afternoon.
  */
 function vnDayIndex(d: Date): number {
   return Math.floor((d.getTime() + VN_OFFSET_MS) / MS_PER_DAY);
@@ -76,11 +76,11 @@ function median(sorted: number[]): number {
 }
 
 /**
- * Percentile rank kiểu mid-rank, 0–1: (số giá < p + ½ số giá = p) / n.
+ * Mid-rank percentile rank, 0–1: (count of prices < p + ½ count of prices = p) / n.
  *
- * Đếm cả phần bằng nhau (≤ p) thì giá đứng yên — rất phổ biến trên Shopee —
- * có rank 1 và bị chấm như giá cao nhất lịch sử ("Chưa nên mua"), cùng lúc lý
- * do lại ghi "Đang ở mức đáy ghi nhận".
+ * Counting ties fully (≤ p) gives a flat price — very common on Shopee —
+ * rank 1 and scores it like the historical high ("Don't buy yet"), while the
+ * reason simultaneously says "at the recorded low".
  */
 function percentileRank(sortedAsc: number[], p: number): number {
   let below = 0;
@@ -94,10 +94,10 @@ function percentileRank(sortedAsc: number[], p: number): number {
 }
 
 /**
- * Tính Deal Score v0.
+ * Compute Deal Score v0.
  *
- * Chỉ dùng các quan sát hợp lệ (is_valid !== false) và KHÔNG phải flash sale
- * để tính low/median chuẩn (mục B4). Flash sale được lưu nhưng loại ở đây.
+ * Only valid observations (is_valid !== false) that are NOT flash sales are used
+ * for the standard low/median (section B4). Flash sales are stored but excluded here.
  */
 export function computeDealScore(input: DealScoreInput): DealScoreResult {
   const { price, history, bestOffer } = input;
@@ -116,7 +116,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
     );
   });
 
-  // Số ngày lịch từ quan sát đầu tiên tới hôm nay: dữ liệu ngày -14..0 = 14 ngày.
+  // Calendar days from the first observation to today: data on days -14..0 = 14 days.
   const daysCovered =
     valid.length > 0
       ? today - Math.min(...valid.map((o) => vnDayIndex(new Date(o.observed_at))))
@@ -131,7 +131,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
     percentileRank: null,
   };
 
-  // Ngưỡng dữ liệu tối thiểu (B2).
+  // Minimum data thresholds (B2).
   if (
     valid.length < MIN_OBSERVATIONS_FOR_SCORE ||
     daysCovered < MIN_DAYS_FOR_SCORE
@@ -152,10 +152,10 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
   const med = median(prices);
   const pr = percentileRank(prices, price);
 
-  // --- Thành phần 1: Percentile giá (50%) ---
+  // --- Component 1: price percentile (50%) ---
   const cPercentile = 100 * (1 - pr);
 
-  // --- Thành phần 2: Khoảng cách tới đáy (30%) ---
+  // --- Component 2: distance to the low (30%) ---
   const cToLow =
     price <= low
       ? 100
@@ -163,8 +163,8 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
         ? 100 * clamp(1 - (price - low) / (med - low), 0, 1)
         : 0;
 
-  // --- Thành phần 3: So sánh giữa các offer (20%) ---
-  // Nếu không có bestOffer thì bỏ qua và chuẩn hóa lại trọng số 50/30.
+  // --- Component 3: cross-offer comparison (20%) ---
+  // Without a bestOffer, skip it and renormalize the 50/30 weights.
   let score: number;
   const reasons: string[] = [];
 
@@ -173,12 +173,12 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
       100 * clamp(1 - (price - bestOffer) / bestOffer / 0.1, 0, 1);
     score = Math.round(0.5 * cPercentile + 0.3 * cToLow + 0.2 * cBetween);
   } else {
-    // Chuẩn hóa 50/30 → 62.5/37.5 khi thiếu dữ liệu multi-offer.
+    // Renormalize 50/30 → 62.5/37.5 when multi-offer data is missing.
     score = Math.round(0.625 * cPercentile + 0.375 * cToLow);
   }
   score = clamp(score, 0, 100);
 
-  // --- Lý do sinh tự động (mục C3) ---
+  // --- Auto-generated reasons (section C3) ---
   const diffFromMedian = Math.round(((med - price) / med) * 100);
   if (diffFromMedian > 0) {
     reasons.push(`✓ Thấp hơn ${diffFromMedian}% so với giá trung vị 90 ngày`);
@@ -205,7 +205,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
     );
   }
 
-  // --- Buy / Wait / Avoid (mục C4) ---
+  // --- Buy / Wait / Avoid (section C4) ---
   const recommendation = classify(score, price, med);
 
   return {
@@ -231,7 +231,7 @@ function classify(
   if (score >= 75 && price <= median30) return "buy";
   if (score < 50 || price > median30 * 1.05) return "avoid";
   if (score >= 50 && score <= 74) return "wait";
-  // Rơi vào khoảng còn lại (score 75+ nhưng price > median) → chờ.
+  // Falls in the remaining range (score 75+ but price > median) → wait.
   return "wait";
 }
 
@@ -243,19 +243,19 @@ export const RECOMMENDATION_LABEL: Record<Recommendation, string> = {
 };
 
 /**
- * Fake Sale Detector v0 (mục C6).
- * @returns thông điệp cảnh báo, hoặc null nếu không có dấu hiệu.
+ * Fake Sale Detector v0 (section C6).
+ * @returns a warning message, or null if there is no sign of a fake sale.
  */
 export function detectFakeSale(params: {
   currentPrice: number;
-  listedPrice: number; // giá niêm yết (original_price)
+  listedPrice: number; // list price (original_price)
   median30d: number;
   median14dBeforeSale?: number;
   median60dBefore?: number;
 }): string | null {
   const { currentPrice, listedPrice, median30d } = params;
 
-  // Mức giảm niêm yết ≥ 20% nhưng giá vẫn ≥ median_30d × 0.95.
+  // List discount ≥ 20% yet the price is still ≥ median_30d × 0.95.
   if (listedPrice > 0) {
     const discount = 1 - currentPrice / listedPrice;
     if (discount >= 0.2 && currentPrice >= median30d * 0.95) {
@@ -263,7 +263,7 @@ export function detectFakeSale(params: {
     }
   }
 
-  // Tăng giá trước sale.
+  // Price hike before the sale.
   if (
     params.median14dBeforeSale &&
     params.median60dBefore &&

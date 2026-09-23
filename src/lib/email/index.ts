@@ -21,11 +21,11 @@ export async function sendEmail(
   if (!apiKey) {
     if (isProduction) {
       throw new EmailSendError(
-        "RESEND_API_KEY chưa được cấu hình trong môi trường production.",
+        "RESEND_API_KEY is not configured in the production environment.",
       );
     }
-    // Chế độ phát triển: in email ra console
-    console.info("--- [GỬI EMAIL (DEV CONSOLE)] ---");
+    // Development mode: print the email to the console
+    console.info("--- [SEND EMAIL (DEV CONSOLE)] ---");
     console.info(`To: ${msg.to}`);
     console.info(`Subject: ${msg.subject}`);
     console.info(`Text:\n${msg.text}`);
@@ -33,9 +33,9 @@ export async function sendEmail(
     return { id: null };
   }
 
-  // Thiếu người gửi mà vẫn gửi bằng địa chỉ mặc định là gửi từ domain có thể chưa xác minh.
+  // Sending with a default address when the sender is missing means sending from a possibly unverified domain.
   const from = process.env.EMAIL_FROM;
-  if (!from) throw new EmailSendError("Thiếu EMAIL_FROM");
+  if (!from) throw new EmailSendError("Missing EMAIL_FROM");
 
   const resend = new Resend(apiKey);
 
@@ -52,7 +52,7 @@ export async function sendEmail(
 
     if (res.error) {
       throw new EmailSendError(
-        `Lỗi gửi email qua Resend: ${res.error.message}`,
+        `Resend email error: ${res.error.message}`,
       );
     }
 
@@ -60,7 +60,7 @@ export async function sendEmail(
   } catch (err) {
     if (err instanceof EmailSendError) throw err;
     throw new EmailSendError(
-      `Không thể gửi email: ${err instanceof Error ? err.message : String(err)}`,
+      `Could not send email: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 }

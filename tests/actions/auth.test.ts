@@ -34,13 +34,13 @@ beforeEach(() => {
 });
 
 describe("requestLoginCode", () => {
-  it("email sai hình thức → lỗi, không gọi Supabase", async () => {
+  it("malformed email → error, Supabase not called", async () => {
     const r = await requestLoginCode({ status: "idle" }, form({ email: "abc", next: "/" }));
     expect(r).toMatchObject({ status: "error", error: { code: "invalid_email" } });
     expect(auth.signInWithOtp).not.toHaveBeenCalled();
   });
 
-  it("gửi với emailRedirectTo có sẵn ?next= đã lọc", async () => {
+  it("sends with emailRedirectTo carrying the sanitized ?next=", async () => {
     auth.signInWithOtp.mockResolvedValue({ data: {}, error: null });
     const r = await requestLoginCode(
       { status: "idle" },
@@ -53,7 +53,7 @@ describe("requestLoginCode", () => {
     });
   });
 
-  it("lỗi rate limit → map sang rate_limited", async () => {
+  it("rate limit error → mapped to rate_limited", async () => {
     auth.signInWithOtp.mockResolvedValue({
       data: {},
       error: { code: "over_email_send_rate_limit", message: "after 30 seconds", status: 429 },
@@ -64,13 +64,13 @@ describe("requestLoginCode", () => {
 });
 
 describe("verifyLoginCode", () => {
-  it("mã không đủ 6 chữ số → otp_invalid, không gọi Supabase", async () => {
+  it("code not exactly 6 digits → otp_invalid, Supabase not called", async () => {
     const r = await verifyLoginCode({ status: "idle" }, form({ email: "an@kairo.vn", token: "12ab", next: "/" }));
     expect(r).toMatchObject({ status: "error", error: { code: "otp_invalid" } });
     expect(auth.verifyOtp).not.toHaveBeenCalled();
   });
 
-  it("thành công → redirect về next", async () => {
+  it("success → redirect to next", async () => {
     auth.verifyOtp.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
     await expect(
       verifyLoginCode({ status: "idle" }, form({ email: "an@kairo.vn", token: "123456", next: "/ssd/a" })),
@@ -78,7 +78,7 @@ describe("verifyLoginCode", () => {
     expect(auth.verifyOtp).toHaveBeenCalledWith({ email: "an@kairo.vn", token: "123456", type: "email" });
   });
 
-  it("mã hết hạn → otp_expired", async () => {
+  it("expired code → otp_expired", async () => {
     auth.verifyOtp.mockResolvedValue({ data: { user: null }, error: { code: "otp_expired", status: 403 } });
     const r = await verifyLoginCode({ status: "idle" }, form({ email: "an@kairo.vn", token: "123456", next: "/" }));
     expect(r).toMatchObject({ status: "error", error: { code: "otp_expired" } });

@@ -1,9 +1,9 @@
 /**
- * Chạy Alert Engine một lượt ở local — nơi pg_cron không gọi được máy dev
- * nếu chưa đặt secret kairo_app_url trong Vault.
- * Chạy: pnpm alerts:run
+ * Run the Alert Engine once locally — pg_cron cannot reach a dev machine
+ * unless the kairo_app_url secret is set in Vault.
+ * Run: pnpm alerts:run
  *
- * Bọc trong main(): tsx biên dịch file .ts sang CJS, không cho await cấp cao nhất.
+ * Wrapped in main(): tsx compiles .ts files to CJS, which forbids top-level await.
  */
 import { requireLocalSupabase } from "./guard-env";
 import { evaluateWatches } from "@/lib/alerts/evaluate";

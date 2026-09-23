@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Lỗi api/autocomplete:", err);
+    console.error("api/autocomplete error:", err);
     return NextResponse.json([], { status: 500 });
   }
 }

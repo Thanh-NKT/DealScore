@@ -59,12 +59,12 @@ export function parseSearchParams(
   };
 
   const q = getParam("q")?.trim() || undefined;
-  // catId đi thẳng vào tham số uuid của RPC: giá trị rác làm RPC ném lỗi → trang lỗi.
+  // catId goes straight into the RPC's uuid parameter: a junk value makes the RPC throw → error page.
   const rawCatId = getParam("catId");
   const categoryId = rawCatId && UUID_RE.test(rawCatId) ? rawCatId : undefined;
   const categorySlug = getParam("cat") || undefined;
 
-  // brands có thể truyền dạng ?brand=samsung&brand=wd
+  // brands may be passed as ?brand=samsung&brand=wd
   const brands = getAllParams("brand")
     .map((b) => b.trim())
     .filter(Boolean);
@@ -75,7 +75,7 @@ export function parseSearchParams(
   if (minPrice != null && isNaN(minPrice)) minPrice = undefined;
   if (maxPrice != null && isNaN(maxPrice)) maxPrice = undefined;
 
-  // Hoán đổi nếu min > max
+  // Swap if min > max
   if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
     const temp = minPrice;
     minPrice = maxPrice;
@@ -118,8 +118,8 @@ export function toSearchParams(p: SearchParams): URLSearchParams {
   }
   if (p.minPrice != null) sp.set("min", p.minPrice.toString());
   if (p.maxPrice != null) sp.set("max", p.maxPrice.toString());
-  // Không ghi giá trị mặc định vào URL: ghi vào sẽ sinh hai đường dẫn khác nhau
-  // cho cùng một trang — trùng lặp nội dung, có hại cho SEO ở mục 1.7.
+  // Don't write default values into the URL: doing so produces two different paths
+  // for the same page — duplicate content, harmful to SEO (section 1.7).
   const defaultSort = p.q ? "relevance" : "updated";
   if (p.sort && p.sort !== defaultSort) sp.set("sort", p.sort);
   if (p.page && p.page > 1) sp.set("page", p.page.toString());
@@ -154,17 +154,17 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     p_offset: offset,
   });
 
-  // KHÔNG nuốt lỗi và KHÔNG trả dữ liệu bịa. Với một sản phẩm tra giá, hiển thị
-  // sản phẩm và giá không có thật là phá hỏng đúng thứ duy nhất khiến người
-  // dùng tin nó. Lỗi phải nổi lên để trang hiện trạng thái lỗi thật.
+  // Do NOT swallow errors and do NOT return made-up data. For a price-lookup product, showing
+  // products and prices that don't exist destroys the one thing that makes users
+  // trust it. Errors must surface so the page shows a real error state.
   if (error) {
-    throw new Error(`Tìm kiếm thất bại: ${error.message}`);
+    throw new Error(`Search failed: ${error.message}`);
   }
 
   const rows = data ?? [];
 
-  // Không có kết quả là trạng thái HỢP LỆ (1.1.b AC#6) — trang kết quả sẽ gợi ý
-  // bỏ bớt filter và mời dán URL Shopee.
+  // No results is a VALID state (1.1.b AC#6) — the results page suggests
+  // removing filters and invites pasting a Shopee URL.
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
 
   const items: SearchItem[] = rows.map((d) => ({
@@ -190,14 +190,14 @@ export interface FilterFacets {
 }
 
 /**
- * Danh mục và brand có THẬT trong catalog, để dựng bộ lọc.
+ * Categories and brands that ACTUALLY exist in the catalog, for building filters.
  *
- * Không hard-code danh sách này: slug hard-code sẽ lệch khỏi slug thật và mọi
- * link lọc đều ra 0 kết quả, còn brand hard-code thì vừa hiện thứ không có vừa
- * thiếu thứ đang có.
+ * Don't hard-code this list: hard-coded slugs drift from the real ones and every
+ * filter link returns 0 results, while hard-coded brands both show what doesn't exist and
+ * miss what does.
  *
- * Brand lấy qua RPC distinct: đọc cả cột về tầng ứng dụng thì bị PostgREST cắt
- * âm thầm ở 1000 dòng.
+ * Brands come from a distinct RPC: reading the whole column into the app gets
+ * silently truncated by PostgREST at 1000 rows.
  */
 export async function getFilterFacets(): Promise<FilterFacets> {
   const supabase = await createClient();
@@ -207,8 +207,8 @@ export async function getFilterFacets(): Promise<FilterFacets> {
     supabase.rpc("product_brands"),
   ]);
 
-  if (catRes.error) throw new Error(`Đọc danh mục thất bại: ${catRes.error.message}`);
-  if (brandRes.error) throw new Error(`Đọc brand thất bại: ${brandRes.error.message}`);
+  if (catRes.error) throw new Error(`Failed to read categories: ${catRes.error.message}`);
+  if (brandRes.error) throw new Error(`Failed to read brands: ${brandRes.error.message}`);
 
   const brands = (brandRes.data ?? [])
     .map((r) => r.brand)
@@ -228,7 +228,7 @@ export interface AutocompleteItem {
   bestPrice: number | null;
 }
 
-/** Gợi ý khi gõ: chỉ lấy đúng số dòng cần hiện (spec §12), không filter. */
+/** Typeahead suggestions: fetch exactly the rows to display (spec §12), no filters. */
 export async function autocompleteProducts(q: string): Promise<AutocompleteItem[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("search_products", {
@@ -237,7 +237,7 @@ export async function autocompleteProducts(q: string): Promise<AutocompleteItem[
     p_limit: AUTOCOMPLETE_LIMIT,
     p_offset: 0,
   });
-  if (error) throw new Error(`Gợi ý tìm kiếm thất bại: ${error.message}`);
+  if (error) throw new Error(`Search suggestions failed: ${error.message}`);
 
   return (data ?? []).map((d) => ({
     productId: d.product_id,

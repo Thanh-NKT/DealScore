@@ -44,7 +44,7 @@ afterAll(async () => {
 const upsert = (rows: unknown[]) => admin.rpc("upsert_conversions", { p_rows: rows as never });
 
 describe("upsert_conversions", () => {
-  it("upsert 2 lần cùng lô: lần 2 không chèn thêm", async () => {
+  it("upserting the same batch twice: the second inserts nothing", async () => {
     const r = row();
     const a = await upsert([r]);
     const b = await upsert([r]);
@@ -54,7 +54,7 @@ describe("upsert_conversions", () => {
     expect(count).toBe(1);
   });
 
-  it("pending → completed → cancelled; first_seen_at không đổi", async () => {
+  it("pending → completed → cancelled; first_seen_at unchanged", async () => {
     const r = row();
     await upsert([r]);
     const { data: first } = await admin.from("conversions").select("first_seen_at").eq("order_id", r.order_id).single();
@@ -65,7 +65,7 @@ describe("upsert_conversions", () => {
     expect(data?.first_seen_at).toBe(first?.first_seen_at);
   });
 
-  it("bản sau thiếu sub_id: click đã khớp được giữ nguyên", async () => {
+  it("a later version missing sub_id: an already matched click is kept", async () => {
     const r = row();
     await upsert([r]);
     await upsert([{ ...r, click_event_id: null, sub_ids: [], source_channel: "unknown" }]);
@@ -77,7 +77,7 @@ describe("upsert_conversions", () => {
     expect(data).toEqual({ click_event_id: clickId, source_channel: "web", sub_ids: ["x", "web"] });
   });
 
-  it("click_event_id trỏ tới click không tồn tại → lưu với null", async () => {
+  it("click_event_id pointing to a non-existent click → stored as null", async () => {
     const r = row({ click_event_id: randomUUID() });
     const res = await upsert([r]);
     expect(res.data?.[0].matched).toBe(0);
@@ -86,8 +86,8 @@ describe("upsert_conversions", () => {
   });
 });
 
-describe("upsert_conversions — hồi quy v_click", () => {
-  it("đơn không khớp đứng SAU đơn khớp trong cùng lô không bị gán nhầm click", async () => {
+describe("upsert_conversions — v_click regression", () => {
+  it("an unmatched order AFTER a matched one in the same batch is not assigned the wrong click", async () => {
     const matched = row();
     const unmatched = row({ click_event_id: randomUUID() });
     const res = await upsert([matched, unmatched]);
@@ -98,9 +98,9 @@ describe("upsert_conversions — hồi quy v_click", () => {
 });
 
 describe("views", () => {
-  it("hai món cùng đơn → affiliate_daily đếm 1 đơn; match_rate đúng", async () => {
+  it("two items in one order → affiliate_daily counts 1 order; match_rate correct", async () => {
     const orderId = `T-${randomUUID()}`;
-    const purchase = "2020-01-15T05:00:00Z"; // ngày cố định, không lẫn dữ liệu khác
+    const purchase = "2020-01-15T05:00:00Z"; // fixed date, never mixes with other data
     await upsert([
       row({ order_id: orderId, item_id: "a", purchase_time: purchase, source_channel: "push", status: "completed" }),
       row({ order_id: orderId, item_id: "b", purchase_time: purchase, source_channel: "push", status: "completed" }),
@@ -112,14 +112,14 @@ describe("views", () => {
   });
 });
 
-describe("quyền", () => {
+describe("privileges", () => {
   let u: TestUser;
   beforeAll(async () => {
     u = await createTestUser();
   });
   afterAll(async () => deleteTestUser(u.id));
 
-  it("user không đọc được conversions / views, không gọi được RPC", async () => {
+  it("users cannot read conversions / views or call the RPC", async () => {
     const r1 = await u.client.from("conversions").select("id").limit(1);
     const r2 = await u.client.from("affiliate_daily").select("*").limit(1);
     const r3 = await u.client.rpc("upsert_conversions", { p_rows: [] as never });

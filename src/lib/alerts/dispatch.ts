@@ -23,9 +23,9 @@ export type PushSender = (
   payload: PushPayload,
 ) => Promise<{ delivered: number; removed: number; failed: number }>;
 
-/** Task 13 thay bằng sendPushToUser thật. */
+/** Replaced by the real sendPushToUser in Task 13. */
 const pushNotInstalled: PushSender = async () => {
-  throw new Error("Web push chưa được cài đặt");
+  throw new Error("Web push is not configured");
 };
 
 type Client = SupabaseClient<Database>;
@@ -59,7 +59,7 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
          users!inner(email, deleted_at, notification_settings(*)))`,
     )
     .in("id", ids);
-  if (error) throw new Error(`Đọc alert_events thất bại: ${error.message}`);
+  if (error) throw new Error(`Failed to read alert_events: ${error.message}`);
 
   const map = new Map<string, EventDetail>();
   for (const r of data ?? []) {
@@ -113,7 +113,7 @@ export async function dispatchDueDeliveries(
     p_now: nowIso,
     p_limit: Math.min(opts.limit ?? 200, 999),
   });
-  if (error) throw new Error(`claim_due_deliveries thất bại: ${error.message}`);
+  if (error) throw new Error(`claim_due_deliveries failed: ${error.message}`);
   const claimed: ClaimedDelivery[] = (claimedRaw ?? []).map((r) => ({
     deliveryId: r.delivery_id,
     channel: r.channel as Channel,
@@ -129,10 +129,10 @@ export async function dispatchDueDeliveries(
   const update = async (ids: string[], patch: Database["public"]["Tables"]["alert_deliveries"]["Update"]) => {
     if (ids.length === 0) return;
     const { error: uErr } = await client.from("alert_deliveries").update(patch).in("id", ids);
-    if (uErr) throw new Error(`Cập nhật alert_deliveries thất bại: ${uErr.message}`);
+    if (uErr) throw new Error(`Failed to update alert_deliveries: ${uErr.message}`);
   };
 
-  // Lọc: kiểm lại NGAY trước khi gửi — trạng thái có thể đã đổi từ lúc tạo alert.
+  // Filter: re-check RIGHT before sending — state may have changed since the alert was created.
   const ready: ClaimedDelivery[] = [];
   const skips = new Map<string, string[]>();
   for (const c of claimed) {
@@ -154,7 +154,7 @@ export async function dispatchDueDeliveries(
 
   for (const group of groupDeliveries(ready)) {
     if (opts.deadline && Date.now() > opts.deadline) {
-      // Trả việc chưa làm về pending để lượt sau nhận lại ngay.
+      // Return unfinished work to pending so the next run picks it up immediately.
       await update(group.deliveries.map((d) => d.deliveryId), { status: "pending", claimed_at: null });
       continue;
     }
@@ -164,7 +164,7 @@ export async function dispatchDueDeliveries(
     try {
       let providerId: string | null = null;
       if (group.channel === "email") {
-        if (!secret) throw new Error("Thiếu UNSUBSCRIBE_SECRET");
+        if (!secret) throw new Error("Missing UNSUBSCRIBE_SECRET");
         const to = items[0].user.email;
         if (!to) {
           await update(ids, { status: "skipped", skip_reason: "no_email" });
@@ -192,7 +192,7 @@ export async function dispatchDueDeliveries(
             e.offerId && e.marketplace
               ? `${site}/go/${e.marketplace}/${e.offerId}?src=email&watch=${e.watchId}&alert=${e.id}`
               : productUrl(site, e),
-          // Chưa có trang chi tiết /account/watch/[id] — trỏ vào danh sách, cuộn tới Watch đó.
+          // No /account/watch/[id] detail page yet — point at the list, scrolled to that Watch.
           manageUrl: `${site}/account/watch#${e.watchId}`,
           pauseUrl: `${site}/unsubscribe?t=${signUnsubscribeToken({ kind: "watch", userId: group.userId, watchId: e.watchId }, secret)}`,
         }));
@@ -219,7 +219,7 @@ export async function dispatchDueDeliveries(
           stats.skipped += ids.length;
           continue;
         }
-        if (r.delivered === 0) throw new Error(`Push thất bại ở ${r.failed} thiết bị`);
+        if (r.delivered === 0) throw new Error(`Push failed on ${r.failed} device(s)`);
       }
 
       await update(ids, { status: "sent", sent_at: nowIso, provider_message_id: providerId, attempts: group.deliveries[0].attempts + 1 });

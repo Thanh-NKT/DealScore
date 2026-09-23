@@ -6,7 +6,7 @@ import { toVnDate } from "@/lib/format";
 import { STALE_HOURS } from "@/lib/watch/constants";
 import type { VariantSnapshot } from "@/lib/watch/types";
 
-/** PostgREST cắt âm thầm ở 1.000 dòng. 10 variant × 91 ngày ≤ 910 dòng. */
+/** PostgREST silently truncates at 1,000 rows. 10 variants × 91 days ≤ 910 rows. */
 const ROLLUP_CHUNK = 10;
 const PG_MAX_ROWS = 1000;
 const n = (v: unknown) => (v == null ? null : Number(v));
@@ -29,7 +29,7 @@ export async function loadVariantSnapshots(
   const current = new Map<string, Database["public"]["Tables"]["variant_current_price"]["Row"]>();
   for (const part of chunks(ids, 500)) {
     const { data, error } = await client.from("variant_current_price").select("*").in("variant_id", part);
-    if (error) throw new Error(`Đọc variant_current_price thất bại: ${error.message}`);
+    if (error) throw new Error(`Failed to read variant_current_price: ${error.message}`);
     for (const r of data ?? []) current.set(r.variant_id, r);
   }
 
@@ -42,8 +42,8 @@ export async function loadVariantSnapshots(
       .in("variant_id", part)
       .gte("day", since)
       .order("day", { ascending: true });
-    if (error) throw new Error(`Đọc variant_daily_prices thất bại: ${error.message}`);
-    if ((data ?? []).length >= PG_MAX_ROWS) throw new Error("Rollup chạm ngưỡng 1.000 dòng — giảm ROLLUP_CHUNK");
+    if (error) throw new Error(`Failed to read variant_daily_prices: ${error.message}`);
+    if ((data ?? []).length >= PG_MAX_ROWS) throw new Error("Rollup hit the 1,000-row limit — reduce ROLLUP_CHUNK");
     for (const r of data ?? []) {
       const list = history.get(r.variant_id) ?? [];
       list.push({
@@ -75,7 +75,7 @@ export async function loadVariantSnapshots(
       offerId: c.best_offer_id,
       observedAt: c.observed_at,
       isStale,
-      // KHÔNG bestOffer (Đ7): số trong alert phải trùng điểm đầu trang sản phẩm.
+      // NO bestOffer (Đ7): the numbers in an alert must match the product page header score.
       deal: price != null && price > 0 ? computeDealScore({ price, history: expandRollup(history.get(id) ?? []), now }) : null,
     });
   }

@@ -12,10 +12,10 @@ export default async function UnsubscribePage({
   searchParams,
 }: UnsubscribePageProps) {
   const { t: token, done: completedKind } = await searchParams;
-  // Không có giá trị mặc định: chuỗi mặc định nằm công khai trong repo, ai cũng giả được token.
+  // No default value: a default string lives publicly in the repo, so anyone could forge tokens.
   const secret = process.env.UNSUBSCRIBE_SECRET;
 
-  // Trường hợp đã hoàn tất
+  // Already completed
   if (completedKind) {
     return (
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12 sm:py-16 text-center space-y-6">
@@ -46,8 +46,8 @@ export default async function UnsubscribePage({
     );
   }
 
-  // Xác thực token
-  // Thiếu UNSUBSCRIBE_SECRET → coi mọi token là không hợp lệ.
+  // Verify the token
+  // Missing UNSUBSCRIBE_SECRET → treat every token as invalid.
   const scope = token && secret ? verifyUnsubscribeToken(token, secret) : null;
 
   if (!scope || !token) {

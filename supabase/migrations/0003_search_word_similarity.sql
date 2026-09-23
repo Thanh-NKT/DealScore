@@ -1,23 +1,23 @@
 -- ============================================================================
--- 0003 — Sửa nhánh chịu lỗi gõ sai của search_products
+-- 0003 — Fix the typo-tolerant branch of search_products
 --
--- Bản 0002 dùng similarity(search_text, q), vốn so TOÀN CHUỖI. Truy vấn ngắn
--- đối với tài liệu dài luôn cho điểm thấp, nên nhánh fallback không bao giờ
--- kích hoạt:
+-- 0002 used similarity(search_text, q), which compares the WHOLE string. A short query
+-- against a long document always scores low, so the fallback branch never
+-- fires:
 --
 --   similarity('samsng', 'ban phim samsung air 100 samsung air 100') = 0.185
 --   word_similarity('samsng', 'ban phim samsung air 100 samsung air 100') = 0.571
 --
--- word_similarity tìm từ khớp nhất trong tài liệu — đúng thứ cần cho việc
--- chịu lỗi gõ sai (mục 1.1.b). Đo trên catalog seed:
+-- word_similarity finds the best-matching word in the document — exactly what
+-- typo tolerance needs (section 1.1.b). Measured on the seed catalog:
 --
 --   samsng 0.571 · keychrn 0.750 · logitec 0.875 · ban phim 1.000
---   macbook pro m3 0.286 (không có trong catalog) · xyzabc 0.000
+--   macbook pro m3 0.286 (not in the catalog) · xyzabc 0.000
 --
--- Ngưỡng 0.4 tách sạch hai nhóm.
+-- A 0.4 threshold separates the two groups cleanly.
 --
--- Cũng sửa: truy vấn chỉ có khoảng trắng phải được coi như không có từ khóa
--- (trước đây rơi vào nhánh fallback rồi bị lọc hết, trả 0 kết quả).
+-- Also fixed: a whitespace-only query must be treated as no query
+-- (it used to fall into the fallback branch, get filtered out and return 0 results).
 -- ============================================================================
 
 create or replace function public.search_products(
@@ -36,12 +36,12 @@ create or replace function public.search_products(
   relevance real, total_count bigint
 ) language sql stable as $$
   with norm as (
-    -- btrim: '   ' phải tương đương với không có từ khóa.
+    -- btrim: '   ' must be equivalent to no query.
     select btrim(public.f_unaccent(lower(coalesce(p_q, '')))) as q
   ),
   tsq as (
-    -- Ghép tsquery AN TOÀN: chỉ giữ token [a-z0-9], thêm :* rồi nối bằng &.
-    -- Nối thẳng chuỗi người dùng vào to_tsquery sẽ ném lỗi với ! & ( ...
+    -- Build the tsquery SAFELY: keep only [a-z0-9] tokens, append :* and join with &.
+    -- Concatenating user input straight into to_tsquery throws on ! & ( ...
     select case when (select q from norm) = '' then null
            else to_tsquery('simple',
                   array_to_string(
@@ -81,8 +81,8 @@ create or replace function public.search_products(
              when (select tq from tsq) is null then 0::real
              when to_tsvector('simple', b.search_text) @@ (select tq from tsq)
                then ts_rank(to_tsvector('simple', b.search_text), (select tq from tsq)) + 1.0
-             -- Nhánh chịu lỗi gõ sai. Thứ tự tham số quan trọng:
-             -- word_similarity(<truy vấn>, <tài liệu>).
+             -- Typo-tolerant branch. Argument order matters:
+             -- word_similarity(<query>, <document>).
              else word_similarity((select q from norm), b.search_text)
            end as rel
     from base b

@@ -18,7 +18,7 @@ export interface WatchConfig {
   notifyLow: boolean;
   minDealScore: number | null; // 1–100
   notifyBackInStock: boolean;
-  channels: Channel[] | null; // null = theo tài khoản
+  channels: Channel[] | null; // null = follow the account setting
 }
 
 export interface WatchState {

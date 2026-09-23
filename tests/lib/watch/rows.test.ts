@@ -27,7 +27,7 @@ const row = {
 };
 
 describe("rows", () => {
-  it("configFromRow đổi numeric sang number", () => {
+  it("configFromRow converts numeric to number", () => {
     expect(configFromRow(row as never)).toEqual({
       targetPrice: 1250000,
       dropPct: 10,
@@ -37,10 +37,10 @@ describe("rows", () => {
       channels: ["email"],
     });
   });
-  it("stateFromRow chỉ giữ key boolean hợp lệ của cond_state", () => {
+  it("stateFromRow keeps only valid boolean keys of cond_state", () => {
     expect(stateFromRow(row as never).condState).toEqual({ target_price: true });
   });
-  it("toRpcState đúng tên khóa của record_watch_evaluation", () => {
+  it("toRpcState uses record_watch_evaluation's key names", () => {
     expect(
       toRpcState({ condState: { low: false }, lastInStock: true, baselinePrice: 5, alerted: { price: 4, at: "t" } }),
     ).toEqual({ cond_state: { low: false }, last_in_stock: true, baseline_price: 5, alerted: { price: 4, at: "t" } });

@@ -12,7 +12,7 @@ import {
 const base: NotificationSettings = DEFAULT_NOTIFICATION_SETTINGS;
 
 describe("parseNotificationSettings", () => {
-  it("checkbox vắng mặt → false; đủ trường hợp lệ", () => {
+  it("absent checkbox → false; all fields valid", () => {
     const r = parseNotificationSettings({ frequency: "daily_digest", digestHour: "20", quietStart: "", quietEnd: "" });
     expect(r).toEqual({
       ok: true,
@@ -27,7 +27,7 @@ describe("parseNotificationSettings", () => {
     });
   });
 
-  it("nhận FormData", () => {
+  it("accepts FormData", () => {
     const f = new FormData();
     f.set("emailEnabled", "on");
     f.set("frequency", "instant");
@@ -38,7 +38,7 @@ describe("parseNotificationSettings", () => {
     expect(r.ok && r.value).toMatchObject({ emailEnabled: true, quietStart: 22, quietEnd: 7 });
   });
 
-  it("gom mọi lỗi cùng lúc", () => {
+  it("collects every error at once", () => {
     const r = parseNotificationSettings({ frequency: "weekly", digestHour: "24", quietStart: "22", quietEnd: "" });
     expect(r.ok).toBe(false);
     if (!r.ok) {
@@ -46,19 +46,19 @@ describe("parseNotificationSettings", () => {
     }
   });
 
-  it("giờ im lặng bằng nhau → lỗi", () => {
+  it("equal quiet hours → error", () => {
     const r = parseNotificationSettings({ frequency: "instant", digestHour: "8", quietStart: "5", quietEnd: "5" });
     expect(r.ok).toBe(false);
   });
 
-  it.each(["-1", "abc", "7.5"])("giờ %s không hợp lệ", (h) => {
+  it.each(["-1", "abc", "7.5"])("hour %s is invalid", (h) => {
     const r = parseNotificationSettings({ frequency: "instant", digestHour: h });
     expect(r.ok).toBe(false);
   });
 });
 
 describe("fromRow / toRow", () => {
-  it("khứ hồi", () => {
+  it("round trip", () => {
     const row = {
       user_id: "u",
       email_enabled: true,
@@ -83,19 +83,19 @@ describe("fromRow / toRow", () => {
 });
 
 describe("resolveChannels", () => {
-  it("null → theo tài khoản", () => {
+  it("null → follow the account", () => {
     expect(resolveChannels({ ...base, emailEnabled: true, pushEnabled: true }, null)).toEqual(["email", "push"]);
   });
-  it("ghi đè thu hẹp được", () => {
+  it("override can narrow", () => {
     expect(resolveChannels({ ...base, emailEnabled: true, pushEnabled: true }, ["push"])).toEqual(["push"]);
   });
-  it("ghi đè KHÔNG mở lại kênh tài khoản đã tắt", () => {
+  it("override does NOT re-enable a channel disabled on the account", () => {
     expect(resolveChannels({ ...base, emailEnabled: false, pushEnabled: true }, ["email"])).toEqual([]);
   });
-  it("tắt hết → rỗng", () => {
+  it("all off → empty", () => {
     expect(resolveChannels({ ...base, emailEnabled: false, pushEnabled: false }, null)).toEqual([]);
   });
-  it("thứ tự cố định email trước push", () => {
+  it("fixed order: email before push", () => {
     expect(resolveChannels({ ...base, emailEnabled: true, pushEnabled: true }, ["push", "email"])).toEqual([
       "email",
       "push",
@@ -103,23 +103,23 @@ describe("resolveChannels", () => {
   });
 });
 
-describe("isQuietHour (giờ VN = UTC+7)", () => {
+describe("isQuietHour (Vietnam time = UTC+7)", () => {
   // 15:00Z = 22:00 VN, 23:59Z = 06:59 VN, 00:00Z = 07:00 VN
   const at = (iso: string) => new Date(iso);
 
-  it("không đặt → false", () => {
+  it("not set → false", () => {
     expect(isQuietHour(base, at("2026-09-23T15:00:00Z"))).toBe(false);
   });
-  it("khoảng thường 13 → 15", () => {
+  it("normal range 13 → 15", () => {
     const s = { ...base, quietStart: 13, quietEnd: 15 };
     expect(isQuietHour(s, at("2026-09-23T06:00:00Z"))).toBe(true); // 13:00 VN
     expect(isQuietHour(s, at("2026-09-23T08:00:00Z"))).toBe(false); // 15:00 VN
   });
-  it("vắt qua nửa đêm 22 → 7", () => {
+  it("wraps past midnight 22 → 7", () => {
     const s = { ...base, quietStart: 22, quietEnd: 7 };
-    expect(isQuietHour(s, at("2026-09-23T15:00:00Z"))).toBe(true); // 22:00 VN — biên start
+    expect(isQuietHour(s, at("2026-09-23T15:00:00Z"))).toBe(true); // 22:00 Vietnam time — start boundary
     expect(isQuietHour(s, at("2026-09-23T23:59:00Z"))).toBe(true); // 06:59 VN
-    expect(isQuietHour(s, at("2026-09-24T00:00:00Z"))).toBe(false); // 07:00 VN — biên end
+    expect(isQuietHour(s, at("2026-09-24T00:00:00Z"))).toBe(false); // 07:00 Vietnam time — end boundary
     expect(isQuietHour(s, at("2026-09-23T05:00:00Z"))).toBe(false); // 12:00 VN
   });
 });

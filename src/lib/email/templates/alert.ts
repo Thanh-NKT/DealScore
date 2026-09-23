@@ -11,7 +11,7 @@ export interface AlertEmailItem {
   dealScore: number | null;
   recommendation: Recommendation | null;
   triggerTexts: string[];
-  scoreReasons: string[]; // tối đa 2
+  scoreReasons: string[]; // at most 2
   buyUrl: string;
   manageUrl: string;
   pauseUrl: string;
@@ -82,7 +82,7 @@ ${htmlItems}
   return { subject, html, text };
 }
 
-/** RFC 8058 — Gmail / Yahoo hiện nút hủy một chạm. */
+/** RFC 8058 — Gmail / Yahoo show a one-click unsubscribe button. */
 export function listUnsubscribeHeaders(oneClickPostUrl: string, pageUrl: string): Record<string, string> {
   return {
     "List-Unsubscribe": `<${oneClickPostUrl}>, <${pageUrl}>`,

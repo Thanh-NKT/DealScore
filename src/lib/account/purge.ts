@@ -6,10 +6,10 @@ import { purgeCutoff } from "@/lib/account/purge-date";
 export { PURGE_AFTER_DAYS, purgeCutoff, purgeDate } from "@/lib/account/purge-date";
 
 /**
- * Xóa hẳn các tài khoản đã yêu cầu xóa quá 30 ngày.
- * Xóa auth.users → cascade users → watches → alert_events, notification_settings;
- * click_events.user_id và lookup_requests.user_id → null.
- * Lỗi một user không dừng cả lượt. Chạy lại vô hại.
+ * Hard-delete accounts whose deletion was requested more than 30 days ago.
+ * Deleting auth.users cascades to users → watches → alert_events, notification_settings;
+ * click_events.user_id and lookup_requests.user_id → null.
+ * One user failing does not stop the run. Safe to re-run.
  */
 export async function purgeDeletedAccounts(
   opts: { now: Date; limit?: number },
@@ -21,7 +21,7 @@ export async function purgeDeletedAccounts(
     .lt("deleted_at", purgeCutoff(opts.now).toISOString())
     .order("deleted_at", { ascending: true })
     .limit(opts.limit ?? 100);
-  if (error) throw new Error(`Đọc danh sách chờ xóa thất bại: ${error.message}`);
+  if (error) throw new Error(`Failed to read pending deletions: ${error.message}`);
 
   const purged: string[] = [];
   const failed: Array<{ userId: string; error: string }> = [];

@@ -41,7 +41,7 @@ function formatAbsolute(dateString: string): string {
 const emptySubscribe = () => () => {};
 
 export function UpdatedAt({ iso, isStale = false }: UpdatedAtProps) {
-  // Dùng useSyncExternalStore để xác định client đã mount mà không gây cascading render hoặc hydration mismatch
+  // useSyncExternalStore detects client mount without cascading renders or a hydration mismatch
   const isMounted = useSyncExternalStore(
     emptySubscribe,
     () => true,

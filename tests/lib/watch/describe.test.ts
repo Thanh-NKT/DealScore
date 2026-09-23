@@ -33,25 +33,25 @@ const input = (o: Partial<Parameters<typeof describeWatch>[0]> = {}) => ({
 });
 
 describe("describeWatch", () => {
-  it("khoảng cách tới target và thay đổi từ lúc bắt đầu", () => {
+  it("distance to target and change since tracking started", () => {
     const v = describeWatch(input());
     expect(v.target).toEqual({ amount: 900, gap: 100, gapPct: 0.1, reached: false });
     expect(v.changeSinceStart).toEqual({ amount: -200, pct: -200 / 1200, since: "2026-09-12T00:00:00Z" });
     expect(v.sortKey).toBeCloseTo(0.1);
   });
 
-  it("đã đạt target → reached, sortKey 0", () => {
+  it("target reached → reached, sortKey 0", () => {
     const v = describeWatch(input({ snapshot: snap({ price: 850 }) }));
     expect(v.target?.reached).toBe(true);
     expect(v.sortKey).toBe(0);
   });
 
-  it("hết hàng / stale → sortKey 2; không target → 1", () => {
+  it("out of stock / stale → sortKey 2; no target → 1", () => {
     expect(describeWatch(input({ snapshot: snap({ inStock: false }) })).sortKey).toBe(2);
     expect(describeWatch(input({ config: { ...config, targetPrice: null, notifyLow: true } })).sortKey).toBe(1);
   });
 
-  it("alertStatus: đã gửi / đang chờ tóm tắt / chưa có", () => {
+  it("alertStatus: sent / waiting for digest / none", () => {
     expect(describeWatch(input()).alertStatus).toEqual({ kind: "none" });
     const sent = describeWatch(
       input({
@@ -73,7 +73,7 @@ describe("describeWatch", () => {
     expect(pending.alertStatus).toEqual({ kind: "scheduled", deliverAfter: "2026-09-24T01:00:00Z", reason: "daily_digest" });
   });
 
-  it("conditions dùng evaluateConditions", () => {
+  it("conditions use evaluateConditions", () => {
     expect(describeWatch(input()).conditions).toEqual([{ key: "target_price", state: false }]);
   });
 });

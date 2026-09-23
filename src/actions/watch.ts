@@ -47,7 +47,7 @@ export async function setWatchStatus(
         "Đã đạt giới hạn 50 Watch đang hoạt động. Vui lòng tạm dừng bớt sản phẩm khác.",
       );
     }
-    throw new Error(`Lỗi cập nhật trạng thái Watch: ${error.message}`);
+    throw new Error(`Failed to update Watch status: ${error.message}`);
   }
 
   if (!data || data.length === 0) {
@@ -69,7 +69,7 @@ export async function deleteWatch(watchId: string): Promise<void> {
     .select("id");
 
   if (error) {
-    throw new Error(`Lỗi xóa Watch: ${error.message}`);
+    throw new Error(`Failed to delete Watch: ${error.message}`);
   }
 
   if (!data || data.length === 0) {

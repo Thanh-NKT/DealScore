@@ -29,7 +29,7 @@ export function ConsentForm({ initialNext }: ConsentFormProps) {
       )}
 
       <div className="space-y-4">
-        {/* Checkbox bắt buộc */}
+        {/* Required checkbox */}
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -69,7 +69,7 @@ export function ConsentForm({ initialNext }: ConsentFormProps) {
           </span>
         </label>
 
-        {/* Checkbox tùy chọn: marketing */}
+        {/* Optional checkbox: marketing */}
         <label className="flex items-start gap-3 cursor-pointer">
           <input
             type="checkbox"

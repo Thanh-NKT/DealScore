@@ -10,7 +10,7 @@ export interface ClaimedDelivery {
   userId: string;
 }
 
-/** Gom theo (userId, channel), theo thứ tự xuất hiện. */
+/** Group by (userId, channel), in order of first appearance. */
 export function groupDeliveries(
   rows: ClaimedDelivery[],
 ): Array<{ userId: string; channel: Channel; deliveries: ClaimedDelivery[] }> {
@@ -21,11 +21,11 @@ export function groupDeliveries(
     g.deliveries.push(r);
     map.set(key, g);
   }
-  // email trước push: một lượt thiếu thời gian thì email — kênh chắc chắn tới — được ưu tiên.
+  // email before push: if a run runs short on time, email — the channel that surely arrives — goes first.
   return [...map.values()].sort((a, b) => (a.channel === b.channel ? 0 : a.channel === "email" ? -1 : 1));
 }
 
-/** Sau lần thất bại thứ `attempts` (1-based). null = hết lượt → failed. */
+/** After failure number `attempts` (1-based). null = out of attempts → failed. */
 export function nextRetryAt(attempts: number, now: Date): Date | null {
   if (attempts >= MAX_DELIVERY_ATTEMPTS) return null;
   const minutes = RETRY_DELAYS_MINUTES[Math.min(attempts - 1, RETRY_DELAYS_MINUTES.length - 1)];

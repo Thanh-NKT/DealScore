@@ -13,19 +13,19 @@ export interface DailyPriceRow {
 }
 
 /**
- * Giãn rollup ngày thành chuỗi quan sát cho computeDealScore().
+ * Expand the daily rollup into an observation series for computeDealScore().
  *
- * Mỗi ngày đóng góp ĐÚNG MỘT quan sát: min_price (đã loại flash sale).
- * Ngày có min_price = null (chỉ có flash sale, hoặc không thu được) bị BỎ QUA.
- * observed_at đặt tại 12:00 giờ Việt Nam (05:00:00.000Z) của ngày đó, để daysBetween không
- * lệch một ngày do biên nửa đêm.
+ * Each day contributes EXACTLY ONE observation: min_price (flash sales excluded).
+ * Days with min_price = null (flash sale only, or nothing collected) are SKIPPED.
+ * observed_at is set to 12:00 Vietnam time (05:00:00.000Z) that day, so daysBetween
+ * is not off by one around midnight.
  */
 export function expandRollup(rows: DailyPriceRow[]): PriceObservation[] {
   const result: PriceObservation[] = [];
 
   for (const row of rows) {
     if (row.min_price != null && Number.isFinite(row.min_price) && row.min_price > 0) {
-      // row.day là 'YYYY-MM-DD'. 12:00 giờ VN = 05:00 UTC
+      // row.day is 'YYYY-MM-DD'. 12:00 Vietnam time = 05:00 UTC
       const observedAt = `${row.day}T05:00:00.000Z`;
       result.push({
         observed_at: observedAt,
@@ -36,16 +36,16 @@ export function expandRollup(rows: DailyPriceRow[]): PriceObservation[] {
     }
   }
 
-  // Đảm bảo sắp xếp theo thời gian tăng dần
+  // Ensure ascending time order
   return result.sort(
     (a, b) => new Date(a.observed_at).getTime() - new Date(b.observed_at).getTime(),
   );
 }
 
 /**
- * Trung vị min_price trong cửa sổ [now - fromDaysAgo, now - toDaysAgo).
- * fromDaysAgo > toDaysAgo. Ví dụ (74, 14) = "60 ngày trước đợt 14 ngày gần nhất".
- * dayCount = số ngày THỰC SỰ có min_price trong cửa sổ.
+ * Median min_price over the window [now - fromDaysAgo, now - toDaysAgo).
+ * fromDaysAgo > toDaysAgo. E.g. (74, 14) = "the 60 days before the most recent 14 days".
+ * dayCount = number of days that ACTUALLY have a min_price in the window.
  */
 export function medianWindow(
   rows: DailyPriceRow[],
@@ -55,10 +55,10 @@ export function medianWindow(
 ): { value: number | null; dayCount: number } {
   const msPerDay = 86_400_000;
 
-  // Cửa sổ phải được định nghĩa theo NGÀY LỊCH, không theo hiệu mili-giây.
-  // Nếu so bằng mili-giây với mốc 05:00Z của từng dòng, thì dòng hôm nay lọt
-  // vào cửa sổ khi chạy buổi chiều nhưng bị loại khi chạy buổi sáng — cùng một
-  // trang sẽ cho hai con số khác nhau tùy giờ người dùng mở.
+  // The window must be defined in CALENDAR DAYS, not millisecond differences.
+  // Comparing milliseconds against each row's 05:00Z mark lets today's row into
+  // the window in the afternoon but excludes it in the morning — the same
+  // page would show two different numbers depending on when the user opens it.
   const fromDay = toVnDate(new Date(now.getTime() - fromDaysAgo * msPerDay));
   const toDay = toVnDate(new Date(now.getTime() - toDaysAgo * msPerDay));
 
@@ -69,8 +69,8 @@ export function medianWindow(
       continue;
     }
 
-    // Khoảng [fromDay, toDay) — mốc toDay bị LOẠI TRỪ, nên medianWindow(rows, 30, 0)
-    // phủ ngày -30..-1 và không gồm hôm nay.
+    // Range [fromDay, toDay) — toDay is EXCLUDED, so medianWindow(rows, 30, 0)
+    // covers days -30..-1 and does not include today.
     if (row.day >= fromDay && row.day < toDay) {
       validPrices.push(row.min_price);
     }
@@ -92,14 +92,14 @@ export interface HistoryStats {
   low: number | null;
   median: number | null;
   high: number | null;
-  /** Số ngày có min_price trong cửa sổ. */
+  /** Number of days with a min_price in the window. */
   dayCount: number;
 }
 
 /**
- * Đáy / trung vị / đỉnh của min_price theo ngày trong `windowDays` ngày gần
- * nhất (tính cả hôm nay) — cùng dữ liệu computeDealScore() nhận qua
- * expandRollup(), nên khi đã đủ ngưỡng các số này trùng với stats của Deal Score.
+ * Low / median / high of daily min_price over the last `windowDays` days
+ * (today included) — the same data computeDealScore() receives via
+ * expandRollup(), so once thresholds are met these match the Deal Score stats.
  */
 export function historyStats(
   rows: DailyPriceRow[],

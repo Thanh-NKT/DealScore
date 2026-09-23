@@ -1,10 +1,10 @@
 /**
- * Các hàm tiện ích định dạng tiền tệ, phần trăm giảm giá và ngày giờ.
+ * Formatting helpers for currency, discount percentages and dates.
  */
 
 /**
- * Định dạng tiền tệ VND ("1.234.000 ₫").
- * Làm tròn về số nguyên. Trả về "—" nếu null hoặc undefined.
+ * Format VND currency ("1.234.000 ₫").
+ * Rounds to an integer. Returns "—" for null or undefined.
  */
 export function formatVnd(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) {
@@ -18,9 +18,9 @@ export function formatVnd(value: number | null | undefined): string {
 }
 
 /**
- * % giảm so với giá niêm yết, LÀM TRÒN XUỐNG (Math.floor).
- * Trả null khi: thiếu giá, listed <= current, hoặc kết quả <= 0.
- * Không bao giờ trả 0 — hiển thị "−0%" là vô nghĩa.
+ * % off the list price, ROUNDED DOWN (Math.floor).
+ * Returns null when: a price is missing, listed <= current, or the result is <= 0.
+ * Never returns 0 — showing "−0%" is meaningless.
  */
 export function discountPercent(
   current: number | null | undefined,
@@ -42,7 +42,7 @@ export function discountPercent(
 }
 
 /**
- * Chuyển Date hoặc chuỗi timestamp sang 'YYYY-MM-DD' theo múi giờ Việt Nam (Asia/Ho_Chi_Minh).
+ * Convert a Date or timestamp string to 'YYYY-MM-DD' in Vietnam time (Asia/Ho_Chi_Minh).
  */
 export function toVnDate(d: Date | string): string {
   const dateObj = typeof d === "string" ? new Date(d) : d;
@@ -55,7 +55,7 @@ export function toVnDate(d: Date | string): string {
 }
 
 /**
- * Số ngày giữa hai mốc thời gian, luôn dương.
+ * Number of days between two instants, always positive.
  */
 export function daysBetween(a: Date | string, b: Date | string): number {
   const da = typeof a === "string" ? new Date(a) : a;

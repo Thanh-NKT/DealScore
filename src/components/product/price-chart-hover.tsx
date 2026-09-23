@@ -30,7 +30,7 @@ export function PriceChartHover({ points, width, height }: PriceChartHoverProps)
     const scaleX = width / rect.width;
     const mouseX = (e.clientX - rect.left) * scaleX;
 
-    // Tìm điểm gần mouseX nhất
+    // Find the point nearest to mouseX
     let closest = points[0];
     let minDiff = Math.abs(points[0].x - mouseX);
 
@@ -71,7 +71,7 @@ export function PriceChartHover({ points, width, height }: PriceChartHoverProps)
           viewBox={`0 0 ${width} ${height}`}
           className="pointer-events-none absolute inset-0 h-full w-full"
         >
-          {/* Đường gióng dọc */}
+          {/* Vertical guide line */}
           <line
             x1={activePoint.x}
             y1={16}
@@ -83,7 +83,7 @@ export function PriceChartHover({ points, width, height }: PriceChartHoverProps)
             className="text-foreground/40"
           />
 
-          {/* Điểm highlight */}
+          {/* Highlighted point */}
           <circle
             cx={activePoint.x}
             cy={activePoint.y}

@@ -1,9 +1,9 @@
--- 0005_account.sql: Cấu hình tài khoản, đồng ý điều khoản, notification_settings
+-- 0005_account.sql: account settings, terms consent, notification_settings
 alter table public.users add column if not exists consent_at timestamptz;
 
--- 0001 cho người dùng tự INSERT/UPDATE toàn bộ hàng của mình. Hệ quả: tự ghi
--- consent_version (giả mạo đã đồng ý) hoặc xóa deleted_at (tự khôi phục sau
--- khi hết hạn). Hàng được tạo bằng trigger; chỉ marketing_opt_in là của người dùng.
+-- 0001 let users INSERT/UPDATE their entire own row. Consequence: they could write
+-- consent_version themselves (faking consent) or clear deleted_at (self-restore after
+-- the grace period). Rows are created by a trigger; only marketing_opt_in belongs to the user.
 drop policy if exists "users_insert_self" on public.users;
 revoke insert, update, delete on public.users from anon, authenticated;
 grant update (marketing_opt_in) on public.users to authenticated;
@@ -15,7 +15,7 @@ create table if not exists public.notification_settings (
   frequency     text     not null default 'instant'
                 check (frequency in ('instant', 'daily_digest')),
   digest_hour   smallint not null default 8 check (digest_hour between 0 and 23),
-  quiet_start   smallint check (quiet_start between 0 and 23),   -- giờ VN
+  quiet_start   smallint check (quiet_start between 0 and 23),   -- Vietnam time
   quiet_end     smallint check (quiet_end between 0 and 23),
   updated_at    timestamptz not null default now(),
   constraint notification_quiet_pair  check ((quiet_start is null) = (quiet_end is null)),
@@ -52,7 +52,7 @@ begin
 end;
 $$;
 
--- Người dùng tạo trước migration này
+-- Users created before this migration
 insert into public.notification_settings (user_id)
 select id from public.users
 on conflict (user_id) do nothing;

@@ -2,8 +2,8 @@ import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
 
 /**
- * Supabase client cho Client Components (chạy trong trình duyệt).
- * Dùng anon key + RLS. KHÔNG dùng service role ở đây.
+ * Supabase client for Client Components (runs in the browser).
+ * Uses the anon key + RLS. NEVER use the service role here.
  */
 export function createClient() {
   return createBrowserClient<Database>(

@@ -23,20 +23,20 @@ beforeEach(() => {
 });
 
 describe("POST /api/cron/conversions", () => {
-  it("chưa cấu hình API → skipped, 200", async () => {
+  it("API not configured → skipped, 200", async () => {
     createShopeeAffiliateClient.mockReturnValue(null);
     const res = await POST(req() as never);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ skipped: "not_configured" });
   });
-  it("lỗi retryable → 503, vẫn nhả lock", async () => {
+  it("retryable error → 503, lock still released", async () => {
     pullConversions.mockRejectedValue(new ShopeeAffiliateError("rate", true));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await POST(req() as never);
     expect(res.status).toBe(503);
     expect(rpc).toHaveBeenLastCalledWith("release_job_lock", expect.objectContaining({ p_name: "conversions" }));
   });
-  it("thành công → 200 kèm số liệu", async () => {
+  it("success → 200 with stats", async () => {
     pullConversions.mockResolvedValue({ pages: 1, rows: 2, rejected: 0, inserted: 2, updated: 0, matched: 1, complete: true });
     const res = await POST(req() as never);
     expect(await res.json()).toMatchObject({ inserted: 2, matched: 1 });

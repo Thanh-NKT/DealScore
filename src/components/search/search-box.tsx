@@ -32,10 +32,10 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Kiểm tra nếu query là một Shopee URL
+  // Check whether the query is a Shopee URL
   const isShopeeUrl = (() => {
     if (!query) return false;
-    // Chuẩn hóa như server: nhận cả đoạn văn bản chia sẻ từ app Shopee.
+    // Normalize like the server does: accept whole shared text from the Shopee app.
     const parsed = parseShopeeUrl(normalizeLookupInput(query));
     return parsed.ok || parsed.reason === "needs_redirect";
   })();
@@ -119,7 +119,7 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
     if (isShopeeUrl) {
       e.preventDefault();
       if (submitting) return;
-      // Chuyển sang luồng URL lookup
+      // Switch to the URL lookup flow
       setLookupError(null);
       try {
         setSubmitting(true);
@@ -132,9 +132,9 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
         if (res.ok && data.productUrl) {
           router.push(data.productUrl);
         } else {
-          // Hiện đúng lỗi server trả về. Chuyển sang trang tìm kiếm với
-          // chính URL làm từ khóa chỉ ra "không tìm thấy" và làm mất lý do thật
-          // (vd bị giới hạn lượt tra cứu).
+          // Show the exact server error. Falling back to the search page with
+          // the URL itself as the query would say "not found" and hide the real reason
+          // (e.g. the lookup rate limit).
           setLookupError(data?.message || "Có lỗi xảy ra. Vui lòng thử lại.");
         }
       } catch {
@@ -143,7 +143,7 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
         setSubmitting(false);
       }
     }
-    // Ngược lại để form submit bình thường tới /search?q=...
+    // Otherwise let the form submit normally to /search?q=...
   };
 
   return (
@@ -199,7 +199,7 @@ export function SearchBox({ initialQuery = "" }: SearchBoxProps) {
         </p>
       )}
 
-      {/* Danh sách gợi ý Autocomplete */}
+      {/* Autocomplete suggestion list */}
       {showDropdown && (
         <ul
           id="autocomplete-listbox"

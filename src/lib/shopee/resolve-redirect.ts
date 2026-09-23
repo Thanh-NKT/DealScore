@@ -1,9 +1,9 @@
 /**
- * Theo redirect cho URL rút gọn của Shopee với kiểm tra bảo mật SSRF chặt chẽ.
+ * Follow redirects for Shopee short URLs with strict SSRF checks.
  *
- * Người dùng cung cấp URL và server đi gọi nó. Mỗi hop đều phải qua:
- * https, cổng mặc định, host nằm CHÍNH XÁC trong allowlist dùng chung với
- * parse-url.ts. Không bao giờ trả body của response về client.
+ * The user supplies a URL and the server fetches it. Every hop must pass:
+ * https, default port, host EXACTLY in the allowlist shared with
+ * parse-url.ts. Never return the response body to the client.
  */
 import { parseShopeeUrl, SHOPEE_HOSTS, SHORT_HOSTS } from "@/lib/shopee/parse-url";
 
@@ -12,8 +12,8 @@ const HOP_TIMEOUT_MS = 3000;
 
 function isHostAllowed(url: URL): boolean {
   const h = url.hostname.toLowerCase();
-  // url.port rỗng = cổng mặc định của scheme (443). Cổng khác là dấu hiệu
-  // đang bị dắt tới một dịch vụ nội bộ.
+  // An empty url.port = the scheme's default port (443). Any other port suggests
+  // we're being steered toward an internal service.
   return url.port === "" && (SHOPEE_HOSTS.has(h) || SHORT_HOSTS.has(h));
 }
 
@@ -33,8 +33,8 @@ export async function resolveShopeeRedirect(
 > {
   let currentUrl = initialUrl;
 
-  // hop = số request đã gửi. Kiểm tra URL hiện tại TRƯỚC mỗi request, và
-  // kiểm tra cả URL đích cuối cùng sau request thứ MAX_HOPS.
+  // hop = number of requests sent. Check the current URL BEFORE each request, and
+  // also check the final target URL after request number MAX_HOPS.
   for (let hop = 0; ; hop++) {
     let parsed: URL;
     try {
@@ -50,7 +50,7 @@ export async function resolveShopeeRedirect(
       return { ok: false, reason: "host_not_allowed" };
     }
 
-    // Đã tới URL sản phẩm đọc được — dừng, không gọi thêm request thừa.
+    // Reached a readable product URL — stop, no extra requests.
     if (parseShopeeUrl(currentUrl).ok) {
       return { ok: true, finalUrl: currentUrl };
     }
@@ -75,7 +75,7 @@ export async function resolveShopeeRedirect(
 
     const location = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
     if (!location) {
-      // Không redirect nữa: URL hiện tại là đích.
+      // No more redirects: the current URL is the target.
       return { ok: true, finalUrl: currentUrl };
     }
 

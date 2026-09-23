@@ -76,7 +76,7 @@ export async function verifyLoginCode(
   const next = safeNextPath(rawNext, "/");
   const token = (rawToken ?? "").trim();
 
-  // Kiểm tra mã OTP đúng 6 số
+  // OTP code must be exactly 6 digits
   if (!/^\d{6}$/.test(token)) {
     return {
       status: "error",
@@ -105,7 +105,7 @@ export async function verifyLoginCode(
     };
   }
 
-  // Chuyển hướng sau khi đăng nhập thành công (AuthGate)
-  // Ngoài try: redirect() ném lỗi điều hướng.
+  // Redirect after a successful sign-in (AuthGate)
+  // Outside the try: redirect() throws a navigation error.
   return redirectAfterLogin(supabase, data.user.id, next);
 }

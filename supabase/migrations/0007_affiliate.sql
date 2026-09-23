@@ -1,4 +1,4 @@
--- 0007_affiliate.sql: Conversions, đối soát click và view affiliate
+-- 0007_affiliate.sql: conversions, click reconciliation and affiliate views
 
 drop table if exists public.conversions;
 
@@ -39,8 +39,8 @@ language plpgsql as $$
 declare v_ins integer := 0; v_upd integer := 0; v_match integer := 0; r jsonb; v_click uuid; v_new boolean;
 begin
   for r in select * from jsonb_array_elements(p_rows) loop
-    -- select … into (không STRICT) không thấy dòng nào đã tự đặt v_click = null;
-    -- đặt tường minh và bỏ qua truy vấn khi không có click_event_id cho dễ đọc.
+    -- select … into (non-STRICT) finding no row already sets v_click = null;
+    -- set it explicitly and skip the query when there is no click_event_id, for readability.
     v_click := null;
     if r->>'click_event_id' is not null then
       select id into v_click from click_events where id = (r->>'click_event_id')::uuid;
@@ -112,9 +112,9 @@ group by 1;
 
 revoke all on public.affiliate_daily, public.affiliate_by_alert from anon, authenticated;
 
--- Kéo conversion mỗi 6 giờ, phút 7 để không trùng lượt alert. Dùng lại secret Vault của 0006.
--- URL và secret đọc từ Vault LÚC CHẠY: mỗi môi trường tự đặt, không nằm trong repo.
--- Thiếu secret → http_post lỗi, job ghi lỗi vào cron.job_run_details, không ảnh hưởng gì khác.
+-- Pull conversions every 6 hours, at minute 7 to avoid colliding with the alert run. Reuses 0006's Vault secret.
+-- URL and secret are read from Vault AT RUN TIME: each environment sets its own, nothing in the repo.
+-- Missing secret → http_post fails, the job logs the error to cron.job_run_details, nothing else is affected.
 select cron.schedule('kairo-conversions', '7 */6 * * *', $job$
   select net.http_post(
     url     := (select decrypted_secret from vault.decrypted_secrets where name = 'kairo_app_url')

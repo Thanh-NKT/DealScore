@@ -4,39 +4,39 @@ import { parseSearchParams, toSearchParams } from "@/lib/search";
 const parse = (qs: string) => parseSearchParams(new URLSearchParams(qs));
 
 describe("parseSearchParams", () => {
-  it("mặc định sort là relevance khi có từ khóa", () => {
+  it("default sort is relevance when there is a query", () => {
     expect(parse("q=ssd").sort).toBe("relevance");
   });
 
-  it("mặc định sort là updated khi không có từ khóa", () => {
+  it("default sort is updated when there is no query", () => {
     expect(parse("").sort).toBe("updated");
   });
 
-  it("nhận nhiều brand", () => {
+  it("accepts multiple brands", () => {
     expect(parse("brand=samsung&brand=wd").brands).toEqual(["samsung", "wd"]);
   });
 
-  it("hoán đổi khi min lớn hơn max", () => {
+  it("swaps when min is greater than max", () => {
     const p = parse("min=500&max=100");
     expect(p.minPrice).toBe(100);
     expect(p.maxPrice).toBe(500);
   });
 
-  it("ép page về 1 khi nhỏ hơn 1 hoặc không phải số", () => {
+  it("forces page to 1 when below 1 or not a number", () => {
     expect(parse("page=0").page).toBe(1);
     expect(parse("page=-3").page).toBe(1);
     expect(parse("page=abc").page).toBe(1);
   });
 
-  it("bỏ qua sort lạ và quay về mặc định", () => {
+  it("ignores unknown sorts and falls back to the default", () => {
     expect(parse("q=ssd&sort=hacker").sort).toBe("relevance");
   });
 
-  it("bỏ qua giá không phải số", () => {
+  it("ignores non-numeric prices", () => {
     expect(parse("min=abc").minPrice).toBeUndefined();
   });
 
-  it("đọc được cả searchParams dạng object của Next.js", () => {
+  it("also reads Next.js object-style searchParams", () => {
     const p = parseSearchParams({ q: "ssd", brand: ["samsung", "wd"], page: "2" });
     expect(p.q).toBe("ssd");
     expect(p.brands).toEqual(["samsung", "wd"]);
@@ -45,7 +45,7 @@ describe("parseSearchParams", () => {
 });
 
 describe("round-trip parse ↔ serialize", () => {
-  it("giữ nguyên mọi tham số — điều kiện để filter chia sẻ được qua URL", () => {
+  it("keeps every parameter — required for sharing filters via URL", () => {
     const original =
       "q=ssd+samsung&cat=o-cung-ssd&brand=samsung&brand=wd&min=100&max=500&sort=price_asc&page=3";
     const once = parseSearchParams(new URLSearchParams(original));
@@ -53,9 +53,9 @@ describe("round-trip parse ↔ serialize", () => {
     expect(twice).toEqual(once);
   });
 
-  it("không ghi tham số mặc định vào URL", () => {
-    // Ghi sort mặc định vào URL sinh ra hai đường dẫn khác nhau cho cùng
-    // một trang — trùng lặp nội dung, có hại cho SEO ở mục 1.7.
+  it("doesn't write default parameters into the URL", () => {
+    // Writing the default sort into the URL produces two different paths for the same
+    // page — duplicate content, harmful to SEO (section 1.7).
     const qs = toSearchParams(parse("q=ssd")).toString();
     expect(qs).not.toContain("page=");
     expect(qs).not.toContain("sort=");
@@ -63,11 +63,11 @@ describe("round-trip parse ↔ serialize", () => {
 });
 
 describe("parseSearchParams — catId", () => {
-  it("bỏ catId không phải UUID, thay vì để RPC ném lỗi", () => {
+  it("drops a non-UUID catId instead of letting the RPC throw", () => {
     expect(parseSearchParams({ catId: "abc" }).categoryId).toBeUndefined();
   });
 
-  it("giữ catId đúng định dạng UUID", () => {
+  it("keeps a well-formed UUID catId", () => {
     const id = "0b6f1c2e-5a8d-4c1e-9f3a-2d7b8e6c4a10";
     expect(parseSearchParams({ catId: id }).categoryId).toBe(id);
   });

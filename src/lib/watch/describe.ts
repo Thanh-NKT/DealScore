@@ -53,7 +53,7 @@ export function describeWatch(input: {
   const { config, state, snapshot, createdAt, latestAlert, settings } = input;
   const { price, inStock, isStale } = snapshot;
 
-  // 1. Khoảng cách tới target
+  // 1. Distance to target
   let targetInfo: WatchView["target"] = null;
   let sortKey = 1;
 
@@ -89,7 +89,7 @@ export function describeWatch(input: {
     sortKey = inStock && !isStale ? 1 : 2;
   }
 
-  // 2. Thay đổi giá từ lúc bắt đầu theo dõi
+  // 2. Price change since tracking started
   let changeSinceStart: WatchView["changeSinceStart"] = null;
   if (state.baselinePrice !== null && price !== null) {
     const diff = price - state.baselinePrice;
@@ -101,7 +101,7 @@ export function describeWatch(input: {
     };
   }
 
-  // 3. Trạng thái các điều kiện
+  // 3. Condition states
   const triMap = evaluateConditions(config, state, snapshot);
   const conditions: Array<{ key: ConditionKey; state: Tri }> = [];
 
@@ -119,7 +119,7 @@ export function describeWatch(input: {
     }
   }
 
-  // 4. Trạng thái alert
+  // 4. Alert state
   let alertStatus: WatchView["alertStatus"] = { kind: "none" };
 
   if (latestAlert) {

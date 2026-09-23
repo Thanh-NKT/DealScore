@@ -1,4 +1,4 @@
-// Service worker tối thiểu cho web push (1.4). Không cache, không offline.
+// Minimal service worker for web push (1.4). No caching, no offline.
 self.addEventListener("push", (event) => {
   let data = {};
   try {
@@ -18,7 +18,7 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = new URL(event.notification.data?.url || "/", self.location.origin);
-  // Chỉ mở URL cùng origin.
+  // Only open same-origin URLs.
   if (target.origin !== self.location.origin) return;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {

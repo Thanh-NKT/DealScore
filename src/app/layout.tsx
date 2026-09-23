@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "Kairo — Đừng chỉ tìm giá rẻ. Tìm đúng thời điểm để mua.",
   description:
     "Lịch sử giá chuẩn hóa theo variant, Deal Score có giải thích, và câu trả lời Nên mua / Có thể chờ / Chưa nên mua.",
-  // Không link manifest thì trình duyệt không cài được PWA, và share target (1.1.d) không bao giờ hiện.
+  // Without the manifest link the browser can't install the PWA, and the share target (1.1.d) never appears.
   manifest: "/manifest.webmanifest",
 };
 

@@ -1,5 +1,5 @@
 /**
- * Phân tích và trích xuất thông tin shopId, itemId từ URL Shopee.
+ * Parse a Shopee URL and extract shopId and itemId.
  */
 
 export type ParsedShopeeUrl =
@@ -17,22 +17,22 @@ export function externalItemId(shopId: string, itemId: string): string {
   return `${shopId}_${itemId}`;
 }
 
-/** Link rút gọn — phải theo redirect mới biết shopId/itemId. */
+/** Short links — the redirect must be followed to learn shopId/itemId. */
 export const SHORT_HOSTS: ReadonlySet<string> = new Set(["shope.ee", "s.shopee.vn"]);
-/** Host của trang sản phẩm canonical. */
+/** Canonical product page hosts. */
 export const SHOPEE_HOSTS: ReadonlySet<string> = new Set(["shopee.vn", "www.shopee.vn"]);
 
 export function extractFirstUrl(text: string): string | null {
   if (!text) return null;
   const match = text.match(/https?:\/\/[^\s]+/i);
-  // Văn bản chia sẻ hay kẹp link trong ngoặc hoặc kết câu ngay sau link.
+  // Shared text often wraps the link in brackets or ends the sentence right after it.
   return match ? match[0].replace(/[)\]}>.,;:!?'"]+$/, "") : null;
 }
 
 /**
- * Chuẩn hóa thứ người dùng dán vào: lấy URL đầu tiên nếu là cả đoạn văn bản
- * chia sẻ, thêm https:// nếu thiếu. Parse và theo redirect phải dùng CÙNG
- * chuỗi này — `shope.ee/abc` parse được nhưng `new URL("shope.ee/abc")` ném lỗi.
+ * Normalize what the user pasted: take the first URL if it's a whole block of shared
+ * text, add https:// if missing. Parsing and redirect-following must use the SAME
+ * string — `shope.ee/abc` parses but `new URL("shope.ee/abc")` throws.
  */
 export function normalizeLookupInput(raw: string): string {
   const trimmed = (raw ?? "").trim();
@@ -49,9 +49,9 @@ export function parseShopeeUrl(raw: string): ParsedShopeeUrl {
 
   const trimmed = raw.trim();
 
-  // Chỉ thêm protocol khi chuỗi thực sự trông như một tên miền. Nếu không,
-  // mọi từ khóa tìm kiếm ("samsung") sẽ thành URL hợp lệ và người dùng nhận
-  // thông báo "chỉ hỗ trợ Shopee" thay vì "hãy dán một đường dẫn".
+  // Only add a protocol when the string really looks like a domain. Otherwise
+  // every search term ("samsung") becomes a valid URL and the user gets
+  // "only Shopee is supported" instead of "please paste a link".
   const looksLikeHost = /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/|$|\?|#|:)/i.test(trimmed);
 
   let parsed: URL;
@@ -67,10 +67,10 @@ export function parseShopeeUrl(raw: string): ParsedShopeeUrl {
 
   const host = parsed.hostname.toLowerCase();
 
-  // So khớp host CHÍNH XÁC theo danh sách trắng.
-  // So khớp lỏng bằng includes("shopee.") hay endsWith("shopee.vn") cho lọt
-  // shopee.vn.evil.com và evil-shopee.com.attacker.net — đây là URL do người
-  // dùng cung cấp mà server sẽ đi gọi và ghi vào catalog, nên phải chặt.
+  // Match hosts EXACTLY against the allowlist.
+  // Loose matching via includes("shopee.") or endsWith("shopee.vn") lets through
+  // shopee.vn.evil.com and evil-shopee.com.attacker.net — this is a user-supplied
+  // URL the server will fetch and write into the catalog, so it must be strict.
   if (SHORT_HOSTS.has(host)) {
     return { ok: false, reason: "needs_redirect" };
   }
@@ -81,7 +81,7 @@ export function parseShopeeUrl(raw: string): ParsedShopeeUrl {
 
   const pathname = parsed.pathname;
 
-  // Dạng 1: /product/{shopId}/{itemId}
+  // Form 1: /product/{shopId}/{itemId}
   const productMatch = pathname.match(/\/product\/(\d+)\/(\d+)/i);
   if (productMatch) {
     return {
@@ -91,7 +91,7 @@ export function parseShopeeUrl(raw: string): ParsedShopeeUrl {
     };
   }
 
-  // Dạng 2: /-i.{shopId}.{itemId}
+  // Form 2: /-i.{shopId}.{itemId}
   const slugMatch = pathname.match(/-i\.(\d+)\.(\d+)/i);
   if (slugMatch) {
     return {

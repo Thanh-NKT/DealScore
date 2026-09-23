@@ -1,4 +1,4 @@
-/** Escape mọi giá trị chèn vào HTML email. */
+/** Escape every value interpolated into email HTML. */
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -8,7 +8,7 @@ export function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** dd/MM/yyyy theo giờ Việt Nam. */
+/** dd/MM/yyyy in Vietnam time. */
 export function formatVnDate(d: Date): string {
   return new Intl.DateTimeFormat("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
