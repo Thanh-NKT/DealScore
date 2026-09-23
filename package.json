@@ -18,14 +18,16 @@
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --local --schema public > src/lib/database.types.ts",
     "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
-    "scores:recompute": "tsx --env-file=.env.local scripts/recompute-deal-scores.ts"
+    "scores:recompute": "tsx --env-file=.env.local scripts/recompute-deal-scores.ts",
+    "test:db": "vitest run --config vitest.db.config.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
     "next": "16.3.5",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "resend": "^6.28.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
