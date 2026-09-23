@@ -19,7 +19,8 @@
     "db:types": "supabase gen types typescript --local --schema public > src/lib/database.types.ts",
     "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
     "scores:recompute": "tsx --env-file=.env.local scripts/recompute-deal-scores.ts",
-    "test:db": "vitest run --config vitest.db.config.mts"
+    "test:db": "vitest run --config vitest.db.config.mts",
+    "alerts:run": "tsx --env-file=.env.local scripts/run-alerts.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
