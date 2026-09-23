@@ -46,7 +46,8 @@ Never mix these up; the choice encodes the security model.
   Chỗ được dùng: collector / cron / scripts, `src/lib/ingest.ts`, `src/lib/rate-limit.ts`,
   `src/app/go/…/route.ts`, `src/app/tai-khoan/actions.ts`, `src/app/tai-khoan/xuat-du-lieu/route.ts`,
   `src/lib/account-purge.ts`, `src/lib/alerts/*`, `src/lib/push/index.ts`, `src/app/actions/push.ts`,
-  `src/app/api/unsubscribe/route.ts`, `src/app/api/cron/alerts/route.ts`, `scripts/run-alerts.ts`.
+  `src/app/api/unsubscribe/route.ts`, `src/app/api/cron/alerts/route.ts`, `scripts/run-alerts.ts`,
+  `src/lib/affiliate/import.ts`, `src/app/api/cron/conversions/route.ts`, `scripts/import-conversions.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
@@ -55,6 +56,11 @@ Never mix these up; the choice encodes the security model.
   không; `tests/lib/alerts/scenarios.test.ts` là cam kết "không spam" — đừng sửa kỳ vọng ở đó để test xanh.
   Ngưỡng nằm ở `src/lib/watch/constants.ts` (và `50` trong trigger `watches_enforce_limit`). Truy vấn có thể
   vượt 1.000 dòng phải chia lô — PostgREST cắt âm thầm (xem `src/lib/watch/snapshot.ts`).
+- **Affiliate (1.5):** `/go` ghi click rồi redirect link `an_redir` với `sub_id = {clickHex}-{source}`
+  (`src/lib/affiliate/link.ts`). Đơn hàng vào `conversions` qua RPC `upsert_conversions` từ API
+  (`/api/cron/conversions`) hoặc CSV (`pnpm conversions:import`). Mọi hiểu biết về Shopee Affiliate API là
+  **giả định G1–G6** chưa spike — xem `docs/superpowers/specs/2026-09-23-affiliate-design.md` §1.
+  Deal Score / search / alert **không** được đọc dữ liệu affiliate (test `no-bias`).
 - **Test DB:** `pnpm test:db` chạy `tests/db/**` trên Supabase local (helper tự chặn URL khác). Script
   chạy bằng `tsx` bị biên dịch sang CJS — **không** dùng `await` ở cấp cao nhất, bọc trong `main()`.
 - `src/lib/supabase/middleware.ts` — `updateSession()`, called from `src/proxy.ts` on every

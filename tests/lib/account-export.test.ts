@@ -78,6 +78,9 @@ const input = {
     },
   ],
   lookups: [{ created_at: "2026-09-04T00:00:00Z", outcome: "resolved", ip_hash: "KHONG-DUOC-XUAT" }],
+  orders: [
+    { purchase_time: "2026-09-10T00:00:00Z", status: "completed", order_value: 500000, item_id: "111", commission: 25000, raw: { x: 1 } },
+  ],
 };
 
 describe("buildAccountExport", () => {
@@ -108,6 +111,12 @@ describe("buildAccountExport", () => {
   it("push chỉ có created_at + user_agent — không endpoint, không khóa", () => {
     expect(out.push_devices).toEqual([{ created_at: "2026-09-06T00:00:00Z", user_agent: "Chrome" }]);
     expect(JSON.stringify(out)).not.toContain("https://secret");
+  });
+  it("đơn hàng: có thời điểm, trạng thái, giá trị — KHÔNG có hoa hồng hay raw", () => {
+    expect(out.orders).toEqual([
+      { purchase_time: "2026-09-10T00:00:00Z", status: "completed", order_value: 500000, product_item_id: "111" },
+    ]);
+    expect(JSON.stringify(out.orders)).not.toContain("25000");
   });
   it("cài đặt ở dạng NotificationSettings", () => {
     expect(out.notification_settings).toMatchObject({ emailEnabled: true, frequency: "instant" });

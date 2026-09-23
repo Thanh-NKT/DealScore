@@ -93,3 +93,6 @@ Migration 0006 tạo job `kairo-alerts` (mỗi 15 phút). Job đọc URL và sec
 
 Xem lịch sử chạy: `select * from cron.job_run_details order by start_time desc limit 20;`
 Ở local không đặt Vault thì dùng `pnpm alerts:run`.
+
+Migration 0007 thêm job `kairo-conversions` (phút 7, mỗi 6 giờ) — dùng chung hai secret Vault ở trên.
+Chưa đặt `SHOPEE_AFFILIATE_APP_ID` / `SHOPEE_AFFILIATE_SECRET` thì route trả `{ skipped: "not_configured" }`.

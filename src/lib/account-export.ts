@@ -1,5 +1,6 @@
 import type { Database } from "@/lib/database.types";
 import { fromRow, type NotificationSettings } from "@/lib/notification-settings";
+import type { ConversionStatus } from "@/lib/affiliate/normalize";
 
 type Row<T extends keyof Database["public"]["Tables"]> =
   Database["public"]["Tables"][T]["Row"];
@@ -46,6 +47,7 @@ export interface AccountExport {
   push_devices: Array<{ created_at: string; user_agent: string | null }>;
   clicks: Array<{ created_at: string; offer_id: string | null; source: string | null }>;
   url_lookups: Array<{ created_at: string; outcome: string }>;
+  orders: Array<{ purchase_time: string; status: ConversionStatus; order_value: number | null; product_item_id: string }>;
 }
 
 /**
@@ -66,6 +68,7 @@ export function buildAccountExport(input: {
   pushDevices: Array<{ created_at: string; user_agent: string | null }>;
   clicks: Row<"click_events">[];
   lookups: Array<{ created_at: string; outcome: string }>;
+  orders: Array<{ purchase_time: string; status: string; order_value: number | null; item_id: string }>;
 }): AccountExport {
   const p = input.profile;
   return {
@@ -110,6 +113,13 @@ export function buildAccountExport(input: {
     push_devices: input.pushDevices.map((d) => ({ created_at: d.created_at, user_agent: d.user_agent })),
     clicks: input.clicks.map((c) => ({ created_at: c.created_at, offer_id: c.offer_id, source: c.source })),
     url_lookups: input.lookups.map((l) => ({ created_at: l.created_at, outcome: l.outcome })),
+    // A8: không xuất commission / raw / sub_ids — đó là doanh thu của Kairo.
+    orders: input.orders.map((o) => ({
+      purchase_time: o.purchase_time,
+      status: o.status as ConversionStatus,
+      order_value: num(o.order_value),
+      product_item_id: o.item_id,
+    })),
   };
 }
 

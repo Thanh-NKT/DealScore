@@ -47,6 +47,18 @@ export async function GET() {
     if (res.error) throw new Error(`Xuất dữ liệu: đọc ${name} thất bại: ${res.error.message}`);
   }
 
+  // Đơn hàng gắn với click của CHÍNH user — conversions chỉ service role đọc được.
+  const clickIds = (clicksRes.data ?? []).map((c) => c.id);
+  const orders: Array<{ purchase_time: string; status: string; order_value: number | null; item_id: string }> = [];
+  for (let i = 0; i < clickIds.length; i += 500) {
+    const { data, error } = await admin
+      .from("conversions")
+      .select("purchase_time, status, order_value, item_id")
+      .in("click_event_id", clickIds.slice(i, i + 500));
+    if (error) throw new Error(`Xuất dữ liệu: đọc đơn hàng thất bại: ${error.message}`);
+    orders.push(...(data ?? []));
+  }
+
   const now = new Date();
   const exportData = buildAccountExport({
     exportedAt: now,
@@ -55,6 +67,7 @@ export async function GET() {
     watches: watchesRes.data ?? [],
     alertEvents: alertsRes.data ?? [],
     pushDevices: pushRes.data ?? [],
+    orders,
     clicks: clicksRes.data ?? [],
     lookups: lookupsRes.data ?? [],
   });
