@@ -11,6 +11,9 @@ import { DraftProductNotice } from "@/components/product/draft-product-notice";
 import { PriceChart } from "@/components/product/price-chart";
 import { StatsRow } from "@/components/product/stats-row";
 import { OfferList } from "@/components/product/offer-list";
+import { getCurrentUser } from "@/lib/auth/session";
+import { getMyWatchForVariant } from "@/lib/watch/queries";
+import { WatchButton } from "@/components/watch/watch-button";
 
 interface PageProps {
   params: Promise<{ category: string; product: string }>;
@@ -37,6 +40,19 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   }
 
   const { product, variants, selectedVariantId, pricing, dailyPrices } = data;
+
+  const user = await getCurrentUser();
+  // getMyWatchForVariant ném khi lỗi DB. Trang sản phẩm công khai không được sập vì phần Watch:
+  // lỗi thì coi như chưa có Watch.
+  const existingWatch = user
+    ? await getMyWatchForVariant(user.id, selectedVariantId).catch((err) => {
+        console.error("getMyWatchForVariant thất bại", err);
+        return null;
+      })
+    : null;
+
+  const currentVariant = variants.find((v) => v.id === selectedVariantId);
+  const currentPath = `/${product.categorySlug}/${product.slug}?variant=${selectedVariantId}&range=${range}`;
 
   // Chart series theo range (chỉ cắt chart, không ảnh hưởng Deal Score)
   const chartSeries = buildChartSeries(dailyPrices, range);
@@ -94,13 +110,35 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           range={range}
         />
 
-        {/* Khối giá hiện tại */}
-        <PriceSummary
-          cheapest={pricing.cheapest}
-          offerCount={pricing.offers.length}
-          updatedAt={pricing.updatedAt}
-          isStale={pricing.isStale}
-        />
+        {/* Khối giá hiện tại & nút theo dõi giá */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <PriceSummary
+            cheapest={pricing.cheapest ?? pricing.lastKnown}
+            offerCount={pricing.offers.length}
+            updatedAt={pricing.updatedAt}
+            isStale={pricing.isStale}
+          />
+          <div className="flex items-center gap-3">
+            <WatchButton
+              isLoggedIn={Boolean(user)}
+              productName={product.canonicalName}
+              variantKey={currentVariant?.variantKey ?? ""}
+              variantId={selectedVariantId}
+              currentPrice={
+                pricing.cheapest?.price ?? pricing.lastKnown?.price ?? null
+              }
+              existingWatch={existingWatch}
+              currentPath={currentPath}
+            />
+          </div>
+        </div>
+
+        {/* Hết hàng ở mọi người bán: không chấm điểm (1.2.e) */}
+        {pricing.allOutOfStock && (
+          <p className="rounded-2xl border border-border p-4 text-sm text-muted">
+            Tạm hết hàng ở mọi người bán đang theo dõi.
+          </p>
+        )}
 
         {/* Deal Score đầu trang + Lý do */}
         {pricing.headline && (
@@ -125,9 +163,9 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         />
 
         {/* 4 chỉ số thống kê (Đáy / Trung vị / Đỉnh / Bắt đầu theo dõi) */}
-        {pricing.headline && (
+        {(pricing.stats.dayCount > 0 || pricing.trackingSince) && (
           <StatsRow
-            stats={pricing.headline.stats}
+            stats={pricing.stats}
             trackingSince={pricing.trackingSince}
           />
         )}

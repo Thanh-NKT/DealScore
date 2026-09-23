@@ -16,7 +16,11 @@ export const metadata: Metadata = {
   title: "Kairo — Đừng chỉ tìm giá rẻ. Tìm đúng thời điểm để mua.",
   description:
     "Lịch sử giá chuẩn hóa theo variant, Deal Score có giải thích, và câu trả lời Nên mua / Có thể chờ / Chưa nên mua.",
+  // Không link manifest thì trình duyệt không cài được PWA, và share target (1.1.d) không bao giờ hiện.
+  manifest: "/manifest.webmanifest",
 };
+
+import { SiteHeader } from "@/components/layout/site-header";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -24,7 +28,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="vi"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <SiteHeader />
+        {children}
+      </body>
     </html>
   );
 }
