@@ -1,4 +1,4 @@
-import type { Channel, NotificationSettings } from "@/lib/notification-settings";
+import type { Channel, NotificationSettings } from "@/lib/account/notification-settings";
 import { evaluateConditions } from "@/lib/watch/conditions";
 import type {
   ConditionKey,

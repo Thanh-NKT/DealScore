@@ -13,7 +13,7 @@ pnpm start       # serve the production build
 pnpm lint        # eslint (flat config, eslint-config-next)
 ```
 
-There is **no test runner configured yet**. `src/lib/deal-score.ts` is written as pure
+There is **no test runner configured yet**. `src/lib/pricing/deal-score.ts` is written as pure
 functions specifically so it can be unit-tested / backtested — if you add tests, wire up a
 runner (e.g. vitest) first.
 
@@ -44,8 +44,8 @@ Never mix these up; the choice encodes the security model.
 - `src/lib/supabase/admin.ts` — **service-role** client, **bypasses RLS**. Trusted server code
   only (collector, cron, admin). **Never import into a Client Component.**
   Chỗ được dùng: collector / cron / scripts, `src/lib/ingest.ts`, `src/lib/rate-limit.ts`,
-  `src/app/go/…/route.ts`, `src/app/account/actions.ts`, `src/app/account/export/route.ts`,
-  `src/lib/account-purge.ts`, `src/lib/alerts/*`, `src/lib/push/index.ts`, `src/app/actions/push.ts`,
+  `src/app/go/…/route.ts`, `src/actions/account.ts`, `src/app/account/export/route.ts`,
+  `src/lib/account/purge.ts`, `src/lib/alerts/*`, `src/lib/push/index.ts`, `src/actions/push.ts`,
   `src/app/api/unsubscribe/route.ts`, `src/app/api/cron/alerts/route.ts`, `scripts/run-alerts.ts`,
   `src/lib/affiliate/import.ts`, `src/app/api/cron/conversions/route.ts`, `scripts/import-conversions.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
@@ -63,7 +63,7 @@ Never mix these up; the choice encodes the security model.
   Deal Score / search / alert **không** được đọc dữ liệu affiliate (test `no-bias`).
 - **Test DB:** `pnpm test:db` chạy `tests/db/**` trên Supabase local (helper tự chặn URL khác). Script
   chạy bằng `tsx` bị biên dịch sang CJS — **không** dùng `await` ở cấp cao nhất, bọc trong `main()`.
-- `src/lib/supabase/middleware.ts` — `updateSession()`, called from `src/proxy.ts` on every
+- `src/lib/supabase/proxy.ts` — `updateSession()`, called from `src/proxy.ts` on every
   request to refresh the auth token. Do not insert logic between `createServerClient` and the
   `getUser()` call there.
 
@@ -72,7 +72,7 @@ tables (`users`, `watches`, `alert_events`, `click_events`). Catalog and price d
 public-read; all writes go through the service-role client, which bypasses RLS. A trigger
 (`on_auth_user_created`) auto-creates a `public.users` row for each new `auth.users` record.
 
-### 2. Deal Score engine — `src/lib/deal-score.ts`
+### 2. Deal Score engine — `src/lib/pricing/deal-score.ts`
 
 Pure, DB-free functions (input = price + observation history, output = score + recommendation).
 Keep it that way so it stays backtestable.

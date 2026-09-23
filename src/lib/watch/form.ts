@@ -1,4 +1,4 @@
-import type { Channel } from "@/lib/notification-settings";
+import type { Channel } from "@/lib/account/notification-settings";
 import type { WatchConfig } from "@/lib/watch/types";
 
 export type WatchField =

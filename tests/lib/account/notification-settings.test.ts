@@ -7,7 +7,7 @@ import {
   resolveChannels,
   toRow,
   type NotificationSettings,
-} from "@/lib/notification-settings";
+} from "@/lib/account/notification-settings";
 
 const base: NotificationSettings = DEFAULT_NOTIFICATION_SETTINGS;
 

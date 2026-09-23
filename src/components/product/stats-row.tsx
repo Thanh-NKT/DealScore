@@ -1,4 +1,4 @@
-import type { HistoryStats } from "@/lib/price-history";
+import type { HistoryStats } from "@/lib/pricing/price-history";
 import { formatVnd } from "@/lib/format";
 
 interface StatsRowProps {

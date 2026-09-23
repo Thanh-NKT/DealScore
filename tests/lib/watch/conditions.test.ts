@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluateConditions } from "@/lib/watch/conditions";
 import type { VariantSnapshot, WatchConfig, WatchState } from "@/lib/watch/types";
-import type { DealScoreResult } from "@/lib/deal-score";
+import type { DealScoreResult } from "@/lib/pricing/deal-score";
 
 const cfg = (o: Partial<WatchConfig> = {}): WatchConfig => ({
   targetPrice: null,

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { computeDealScore } from "@/lib/deal-score";
+import { computeDealScore } from "@/lib/pricing/deal-score";
 import { toVnDate } from "@/lib/format";
 import {
   expandRollup,
   historyStats,
   medianWindow,
   type DailyPriceRow,
-} from "@/lib/price-history";
+} from "@/lib/pricing/price-history";
 
 /** Đồng hồ cố định, truyền vào computeDealScore qua `now`. 10:00 giờ VN. */
 const NOW = new Date("2026-06-15T03:00:00Z");

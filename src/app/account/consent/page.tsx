@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { requireUser } from "@/lib/auth/session";
-import { needsConsent } from "@/lib/consent";
+import { needsConsent } from "@/lib/account/consent";
 import { ConsentForm } from "@/components/account/consent-form";
 
 export const dynamic = "force-dynamic";

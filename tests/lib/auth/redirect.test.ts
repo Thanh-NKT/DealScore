@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CURRENT_CONSENT_VERSION, needsConsent } from "@/lib/consent";
+import { CURRENT_CONSENT_VERSION, needsConsent } from "@/lib/account/consent";
 import { decideAuthGate, safeNextPath } from "@/lib/auth/redirect";
 
 describe("needsConsent", () => {

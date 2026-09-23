@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAuthorizedCronRequest } from "@/lib/cron";
-import { purgeDeletedAccounts } from "@/lib/account-purge";
+import { purgeDeletedAccounts } from "@/lib/account/purge";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 

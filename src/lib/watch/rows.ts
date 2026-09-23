@@ -1,5 +1,5 @@
 import type { Database } from "@/lib/database.types";
-import type { Channel } from "@/lib/notification-settings";
+import type { Channel } from "@/lib/account/notification-settings";
 import type { NextState } from "@/lib/watch/decide";
 import type { ConditionKey, WatchConfig, WatchState } from "@/lib/watch/types";
 

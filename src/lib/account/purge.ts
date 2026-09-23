@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { purgeCutoff } from "@/lib/account-purge-date";
+import { purgeCutoff } from "@/lib/account/purge-date";
 
-export { PURGE_AFTER_DAYS, purgeCutoff, purgeDate } from "@/lib/account-purge-date";
+export { PURGE_AFTER_DAYS, purgeCutoff, purgeDate } from "@/lib/account/purge-date";
 
 /**
  * Xóa hẳn các tài khoản đã yêu cầu xóa quá 30 ngày.

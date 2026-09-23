@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { loadProductPageData } from "@/lib/product-page-data";
-import { buildChartSeries } from "@/lib/chart-series";
+import { loadProductPageData } from "@/lib/product/page-data";
+import { buildChartSeries } from "@/lib/pricing/chart-series";
 import { PriceSummary } from "@/components/product/price-summary";
 import { VariantPicker } from "@/components/product/variant-picker";
 import { DealScoreBadge } from "@/components/product/deal-score-badge";

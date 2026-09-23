@@ -1,5 +1,5 @@
-import type { Channel } from "@/lib/notification-settings";
-import type { DealScoreResult } from "@/lib/deal-score";
+import type { Channel } from "@/lib/account/notification-settings";
+import type { DealScoreResult } from "@/lib/pricing/deal-score";
 
 export type ConditionKey =
   | "target_price"

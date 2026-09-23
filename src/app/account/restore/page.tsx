@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
-import { restoreAccount, signOut } from "@/app/account/actions";
+import { restoreAccount, signOut } from "@/actions/account";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeDealScore, detectFakeSale, type PriceObservation } from "@/lib/deal-score";
+import { computeDealScore, detectFakeSale, type PriceObservation } from "@/lib/pricing/deal-score";
 
 const NOW = new Date("2026-06-15T03:00:00Z"); // 10:00 giờ VN
 

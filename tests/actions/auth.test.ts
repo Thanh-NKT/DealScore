@@ -20,7 +20,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { requestLoginCode, verifyLoginCode } = await import("@/app/login/actions");
+const { requestLoginCode, verifyLoginCode } = await import("@/actions/auth");
 
 function form(entries: Record<string, string>) {
   const f = new FormData();

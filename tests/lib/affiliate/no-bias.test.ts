@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
  * kỳ thứ gì liên quan tới hoa hồng — đừng "sửa" test này để nó xanh.
  */
 const GUARDED = [
-  "src/lib/deal-score.ts",
-  "src/lib/variant-pricing.ts",
+  "src/lib/pricing/deal-score.ts",
+  "src/lib/pricing/variant-pricing.ts",
   "src/lib/search.ts",
   "src/lib/alerts",
   "src/lib/watch",

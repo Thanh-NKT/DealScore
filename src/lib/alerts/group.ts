@@ -1,4 +1,4 @@
-import type { Channel } from "@/lib/notification-settings";
+import type { Channel } from "@/lib/account/notification-settings";
 import { MAX_DELIVERY_ATTEMPTS, RETRY_DELAYS_MINUTES } from "@/lib/watch/constants";
 
 export interface ClaimedDelivery {

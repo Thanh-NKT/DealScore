@@ -1,4 +1,4 @@
-import type { DailyPriceRow } from "@/lib/price-history";
+import type { DailyPriceRow } from "@/lib/pricing/price-history";
 
 export interface ChartPoint {
   day: string; // 'YYYY-MM-DD'

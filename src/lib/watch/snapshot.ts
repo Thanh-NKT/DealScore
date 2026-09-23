@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { computeDealScore } from "@/lib/deal-score";
-import { expandRollup, type DailyPriceRow } from "@/lib/price-history";
+import { computeDealScore } from "@/lib/pricing/deal-score";
+import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
 import { STALE_HOURS } from "@/lib/watch/constants";
 import type { VariantSnapshot } from "@/lib/watch/types";

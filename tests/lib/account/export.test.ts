@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAccountExport, exportFileName } from "@/lib/account-export";
+import { buildAccountExport, exportFileName } from "@/lib/account/export";
 
 const input = {
   exportedAt: new Date("2026-09-23T20:00:00Z"),

@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { updateSession } from "@/lib/supabase/proxy";
 
 // Next.js 16: convention "proxy" (thay cho "middleware" đã deprecated).
 export async function proxy(request: NextRequest) {

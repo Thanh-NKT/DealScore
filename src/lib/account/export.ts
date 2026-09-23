@@ -1,5 +1,5 @@
 import type { Database } from "@/lib/database.types";
-import { fromRow, type NotificationSettings } from "@/lib/notification-settings";
+import { fromRow, type NotificationSettings } from "@/lib/account/notification-settings";
 import type { ConversionStatus } from "@/lib/affiliate/normalize";
 
 type Row<T extends keyof Database["public"]["Tables"]> =

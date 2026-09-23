@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { describeWatch } from "@/lib/watch/describe";
-import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/notification-settings";
+import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/account/notification-settings";
 import type { VariantSnapshot, WatchConfig, WatchState } from "@/lib/watch/types";
 
 const config: WatchConfig = {

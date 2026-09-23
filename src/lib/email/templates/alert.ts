@@ -1,4 +1,4 @@
-import { RECOMMENDATION_LABEL, type Recommendation } from "@/lib/deal-score";
+import { RECOMMENDATION_LABEL, type Recommendation } from "@/lib/pricing/deal-score";
 import { formatVnd } from "@/lib/format";
 import { escapeHtml } from "@/lib/email/escape";
 

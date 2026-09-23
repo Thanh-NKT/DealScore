@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeDeliverAfter } from "@/lib/alerts/schedule";
-import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/notification-settings";
+import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/account/notification-settings";
 
 const vn = (s: string) => new Date(`${s}+07:00`);
 const iso = (d: Date) => d.toISOString();

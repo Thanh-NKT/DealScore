@@ -3,8 +3,8 @@ import {
   buildVariantPricing,
   type OfferRow,
   type VariantPricing,
-} from "@/lib/variant-pricing";
-import type { DailyPriceRow } from "@/lib/price-history";
+} from "@/lib/pricing/variant-pricing";
+import type { DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
 
 export interface ProductPageData {

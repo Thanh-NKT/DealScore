@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { SearchItem } from "@/lib/search";
 import { formatVnd } from "@/lib/format";
-import { RECOMMENDATION_LABEL } from "@/lib/deal-score";
+import { RECOMMENDATION_LABEL } from "@/lib/pricing/deal-score";
 
 interface ProductCardProps {
   item: SearchItem;

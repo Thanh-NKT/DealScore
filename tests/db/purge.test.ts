@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { purgeDeletedAccounts } from "@/lib/account-purge";
+import { purgeDeletedAccounts } from "@/lib/account/purge";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
 
 const created: TestUser[] = [];

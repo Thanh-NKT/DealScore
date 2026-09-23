@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { CURRENT_CONSENT_VERSION } from "@/lib/consent";
+import { CURRENT_CONSENT_VERSION } from "@/lib/account/consent";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { requireUser } from "@/lib/auth/session";
 import { sendEmail } from "@/lib/email";
@@ -11,10 +11,10 @@ import {
   parseNotificationSettings,
   toRow,
   type SettingsField,
-} from "@/lib/notification-settings";
+} from "@/lib/account/notification-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { purgeDate as computePurgeDate } from "@/lib/account-purge-date";
+import { purgeDate as computePurgeDate } from "@/lib/account/purge-date";
 import { siteUrl as getSiteUrl } from "@/lib/site-url";
 
 export type ActionResult<E extends string = string> =

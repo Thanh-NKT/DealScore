@@ -1,4 +1,4 @@
-import type { PriceObservation } from "@/lib/deal-score";
+import type { PriceObservation } from "@/lib/pricing/deal-score";
 import { toVnDate } from "@/lib/format";
 
 export interface DailyPriceRow {

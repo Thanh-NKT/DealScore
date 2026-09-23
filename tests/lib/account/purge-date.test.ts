@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { purgeCutoff, purgeDate } from "@/lib/account-purge-date";
+import { purgeCutoff, purgeDate } from "@/lib/account/purge-date";
 
 describe("purgeCutoff / purgeDate", () => {
   it("đúng 30 ngày", () => {

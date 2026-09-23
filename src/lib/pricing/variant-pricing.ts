@@ -2,7 +2,7 @@ import {
   computeDealScore,
   detectFakeSale,
   type DealScoreResult,
-} from "@/lib/deal-score";
+} from "@/lib/pricing/deal-score";
 import { discountPercent } from "@/lib/format";
 import {
   expandRollup,
@@ -10,7 +10,7 @@ import {
   medianWindow,
   type DailyPriceRow,
   type HistoryStats,
-} from "@/lib/price-history";
+} from "@/lib/pricing/price-history";
 
 export const FLASH_SALE_REASON =
   "⚠ Giá hiện tại là giá flash sale, chỉ kéo dài trong thời gian ngắn";

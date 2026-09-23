@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { acceptConsent, type ActionResult } from "@/app/account/actions";
+import { acceptConsent, type ActionResult } from "@/actions/account";
 
 interface ConsentFormProps {
   initialNext: string;

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { computeDealScore } from "@/lib/deal-score";
-import { expandRollup, type DailyPriceRow } from "@/lib/price-history";
+import { computeDealScore } from "@/lib/pricing/deal-score";
+import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 import {
   buildVariantPricing,
   FLASH_SALE_REASON,
   isOfferVisible,
   type OfferRow,
-} from "@/lib/variant-pricing";
+} from "@/lib/pricing/variant-pricing";
 
 /** Đồng hồ cố định (10:00 giờ VN), truyền vào qua `now`. */
 const NOW = new Date("2026-06-15T03:00:00Z");

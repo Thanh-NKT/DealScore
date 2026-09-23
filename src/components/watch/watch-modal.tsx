@@ -6,7 +6,7 @@ import {
   setWatchStatus,
   deleteWatch,
   type WatchActionResult,
-} from "@/app/actions/watch";
+} from "@/actions/watch";
 import { formatVnd } from "@/lib/format";
 import { suggestTargetPrice } from "@/lib/watch/form";
 import type { WatchConfig } from "@/lib/watch/types";

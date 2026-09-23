@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { formatVnd } from "@/lib/format";
-import { setWatchStatus, deleteWatch } from "@/app/actions/watch";
+import { setWatchStatus, deleteWatch } from "@/actions/watch";
 import { WatchModal } from "@/components/watch/watch-modal";
 import type { MyWatchItem } from "@/lib/watch/queries";
 import type { ConditionKey } from "@/lib/watch/types";

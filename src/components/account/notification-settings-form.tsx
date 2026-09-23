@@ -4,12 +4,12 @@ import { useActionState, useState } from "react";
 import {
   updateNotificationSettings,
   type ActionResult,
-} from "@/app/account/actions";
+} from "@/actions/account";
 import type {
   Frequency,
   NotificationSettings,
   SettingsField,
-} from "@/lib/notification-settings";
+} from "@/lib/account/notification-settings";
 
 interface NotificationSettingsFormProps {
   initialSettings: NotificationSettings;

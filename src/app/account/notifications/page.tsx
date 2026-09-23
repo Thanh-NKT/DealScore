@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   fromRow,
   DEFAULT_NOTIFICATION_SETTINGS,
-} from "@/lib/notification-settings";
+} from "@/lib/account/notification-settings";
 import { NotificationSettingsForm } from "@/components/account/notification-settings-form";
 
 export const dynamic = "force-dynamic";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MIN_DAYS_FOR_SCORE, RECOMMENDATION_LABEL } from "@/lib/deal-score";
+import { MIN_DAYS_FOR_SCORE, RECOMMENDATION_LABEL } from "@/lib/pricing/deal-score";
 
 /**
  * Test khói: chứng minh alias "@/" phân giải được tới src/.

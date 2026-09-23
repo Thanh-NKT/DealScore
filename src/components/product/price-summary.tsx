@@ -1,4 +1,4 @@
-import type { PricedOffer } from "@/lib/variant-pricing";
+import type { PricedOffer } from "@/lib/pricing/variant-pricing";
 import { formatVnd } from "@/lib/format";
 import { UpdatedAt } from "./updated-at";
 

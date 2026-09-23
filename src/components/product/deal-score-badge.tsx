@@ -3,7 +3,7 @@ import {
   MIN_DAYS_FOR_SCORE,
   MIN_OBSERVATIONS_FOR_SCORE,
   RECOMMENDATION_LABEL,
-} from "@/lib/deal-score";
+} from "@/lib/pricing/deal-score";
 
 /** Nói rõ còn thiếu gì (design §12.3): thiếu số ngày theo dõi, hay thiếu số ngày có dữ liệu. */
 function insufficientDetail(stats: DealScoreResult["stats"]): string {

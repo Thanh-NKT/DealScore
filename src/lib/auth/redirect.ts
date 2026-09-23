@@ -1,4 +1,4 @@
-import { needsConsent } from "@/lib/consent";
+import { needsConsent } from "@/lib/account/consent";
 
 /**
  * Đường dẫn nội bộ an toàn để quay về sau đăng nhập.

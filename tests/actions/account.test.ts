@@ -53,7 +53,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const actions = await import("@/app/account/actions");
+const actions = await import("@/actions/account");
 
 function form(entries: Record<string, string>) {
   const f = new FormData();

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { lookupErrorMessage, type LookupErrorCode } from "@/lib/lookup-messages";
+import { lookupErrorMessage, type LookupErrorCode } from "@/lib/lookup/messages";
 
 interface UrlLookupFormProps {
   autoFocus?: boolean;

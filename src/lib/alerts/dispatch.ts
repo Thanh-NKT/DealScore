@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_NOTIFICATION_SETTINGS, fromRow, resolveChannels, type Channel } from "@/lib/notification-settings";
-import type { Recommendation } from "@/lib/deal-score";
+import { DEFAULT_NOTIFICATION_SETTINGS, fromRow, resolveChannels, type Channel } from "@/lib/account/notification-settings";
+import type { Recommendation } from "@/lib/pricing/deal-score";
 import { sendEmail } from "@/lib/email";
 import { listUnsubscribeHeaders, renderAlertEmail, type AlertEmailItem } from "@/lib/email/templates/alert";
 import { describeTriggers } from "@/lib/alerts/triggers-text";

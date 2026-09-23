@@ -13,10 +13,10 @@ import { normalizeLookupInput, parseShopeeUrl } from "@/lib/shopee/parse-url";
 import { resolveShopeeRedirect } from "@/lib/shopee/resolve-redirect";
 import { beginIngest, beginLookup, finishLookup } from "@/lib/rate-limit";
 import { findExistingProductUrl, ingestShopeeItem } from "@/lib/ingest";
-import type { LookupErrorCode } from "@/lib/lookup-messages";
+import type { LookupErrorCode } from "@/lib/lookup/messages";
 
-export type { LookupErrorCode } from "@/lib/lookup-messages";
-export { lookupErrorMessage } from "@/lib/lookup-messages";
+export type { LookupErrorCode } from "@/lib/lookup/messages";
+export { lookupErrorMessage } from "@/lib/lookup/messages";
 
 export type LookupResult =
   | { status: "ok" | "ingested"; productUrl: string }

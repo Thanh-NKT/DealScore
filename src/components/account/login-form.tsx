@@ -5,7 +5,7 @@ import {
   requestLoginCode,
   verifyLoginCode,
   type LoginState,
-} from "@/app/login/actions";
+} from "@/actions/auth";
 import { authErrorFromCode } from "@/lib/auth/errors";
 
 interface LoginFormProps {

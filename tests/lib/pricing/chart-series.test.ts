@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildChartSeries } from "@/lib/chart-series";
-import type { DailyPriceRow } from "@/lib/price-history";
+import { buildChartSeries } from "@/lib/pricing/chart-series";
+import type { DailyPriceRow } from "@/lib/pricing/price-history";
 
 const NOW = new Date("2026-03-20T10:00:00Z");
 

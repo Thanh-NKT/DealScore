@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
-import { buildAccountExport, exportFileName } from "@/lib/account-export";
+import { buildAccountExport, exportFileName } from "@/lib/account/export";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 

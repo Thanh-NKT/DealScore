@@ -1,4 +1,4 @@
-import { isQuietHour, type NotificationSettings } from "@/lib/notification-settings";
+import { isQuietHour, type NotificationSettings } from "@/lib/account/notification-settings";
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;

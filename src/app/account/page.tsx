@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/account/actions";
+import { signOut } from "@/actions/account";
 import { MarketingToggle } from "@/components/account/marketing-toggle";
 
 export const dynamic = "force-dynamic";

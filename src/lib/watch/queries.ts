@@ -9,7 +9,7 @@ export type WatchActionResult =
   | { status: "idle" }
   | { status: "saved"; watchId: string }
   | { status: "error"; errors: Partial<Record<WatchField, string>> };
-import { fromRow, DEFAULT_NOTIFICATION_SETTINGS, type Channel } from "@/lib/notification-settings";
+import { fromRow, DEFAULT_NOTIFICATION_SETTINGS, type Channel } from "@/lib/account/notification-settings";
 import { describeWatch, type LatestAlert, type WatchView } from "@/lib/watch/describe";
 import { loadVariantSnapshots } from "@/lib/watch/snapshot";
 import type { ConditionKey, WatchConfig, WatchState } from "@/lib/watch/types";

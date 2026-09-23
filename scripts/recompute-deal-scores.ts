@@ -5,7 +5,7 @@
  * variant_deal_scores chỉ tồn tại vì không thể sort theo điểm trước khi phân
  * trang nếu điểm chỉ có trong Node.
  *
- * BẮT BUỘC dùng computeDealScore() từ src/lib/deal-score.ts. Cấm cài đặt lại
+ * BẮT BUỘC dùng computeDealScore() từ src/lib/pricing/deal-score.ts. Cấm cài đặt lại
  * logic tính điểm bằng SQL — hai bản cài đặt sẽ trôi khỏi nhau.
  *
  * Không truyền bestOffer, giống hệt điểm đầu trang (Đ7) — nếu khác thì danh
@@ -15,8 +15,8 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { computeDealScore } from "../src/lib/deal-score";
-import { expandRollup, type DailyPriceRow } from "../src/lib/price-history";
+import { computeDealScore } from "../src/lib/pricing/deal-score";
+import { expandRollup, type DailyPriceRow } from "../src/lib/pricing/price-history";
 import { toVnDate } from "../src/lib/format";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

@@ -59,7 +59,7 @@ supabase/
 
 ## Deal Score
 
-Xem [`src/lib/deal-score.ts`](src/lib/deal-score.ts). Công thức v0 gồm 3 thành phần
+Xem [`src/lib/pricing/deal-score.ts`](src/lib/pricing/deal-score.ts). Công thức v0 gồm 3 thành phần
 (percentile giá 50% · khoảng cách tới đáy 30% · so sánh giữa offer 20%), ngưỡng
 dữ liệu tối thiểu 14 ngày / 10 quan sát, và Fake Sale Detector v0. Thuần hàm →
 dễ backtest (mục C5).

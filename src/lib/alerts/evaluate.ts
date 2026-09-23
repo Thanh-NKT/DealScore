@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_NOTIFICATION_SETTINGS, fromRow, resolveChannels } from "@/lib/notification-settings";
+import { DEFAULT_NOTIFICATION_SETTINGS, fromRow, resolveChannels } from "@/lib/account/notification-settings";
 import { decideAlert } from "@/lib/watch/decide";
 import { configFromRow, stateFromRow, toRpcState, type WatchRow } from "@/lib/watch/rows";
 import { loadVariantSnapshots } from "@/lib/watch/snapshot";

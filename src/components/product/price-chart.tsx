@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { ChartSeries } from "@/lib/chart-series";
-import type { DailyPriceRow } from "@/lib/price-history";
+import type { ChartSeries } from "@/lib/pricing/chart-series";
+import type { DailyPriceRow } from "@/lib/pricing/price-history";
 import { formatVnd } from "@/lib/format";
 import { PriceChartHover } from "./price-chart-hover";
 
