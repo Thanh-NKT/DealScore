@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { NormalizedConversion } from "@/lib/affiliate/normalize";
+import { normalizeApiRow } from "@/lib/affiliate/normalize";
+import type { ShopeeAffiliateClient } from "@/lib/affiliate/shopee-client";
 
 export const UPSERT_BATCH = 500;
 
@@ -21,4 +23,47 @@ export async function upsertNormalizedConversions(
     total.matched += r?.matched ?? 0;
   }
   return total;
+}
+
+export const PULL_WINDOW_DAYS = 60; // G6
+const PAGE_LIMIT = 500;
+
+export async function pullConversions(
+  opts: { client: ShopeeAffiliateClient; now: Date; deadline?: number },
+  upsert: (rows: NormalizedConversion[]) => Promise<{ inserted: number; updated: number; matched: number }> =
+    upsertNormalizedConversions,
+): Promise<{ pages: number; rows: number; rejected: number; inserted: number; updated: number; matched: number; complete: boolean }> {
+  const out = { pages: 0, rows: 0, rejected: 0, inserted: 0, updated: 0, matched: 0, complete: false };
+  const start = new Date(opts.now.getTime() - PULL_WINDOW_DAYS * 86_400_000);
+  let scrollId: string | null = null;
+
+  do {
+    // Dừng giữa chừng vô hại: lượt sau kéo lại từ đầu, upsert là idempotent.
+    if (opts.deadline && Date.now() > opts.deadline) return out;
+
+    const page = await opts.client.conversionReport({ start, end: opts.now, scrollId, limit: PAGE_LIMIT });
+    out.pages++;
+    const rows: NormalizedConversion[] = [];
+    for (const order of page.orders) {
+      for (const item of order.items) {
+        const n = normalizeApiRow(order, item);
+        if (n.ok) rows.push(n.row);
+        else {
+          out.rejected++;
+          console.warn(`pullConversions: bỏ qua dòng — ${n.reason}`); // không log raw
+        }
+      }
+    }
+    if (rows.length > 0) {
+      const r = await upsert(rows);
+      out.rows += rows.length;
+      out.inserted += r.inserted;
+      out.updated += r.updated;
+      out.matched += r.matched;
+    }
+    scrollId = page.nextScrollId;
+  } while (scrollId);
+
+  out.complete = true;
+  return out;
 }
