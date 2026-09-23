@@ -192,7 +192,8 @@ export async function dispatchDueDeliveries(
             e.offerId && e.marketplace
               ? `${site}/go/${e.marketplace}/${e.offerId}?src=email&watch=${e.watchId}&alert=${e.id}`
               : productUrl(site, e),
-          manageUrl: `${site}/tai-khoan/watch/${e.watchId}`,
+          // Chưa có trang chi tiết /tai-khoan/watch/[id] — trỏ vào danh sách, cuộn tới Watch đó.
+          manageUrl: `${site}/tai-khoan/watch#${e.watchId}`,
           pauseUrl: `${site}/huy-dang-ky?t=${signUnsubscribeToken({ kind: "watch", userId: group.userId, watchId: e.watchId }, secret)}`,
         }));
         const mail = renderAlertEmail({
