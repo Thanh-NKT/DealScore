@@ -10,6 +10,7 @@ import { signUnsubscribeToken } from "@/lib/alerts/unsubscribe-token";
 import { groupDeliveries, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
 import type { TriggerType } from "@/lib/watch/types";
 import { siteUrl } from "@/lib/site-url";
+import { buildPushPayload } from "@/lib/push/payload";
 
 export interface PushPayload {
   title: string;
@@ -207,15 +208,10 @@ export async function dispatchDueDeliveries(
         });
         providerId = res.id;
       } else {
-        const payload: PushPayload =
-          items.length === 1
-            ? { title: items[0].product.name, body: `Còn ${items[0].price.toLocaleString("vi-VN")} ₫`, url: productUrl(site, items[0]), tag: "kairo-alert" }
-            : {
-                title: `${items.length} sản phẩm có tin mới`,
-                body: `${items.slice(0, 2).map((e) => e.product.name).join(", ")}…`,
-                url: `${site}/tai-khoan/watch`,
-                tag: "kairo-alert",
-              };
+        const payload = buildPushPayload(
+          items.map((e) => ({ productName: e.product.name, price: e.price, url: productUrl(site, e) })),
+          site,
+        );
         const r = await push(group.userId, payload);
         if (r.delivered === 0 && r.failed === 0) {
           await update(ids, { status: "skipped", skip_reason: "no_device" });
