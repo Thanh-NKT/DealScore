@@ -636,6 +636,8 @@ export type Database = {
       offers: {
         Row: {
           external_model_id: string | null
+          free_shipping: boolean | null
+          has_voucher: boolean | null
           id: string
           listing_id: string
           match_confidence: number | null
@@ -644,6 +646,8 @@ export type Database = {
         }
         Insert: {
           external_model_id?: string | null
+          free_shipping?: boolean | null
+          has_voucher?: boolean | null
           id?: string
           listing_id: string
           match_confidence?: number | null
@@ -652,6 +656,8 @@ export type Database = {
         }
         Update: {
           external_model_id?: string | null
+          free_shipping?: boolean | null
+          has_voucher?: boolean | null
           id?: string
           listing_id?: string
           match_confidence?: number | null
@@ -1196,6 +1202,19 @@ export type Database = {
         }
         Relationships: []
       }
+      metrics_matching_quality: {
+        Row: {
+          auto: number | null
+          manual: number | null
+          marketplace: string | null
+          offers: number | null
+          pending: number | null
+          rejected: number | null
+          suggestions_accepted: number | null
+          suggestions_reviewed: number | null
+        }
+        Relationships: []
+      }
       metrics_retention_d30: {
         Row: {
           cohort_size: number | null
@@ -1219,16 +1238,25 @@ export type Database = {
         }[]
       }
       collector_candidates: {
-        Args: { p_limit: number }
+        Args: { p_limit: number; p_marketplaces?: string[] }
         Returns: {
           external_item_id: string
           id: string
           last_observed_at: string
+          marketplace: string
           refresh_priority: number
           watched: boolean
         }[]
       }
       f_unaccent: { Args: { "": string }; Returns: string }
+      filter_availability: {
+        Args: never
+        Returns: {
+          free_shipping: boolean
+          rating: boolean
+          voucher: boolean
+        }[]
+      }
       ingest_shopee_item: { Args: { p: Json }; Returns: Json }
       latest_price_per_offer: {
         Args: { p_variant_id: string }
@@ -1315,9 +1343,12 @@ export type Database = {
         Args: {
           p_brands?: string[]
           p_category_id?: string
+          p_free_shipping?: boolean
+          p_has_voucher?: boolean
           p_limit?: number
           p_max_price?: number
           p_min_price?: number
+          p_min_rating?: number
           p_offset?: number
           p_q?: string
           p_sort?: string

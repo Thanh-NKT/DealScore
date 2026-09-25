@@ -13,6 +13,7 @@ import { errorRate, selectDueListings, type CollectorListing } from "@/lib/colle
 import { recomputeDealScores } from "@/lib/pricing/recompute-scores";
 import { evaluateWatches } from "@/lib/alerts/evaluate";
 import { toVnDate } from "@/lib/format";
+import { configuredMarketplaces } from "@/lib/marketplaces";
 
 /**
  * One collector run (1.10): Collector → Price DB → Deal Engine → Alert Engine.
@@ -32,7 +33,11 @@ export interface CollectorDeps {
 }
 
 async function loadCandidates(client: SupabaseClient<Database>, poolSize: number): Promise<CollectorListing[]> {
-  const { data, error } = await client.rpc("collector_candidates", { p_limit: poolSize });
+  // Only marketplaces with a data source; today that is Shopee (API or the dev fake).
+  const { data, error } = await client.rpc("collector_candidates", {
+    p_limit: poolSize,
+    p_marketplaces: configuredMarketplaces(),
+  });
   if (error) throw new Error(`collector_candidates failed: ${error.message}`);
   return (data ?? []).map((r) => ({
     id: r.id,

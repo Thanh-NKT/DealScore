@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { buildAffiliateUrl, encodeSubId, type ClickSource } from "@/lib/affiliate/link";
+import { getAdapter, type MarketplaceAdapter } from "@/lib/marketplaces";
 
 interface RouteProps {
   params: Promise<{ marketplace: string; offerId: string }>;
@@ -13,15 +14,14 @@ const SESSION_COOKIE = "kairo_sid";
 const SOURCES: readonly ClickSource[] = ["web", "extension", "email", "push"];
 
 /**
- * Allowed redirect targets. Second line of defense: even if affiliate data
- * is tampered with, /go never becomes an open redirect from our domain to a scam page.
+ * Allowed redirect targets: the hosts of the listing's OWN marketplace (src/lib/marketplaces).
+ * Second line of defense: even if affiliate data is tampered with, /go never becomes an open
+ * redirect from our domain to a scam page — nor to another marketplace.
  */
-const ALLOWED_TARGET_HOSTS = new Set(["shopee.vn", "www.shopee.vn", "s.shopee.vn", "shope.ee", "shp.ee"]);
-
-function isAllowedTarget(raw: string): boolean {
+function isAllowedTarget(raw: string, adapter: MarketplaceAdapter): boolean {
   try {
     const u = new URL(raw);
-    return u.protocol === "https:" && u.port === "" && ALLOWED_TARGET_HOSTS.has(u.hostname.toLowerCase());
+    return u.protocol === "https:" && u.port === "" && adapter.targetHosts.has(u.hostname.toLowerCase());
   } catch {
     return false;
   }
@@ -39,6 +39,8 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
 
   // offerId goes straight into a uuid column: a junk value makes the query fail → 500 instead of 404.
   if (!UUID_RE.test(offerId)) return notFound("Không tìm thấy offer");
+  const adapter = getAdapter(marketplace);
+  if (!adapter) return notFound("Không tìm thấy offer");
 
   const rawSrc = searchParams.get("src");
   const source: ClickSource = SOURCES.includes(rawSrc as ClickSource) ? (rawSrc as ClickSource) : "web";
@@ -69,7 +71,7 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
     if (offer.match_status === "rejected" || listing.status !== "active") {
       return notFound("Offer không còn được theo dõi");
     }
-    if (!listing.url || !isAllowedTarget(listing.url)) {
+    if (!listing.url || !isAllowedTarget(listing.url, adapter)) {
       console.error(`/go: listings.url outside allowlist for offer ${offerId}: ${listing.url}`);
       return notFound("Offer chưa có đường dẫn mua hàng");
     }
@@ -105,7 +107,8 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       warnedMissingAffiliateId = true;
       console.warn("/go: SHOPEE_AFFILIATE_ID missing — every purchase uses the plain link, no commission");
     }
-    const target = buildAffiliateUrl({
+    // Affiliate links exist only for Shopee so far; other marketplaces get the plain product link.
+    const target = adapter.id !== "shopee" ? { url: listing.url, kind: "origin" as const } : buildAffiliateUrl({
       mode: process.env.AFFILIATE_LINK_MODE === "short_link" ? "short_link" : "an_redir",
       originUrl: listing.url,
       affiliateId,
@@ -113,7 +116,7 @@ export async function GET(request: NextRequest, { params }: RouteProps) {
       shortLink: aff?.short_link ?? null,
       eligible: aff?.eligible ?? true,
     });
-    if (!isAllowedTarget(target.url)) {
+    if (!isAllowedTarget(target.url, adapter)) {
       console.error(`/go: redirect target outside allowlist for offer ${offerId}: ${target.url}`);
       return notFound("Offer chưa có đường dẫn mua hàng");
     }
