@@ -22,3 +22,5 @@
 - [ ] Dashboard sức khỏe pipeline: lượt collector gần nhất, tỷ lệ lỗi, offer stale > 48 giờ
 - [ ] Cảnh báo khi sync fail / stale (email cho admin)
 - [ ] Báo cáo affiliate: doanh thu, tỷ lệ khớp đơn ↔ click (đọc view có sẵn)
+- [ ] Dashboard chất lượng dữ liệu (G2): đọc view `metrics_matching_quality` (offer theo trạng thái match và theo sàn, tỷ lệ gợi ý được duyệt)
+- [ ] Theo dõi đóng góp từ extension: số quan sát chờ / đã xác nhận, người góp bất thường

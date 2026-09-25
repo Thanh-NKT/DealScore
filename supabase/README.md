@@ -130,3 +130,19 @@ Mục tiêu: **RPO ≤ 24 giờ** (lớp 1), **RTO ≤ 4 giờ**. Khôi phục b
 
 Lịch sử giá (`price_observations`) là thứ **không lấy lại được** nếu mất — ưu tiên kiểm tra bản backup có nó.
 Diễn tập khôi phục vào Supabase local mỗi quý (`supabase start` rồi hai lệnh `psql` ở trên với DB local).
+
+## Google login (Giai đoạn 2)
+
+1. Google Cloud Console → OAuth client (Web). *Authorized redirect URI* = `<SUPABASE_URL>/auth/v1/callback`
+   (local: `http://127.0.0.1:54321/auth/v1/callback`).
+2. Cloud: Dashboard → Authentication → Providers → Google: dán client id / secret.
+   Local: đặt `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` / `_SECRET`, sửa `enabled = true` trong `config.toml`,
+   `supabase stop && supabase start`.
+3. App: `NEXT_PUBLIC_GOOGLE_AUTH=1`. Luồng: `signInWithGoogle` → Google → `/auth/callback` (đổi code lấy phiên)
+   → AuthGate như đăng nhập bằng mật khẩu. Email Google trùng email đã đăng ký sẽ được Supabase gộp tài khoản.
+
+## Chrome extension (Giai đoạn 2)
+
+Migration 0013: `extension_observations` (giá thô do người dùng chia sẻ) chỉ vào `price_observations`
+(`source='extension'`) khi được xác nhận chéo — xem `src/lib/extension/corroborate.ts`. Đặt `EXTENSION_IDS` ở
+production. Hướng dẫn nạp extension: `extension/README.md`.

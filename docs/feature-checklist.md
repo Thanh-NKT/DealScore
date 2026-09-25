@@ -128,9 +128,13 @@
 ---
 
 ## 📈 Giai đoạn 2 — Mở rộng & tạo moat (tháng 4–6)
-- [ ] Chrome Extension (nhận diện trang Shopee, Deal Score, tạo Watch, thu quan sát giá có đồng ý)
+- [x] Chrome Extension (nhận diện trang Shopee, Deal Score, tạo Watch, thu quan sát giá có đồng ý)
+  - `extension/` (MV3): khung Kairo trên trang Shopee, Watch một chạm, chia sẻ giá khi bật (mặc định tắt). API `/api/extension/*` chỉ nhận Origin của extension.
+  - ✏️ Giá từ extension chỉ vào lịch sử khi **xác nhận chéo** (≥ 2 người khác nhau lệch ≤ 2% trong 24 giờ, hoặc khớp giá API). ⚠️ Bộ đọc trang (E1) và cookie phiên (E2) là giả định, phải kiểm trên Shopee/Chrome thật; cần icon + `EXTENSION_IDS` trước khi lên Web Store.
 - [ ] Mở rộng nguồn: TikTok Shop → Lazada
-- [ ] So sánh giữa các sàn (khi ≥ 2 sàn)
+  - ✏️ Đã có khung adapter đa sàn (`src/lib/marketplaces/`): nhận diện URL TikTok Shop / Lazada, `/go` và collector theo sàn. ⚠️ Chưa có nguồn dữ liệu (chờ spike API).
+- [x] So sánh giữa các sàn (khi ≥ 2 sàn)
+  - Khối "So sánh giữa các sàn" trên trang sản phẩm (`compareMarketplaces`), chỉ hiện khi ≥ 2 sàn có giá còn hàng thật.
 - [x] Product comparison A vs B
   - `/compare?a=&b=` (`src/lib/compare/build.ts`): câu tóm tắt, bảng tiêu chí có đánh dấu bên tốt hơn, bảng thông số; nút "So sánh" trên trang sản phẩm; chọn sản phẩm bằng autocomplete, không JS vẫn chọn được.
 - [x] Price Drop Radar (trang sản phẩm giảm mạnh)
@@ -142,9 +146,13 @@
 - [x] Deal Score v1 (thêm trend, volatility, stock, seller quality)
   - ✏️ v1 = v0 + tối đa ±15 điểm, mỗi điều chỉnh có lý do; mặc định qua `scoreDeal()`. Điểm headline chỉ dùng trend/volatility (khớp điểm ở danh sách); tồn kho và người bán áp cho từng offer. Backtest hằng tuần chạy cả v0 và v1.
 - [ ] Product matching v1 + dashboard chất lượng dữ liệu
-- [ ] Google login
-- [ ] Filter nâng cao (rating, freeship, voucher)
+  - ✏️ Matching v1 xong: GTIN, bí danh brand, bộ nhãn (0 match sai, recall 17/17). View `metrics_matching_quality`. ⚠️ Dashboard thuộc Admin (`docs/admin-checklist.md`).
+- [x] Google login
+  - `signInWithGoogle` → `/auth/callback` → AuthGate. ⚠️ Nút ẩn cho tới khi cấu hình OAuth client + `NEXT_PUBLIC_GOOGLE_AUTH=1` (`supabase/README.md`).
+- [x] Filter nâng cao (rating, freeship, voucher)
+  - Lọc theo offer tốt nhất của variant đại diện; nhóm lọc chỉ hiện khi có dữ liệu. ✏️ Freeship/voucher mới có nguồn từ extension (đã xác nhận chéo).
 - [ ] Mở rộng catalog sang ngách lân cận
+  - Việc vận hành, không có code.
 
 **Điều kiện sang G3:** dữ liệu ≥ 2 sàn ổn định, matching ≥ 95% · Watch & doanh thu affiliate tăng theo tháng · SEO chiếm tỷ trọng traffic đáng kể.
 

@@ -69,7 +69,8 @@ Never mix these up; the choice encodes the security model.
   `src/app/api/unsubscribe/route.ts`, `src/app/api/cron/alerts/route.ts`, `scripts/run-alerts.ts`,
   `src/lib/affiliate/import.ts`, `src/app/api/cron/conversions/route.ts`, `scripts/import-conversions.ts`,
   `src/lib/collector/run.ts`, `src/lib/pricing/backtest-job.ts`, `src/app/api/cron/{collector,backtest}/route.ts`,
-  `scripts/run-{collector,backtest}.ts`, `src/app/api/health/route.ts`, `src/lib/analytics/track.ts`.
+  `scripts/run-{collector,backtest}.ts`, `src/app/api/health/route.ts`, `src/lib/analytics/track.ts`,
+  `src/lib/extension/contribute.ts`, `src/app/api/extension/observations/route.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
@@ -98,6 +99,12 @@ Never mix these up; the choice encodes the security model.
   không query; draft là `noindex`. Trang danh mục `/{category}` và `/brand/{slug}`.
 - **Analytics (1.11):** first-party, bảng `analytics_events` + view `metrics_*`. Chỉ ghi qua `trackAfter()` phía server,
   thuộc tính theo allow-list trong `src/lib/analytics/events.ts` (thêm sự kiện = sửa cả check constraint).
+- **Đa sàn (G2):** mọi hiểu biết về URL / nguồn dữ liệu / đích `/go` của từng sàn nằm trong `src/lib/marketplaces/`
+  (TikTok Shop, Lazada: giả định, chưa có dữ liệu). So sánh giữa sàn chỉ hiện khi có ≥ 2 sàn thật.
+- **Extension (G2):** `extension/` (MV3) chỉ nói chuyện với `/api/extension/*`; các route này chỉ nhận Origin của
+  extension (`EXTENSION_IDS`). Giá do extension gửi chỉ vào lịch sử khi `corroborate()` xác nhận chéo.
+- `src/lib/supabase/proxy.ts` — `updateSession()`, called from `src/proxy.ts` on every
+  request to refresh the auth token. Do not insert logic between `createServerClient` and the
   `getUser()` call there.
 
 **RLS model** (`supabase/migrations/0001_init.sql`): RLS is enabled **only** on user-owned
