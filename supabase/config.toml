@@ -304,6 +304,15 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+# Google sign-in (Phase 2). Create an OAuth client (Web) in Google Cloud, authorised redirect URI
+# = <API_URL>/auth/v1/callback (local: http://127.0.0.1:54321/auth/v1/callback), put the id/secret in
+# the env below, set enabled = true, restart Supabase, then NEXT_PUBLIC_GOOGLE_AUTH=1 in the app.
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false
+
 [auth.external.apple]
 enabled = false
 client_id = ""

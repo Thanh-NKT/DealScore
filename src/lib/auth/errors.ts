@@ -8,6 +8,8 @@ export type AuthErrorCode =
 
 export interface AuthErrorInfo {
   code: AuthErrorCode;
+  | "oauth_failed" // Google sign-in did not complete (provider error, expired code)
+  | "oauth_cancelled" // the user closed or refused the Google consent screen
   message: string;
   retryAfterSeconds?: number;
 }
@@ -27,6 +29,8 @@ export function normalizeEmail(raw: string): string {
   return (raw ?? "").trim().toLowerCase();
 }
 
+  oauth_failed: "Chưa đăng nhập được bằng Google. Hãy thử lại, hoặc dùng email và mật khẩu.",
+  oauth_cancelled: "Bạn đã hủy đăng nhập bằng Google. Có thể thử lại hoặc dùng email và mật khẩu.",
 /** Format check only — no network call. */
 export function isValidEmail(email: string): boolean {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
