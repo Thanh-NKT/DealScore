@@ -9,7 +9,14 @@ export interface SearchParams {
   maxPrice?: number;
   sort?: "relevance" | "deal_score" | "price_asc" | "price_desc" | "updated";
   page?: number;
+  /** Seller rating of the best offer (Phase 2 advanced filters). */
+  minRating?: MinRating;
+  freeShipping?: boolean;
+  hasVoucher?: boolean;
 }
+
+export const MIN_RATINGS = [4.5, 4.8] as const;
+export type MinRating = (typeof MIN_RATINGS)[number];
 
 export interface SearchItem {
   productId: string;
@@ -82,6 +89,11 @@ export function parseSearchParams(
     maxPrice = temp;
   }
 
+  const rawRating = Number(getParam("rating"));
+  const minRating = MIN_RATINGS.find((r) => r === rawRating);
+  const freeShipping = getParam("freeship") === "1" ? true : undefined;
+  const hasVoucher = getParam("voucher") === "1" ? true : undefined;
+
   const rawSort = getParam("sort");
   const validSorts = ["relevance", "deal_score", "price_asc", "price_desc", "updated"] as const;
   let sort: SearchParams["sort"] = validSorts.find((s) => s === rawSort);
@@ -103,6 +115,9 @@ export function parseSearchParams(
     maxPrice,
     sort,
     page,
+    minRating,
+    freeShipping,
+    hasVoucher,
   };
 }
 
@@ -118,6 +133,9 @@ export function toSearchParams(p: SearchParams): URLSearchParams {
   }
   if (p.minPrice != null) sp.set("min", p.minPrice.toString());
   if (p.maxPrice != null) sp.set("max", p.maxPrice.toString());
+  if (p.minRating != null) sp.set("rating", String(p.minRating));
+  if (p.freeShipping) sp.set("freeship", "1");
+  if (p.hasVoucher) sp.set("voucher", "1");
   // Don't write default values into the URL: doing so produces two different paths
   // for the same page — duplicate content, harmful to SEO (section 1.7).
   const defaultSort = p.q ? "relevance" : "updated";
@@ -152,6 +170,9 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     p_sort: params.sort || "relevance",
     p_limit: PAGE_SIZE,
     p_offset: offset,
+    p_min_rating: params.minRating ?? undefined,
+    p_free_shipping: params.freeShipping ?? undefined,
+    p_has_voucher: params.hasVoucher ?? undefined,
   });
 
   // Do NOT swallow errors and do NOT return made-up data. For a price-lookup product, showing
@@ -187,7 +208,17 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
 export interface FilterFacets {
   categories: Array<{ slug: string; name: string }>;
   brands: string[];
+  /** Which advanced filters have data behind them; the UI hides the empty ones. */
+  advanced: AdvancedFilterAvailability;
 }
+
+export interface AdvancedFilterAvailability {
+  rating: boolean;
+  freeShipping: boolean;
+  voucher: boolean;
+}
+
+export const NO_ADVANCED_FILTERS: AdvancedFilterAvailability = { rating: false, freeShipping: false, voucher: false };
 
 /**
  * Categories and brands that ACTUALLY exist in the catalog, for building filters.
@@ -202,10 +233,16 @@ export interface FilterFacets {
 export async function getFilterFacets(): Promise<FilterFacets> {
   const supabase = await createClient();
 
-  const [catRes, brandRes] = await Promise.all([
+  const [catRes, brandRes, availRes] = await Promise.all([
     supabase.from("categories").select("slug, name").order("sort_order"),
     supabase.rpc("product_brands"),
+    supabase.rpc("filter_availability"),
   ]);
+  if (availRes.error) throw new Error(`Failed to read filter availability: ${availRes.error.message}`);
+  const avail = availRes.data?.[0];
+  const advanced: AdvancedFilterAvailability = avail
+    ? { rating: avail.rating, freeShipping: avail.free_shipping, voucher: avail.voucher }
+    : NO_ADVANCED_FILTERS;
 
   if (catRes.error) throw new Error(`Failed to read categories: ${catRes.error.message}`);
   if (brandRes.error) throw new Error(`Failed to read brands: ${brandRes.error.message}`);
@@ -215,7 +252,7 @@ export async function getFilterFacets(): Promise<FilterFacets> {
     .filter((b): b is string => !!b)
     .sort((a, b) => a.localeCompare(b, "vi"));
 
-  return { categories: catRes.data ?? [], brands };
+  return { categories: catRes.data ?? [], brands, advanced };
 }
 
 export interface AutocompleteItem {

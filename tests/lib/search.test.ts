@@ -72,3 +72,19 @@ describe("parseSearchParams — catId", () => {
     expect(parseSearchParams({ catId: id }).categoryId).toBe(id);
   });
 });
+
+describe("advanced filters (Phase 2)", () => {
+  it("parses rating, free shipping and voucher, ignoring unknown values", () => {
+    const p = parseSearchParams(new URLSearchParams("rating=4.8&freeship=1&voucher=1"));
+    expect(p).toMatchObject({ minRating: 4.8, freeShipping: true, hasVoucher: true });
+    const bad = parseSearchParams(new URLSearchParams("rating=3&freeship=yes&voucher=0"));
+    expect(bad.minRating).toBeUndefined();
+    expect(bad.freeShipping).toBeUndefined();
+    expect(bad.hasVoucher).toBeUndefined();
+  });
+
+  it("round-trips through the URL", () => {
+    const qs = toSearchParams(parseSearchParams(new URLSearchParams("q=ssd&rating=4.5&freeship=1"))).toString();
+    expect(qs).toBe("q=ssd&rating=4.5&freeship=1");
+  });
+});
