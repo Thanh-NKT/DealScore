@@ -106,6 +106,16 @@ describe("buildComparison", () => {
     ]);
   });
 
+  it("summary says which is cheaper by how much, and which is at Nên mua", () => {
+    const c = buildComparison(page({ slug: "a", price: 900_000, rec: "buy", score: 80 }), page({ slug: "b", price: 1_000_000, rec: "wait", score: 60 }));
+    expect(c.summary).toEqual(["A đang rẻ hơn 100.000đ (10%).", "Chỉ A đang ở mức Nên mua theo lịch sử giá của chính nó."]);
+  });
+
+  it("summary never compares a missing price", () => {
+    const c = buildComparison(page({ slug: "a", price: null }), page({ slug: "b" }));
+    expect(c.summary[0]).toMatch(/chưa so được giá/);
+  });
+
   it("sides carry name, price and a link to the exact variant", () => {
     const c = buildComparison(page({ slug: "a" }), page({ slug: "b" }));
     expect(c.a).toMatchObject({ name: "A", href: "/ssd/a?variant=a-v", recommendation: "wait" });

@@ -33,6 +33,8 @@ export interface Comparison {
   b: CompareSide;
   rows: CompareRow[];
   specRows: CompareRow[];
+  /** One or two plain sentences answering "which one, and why" — facts only, no advice. */
+  summary: string[];
 }
 
 const TIE_RATIO = 0.01;
@@ -77,6 +79,12 @@ function signedPct(x: number | null): string {
   if (x == null) return DASH;
   const n = Math.round(x * 100);
   return n === 0 ? "0%" : n > 0 ? `+${n}%` : `−${Math.abs(n)}%`;
+}
+
+/** "2026-06-01" → "01/06/2026", the way dates read in Vietnamese. */
+function vnDate(day: string | null): string {
+  const m = day?.match(/^(d{4})-(d{2})-(d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : DASH;
 }
 
 function specText(v: unknown): string {
@@ -125,8 +133,8 @@ export function buildComparison(pa: ProductPageData, pb: ProductPageData): Compa
     {
       key: "tracking",
       label: "Kairo theo dõi từ",
-      a: pa.pricing.trackingSince ?? DASH,
-      b: pb.pricing.trackingSince ?? DASH,
+      a: vnDate(pa.pricing.trackingSince),
+      b: vnDate(pb.pricing.trackingSince),
       winner: null,
     },
     {
@@ -149,5 +157,27 @@ export function buildComparison(pa: ProductPageData, pb: ProductPageData): Compa
     winner: null,
   }));
 
-  return { a, b, rows, specRows };
+  return { a, b, rows, specRows, summary: summarize(a, b) };
+}
+
+function summarize(a: CompareSide, b: CompareSide): string[] {
+  const out: string[] = [];
+  if (a.price != null && b.price != null) {
+    const w = pick(a.price, b.price, "lower");
+    if (w === "tie") {
+      out.push("Hai sản phẩm đang có giá gần như bằng nhau.");
+    } else if (w) {
+      const [cheap, dear] = w === "a" ? [a, b] : [b, a];
+      const diff = (dear.price as number) - (cheap.price as number);
+      const pct = Math.round((diff / (dear.price as number)) * 100);
+      out.push(`${cheap.name} đang rẻ hơn ${formatVnd(diff)} (${pct}%).`);
+    }
+  } else if (a.price == null || b.price == null) {
+    out.push("Một trong hai sản phẩm chưa có giá còn hàng, nên chưa so được giá.");
+  }
+  const buyA = a.recommendation === "buy";
+  const buyB = b.recommendation === "buy";
+  if (buyA !== buyB) out.push(`Chỉ ${buyA ? a.name : b.name} đang ở mức Nên mua theo lịch sử giá của chính nó.`);
+  else if (buyA && buyB) out.push("Cả hai đều đang ở mức Nên mua theo lịch sử giá của từng sản phẩm.");
+  return out;
 }

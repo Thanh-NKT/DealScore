@@ -131,11 +131,16 @@
 - [ ] Chrome Extension (nhận diện trang Shopee, Deal Score, tạo Watch, thu quan sát giá có đồng ý)
 - [ ] Mở rộng nguồn: TikTok Shop → Lazada
 - [ ] So sánh giữa các sàn (khi ≥ 2 sàn)
-- [ ] Product comparison A vs B
-- [ ] Price Drop Radar (trang sản phẩm giảm mạnh)
-- [ ] Trang "Trending / Most Watched"
-- [ ] Share deal kèm OG image
-- [ ] Deal Score v1 (thêm trend, volatility, stock, seller quality)
+- [x] Product comparison A vs B
+  - `/compare?a=&b=` (`src/lib/compare/build.ts`): câu tóm tắt, bảng tiêu chí có đánh dấu bên tốt hơn, bảng thông số; nút "So sánh" trên trang sản phẩm; chọn sản phẩm bằng autocomplete, không JS vẫn chọn được.
+- [x] Price Drop Radar (trang sản phẩm giảm mạnh)
+  - ✏️ `/radar`: giảm ≥ 10% so với **trung vị 30 ngày thật** (không so giá niêm yết), còn hàng, giá mới trong 48 giờ; lọc theo danh mục.
+- [x] Trang "Trending / Most Watched"
+  - `/trending`: "Nhiều người theo dõi" (≥ 2 Watch) và "Đang được quan tâm" (lượt xem 7 ngày tăng, ≥ 3); RPC chỉ trả số đếm tổng hợp.
+- [x] Share deal kèm OG image
+  - Nút "Chia sẻ" (Web Share → sao chép link → hiện link để copy tay), link `?ref=share`, sự kiện `deal_shared` / `share_opened`; ảnh OG theo sản phẩm từ 1.7.
+- [x] Deal Score v1 (thêm trend, volatility, stock, seller quality)
+  - ✏️ v1 = v0 + tối đa ±15 điểm, mỗi điều chỉnh có lý do; mặc định qua `scoreDeal()`. Điểm headline chỉ dùng trend/volatility (khớp điểm ở danh sách); tồn kho và người bán áp cho từng offer. Backtest hằng tuần chạy cả v0 và v1.
 - [ ] Product matching v1 + dashboard chất lượng dữ liệu
 - [ ] Google login
 - [ ] Filter nâng cao (rating, freeship, voucher)
