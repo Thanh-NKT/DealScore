@@ -3,7 +3,7 @@
  *
  * Privacy by construction: every event has an allow-list of properties, each a number, boolean,
  * UUID or a value from a fixed enum. Anything else is dropped — no emails, search text or URLs can
- * reach the table. Keep EVENT_NAMES in sync with the check constraint in migration 0010.
+ * reach the table. Keep EVENT_NAMES in sync with the check constraint (latest: migration 0011).
  */
 
 export const EVENT_NAMES = [
@@ -15,6 +15,8 @@ export const EVENT_NAMES = [
   "watch_created",
   "watch_deleted",
   "push_enabled",
+  "deal_shared",
+  "share_opened",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];
@@ -39,6 +41,8 @@ const SCHEMA: Record<EventName, Record<string, PropType>> = {
   watch_created: { variant_id: "uuid", condition_count: "number" },
   watch_deleted: {},
   push_enabled: {},
+  deal_shared: { product_id: "uuid", method: ["native", "copy"] },
+  share_opened: { product_id: "uuid" },
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

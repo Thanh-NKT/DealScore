@@ -15,6 +15,8 @@ describe("event names", () => {
         "signup_completed",
         "watch_created",
         "watch_deleted",
+        "deal_shared",
+        "share_opened",
       ].sort(),
     );
   });
