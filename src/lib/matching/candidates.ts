@@ -22,7 +22,7 @@ export async function loadMatchCandidates(
 
   const { data, error } = await client
     .from("products")
-    .select("id, brand, model, canonical_name, product_variants ( id, variant_key, specs )")
+    .select("id, brand, model, gtin, canonical_name, product_variants ( id, variant_key, specs )")
     .eq("status", "verified")
     .ilike("brand", brand.replace(/[%_\\]/g, (c) => `\\${c}`))
     .limit(200);
@@ -39,6 +39,7 @@ export async function loadMatchCandidates(
       variantKey: v.variant_key,
       variantSpecs: (v.specs ?? {}) as Record<string, unknown>,
       siblingCount: variants.length,
+      gtin: p.gtin,
     }));
   });
 }

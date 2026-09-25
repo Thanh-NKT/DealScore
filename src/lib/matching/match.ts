@@ -1,5 +1,6 @@
 /**
- * Product matching v0 (1.9): score how likely a marketplace offer is a given catalog variant.
+ * Product matching v1 (1.9 → Phase 2): score how likely a marketplace offer is a given catalog variant.
+ * v1 adds GTIN matching and brand aliases; everything else is the v0 scorer.
  * Pure — the caller loads candidates (verified products only) and writes the result.
  *
  * confidence ≥ AUTO_MATCH_THRESHOLD → the offer is attached automatically;
@@ -12,9 +13,12 @@ import {
   type AttributeKey,
   type OfferAttributes,
 } from "@/lib/matching/attributes";
+import { brandForms } from "@/lib/matching/aliases";
 
 export const AUTO_MATCH_THRESHOLD = 0.95;
 export const SUGGEST_THRESHOLD = 0.5;
+/** Same barcode: as sure as matching gets, short of a human. */
+const GTIN_CONFIDENCE = 0.99;
 /** Two different variants both clearing the auto threshold → nobody can decide automatically. */
 const AMBIGUOUS_CONFIDENCE = 0.9;
 
@@ -32,6 +36,8 @@ export interface MatchCandidate {
   variantSpecs: Record<string, unknown>;
   /** Number of variants of the candidate's product (including this one). */
   siblingCount: number;
+  /** Product barcode (GTIN / EAN / UPC), when the catalog has one. */
+  gtin?: string | null;
 }
 
 export interface OfferToMatch {
@@ -39,6 +45,8 @@ export interface OfferToMatch {
   title: string;
   /** Shopee model (tier variation) name, e.g. "Đen, 2TB". */
   modelName: string;
+  /** Barcode read from the listing, when the marketplace exposes one. */
+  gtin?: string | null;
 }
 
 export interface MatchResult {
@@ -58,19 +66,32 @@ function containsPhrase(normalizedText: string, normalizedPhrase: string): boole
   return ` ${normalizedText} `.includes(` ${normalizedPhrase} `);
 }
 
-/** The longest brand that appears in the title as whole words. */
+/** The longest brand (or brand alias) that appears in the title as whole words. */
 export function detectBrand(title: string, brands: string[]): string | null {
   const t = normalizeText(title);
   let best: string | null = null;
   let bestLen = 0;
+  let bestIsOwnName = false;
   for (const b of brands) {
-    const nb = normalizeText(b);
-    if (nb.length > bestLen && containsPhrase(t, nb)) {
-      best = b;
-      bestLen = nb.length;
-    }
+    brandForms(b).forEach((form, i) => {
+      const own = i === 0;
+      // Longer wins; on a tie the brand's own name beats another brand's alias ("Western Digital").
+      const better = form.length > bestLen || (form.length === bestLen && own && !bestIsOwnName);
+      if (better && containsPhrase(t, form)) {
+        best = b;
+        bestLen = form.length;
+        bestIsOwnName = own;
+      }
+    });
   }
   return best;
+}
+
+/** Digits only; GTINs are 8, 12, 13 or 14 digits. Anything else is not a barcode. */
+function cleanGtin(raw: string | null | undefined): string | null {
+  const d = (raw ?? "").replace(/\D/g, "");
+  if (![8, 12, 13, 14].includes(d.length)) return null;
+  return d.padStart(14, "0");
 }
 
 function attributesEqual(key: AttributeKey, a: OfferAttributes[AttributeKey], b: OfferAttributes[AttributeKey]) {
@@ -114,17 +135,23 @@ export function scoreCandidate(offer: OfferToMatch, c: MatchCandidate): MatchRes
   const zero = (reason: string): MatchResult => ({ variantId: c.variantId, confidence: 0, reason });
 
   if (!c.brand) return zero("Không nhận ra thương hiệu");
-  if (!containsPhrase(title, normalizeText(c.brand))) return zero("Khác thương hiệu");
-
   const mine = offerAttributes(offer);
   const theirs = variantAttributes(c);
   const keys = (Object.keys(theirs) as AttributeKey[]).filter((k) => theirs[k] != null);
 
+  // A conflicting attribute beats everything, even a shared barcode (sellers reuse listings).
   for (const k of keys) {
     if (mine[k] != null && !attributesEqual(k, mine[k], theirs[k])) {
       return zero(`Khác ${ATTRIBUTE_LABEL[k]}`);
     }
   }
+
+  const gOffer = cleanGtin(offer.gtin);
+  if (gOffer && gOffer === cleanGtin(c.gtin)) {
+    return { variantId: c.variantId, confidence: GTIN_CONFIDENCE, reason: "Khớp mã vạch sản phẩm (GTIN)" };
+  }
+
+  if (!brandForms(c.brand).some((form) => containsPhrase(title, form))) return zero("Khác thương hiệu");
 
   const matched: string[] = [`thương hiệu ${c.brand}`];
   let score = WEIGHT_BRAND;
