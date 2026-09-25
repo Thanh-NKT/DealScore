@@ -96,3 +96,37 @@ Xem lịch sử chạy: `select * from cron.job_run_details order by start_time 
 
 Migration 0007 thêm job `kairo-conversions` (phút 7, mỗi 6 giờ) — dùng chung hai secret Vault ở trên.
 Chưa đặt `SHOPEE_AFFILIATE_APP_ID` / `SHOPEE_AFFILIATE_SECRET` thì route trả `{ skipped: "not_configured" }`.
+
+Migration 0009 thêm hai job, cùng hai secret Vault ở trên:
+
+- `kairo-collector` (phút 17 mỗi giờ) → `/api/cron/collector`. Chưa có Shopee API (`isShopeeConfigured()` sai) thì
+  route trả `{ skipped: "not_configured" }` và **không** ghi `collector_runs`. Ở local: `SHOPEE_CLIENT=fake` rồi
+  `pnpm collector:run`.
+- `kairo-backtest` (03:00 thứ Hai giờ VN) → `/api/cron/backtest`, ghi `backtest_runs`. Chạy tay: `pnpm backtest:run`.
+  Xem kết quả: `select ran_at, samples, accuracy, buy_correct, buy_n, wait_correct, wait_n from backtest_runs order by ran_at desc;`
+
+## Giám sát (1.10)
+
+- **Uptime:** trỏ công cụ ngoài (UptimeRobot / Better Stack, chu kỳ 5 phút) vào `GET /api/health`.
+  - HTTP 503 = DB không truy cập được (sự cố).
+  - HTTP 200 nhưng body có `"degraded"` = collector đã cấu hình mà lượt gần nhất xong quá 6 giờ → đặt thêm
+    **keyword monitor** báo khi body chứa `degraded`.
+- **Lỗi:** Sentry, chỉ bật khi có biến môi trường:
+  - `SENTRY_DSN` (server/edge) và `NEXT_PUBLIC_SENTRY_DSN` (trình duyệt).
+  - Tùy chọn, để upload source map lúc build: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`.
+  - Lỗi đã bắt trong cron (alerts, collector, backtest) được gửi qua `reportError()` (`src/lib/observability.ts`).
+
+## Backup DB (1.10)
+
+| Lớp | Cách | Giữ |
+|---|---|---|
+| 1. Supabase | Backup hằng ngày tự động (gói Pro). Bật thêm **PITR** khi có người dùng trả tiền / dữ liệu Watch lớn | 7 ngày (Pro), PITR theo add-on |
+| 2. Ngoài Supabase | `pnpm db:backup` (cần `SUPABASE_DB_URL` = connection string Session pooler) → `backups/kairo-YYYYMMDD-HHmm-{schema,data}.sql`. Chạy **hằng tuần**, chép lên kho lưu trữ khác (vd Google Drive / S3) | 8 bản gần nhất |
+
+Mục tiêu: **RPO ≤ 24 giờ** (lớp 1), **RTO ≤ 4 giờ**. Khôi phục bản ngoài Supabase vào project mới:
+
+    psql "$NEW_DB_URL" -f backups/kairo-…-schema.sql
+    psql "$NEW_DB_URL" -f backups/kairo-…-data.sql
+
+Lịch sử giá (`price_observations`) là thứ **không lấy lại được** nếu mất — ưu tiên kiểm tra bản backup có nó.
+Diễn tập khôi phục vào Supabase local mỗi quý (`supabase start` rồi hai lệnh `psql` ở trên với DB local).

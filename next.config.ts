@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 // Legacy Vietnamese URLs → English routes. Kept permanently: emails already sent
 // (magic links, unsubscribe links, account-deletion notices) still point at the old paths.
@@ -27,4 +28,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Source-map upload to Sentry only when its build token is configured (error tracking itself
+// only needs SENTRY_DSN at runtime — see src/instrumentation.ts).
+export default process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      silent: true,
+    })
+  : nextConfig;

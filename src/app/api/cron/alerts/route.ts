@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { evaluateWatches } from "@/lib/alerts/evaluate";
 import { dispatchDueDeliveries } from "@/lib/alerts/dispatch";
 import { sendPushToUser } from "@/lib/push";
+import { reportError } from "@/lib/observability";
 
 export const maxDuration = 60;
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -33,6 +34,9 @@ export async function POST(request: NextRequest) {
     const dispatch = await dispatchDueDeliveries({ now, deadline }, admin, sendPushToUser);
     // Per-item errors are already recorded in the DB — 200. 500 is only for whole-run failures (thrown).
     return NextResponse.json({ evaluate, dispatch }, { headers: NO_STORE });
+  } catch (err) {
+    reportError(err, { job: "alerts" });
+    throw err;
   } finally {
     await admin.rpc("release_job_lock", { p_name: "alerts", p_owner: owner });
   }

@@ -35,8 +35,24 @@ export class ShopeeUnavailableError extends Error {
   }
 }
 
+/** The item no longer exists on Shopee (deleted / banned) — the collector marks the listing inactive. */
+export class ShopeeItemGoneError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ShopeeItemGoneError";
+  }
+}
+
 export function isFakeClientEnabled(): boolean {
   return process.env.SHOPEE_CLIENT === "fake" && process.env.NODE_ENV !== "production";
+}
+
+/**
+ * Whether getItemDetail() can return data at all. False until the Open API is wired (Phase 0
+ * spike): the collector then skips instead of logging a failed run every hour.
+ */
+export function isShopeeConfigured(): boolean {
+  return isFakeClientEnabled();
 }
 
 export async function getItemDetail(

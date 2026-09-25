@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 docs/superpowers
+
+# database backups (pnpm db:backup) — never commit
+/backups
