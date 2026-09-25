@@ -444,6 +444,74 @@ export type Database = {
           },
         ]
       }
+      extension_contributions: {
+        Row: {
+          contributor: string
+          created_at: string
+          id: number
+        }
+        Insert: {
+          contributor: string
+          created_at?: string
+          id?: never
+        }
+        Update: {
+          contributor?: string
+          created_at?: string
+          id?: never
+        }
+        Relationships: []
+      }
+      extension_observations: {
+        Row: {
+          contributor: string
+          created_at: string
+          free_shipping: boolean | null
+          has_voucher: boolean | null
+          id: number
+          observed_at: string
+          offer_id: string
+          original_price: number | null
+          price: number
+          promoted_at: string | null
+          stock: number | null
+        }
+        Insert: {
+          contributor: string
+          created_at?: string
+          free_shipping?: boolean | null
+          has_voucher?: boolean | null
+          id?: never
+          observed_at: string
+          offer_id: string
+          original_price?: number | null
+          price: number
+          promoted_at?: string | null
+          stock?: number | null
+        }
+        Update: {
+          contributor?: string
+          created_at?: string
+          free_shipping?: boolean | null
+          has_voucher?: boolean | null
+          id?: never
+          observed_at?: string
+          offer_id?: string
+          original_price?: number | null
+          price?: number
+          promoted_at?: string | null
+          stock?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extension_observations_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_locks: {
         Row: {
           locked_until: string
@@ -1246,6 +1314,13 @@ export type Database = {
           marketplace: string
           refresh_priority: number
           watched: boolean
+        }[]
+      }
+      extension_contribution_begin: {
+        Args: { p_contributor: string; p_limit?: number }
+        Returns: {
+          allowed: boolean
+          retry_after_seconds: number
         }[]
       }
       f_unaccent: { Args: { "": string }; Returns: string }

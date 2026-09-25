@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Kairo</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <span class="mark" aria-hidden="true">K</span>
+      <h1>Kairo</h1>
+    </header>
+
+    <p class="lead">Mở một sản phẩm trên Shopee: Kairo hiện giá đã ghi nhận, Deal Score và nên mua hay chờ.</p>
+
+    <section aria-labelledby="account-h">
+      <h2 id="account-h">Tài khoản</h2>
+      <p id="account" class="muted">Đang kiểm tra…</p>
+    </section>
+
+    <section aria-labelledby="share-h">
+      <h2 id="share-h">Chia sẻ giá</h2>
+      <label class="switch">
+        <input type="checkbox" id="share" />
+        <span>Chia sẻ giá tôi xem trên Shopee để giúp mọi người</span>
+      </label>
+      <details>
+        <summary>Kairo nhận những gì?</summary>
+        <ul>
+          <li>Đường dẫn sản phẩm, giá, giá niêm yết, số lượng còn, có miễn phí vận chuyển / voucher hay không.</li>
+          <li>Không gửi tên, địa chỉ, giỏ hàng, lịch sử mua hay bất cứ thông tin cá nhân nào.</li>
+          <li>Giá chỉ được dùng khi ít nhất hai người khác nhau cùng thấy, hoặc khớp với nguồn giá của Kairo.</li>
+        </ul>
+      </details>
+    </section>
+
+    <details class="adv">
+      <summary>Nâng cao</summary>
+      <label for="origin">Máy chủ Kairo</label>
+      <select id="origin">
+        <option value="https://kairo.vn">kairo.vn</option>
+        <option value="http://localhost:3000">localhost:3000 (phát triển)</option>
+      </select>
+    </details>
+
+    <a id="open" class="btn" href="https://kairo.vn" target="_blank" rel="noopener">Mở Kairo</a>
+    <script src="popup.js"></script>
+  </body>
+</html>

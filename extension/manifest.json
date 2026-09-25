@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Kairo — lịch sử giá & Deal Score",
+  "short_name": "Kairo",
+  "version": "0.1.0",
+  "description": "Xem giá Kairo ghi nhận, Deal Score và kết luận Nên mua / Có thể chờ ngay trên trang Shopee. Đặt theo dõi giá chỉ với một chạm.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://kairo.vn/*", "http://localhost:3000/*", "http://127.0.0.1:3000/*"],
+  "background": { "service_worker": "src/background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://shopee.vn/*", "https://www.shopee.vn/*"],
+      "js": ["src/parse-shopee.js", "src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": { "default_popup": "popup.html", "default_title": "Kairo" }
+}
