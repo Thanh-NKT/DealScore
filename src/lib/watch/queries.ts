@@ -7,7 +7,7 @@ type Client = SupabaseClient<Database>;
 
 export type WatchActionResult =
   | { status: "idle" }
-  | { status: "saved"; watchId: string }
+  | { status: "saved"; watchId: string; created: boolean; variantId: string; conditionCount: number }
   | { status: "error"; errors: Partial<Record<WatchField, string>> };
 import { fromRow, DEFAULT_NOTIFICATION_SETTINGS, type Channel } from "@/lib/account/notification-settings";
 import { describeWatch, type LatestAlert, type WatchView } from "@/lib/watch/describe";
@@ -339,5 +339,12 @@ export async function saveWatchForUser(
     watchId = data.id;
   }
 
-  return { status: "saved", watchId };
+  const conditionCount = [
+    config.targetPrice != null,
+    config.dropPct != null,
+    config.notifyLow,
+    config.minDealScore != null,
+    config.notifyBackInStock,
+  ].filter(Boolean).length;
+  return { status: "saved", watchId, created: !existing, variantId, conditionCount };
 }

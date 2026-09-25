@@ -59,8 +59,23 @@ export async function GET() {
     orders.push(...(data ?? []));
   }
 
+  // Analytics can exceed the silent 1000-row cap of PostgREST: page through.
+  const activity: Array<{ created_at: string; name: string; props: unknown }> = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin
+      .from("analytics_events")
+      .select("created_at, name, props")
+      .eq("user_id", user.id)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw new Error(`Data export: failed to read activity: ${error.message}`);
+    activity.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+
   const now = new Date();
   const exportData = buildAccountExport({
+    activity,
     exportedAt: now,
     profile: profileRes.data!,
     settings: settingsRes.data!,

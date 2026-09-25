@@ -81,11 +81,19 @@ const input = {
   orders: [
     { purchase_time: "2026-09-10T00:00:00Z", status: "completed", order_value: 500000, item_id: "111", commission: 25000, raw: { x: 1 } },
   ],
+  activity: [
+    { created_at: "2026-09-11T00:00:00Z", name: "product_viewed", props: { is_draft: false }, session_id: "s", id: 7 },
+  ],
 };
 
 describe("buildAccountExport", () => {
   const out = buildAccountExport(input as never);
 
+  it("exports analytics activity without internal ids or session ids", () => {
+    expect(out.activity).toEqual([
+      { created_at: "2026-09-11T00:00:00Z", event: "product_viewed", props: { is_draft: false } },
+    ]);
+  });
   it("has schema_version and exported_at", () => {
     expect(out.schema_version).toBe(1);
     expect(out.exported_at).toBe("2026-09-23T20:00:00.000Z");

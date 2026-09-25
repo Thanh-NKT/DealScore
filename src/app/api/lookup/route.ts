@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { clientIp, hashIp } from "@/lib/rate-limit";
 import { lookupErrorMessage, lookupShopeeUrl, type LookupErrorCode } from "@/lib/lookup";
 import { createClient } from "@/lib/supabase/server";
+import { trackAfter } from "@/lib/analytics/track";
+
+const INVALID_CODES: ReadonlySet<LookupErrorCode> = new Set(["not_a_url", "not_shopee", "unrecognized_format"]);
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -44,6 +47,20 @@ export async function POST(request: NextRequest) {
       raw: rawUrl,
       ipHash: hashIp(clientIp(request.headers)),
       userId: auth.user?.id ?? null,
+    });
+
+    trackAfter("lookup_submitted", {
+      userId: auth.user?.id ?? null,
+      props: {
+        outcome:
+          result.status !== "error"
+            ? result.status
+            : INVALID_CODES.has(result.code)
+              ? "invalid"
+              : result.code === "rate_limited"
+                ? "rejected"
+                : "error",
+      },
     });
 
     if (result.status === "error") {

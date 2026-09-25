@@ -48,6 +48,8 @@ export interface AccountExport {
   clicks: Array<{ created_at: string; offer_id: string | null; source: string | null }>;
   url_lookups: Array<{ created_at: string; outcome: string }>;
   orders: Array<{ purchase_time: string; status: ConversionStatus; order_value: number | null; product_item_id: string }>;
+  /** First-party analytics events (1.11) — allow-listed properties only. */
+  activity: Array<{ created_at: string; event: string; props: unknown }>;
 }
 
 /**
@@ -69,6 +71,7 @@ export function buildAccountExport(input: {
   clicks: Row<"click_events">[];
   lookups: Array<{ created_at: string; outcome: string }>;
   orders: Array<{ purchase_time: string; status: string; order_value: number | null; item_id: string }>;
+  activity?: Array<{ created_at: string; name: string; props: unknown }>;
 }): AccountExport {
   const p = input.profile;
   return {
@@ -120,6 +123,7 @@ export function buildAccountExport(input: {
       order_value: num(o.order_value),
       product_item_id: o.item_id,
     })),
+    activity: (input.activity ?? []).map((a) => ({ created_at: a.created_at, event: a.name, props: a.props })),
   };
 }
 

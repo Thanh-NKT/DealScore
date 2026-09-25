@@ -3,6 +3,7 @@
 import { requireUser } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { trackAfter } from "@/lib/analytics/track";
 
 /** subscription = PushSubscription.toJSON() from the browser. */
 export async function savePushSubscription(
@@ -41,6 +42,7 @@ export async function savePushSubscription(
     { onConflict: "endpoint" },
   );
   if (error) throw new Error(`Failed to save push subscription: ${error.message}`);
+  trackAfter("push_enabled", { userId: user.id });
   return { ok: true };
 }
 

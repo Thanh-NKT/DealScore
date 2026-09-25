@@ -6,6 +6,7 @@ import { safeNextPath } from "@/lib/auth/redirect";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { saveWatchForUser, type WatchActionResult } from "@/lib/watch/queries";
+import { trackAfter } from "@/lib/analytics/track";
 
 export type { WatchActionResult } from "@/lib/watch/queries";
 
@@ -20,6 +21,12 @@ export async function saveWatch(
 
   const result = await saveWatchForUser(await createClient(), user.id, form);
   if (result.status !== "saved") return result;
+  if (result.created) {
+    trackAfter("watch_created", {
+      userId: user.id,
+      props: { variant_id: result.variantId, condition_count: result.conditionCount },
+    });
+  }
 
   revalidatePath(path);
   revalidatePath("/account/watch");
@@ -76,5 +83,6 @@ export async function deleteWatch(watchId: string): Promise<void> {
     notFound();
   }
 
+  trackAfter("watch_deleted", { userId: user.id });
   revalidatePath("/account/watch");
 }
