@@ -2,6 +2,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { externalItemId } from "@/lib/shopee/parse-url";
 import { getItemDetail, ShopeeUnavailableError } from "@/lib/shopee/client";
 import { slugify } from "@/lib/slug";
+import { bestMatch, type MatchCandidate, type MatchResult } from "@/lib/matching/match";
+import { loadMatchCandidates } from "@/lib/matching/candidates";
+
+function toRpcMatch(m: MatchResult | null) {
+  return m ? { variant_id: m.variantId, confidence: m.confidence, reason: m.reason } : null;
+}
 
 export type IngestResult =
   | { status: "resolved"; productUrl: string }
@@ -68,6 +74,16 @@ export async function ingestShopeeItem(params: {
   }
 
   const supabase = createAdminClient();
+
+  // Matcher v0 (1.9). The paste-a-URL entry point must not break because of it: on failure the
+  // item is ingested unmatched, as a draft product.
+  let candidates: MatchCandidate[] = [];
+  try {
+    candidates = await loadMatchCandidates(supabase, detail.title);
+  } catch (err) {
+    console.error("Matcher candidates failed, ingesting unmatched:", err);
+  }
+
   const { data, error } = await supabase.rpc("ingest_shopee_item", {
     p: {
       ext_item_id: externalItemId(shopId, itemId),
@@ -89,6 +105,7 @@ export async function ingestShopeeItem(params: {
         original_price: m.originalPrice,
         stock: m.stock,
         is_flash_sale: m.isFlashSale,
+        match: toRpcMatch(bestMatch({ title: detail.title, modelName: m.name }, candidates)),
       })),
     },
   });

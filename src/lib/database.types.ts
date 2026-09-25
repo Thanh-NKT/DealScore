@@ -157,6 +157,89 @@ export type Database = {
           },
         ]
       }
+      analytics_events: {
+        Row: {
+          created_at: string
+          id: number
+          name: string
+          props: Json
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          name: string
+          props?: Json
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          name?: string
+          props?: Json
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backtest_runs: {
+        Row: {
+          accuracy: number | null
+          avoid_correct: number
+          avoid_n: number
+          buy_correct: number
+          buy_n: number
+          drop_threshold: number
+          horizon_days: number
+          id: string
+          ran_at: string
+          samples: number
+          variants: number
+          wait_correct: number
+          wait_n: number
+        }
+        Insert: {
+          accuracy?: number | null
+          avoid_correct: number
+          avoid_n: number
+          buy_correct: number
+          buy_n: number
+          drop_threshold: number
+          horizon_days: number
+          id?: string
+          ran_at?: string
+          samples: number
+          variants: number
+          wait_correct: number
+          wait_n: number
+        }
+        Update: {
+          accuracy?: number | null
+          avoid_correct?: number
+          avoid_n?: number
+          buy_correct?: number
+          buy_n?: number
+          drop_threshold?: number
+          horizon_days?: number
+          id?: string
+          ran_at?: string
+          samples?: number
+          variants?: number
+          wait_correct?: number
+          wait_n?: number
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           id: string
@@ -1096,6 +1179,29 @@ export type Database = {
         }
         Relationships: []
       }
+      metrics_active_watches: {
+        Row: {
+          active_watches: number | null
+          watching_users: number | null
+        }
+        Relationships: []
+      }
+      metrics_daily_active_users: {
+        Row: {
+          active_users: number | null
+          day: string | null
+        }
+        Relationships: []
+      }
+      metrics_retention_d30: {
+        Row: {
+          cohort_size: number | null
+          cohort_week: string | null
+          rate: number | null
+          retained: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       claim_due_deliveries: {
@@ -1107,6 +1213,16 @@ export type Database = {
           delivery_id: string
           user_id: string
           watch_id: string
+        }[]
+      }
+      collector_candidates: {
+        Args: { p_limit: number }
+        Returns: {
+          external_item_id: string
+          id: string
+          last_observed_at: string
+          refresh_priority: number
+          watched: boolean
         }[]
       }
       f_unaccent: { Args: { "": string }; Returns: string }
@@ -1143,6 +1259,7 @@ export type Database = {
           brand: string
         }[]
       }
+      record_observations: { Args: { p: Json }; Returns: string[] }
       record_watch_evaluation: {
         Args: {
           p_config_version: number
@@ -1152,6 +1269,10 @@ export type Database = {
           p_watch_id: string
         }
         Returns: string
+      }
+      refresh_variant_current_price: {
+        Args: { p_variant_ids: string[] }
+        Returns: undefined
       }
       refresh_variant_daily_prices: {
         Args: { p_from: string; p_to: string }
