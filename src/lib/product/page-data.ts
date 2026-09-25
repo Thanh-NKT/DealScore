@@ -15,6 +15,8 @@ export interface ProductPageData {
     brand: string | null;
     model: string | null;
     image: string | null;
+    /** Product-level specs (brand-agnostic key → value), used by the comparison table. */
+    specs: Record<string, unknown>;
     status: "draft" | "verified";
     categorySlug: string;
     categoryName: string;
@@ -195,6 +197,10 @@ export async function loadProductPageData(params: {
         brand: product.brand,
         model: product.model,
         image: product.image,
+        specs:
+          product.specs && typeof product.specs === "object" && !Array.isArray(product.specs)
+            ? (product.specs as Record<string, unknown>)
+            : {},
         status: product.status === "draft" ? "draft" : "verified",
         categorySlug: cat?.slug || "linh-kien",
         categoryName: cat?.name || "Linh kiện",
