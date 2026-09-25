@@ -67,7 +67,9 @@ Never mix these up; the choice encodes the security model.
   `src/app/go/…/route.ts`, `src/actions/account.ts`, `src/app/account/export/route.ts`,
   `src/lib/account/purge.ts`, `src/lib/alerts/*`, `src/lib/push/index.ts`, `src/actions/push.ts`,
   `src/app/api/unsubscribe/route.ts`, `src/app/api/cron/alerts/route.ts`, `scripts/run-alerts.ts`,
-  `src/lib/affiliate/import.ts`, `src/app/api/cron/conversions/route.ts`, `scripts/import-conversions.ts`.
+  `src/lib/affiliate/import.ts`, `src/app/api/cron/conversions/route.ts`, `scripts/import-conversions.ts`,
+  `src/lib/collector/run.ts`, `src/lib/pricing/backtest-job.ts`, `src/app/api/cron/{collector,backtest}/route.ts`,
+  `scripts/run-{collector,backtest}.ts`, `src/app/api/health/route.ts`, `src/lib/analytics/track.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
@@ -85,6 +87,17 @@ Never mix these up; the choice encodes the security model.
   chạy bằng `tsx` bị biên dịch sang CJS — **không** dùng `await` ở cấp cao nhất, bọc trong `main()`.
 - `src/lib/supabase/proxy.ts` — `updateSession()`, called from `src/proxy.ts` on every
   request to refresh the auth token. Do not insert logic between `createServerClient` and the
+- **Matching v0 (1.9):** `src/lib/matching/` chấm offer ↔ variant **verified** (brand + model + dung lượng/màu/size).
+  ≥ 0.95 → `ingest_shopee_item` gắn `auto`; thấp hơn → product draft + `match_candidates` (duyệt ở Admin — xem
+  `docs/admin-checklist.md`). Giá hiện tại của variant luôn tính lại bằng RPC `refresh_variant_current_price`.
+- **Collector (1.10):** `runCollector()` (`src/lib/collector/run.ts`) → `record_observations` → rollup →
+  `recomputeDealScores()` → `evaluateWatches()`. Bỏ qua khi `isShopeeConfigured()` sai (chưa có Shopee API).
+  Backtest hằng tuần: `src/lib/pricing/backtest.ts` (thuần) → `backtest_runs`. `/api/health` cho uptime; Sentry chỉ
+  bật khi có `SENTRY_DSN`; lỗi đã bắt trong cron gửi qua `reportError()`.
+- **SEO (1.7):** `src/lib/seo/` (metadata, JSON-LD, sitemap — thuần). Canonical sản phẩm là `/{category}/{slug}`
+  không query; draft là `noindex`. Trang danh mục `/{category}` và `/brand/{slug}`.
+- **Analytics (1.11):** first-party, bảng `analytics_events` + view `metrics_*`. Chỉ ghi qua `trackAfter()` phía server,
+  thuộc tính theo allow-list trong `src/lib/analytics/events.ts` (thêm sự kiện = sửa cả check constraint).
   `getUser()` call there.
 
 **RLS model** (`supabase/migrations/0001_init.sql`): RLS is enabled **only** on user-owned
