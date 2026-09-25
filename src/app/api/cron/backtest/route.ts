@@ -26,8 +26,14 @@ export async function POST(request: NextRequest) {
   if (!acquired) return NextResponse.json({ skipped: "locked" }, { headers: NO_STORE });
 
   try {
-    const { runId, variants, result, accuracy } = await runBacktest(admin, { deadline: Date.now() + 50_000 });
-    return NextResponse.json({ runId, variants, samples: result.samples, accuracy }, { headers: NO_STORE });
+    // v0 and v1 side by side: the weekly numbers decide whether v1 stays the default.
+    const deadline = Date.now() + 50_000;
+    const runs = [];
+    for (const version of ["v0", "v1"] as const) {
+      const { runId, variants, result, accuracy } = await runBacktest(admin, { deadline, version });
+      runs.push({ version, runId, variants, samples: result.samples, accuracy });
+    }
+    return NextResponse.json({ runs }, { headers: NO_STORE });
   } catch (err) {
     reportError(err, { job: "backtest" });
     throw err;

@@ -1,8 +1,5 @@
-import {
-  computeDealScore,
-  detectFakeSale,
-  type DealScoreResult,
-} from "@/lib/pricing/deal-score";
+import { detectFakeSale, type DealScoreResult } from "@/lib/pricing/deal-score";
+import { scoreDeal } from "@/lib/pricing/score";
 import { discountPercent } from "@/lib/format";
 import {
   expandRollup,
@@ -125,7 +122,8 @@ export function buildVariantPricing(input: {
   // 5. Header Deal Score (Đ7: do NOT pass bestOffer)
   let headline: DealScoreResult | null = null;
   if (cheapest && cheapest.price != null) {
-    headline = computeDealScore({
+    // History-only (no stock / seller): must equal the cached listing score (Đ7).
+    headline = scoreDeal({
       price: cheapest.price,
       history: historyObs,
       now,
@@ -152,11 +150,13 @@ export function buildVariantPricing(input: {
     offer.dealScore =
       cheapest != null && offer.offerId === cheapest.offerId
         ? headline
-        : computeDealScore({
+        : scoreDeal({
             price: offer.price,
             history: historyObs,
             bestOffer: cheapest?.price ?? undefined,
             now,
+            stock: offer.stock,
+            seller: { rating: offer.sellerRating, isOfficial: offer.sellerIsOfficial },
           });
   }
 

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { computeDealScore, type Recommendation } from "@/lib/pricing/deal-score";
+import type { Recommendation } from "@/lib/pricing/deal-score";
+import { scoreDeal } from "@/lib/pricing/score";
 import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
 
@@ -10,7 +11,8 @@ import { toVnDate } from "@/lib/format";
  * The detail page still computes live and is the source of truth; this cache only exists because
  * you can't sort by score before paginating if the score only lives in Node. MUST use
  * computeDealScore() — never re-implement scoring in SQL. No bestOffer is passed, exactly like the
- * header score (Đ7), so listing and detail page show the same number.
+ * header score (Đ7), so listing and detail page show the same number. Goes through scoreDeal() so
+ * the cache always uses the same Deal Score version as the page.
  *
  * Every read is chunked: PostgREST silently truncates at 1000 rows.
  */
@@ -73,7 +75,7 @@ export async function recomputeDealScores(
     }
 
     for (const v of chunk) {
-      const result = computeDealScore({
+      const result = scoreDeal({
         price: Number(v.price),
         history: expandRollup(byVariant.get(v.variant_id) ?? []),
         now,

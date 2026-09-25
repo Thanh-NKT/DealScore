@@ -6,7 +6,8 @@
  *   buy         is right when the price did NOT drop by ≥ dropThreshold afterwards;
  *   wait/avoid  are right when it did.
  */
-import { computeDealScore, type PriceObservation, type Recommendation } from "@/lib/pricing/deal-score";
+import type { PriceObservation, Recommendation } from "@/lib/pricing/deal-score";
+import { scoreDeal, type DealScoreVersion } from "@/lib/pricing/score";
 import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 
 export type BacktestClassifier = (price: number, history: PriceObservation[], now: Date) => Recommendation;
@@ -16,8 +17,10 @@ export interface BacktestOptions {
   dropThreshold?: number;
   stepDays?: number;
   windowDays?: number;
-  /** Injected in tests; defaults to computeDealScore(). */
+  /** Injected in tests; defaults to scoreDeal() with `version`. */
   classify?: BacktestClassifier;
+  /** Deal Score version replayed by the default classifier. */
+  version?: DealScoreVersion;
 }
 
 export interface BacktestTally {
@@ -51,7 +54,7 @@ export function backtestVariant(rows: DailyPriceRow[], opts: BacktestOptions = {
   const step = opts.stepDays ?? DEFAULT_STEP_DAYS;
   const classify: BacktestClassifier =
     opts.classify ??
-    ((price, history, now) => computeDealScore({ price, history, now, windowDays: opts.windowDays }).recommendation);
+    ((price, history, now) => scoreDeal({ price, history, now, windowDays: opts.windowDays }, opts.version).recommendation);
 
   const result = emptyResult();
   const sorted = [...rows].sort((a, b) => a.day.localeCompare(b.day));

@@ -205,6 +205,7 @@ export type Database = {
           ran_at: string
           samples: number
           variants: number
+          version: string
           wait_correct: number
           wait_n: number
         }
@@ -220,6 +221,7 @@ export type Database = {
           ran_at?: string
           samples: number
           variants: number
+          version?: string
           wait_correct: number
           wait_n: number
         }
@@ -235,6 +237,7 @@ export type Database = {
           ran_at?: string
           samples?: number
           variants?: number
+          version?: string
           wait_correct?: number
           wait_n?: number
         }
@@ -1253,6 +1256,32 @@ export type Database = {
           reason: string
         }[]
       }
+      price_drop_radar: {
+        Args: {
+          p_category_id?: string
+          p_limit?: number
+          p_min_drop?: number
+          p_offset?: number
+        }
+        Returns: {
+          best_price: number
+          brand: string
+          canonical_name: string
+          category_slug: string
+          drop_pct: number
+          image: string
+          last_observed_at: string
+          median_30d: number
+          original_price: number
+          product_id: string
+          recommendation: string
+          score: number
+          slug: string
+          total_count: number
+          variant_id: string
+          variant_key: string
+        }[]
+      }
       product_brands: {
         Args: never
         Returns: {
@@ -1311,6 +1340,25 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      trending_products: {
+        Args: { p_category_id?: string; p_limit?: number; p_mode: string }
+        Returns: {
+          best_price: number
+          brand: string
+          canonical_name: string
+          category_slug: string
+          image: string
+          last_observed_at: string
+          original_price: number
+          product_id: string
+          recommendation: string
+          score: number
+          slug: string
+          views_7d: number
+          views_prev_7d: number
+          watch_count: number
+        }[]
+      }
       try_acquire_job_lock: {
         Args: { p_name: string; p_owner: string; p_ttl_seconds: number }
         Returns: boolean

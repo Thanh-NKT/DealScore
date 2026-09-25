@@ -223,7 +223,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
   };
 }
 
-function classify(
+export function classify(
   score: number,
   price: number,
   median30: number,

@@ -10,6 +10,7 @@ import {
 } from "@/lib/pricing/backtest";
 import type { DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
+import { DEAL_SCORE_VERSION, type DealScoreVersion } from "@/lib/pricing/score";
 
 /**
  * Weekly backtest (1.10): replay Buy/Wait/Avoid over the last LOOKBACK_DAYS of every variant and
@@ -23,8 +24,9 @@ const HISTORY_CHUNK = 5;
 
 export async function runBacktest(
   client: SupabaseClient<Database>,
-  opts: { now?: Date; deadline?: number } = {},
-): Promise<{ runId: string; variants: number; result: BacktestResult; accuracy: number | null }> {
+  opts: { now?: Date; deadline?: number; version?: DealScoreVersion } = {},
+): Promise<{ runId: string; version: DealScoreVersion; variants: number; result: BacktestResult; accuracy: number | null }> {
+  const version = opts.version ?? DEAL_SCORE_VERSION;
   const now = opts.now ?? new Date();
   const since = toVnDate(new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000));
 
@@ -60,7 +62,7 @@ export async function runBacktest(
       byVariant.set(r.variant_id, list);
     }
     for (const rows of byVariant.values()) {
-      results.push(backtestVariant(rows));
+      results.push(backtestVariant(rows, { version }));
       variants++;
     }
   }
@@ -71,6 +73,7 @@ export async function runBacktest(
     .from("backtest_runs")
     .insert({
       ran_at: now.toISOString(),
+      version,
       horizon_days: DEFAULT_HORIZON_DAYS,
       drop_threshold: DEFAULT_DROP_THRESHOLD,
       variants,
@@ -87,5 +90,5 @@ export async function runBacktest(
     .single();
   if (error || !run) throw new Error(`Failed to store backtest run: ${error?.message}`);
 
-  return { runId: run.id, variants, result, accuracy: acc };
+  return { runId: run.id, version, variants, result, accuracy: acc };
 }

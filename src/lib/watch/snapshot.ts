@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { computeDealScore } from "@/lib/pricing/deal-score";
+import { scoreDeal } from "@/lib/pricing/score";
 import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
 import { STALE_HOURS } from "@/lib/watch/constants";
@@ -76,7 +76,7 @@ export async function loadVariantSnapshots(
       observedAt: c.observed_at,
       isStale,
       // NO bestOffer (Đ7): the numbers in an alert must match the product page header score.
-      deal: price != null && price > 0 ? computeDealScore({ price, history: expandRollup(history.get(id) ?? []), now }) : null,
+      deal: price != null && price > 0 ? scoreDeal({ price, history: expandRollup(history.get(id) ?? []), now }) : null,
     });
   }
   return result;
