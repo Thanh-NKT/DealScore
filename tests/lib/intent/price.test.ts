@@ -48,4 +48,7 @@ describe("extractPriceRange", () => {
     const r = extractPriceRange(s)!;
     expect(s.slice(r.start, r.end).trim()).toBe("duoi 3tr");
   });
+  it("skips an earlier same-kind match whose amount fails to validate", () => {
+    expect(range("toi da 0d roi toi da 500k")).toEqual({ minPrice: undefined, maxPrice: 500_000 });
+  });
 });

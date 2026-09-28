@@ -79,17 +79,20 @@ const AMOUNT_GROUP = `(\\d[\\d.,]*)\\s*(${AMOUNT_UNIT})?`;
 // which have no word character of their own for \b to anchor on.
 const LEFT_BOUND = "(?<![a-z0-9])";
 
+// "g" so extractPriceRange can walk every syntactic match of a pattern (matchAll), not just
+// the first — an earlier match can fail amount validation (out of range / unparseable) and
+// must not block a later, valid occurrence of the same phrase kind.
 const PATTERNS: Array<{ kind: "min" | "max" | "between" | "around"; re: RegExp }> = [
   // "tu X tro len" — min, must be checked before the generic "between" pattern.
-  { kind: "min", re: new RegExp(`${LEFT_BOUND}tu\\s+${AMOUNT_GROUP}\\s+tro\\s+len\\b`) },
+  { kind: "min", re: new RegExp(`${LEFT_BOUND}tu\\s+${AMOUNT_GROUP}\\s+tro\\s+len\\b`, "g") },
   // "tu X den|toi|- Y" / "X den|toi|- Y" — between.
   {
     kind: "between",
-    re: new RegExp(`${LEFT_BOUND}(?:tu\\s+)?${AMOUNT_GROUP}\\s*(?:den|toi|-)\\s*${AMOUNT_GROUP}\\b`),
+    re: new RegExp(`${LEFT_BOUND}(?:tu\\s+)?${AMOUNT_GROUP}\\s*(?:den|toi|-)\\s*${AMOUNT_GROUP}\\b`, "g"),
   },
-  { kind: "max", re: new RegExp(`${LEFT_BOUND}(?:${MAX_CUE_ALT})\\s*${AMOUNT_GROUP}\\b`) },
-  { kind: "min", re: new RegExp(`${LEFT_BOUND}(?:${MIN_CUE_ALT})\\s*${AMOUNT_GROUP}\\b`) },
-  { kind: "around", re: new RegExp(`${LEFT_BOUND}(?:${AROUND_CUE_ALT})\\s*${AMOUNT_GROUP}\\b`) },
+  { kind: "max", re: new RegExp(`${LEFT_BOUND}(?:${MAX_CUE_ALT})\\s*${AMOUNT_GROUP}\\b`, "g") },
+  { kind: "min", re: new RegExp(`${LEFT_BOUND}(?:${MIN_CUE_ALT})\\s*${AMOUNT_GROUP}\\b`, "g") },
+  { kind: "around", re: new RegExp(`${LEFT_BOUND}(?:${AROUND_CUE_ALT})\\s*${AMOUNT_GROUP}\\b`, "g") },
 ];
 
 function roundToThousand(n: number): number {
@@ -101,44 +104,69 @@ function parseGroup(rawNumber: string, unit: string | undefined): number | null 
   return parsePriceAmount(rawNumber + (unit ?? ""));
 }
 
+type Match = { start: number; end: number; range: Omit<PriceRange, "start" | "end"> };
+
+/** Builds the range for one regex match of a given kind, or null when its amount(s) don't
+ * validate (out of [MIN_PRICE_VND, MAX_PRICE_VND] or otherwise unparseable). */
+function buildMatch(kind: "min" | "max" | "between" | "around", m: RegExpExecArray): Match | null {
+  const start = m.index;
+  const end = start + m[0].length;
+
+  if (kind === "between") {
+    // Tuple cast: m's capture groups are positional (num1, unit1, num2, unit2) — AMOUNT_GROUP
+    // appears twice in the "between" pattern, and named groups can't repeat a name, so we
+    // destructure by position instead.
+    const [, num1, unit1, num2, unit2] = m as unknown as [string, string, string | undefined, string, string | undefined];
+    // Unit of the second amount applies to the first when the first has none.
+    const effectiveUnit1 = unit1 ?? unit2;
+    const minPrice = parseGroup(num1, effectiveUnit1);
+    const maxPrice = parseGroup(num2, unit2);
+    if (minPrice == null || maxPrice == null) return null;
+    return { start, end, range: { minPrice, maxPrice } };
+  }
+
+  // Tuple cast: same positional destructuring as above, single (num, unit) pair here.
+  const [, num, unit] = m as unknown as [string, string, string | undefined];
+  const amount = parseGroup(num, unit);
+  if (amount == null) return null;
+
+  if (kind === "around") {
+    return {
+      start,
+      end,
+      range: { minPrice: roundToThousand(amount * 0.85), maxPrice: roundToThousand(amount * 1.15) },
+    };
+  }
+  return kind === "max" ? { start, end, range: { maxPrice: amount } } : { start, end, range: { minPrice: amount } };
+}
+
 /**
  * Scans a folded string for the first Vietnamese price phrase (max/min/between/around) and
  * returns its amount(s) plus the character span of the whole phrase, so the caller can strip
  * it out of the query. Bare numbers/amounts with no price cue are never matched (avoids "990
- * pro", "27 inch", "ssd 2tb").
+ * pro", "27 inch", "ssd 2tb"). Walks every syntactic occurrence of each pattern kind (not just
+ * the first): an earlier occurrence can fail amount validation (e.g. "0d", "5000tr") and must
+ * not shadow a later, valid one of the same or a different kind.
  */
 export function extractPriceRange(folded: string): PriceRange | null {
-  let best: { start: number; end: number; range: Omit<PriceRange, "start" | "end"> } | null = null;
+  let best: Match | null = null;
 
   for (const { kind, re } of PATTERNS) {
-    const m = re.exec(folded);
-    if (!m || m.index === undefined) continue;
-    const start = m.index;
-    const end = start + m[0].length;
-    if (best && start >= best.start) continue;
-
-    if (kind === "between") {
-      const [, num1, unit1, num2, unit2] = m as unknown as [string, string, string | undefined, string, string | undefined];
-      // Unit of the second amount applies to the first when the first has none.
-      const effectiveUnit1 = unit1 ?? unit2;
-      const minPrice = parseGroup(num1, effectiveUnit1);
-      const maxPrice = parseGroup(num2, unit2);
-      if (minPrice == null || maxPrice == null) continue;
-      best = { start, end, range: { minPrice, maxPrice } };
-    } else if (kind === "around") {
-      const [, num, unit] = m as unknown as [string, string, string | undefined];
-      const amount = parseGroup(num, unit);
-      if (amount == null) continue;
-      best = {
-        start,
-        end,
-        range: { minPrice: roundToThousand(amount * 0.85), maxPrice: roundToThousand(amount * 1.15) },
-      };
-    } else {
-      const [, num, unit] = m as unknown as [string, string, string | undefined];
-      const amount = parseGroup(num, unit);
-      if (amount == null) continue;
-      best = kind === "max" ? { start, end, range: { maxPrice: amount } } : { start, end, range: { minPrice: amount } };
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(folded)) !== null) {
+      // A zero-length match would spin exec() forever; none of our patterns can produce one
+      // (each requires at least a cue or digit), but guard anyway.
+      if (m[0].length === 0) {
+        re.lastIndex++;
+        continue;
+      }
+      if (best && m.index >= best.start) break; // later matches of this pattern can't win
+      const candidate = buildMatch(kind, m);
+      if (candidate) {
+        best = candidate;
+        break; // first validating match of this pattern kind — earliest occurrence wins
+      }
     }
   }
 
