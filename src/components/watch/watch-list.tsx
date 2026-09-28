@@ -1,351 +1,758 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter, unstable_rethrow } from "next/navigation";
+import Image from "next/image";
 import { formatVnd } from "@/lib/format";
 import { setWatchStatus, deleteWatch } from "@/actions/watch";
 import { WatchModal } from "@/components/watch/watch-modal";
 import type { MyWatchItem } from "@/lib/watch/queries";
-import type { ConditionKey } from "@/lib/watch/types";
+import { variantLabel } from "@/components/product/variant-label";
+import { verdictText } from "@/components/product/verdict-tag";
+import { groupByFolder, type WatchFolder } from "@/lib/watch/folders";
+import type { NotificationSettings } from "@/lib/account/notification-settings";
+import { ALL, FolderNav, UNFILED, type FolderFilter } from "@/components/watch/folder-nav";
+import { WatchNotifyBox } from "@/components/watch/watch-notify-box";
+import {
+  BellIcon,
+  BellOffIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  ClockIcon,
+  DashIcon,
+  FolderIcon,
+  HourglassIcon,
+  PencilIcon,
+  SearchIcon,
+  TargetIcon,
+  TrashIcon,
+  TrendDownIcon,
+} from "@/components/ui/icons";
 
 interface WatchListProps {
   initialItems: MyWatchItem[];
+  folders: WatchFolder[];
+  settings: NotificationSettings;
 }
 
-const CONDITION_LABELS: Record<ConditionKey, string> = {
-  target_price: "Giá mục tiêu",
-  drop_pct: "Giảm theo %",
-  low: "Đáy 90 ngày",
-  deal_score: "Deal Score cao",
-  back_in_stock: "Có hàng lại",
-};
+type Tab = "active" | "paused" | "done";
 
-export function WatchList({ initialItems }: WatchListProps) {
-  const [activeTab, setActiveTab] = useState<"active" | "paused" | "done">("active");
-  const [editingWatch, setEditingWatch] = useState<MyWatchItem | null>(null);
-  const [isPending, startTransition] = useTransition();
+const TABS: Array<{ key: Tab; label: string; empty: string; hint: string }> = [
+  {
+    key: "active",
+    label: "Đang theo dõi",
+    empty: "Bạn chưa theo dõi sản phẩm nào.",
+    hint: "Mở một sản phẩm và bấm “Theo dõi giá” để Kairo báo khi giá xuống.",
+  },
+  {
+    key: "paused",
+    label: "Tạm dừng",
+    empty: "Không có theo dõi nào đang tạm dừng.",
+    hint: "Theo dõi bạn tạm dừng sẽ nằm ở đây.",
+  },
+  {
+    key: "done",
+    label: "Đã mua",
+    empty: "Chưa có sản phẩm nào được đánh dấu đã mua.",
+    hint: "Bấm “Đã mua” ở một theo dõi để chuyển nó vào đây.",
+  },
+];
 
-  const filteredItems = initialItems.filter((item) => item.status === activeTab);
+const TINTS = ["var(--tint-peach)", "var(--tint-lilac)", "var(--tint-sky)", "var(--primary-soft)", "var(--wait-soft)", "var(--buy-soft)"];
 
-  const activeCount = initialItems.filter((i) => i.status === "active").length;
-  const pausedCount = initialItems.filter((i) => i.status === "paused").length;
-  const doneCount = initialItems.filter((i) => i.status === "done").length;
+function getTint(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash + id.charCodeAt(i)) % TINTS.length;
+  }
+  return TINTS[hash];
+}
 
-  const handleStatusChange = (watchId: string, newStatus: "active" | "paused" | "done") => {
+function timeVN(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = Date.now();
+  const diffMinutes = Math.round((now - d.getTime()) / 60000);
+  if (diffMinutes < 1) return "vừa xong";
+  if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays} ngày trước`;
+}
+
+export function WatchList({ initialItems, folders, settings }: WatchListProps) {
+  const router = useRouter();
+  const items = useMemo(() => initialItems ?? [], [initialItems]);
+  const [activeTab, setActiveTab] = useState<Tab>("active");
+  const [selectedFolder, setSelectedFolder] = useState<FolderFilter>(ALL);
+  const [pasteUrl, setPasteUrl] = useState("");
+
+  const [editing, setEditing] = useState<MyWatchItem | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  // Alert emails link to /account/watch#{watchId}: switch to that watch's tab, then scroll to it.
+  useEffect(() => {
+    const list = initialItems ?? [];
+    const openFromHash = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      const target = id ? list.find((i) => i.id === id) : null;
+      if (!target) return;
+      setActiveTab(target.status);
+      requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+    };
+    const raf = requestAnimationFrame(openFromHash);
+    window.addEventListener("hashchange", openFromHash);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("hashchange", openFromHash);
+    };
+  }, [initialItems]);
+
+  const run = (id: string, work: () => Promise<void>, fallback: string) => {
+    setPendingId(id);
+    setRowError(null);
     startTransition(async () => {
       try {
-        await setWatchStatus(watchId, newStatus);
+        await work();
+        setConfirmDelete(null);
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái");
+        unstable_rethrow(err);
+        setRowError({ id, message: err instanceof Error && err.message.startsWith("Đã đạt") ? err.message : fallback });
+      } finally {
+        setPendingId(null);
       }
     });
   };
 
-  const handleDelete = (watchId: string) => {
-    if (confirm("Bạn có chắc chắn muốn xóa theo dõi sản phẩm này?")) {
-      startTransition(async () => {
-        try {
-          await deleteWatch(watchId);
-        } catch (err) {
-          alert(err instanceof Error ? err.message : "Lỗi khi xóa");
-        }
-      });
-    }
+  const handlePasteSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pasteUrl.trim()) return;
+    router.push(`/search?q=${encodeURIComponent(pasteUrl.trim())}`);
   };
 
+  // Filter items by Tab and by Folder
+  const tabItems = useMemo(
+    () => items.filter((i) => i.status === activeTab),
+    [items, activeTab]
+  );
+
+  const groups = useMemo(() => groupByFolder(tabItems, folders), [tabItems, folders]);
+  const folderCounts = {
+    all: groups.all.count,
+    unfiled: groups.unfiled.count,
+    byFolder: Object.fromEntries(groups.byFolder.map((g) => [g.folder.id, g.count])),
+  };
+  const folderNameById = new Map(folders.map((f) => [f.id, f.name]));
+
+  // A folder deleted elsewhere falls back to "Tất cả".
+  const activeFolder =
+    selectedFolder === ALL || selectedFolder === UNFILED || folderNameById.has(selectedFolder) ? selectedFolder : ALL;
+  const folderFilteredItems =
+    activeFolder === ALL
+      ? groups.all.items
+      : activeFolder === UNFILED
+        ? groups.unfiled.items
+        : (groups.byFolder.find((g) => g.folder.id === activeFolder)?.items ?? []);
+
+  // Overall statistics for top summary tiles
+  const trackedItems = items.filter((i) => i.status !== "done");
+  const reachedCount = trackedItems.filter((i) => i.view.target?.reached).length;
+  const droppedCount = trackedItems.filter((i) => {
+    const c = i.view.changeSinceStart;
+    return c != null && c.amount < 0;
+  }).length;
+  const goodDealsCount = trackedItems.filter(
+    (i) => i.view.deal?.recommendation === "buy"
+  ).length;
+  const alertsOnCount = items.filter((i) => i.status === "active").length;
+
+  const currentTabInfo = TABS.find((t) => t.key === activeTab)!;
+
   return (
-    <div className="space-y-6">
-      {/* Status tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-3">
-        <button
-          type="button"
-          onClick={() => setActiveTab("active")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors ${
-            activeTab === "active"
-              ? "bg-foreground text-background"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          <span>Đang theo dõi</span>
-          <span className="rounded-full bg-black/10 dark:bg-white/10 px-2 py-0.5 text-[10px]">
-            {activeCount}
-          </span>
-        </button>
+    <div className="grid grid-cols-1 items-start gap-8 min-[1080px]:grid-cols-[260px_1fr]">
+      {/* Left: Folders & Notification Settings Sidebar */}
+      <aside className="flex flex-col gap-6">
+        <FolderNav
+          folders={folders}
+          counts={folderCounts}
+          selected={activeFolder}
+          onSelect={setSelectedFolder}
+        />
+        <WatchNotifyBox initialSettings={settings} />
+      </aside>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("paused")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors ${
-            activeTab === "paused"
-              ? "bg-foreground text-background"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          <span>Tạm dừng</span>
-          <span className="rounded-full bg-black/10 dark:bg-white/10 px-2 py-0.5 text-[10px]">
-            {pausedCount}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("done")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors ${
-            activeTab === "done"
-              ? "bg-foreground text-background"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          <span>Đã mua</span>
-          <span className="rounded-full bg-black/10 dark:bg-white/10 px-2 py-0.5 text-[10px]">
-            {doneCount}
-          </span>
-        </button>
-      </div>
-
-      {/* Watch list */}
-      {filteredItems.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-border p-12 text-center space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-black/5 dark:bg-white/5 text-2xl">
-            {activeTab === "active" ? "🔔" : activeTab === "paused" ? "⏸" : "🛍"}
+      {/* Main Area: Top Bar, 3 Tiles, Table */}
+      <main className="flex min-w-0 flex-col gap-6">
+        {/* Header Row: Title & Paste Link Search */}
+        <div className="flex flex-col gap-4 min-[900px]:flex-row min-[900px]:items-center min-[900px]:justify-between">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-[family-name:var(--font-display)] text-[32px] font-extrabold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[36px]">
+              Đang theo dõi
+            </h1>
+            <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-ink-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-0.5 shadow-xs">
+                <span className="font-[family-name:var(--font-display)] font-bold text-ink">
+                  {items.length}
+                </span>
+                <span>sản phẩm</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-soft bg-primary-soft/60 px-2.5 py-0.5 text-primary-hover">
+                <BellIcon className="size-3.5" strokeWidth={2.2} fill="currentColor" />
+                <span className="font-[family-name:var(--font-display)] font-bold">
+                  {alertsOnCount}
+                </span>
+                <span>đang bật cảnh báo</span>
+              </span>
+            </div>
           </div>
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-foreground">
-              {activeTab === "active"
-                ? "Chưa có sản phẩm nào đang theo dõi"
-                : activeTab === "paused"
-                  ? "Không có sản phẩm nào bị tạm dừng"
-                  : "Chưa có sản phẩm nào đánh dấu đã mua"}
-            </h3>
-            <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
-              {activeTab === "active"
-                ? "Duyệt tìm sản phẩm và bấm nút 'Theo dõi giá' để nhận thông báo ngay khi giá giảm."
-                : "Các sản phẩm bạn tạm dừng nhận cảnh báo hoặc đã mua sẽ xuất hiện tại đây."}
-            </p>
-          </div>
-          {activeTab === "active" && (
-            <Link
-              href="/search"
-              className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2 text-xs font-semibold text-background hover:opacity-90"
+
+          <form
+            onSubmit={handlePasteSubmit}
+            className="flex w-full max-w-[500px] items-center gap-2.5 rounded-xl border border-line-strong bg-surface p-1.5 pl-3.5 shadow-sm transition-colors focus-within:border-primary"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--ink-3)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="shrink-0"
             >
-              Tìm sản phẩm ngay →
-            </Link>
-          )}
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <label htmlFor="w-url" className="sr-only">
+              Dán link sản phẩm để theo dõi
+            </label>
+            <input
+              id="w-url"
+              type="text"
+              value={pasteUrl}
+              onChange={(e) => setPasteUrl(e.target.value)}
+              placeholder="Dán link sản phẩm Shopee…"
+              className="h-10 min-w-0 flex-1 border-none bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-3"
+            />
+            <button
+              type="submit"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm bg-primary px-3.5 text-[13px] font-bold text-on-primary transition-colors hover:bg-primary-hover"
+            >
+              <BellIcon className="size-4" strokeWidth={2.2} />
+              <span>Theo dõi giá</span>
+            </button>
+          </form>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredItems.map((item) => {
-            const { view, product, variant, config } = item;
-            const productHref = `/${product.categorySlug}/${product.slug}?variant=${variant.id}`;
 
+        {/* 3 Summary Tiles */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-xs">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-wait-soft text-wait">
+              <TargetIcon className="size-4" strokeWidth={2.2} />
+            </span>
+            <div className="flex min-w-0 items-baseline gap-2">
+              <span className="font-[family-name:var(--font-display)] text-[22px] font-extrabold leading-none text-ink">
+                {reachedCount}
+              </span>
+              <span className="truncate text-[13px] font-medium text-ink-2">
+                Chạm giá mục tiêu
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-xs">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-primary-soft text-primary-hover">
+              <TrendDownIcon className="size-4" strokeWidth={2.2} />
+            </span>
+            <div className="flex min-w-0 items-baseline gap-2">
+              <span className="font-[family-name:var(--font-display)] text-[22px] font-extrabold leading-none text-ink">
+                {droppedCount}
+              </span>
+              <span className="truncate text-[13px] font-medium text-ink-2">
+                Giảm giá 7 ngày qua
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-xs">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-buy-soft text-buy">
+              <CheckCircleIcon className="size-4" strokeWidth={2.2} />
+            </span>
+            <div className="flex min-w-0 items-baseline gap-2">
+              <span className="font-[family-name:var(--font-display)] text-[22px] font-extrabold leading-none text-ink">
+                {goodDealsCount}
+              </span>
+              <span className="truncate text-[13px] font-medium text-ink-2">
+                Đang ở mức Nên mua
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Tab Switcher (Đang theo dõi / Tạm dừng / Đã mua) */}
+        <div
+          role="group"
+          aria-label="Lọc theo trạng thái"
+          className="inline-flex max-w-full flex-wrap gap-1 self-start rounded-xl border border-line bg-surface-2 p-1"
+        >
+          {TABS.map((t) => {
+            const count = items.filter((i) => i.status === t.key).length;
+            const isActive = activeTab === t.key;
             return (
-              <div
-                key={item.id}
-                // Alert emails link to /account/watch#{watchId} — the anchor scrolls to that Watch.
-                id={item.id}
-                className="scroll-mt-6 flex flex-col md:flex-row md:items-center justify-between gap-6 rounded-3xl border border-border bg-black/[0.01] p-5 sm:p-6 shadow-sm dark:bg-white/[0.01]"
+              <button
+                key={t.key}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => setActiveTab(t.key)}
+                className={`inline-flex h-9 items-center gap-2 rounded-sm px-3.5 text-[13px] transition-colors ${
+                  isActive
+                    ? "bg-surface font-bold text-ink shadow-xs"
+                    : "font-semibold text-ink-2 hover:text-ink"
+                }`}
               >
-                {/* Product info */}
-                <div className="flex items-start gap-4 flex-1">
-                  {product.image && (
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-border bg-black/5 dark:bg-white/5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    <Link
-                      href={productHref}
-                      className="text-sm font-bold text-foreground hover:underline line-clamp-1"
-                    >
-                      {product.name}
-                    </Link>
-
-                    {variant.key && (
-                      <p className="text-xs text-muted truncate">
-                        Phiên bản: {variant.key}
-                      </p>
-                    )}
-
-                    {/* Price & distance to target */}
-                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                      {view.price !== null ? (
-                        <span className="font-bold text-foreground">
-                          {formatVnd(view.price)}
-                        </span>
-                      ) : (
-                        <span className="text-muted font-medium">
-                          Tạm hết hàng
-                        </span>
-                      )}
-
-                      {view.target && (
-                        <span
-                          className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
-                            view.target.reached
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                              : "bg-black/5 text-muted dark:bg-white/5"
-                          }`}
-                        >
-                          {view.target.reached
-                            ? "✓ Đã đạt giá mục tiêu"
-                            : `Còn ${formatVnd(view.target.gap)} (${Math.round(
-                                view.target.gapPct * 100,
-                              )}%)`}
-                        </span>
-                      )}
-
-                      {view.changeSinceStart && view.changeSinceStart.amount !== 0 && (
-                        <span className="text-[11px] text-muted">
-                          {view.changeSinceStart.amount < 0 ? "↓" : "↑"}{" "}
-                          {Math.abs(Math.round(view.changeSinceStart.pct * 100))}%
-                          từ lúc bắt đầu
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Condition status chips */}
-                    <div className="flex flex-wrap gap-1.5 pt-2">
-                      {view.conditions.map((c) => (
-                        <span
-                          key={c.key}
-                          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium ${
-                            c.state === true
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                              : c.state === "unknown"
-                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                                : "bg-black/5 text-muted dark:bg-white/5"
-                          }`}
-                        >
-                          <span>
-                            {c.state === true
-                              ? "●"
-                              : c.state === "unknown"
-                                ? "○"
-                                : "·"}
-                          </span>
-                          <span>{CONDITION_LABELS[c.key]}</span>
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Latest alert status */}
-                    <div className="pt-1 text-[11px] text-muted">
-                      {view.alertStatus.kind === "sent" ? (
-                        <span>
-                          Đã gửi cảnh báo qua {view.alertStatus.channels.join(", ")}
-                        </span>
-                      ) : view.alertStatus.kind === "scheduled" ? (
-                        <span>
-                          Chờ gửi lúc{" "}
-                          {new Date(
-                            view.alertStatus.deliverAfter,
-                          ).toLocaleTimeString("vi-VN", {
-                            timeZone: "Asia/Ho_Chi_Minh",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          ({view.alertStatus.reason === "daily_digest"
-                            ? "tóm tắt hằng ngày"
-                            : "sau giờ im lặng"})
-                        </span>
-                      ) : (
-                        <span>Chưa có cảnh báo nào</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex flex-wrap md:flex-col items-center md:items-end justify-between gap-2 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 shrink-0">
-                  {/* Buy on Shopee button */}
-                  <a
-                    href={`/go/shopee/offer?src=web&watch=${item.id}`}
-                    target="_blank"
-                    rel="nofollow sponsored noopener"
-                    className="inline-flex items-center justify-center rounded-xl bg-foreground px-3 py-1.5 text-xs font-semibold text-background hover:opacity-90 transition-opacity"
-                  >
-                    Mua trên Shopee ↗
-                  </a>
-
-                  <div className="flex items-center gap-1 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setEditingWatch(item)}
-                      className="rounded-lg px-2 py-1 text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                    >
-                      Sửa
-                    </button>
-
-                    {item.status === "active" ? (
-                      <button
-                        type="button"
-                        disabled={isPending}
-                        onClick={() => handleStatusChange(item.id, "paused")}
-                        className="rounded-lg px-2 py-1 text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                      >
-                        Tạm dừng
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isPending}
-                        onClick={() => handleStatusChange(item.id, "active")}
-                        className="rounded-lg px-2 py-1 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
-                      >
-                        Tiếp tục
-                      </button>
-                    )}
-
-                    {item.status !== "done" && (
-                      <button
-                        type="button"
-                        disabled={isPending}
-                        onClick={() => handleStatusChange(item.id, "done")}
-                        className="rounded-lg px-2 py-1 text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-                      >
-                        Đã mua
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => handleDelete(item.id)}
-                      className="rounded-lg px-2 py-1 text-red-600 dark:text-red-400 hover:bg-red-500/10"
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              </div>
+                {t.key === "active" ? (
+                  <BellIcon className="size-3.5 shrink-0" strokeWidth={2.2} />
+                ) : t.key === "paused" ? (
+                  <BellOffIcon className="size-3.5 shrink-0" strokeWidth={2} />
+                ) : (
+                  <CheckIcon className="size-3.5 shrink-0" strokeWidth={2.4} />
+                )}
+                <span>{t.label}</span>
+                <span
+                  className={`font-[family-name:var(--font-display)] inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                    isActive
+                      ? "bg-primary-soft text-primary-hover"
+                      : "bg-surface text-ink-3"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
             );
           })}
         </div>
-      )}
 
-      {/* Edit Watch modal */}
-      {editingWatch && (
-        <WatchModal
-          isOpen={Boolean(editingWatch)}
-          onClose={() => setEditingWatch(null)}
-          productName={editingWatch.product.name}
-          variantKey={editingWatch.variant.key}
-          variantId={editingWatch.variant.id}
-          currentPrice={editingWatch.view.price}
-          existingWatch={{
-            id: editingWatch.id,
-            config: editingWatch.config,
-            status: editingWatch.status,
-          }}
-          currentPath="/account/watch"
-        />
-      )}
+        {/* Tracked Items Table */}
+        {folderFilteredItems.length === 0 ? (
+          <div className="rounded-[20px] border border-dashed border-line-strong bg-surface p-12 text-center">
+            <p className="font-[family-name:var(--font-display)] text-[20px] font-bold text-ink">
+              {currentTabInfo.empty}
+            </p>
+            <p className="mx-auto mt-2 max-w-[46ch] text-[15px] text-ink-2">
+              {currentTabInfo.hint}
+            </p>
+            {activeTab === "active" && (
+              <Link
+                href="/search"
+                className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-bold text-on-primary transition-colors hover:bg-primary-hover"
+              >
+                <SearchIcon className="size-[18px]" />
+                <span>Tìm sản phẩm</span>
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-[20px] border border-line bg-surface shadow-sm">
+            {/* Table Header */}
+            <div
+              aria-hidden="true"
+              className="hidden grid-cols-[minmax(0,2.8fr)_minmax(0,1.15fr)_104px_minmax(0,1.55fr)_240px] gap-4 border-b border-line bg-canvas px-6 py-3.5 text-[13px] font-bold text-ink-3 min-[1080px]:grid"
+            >
+              <span>Sản phẩm</span>
+              <span>Giá hiện tại</span>
+              <span className="text-center">Deal Score</span>
+              <span>Giá mong muốn</span>
+              <span className="sr-only">Hành động</span>
+            </div>
+
+            {/* Table Rows */}
+            <div className="divide-y divide-line">
+              {folderFilteredItems.map((item) => {
+                const { product, variant, view } = item;
+                const name = product.name?.trim() || "Sản phẩm chưa có tên";
+                const href = `/${product.categorySlug}/${product.slug}?variant=${encodeURIComponent(variant.id)}`;
+                const busy = pendingId === item.id;
+                const alertOn = item.status === "active";
+                const updatedAgo = view.observedAt ? timeVN(view.observedAt) : "5 phút trước";
+                const folderName = item.folderId ? folderNameById.get(item.folderId) : undefined;
+                const tintBg = getTint(product.slug || item.id);
+
+                const price = view.price != null && view.price > 0 ? view.price : null;
+                const change = view.changeSinceStart;
+                const chgAmount = change?.amount ?? 0;
+                const chgLabel =
+                  change == null
+                    ? "Chưa đủ 7 ngày"
+                    : chgAmount === 0
+                      ? "— 7 ngày"
+                      : `${chgAmount < 0 ? "↓ " : "↑ "}${formatVnd(Math.abs(chgAmount))} · 7d`;
+                const chgColor =
+                  change == null || chgAmount === 0
+                    ? "text-ink-3"
+                    : chgAmount < 0
+                      ? "text-buy"
+                      : "text-avoid";
+
+                // Deal Score visual gauge
+                const rawScore = view.deal?.score;
+                const score =
+                  rawScore != null && Number.isFinite(rawScore)
+                    ? Math.min(100, Math.max(0, Math.round(rawScore)))
+                    : null;
+                const recKey = score == null ? "insufficient_data" : (view.deal?.recommendation ?? "insufficient_data");
+                const vConfig = {
+                  buy: { fg: "var(--buy)", badgeBg: "bg-buy text-canvas" },
+                  wait: { fg: "var(--wait)", badgeBg: "bg-wait text-canvas" },
+                  avoid: { fg: "var(--avoid)", badgeBg: "bg-avoid text-canvas" },
+                  insufficient_data: { fg: "var(--ink-3)", badgeBg: "bg-surface-2 text-ink-3" },
+                }[recKey];
+                const ringCircumference = 122.5; // 2 * Math.PI * 19.5
+                const ringDash =
+                  score != null
+                    ? `${Math.max(6, Math.round((score / 100) * ringCircumference))} ${ringCircumference}`
+                    : "0 122.5";
+                const scoreTooltip =
+                  score != null
+                    ? `Deal Score: ${score}/100 — ${verdictText(recKey)}`
+                    : `Deal Score: ${verdictText("insufficient_data")}`;
+
+                // Target status
+                const target = view.target;
+                const hasTarget = target != null && target.amount > 0;
+                const reached = hasTarget && target.reached;
+                const gap = hasTarget && price != null ? price - target.amount : 0;
+                const closePct = !hasTarget
+                  ? 0
+                  : reached
+                    ? 100
+                    : Math.max(0, Math.round((1 - Math.min(1, gap / (price || 1) / 0.3)) * 100));
+
+                const alertTitle = busy
+                  ? "Đang xử lý…"
+                  : alertOn
+                    ? view.alertStatus.kind === "scheduled"
+                      ? `Cảnh báo đang bật (${view.alertStatus.text}) — Bấm để tạm dừng`
+                      : "Cảnh báo đang bật — Bấm để tạm dừng"
+                    : "Cảnh báo đã tắt — Bấm để bật lại";
+
+                return (
+                  <div
+                    key={item.id}
+                    id={item.id}
+                    className="grid grid-cols-1 items-center gap-4 p-5 min-[1080px]:grid-cols-[minmax(0,2.8fr)_minmax(0,1.15fr)_104px_minmax(0,1.55fr)_240px] min-[1080px]:px-6 min-[1080px]:py-4"
+                  >
+                    {/* Col 1: Product info */}
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <div
+                        className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+                        style={{ backgroundColor: tintBg }}
+                      >
+                        {product.image ? (
+                          <Image
+                            src={product.image}
+                            alt=""
+                            width={44}
+                            height={44}
+                            className="size-11 object-contain"
+                            unoptimized
+                          />
+                        ) : (
+                          <svg
+                            width="28"
+                            height="28"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="var(--ink)"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M4 10h16v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4zM2 10h20M9 6c0-1 1-2 3-2s3 1 3 2" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <Link
+                          href={href}
+                          title={name}
+                          className="line-clamp-1 text-[14px] font-semibold leading-snug text-ink hover:underline"
+                        >
+                          {name}
+                        </Link>
+                        {(variant.key || folderName) && (
+                          <div className="flex flex-wrap items-center gap-2 text-[12px] text-ink-3">
+                            {variant.key && (
+                              <span className="inline-flex h-5 min-w-[56px] items-center justify-center rounded bg-surface-2 px-2 text-[12px] font-semibold text-ink-2">
+                                {variantLabel(variant.key)}
+                              </span>
+                            )}
+                            {folderName && (
+                              <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                                <FolderIcon className="size-3.5 text-ink-3" />
+                                <span>{folderName}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <span
+                          className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] text-ink-3"
+                          title={`Cập nhật ${updatedAgo}`}
+                        >
+                          <ClockIcon className="size-3.5 text-ink-3" />
+                          <span>{updatedAgo}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Col 2: Current price */}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-[family-name:var(--font-display)] whitespace-nowrap text-[18px] font-bold text-ink">
+                        {price != null ? formatVnd(price) : "—"}
+                      </span>
+                      <span className={`whitespace-nowrap text-[12px] font-semibold ${chgColor}`}>
+                        {chgLabel}
+                      </span>
+                    </div>
+
+                    {/* Col 3: Deal Score (Visual Progress Ring + Status Badge) */}
+                    <div className="flex items-center min-[1080px]:justify-center">
+                      <div
+                        role="img"
+                        aria-label={scoreTooltip}
+                        title={scoreTooltip}
+                        className="relative inline-flex size-12 shrink-0 items-center justify-center"
+                      >
+                        <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" className="size-12">
+                          <circle
+                            cx="24"
+                            cy="24"
+                            r="19.5"
+                            fill="none"
+                            stroke={recKey === "insufficient_data" ? "var(--line-strong)" : "var(--surface-2)"}
+                            strokeWidth="3.5"
+                            strokeDasharray={recKey === "insufficient_data" ? "3 3" : undefined}
+                          />
+                          {score != null && (
+                            <circle
+                              cx="24"
+                              cy="24"
+                              r="19.5"
+                              fill="none"
+                              stroke={vConfig.fg}
+                              strokeWidth="3.5"
+                              strokeLinecap="round"
+                              strokeDasharray={ringDash}
+                              transform="rotate(-90 24 24)"
+                            />
+                          )}
+                        </svg>
+                        <span
+                          className={`font-[family-name:var(--font-display)] absolute text-[15px] font-extrabold leading-none ${
+                            score != null ? "text-ink" : "text-ink-3"
+                          }`}
+                        >
+                          {score != null ? score : "—"}
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className={`absolute -bottom-0.5 -right-0.5 flex size-[18px] items-center justify-center rounded-full ring-2 ring-surface ${vConfig.badgeBg}`}
+                        >
+                          {recKey === "buy" ? (
+                            <CheckIcon className="size-2.5" strokeWidth={3} />
+                          ) : recKey === "wait" ? (
+                            <HourglassIcon className="size-2.5" strokeWidth={2.5} />
+                          ) : recKey === "avoid" ? (
+                            <DashIcon className="size-2.5" strokeWidth={3} />
+                          ) : (
+                            <span className="text-[10px] font-bold leading-none">?</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Col 4: Target price & progress bar */}
+                    <div className="flex flex-col justify-center gap-1.5">
+                      {hasTarget ? (
+                        <>
+                          <div className="flex items-baseline justify-between gap-2 text-[13px]">
+                            <span className="font-[family-name:var(--font-display)] whitespace-nowrap font-bold text-ink">
+                              {formatVnd(target.amount)}
+                            </span>
+                            <span
+                              title={reached ? "Đã đạt giá mong muốn" : `Còn cách giá mong muốn ${formatVnd(gap)}`}
+                              className={`inline-flex items-center gap-0.5 whitespace-nowrap text-[12px] font-semibold ${
+                                reached ? "text-buy" : "text-ink-3"
+                              }`}
+                            >
+                              {reached && <CheckIcon className="size-3.5" strokeWidth={2.6} />}
+                              {reached ? "Đã đạt" : `-${formatVnd(gap)}`}
+                            </span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{
+                                width: `${closePct}%`,
+                                backgroundColor: reached ? "var(--buy)" : "var(--primary)",
+                              }}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEditing(item)}
+                          className="inline-flex h-10 items-center gap-1.5 self-start whitespace-nowrap rounded-xl border border-dashed border-line-strong px-3 text-[13px] font-semibold text-ink-2 transition-colors hover:border-ink hover:bg-canvas hover:text-ink"
+                        >
+                          <TargetIcon className="size-4 shrink-0" />
+                          <span>Đặt mục tiêu</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Col 5: Unified CTA & Icon Actions ([Xem giá] [🔔] [✏️] [🗑️]) */}
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={href}
+                        title={reached ? "Liên kết tiếp thị" : undefined}
+                        className={`flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-xl px-3 text-[13px] font-bold transition-colors ${
+                          reached
+                            ? "bg-primary text-on-primary hover:bg-primary-hover"
+                            : "border border-line-strong bg-surface text-ink hover:bg-canvas"
+                        }`}
+                      >
+                        {reached ? "Đến Shopee" : "Xem giá"}
+                      </Link>
+                      <button
+                        type="button"
+                        aria-pressed={alertOn}
+                        aria-label={alertTitle}
+                        title={alertTitle}
+                        disabled={busy}
+                        onClick={() =>
+                          run(
+                            item.id,
+                            () => setWatchStatus(item.id, alertOn ? "paused" : "active"),
+                            "Chưa đổi được trạng thái."
+                          )
+                        }
+                        className={`relative inline-flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+                          alertOn
+                            ? "border-primary-soft bg-primary-soft text-primary-hover hover:bg-primary-soft/80"
+                            : "border-line-strong bg-surface text-ink-3 hover:bg-canvas hover:text-ink"
+                        }`}
+                      >
+                        {alertOn ? (
+                          <BellIcon className="size-4" strokeWidth={2.2} fill="currentColor" />
+                        ) : (
+                          <BellOffIcon className="size-4" />
+                        )}
+                        {alertOn && view.alertStatus.kind === "scheduled" && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary ring-2 ring-surface"
+                          />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(item)}
+                        aria-label={`Sửa theo dõi ${name}`}
+                        title="Sửa"
+                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink-2 transition-colors hover:bg-canvas hover:text-ink"
+                      >
+                        <PencilIcon className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(item.id)}
+                        aria-label={`Xóa theo dõi ${name}`}
+                        title="Xóa"
+                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink-2 transition-colors hover:border-avoid hover:bg-avoid-soft hover:text-avoid"
+                      >
+                        <TrashIcon className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {confirmDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-night/60 p-4">
+            <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-lift">
+              <h3 className="font-[family-name:var(--font-display)] text-[20px] font-bold text-ink">
+                Xác nhận xóa theo dõi?
+              </h3>
+              <p className="mt-2 text-[14px] text-ink-2">
+                Bạn sẽ không nhận thông báo khi giá sản phẩm này giảm nữa.
+              </p>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(null)}
+                  className="h-10 rounded-xl border border-line-strong px-4 text-[14px] font-semibold text-ink"
+                >
+                  Giữ lại
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    run(
+                      confirmDelete,
+                      () => deleteWatch(confirmDelete),
+                      "Chưa xóa được theo dõi."
+                    )
+                  }
+                  className="h-10 rounded-xl bg-avoid px-4 text-[14px] font-semibold text-canvas"
+                >
+                  Xóa theo dõi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Watch Modal */}
+        {editing && (
+          <WatchModal
+            isOpen
+            onClose={() => setEditing(null)}
+            productName={editing.product.name}
+            variantKey={editing.variant.key}
+            variantId={editing.variant.id}
+            currentPrice={editing.view.price}
+            existingWatch={{
+              id: editing.id,
+              config: editing.config,
+              status: editing.status,
+              folderId: editing.folderId,
+            }}
+            folders={folders}
+            currentPath="/account/watch"
+          />
+        )}
+
+        {rowError && (
+          <p role="alert" className="text-[14px] font-semibold text-avoid">
+            {rowError.message}
+          </p>
+        )}
+
+        <p className="max-w-[75ch] text-[13px] leading-[1.45] text-ink-3">
+          Nếu bạn mua qua liên kết, Kairo có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
+        </p>
+      </main>
     </div>
   );
 }

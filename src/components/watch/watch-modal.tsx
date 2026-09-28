@@ -1,15 +1,15 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import {
-  saveWatch,
-  setWatchStatus,
-  deleteWatch,
-  type WatchActionResult,
-} from "@/actions/watch";
+import { useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { unstable_rethrow } from "next/navigation";
+import { saveWatch, setWatchStatus, deleteWatch, moveWatchToFolder, type WatchActionResult } from "@/actions/watch";
+import type { WatchFolder } from "@/lib/watch/folders";
 import { formatVnd } from "@/lib/format";
 import { suggestTargetPrice } from "@/lib/watch/form";
 import type { WatchConfig } from "@/lib/watch/types";
+import { AlertIcon, CheckCircleIcon, InfoIcon } from "@/components/ui/icons";
+import { variantLabel } from "@/components/product/variant-label";
+import { formatTyping, parseVndInput, type ParsedPrice } from "./price-input";
 
 interface WatchModalProps {
   isOpen: boolean;
@@ -22,10 +22,68 @@ interface WatchModalProps {
     id: string;
     config: WatchConfig;
     status: string;
+    /** Only known where folders are shown (the Watch page). */
+    folderId?: string | null;
   } | null;
   currentPath: string;
+  /** When given, the modal shows a "Thư mục" select and files the Watch on save. */
+  folders?: WatchFolder[];
 }
 
+type ChannelMode = "account" | "email" | "push" | "both";
+
+/** Above this a target is almost certainly a typo (an extra zero), not a real price. */
+const MAX_TARGET = 10_000_000_000;
+
+const PRICE_ERRORS: Record<Exclude<ParsedPrice, { ok: true }>["reason"], string> = {
+  empty: "Nhập giá mục tiêu, hoặc bỏ chọn điều kiện này.",
+  zero: "Giá mục tiêu phải lớn hơn 0đ.",
+  negative: "Giá mục tiêu không thể là số âm.",
+  unreadable: "Chưa đọc được số tiền. Thử dạng 2.399.000 hoặc 2tr4.",
+  ambiguous: "Thêm đơn vị để rõ số tiền, ví dụ 2,4 triệu hoặc 2.400.000.",
+};
+
+function initialChannel(config: WatchConfig | undefined): ChannelMode {
+  const c = config?.channels;
+  if (!c || c.length === 0) return "account";
+  if (c.includes("email") && c.includes("push")) return "both";
+  return c.includes("email") ? "email" : "push";
+}
+
+const inputClass =
+  "min-h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-[16px] text-ink placeholder:text-ink-3 transition-colors duration-150 ease-out focus:border-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
+const secondaryBtn =
+  "inline-flex min-h-11 items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-[15px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-3";
+const primaryBtn =
+  "inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 text-[15px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3";
+const dangerBtn =
+  "inline-flex min-h-11 items-center justify-center rounded-md border border-avoid bg-surface px-4 text-[15px] font-semibold text-avoid transition-colors duration-150 ease-out hover:bg-avoid-soft disabled:cursor-not-allowed disabled:border-line disabled:text-ink-3";
+/** One condition = one inner box on the card surface. */
+const conditionBox = "rounded-md bg-surface-2 p-3.5";
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="size-5">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <p id={id} className="mt-1.5 flex items-start gap-1.5 text-[14px] font-semibold text-avoid">
+      <AlertIcon className="mt-0.5 size-4" />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/**
+ * Watch editor in a native <dialog> (focus trap, Esc, focus return for free). Hardened for real input:
+ * the target price accepts "2.399.000", "2tr4", "2,4 triệu" and shows what it understood plus the
+ * distance from today's price; closing with unsaved edits asks first; save/pause/delete failures show
+ * inline and never lose what was typed.
+ */
 export function WatchModal({
   isOpen,
   onClose,
@@ -35,430 +93,484 @@ export function WatchModal({
   currentPrice,
   existingWatch,
   currentPath,
+  folders,
 }: WatchModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const uid = useId();
+  const initial = existingWatch?.config;
+  const price = currentPrice != null && Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : null;
+  const suggested = suggestTargetPrice(price);
+  const initialFolder = existingWatch?.folderId ?? "";
+  const [folderChoice, setFolderChoice] = useState<string>(initialFolder);
+
   const [state, formAction, isSaving] = useActionState(
-    saveWatch,
+    async (prev: WatchActionResult, form: FormData): Promise<WatchActionResult> => {
+      try {
+        const saved = await saveWatch(prev, form);
+        // Filing into a folder is its own action (moveWatchToFolder), run once the Watch exists.
+        const wanted = form.get("folderId");
+        if (saved.status === "saved" && folders && typeof wanted === "string" && wanted !== initialFolder) {
+          const moved = await moveWatchToFolder(saved.watchId, wanted === "" ? null : wanted);
+          if (moved.status === "error") {
+            return { status: "error", errors: { _form: `Đã lưu theo dõi nhưng chưa chuyển được thư mục: ${moved.error}` } };
+          }
+        }
+        return saved;
+      } catch (err) {
+        unstable_rethrow(err); // let Next handle redirects (e.g. session expired → login)
+        return { status: "error", errors: { _form: "Chưa lưu được do lỗi kết nối. Thông tin bạn nhập vẫn còn, hãy thử lại." } };
+      }
+    },
     { status: "idle" } as WatchActionResult,
   );
 
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const initialTarget = initial?.targetPrice ?? suggested ?? null;
+  const [enableTarget, setEnableTarget] = useState(initial ? initial.targetPrice !== null : true);
+  const [targetText, setTargetText] = useState(initialTarget ? formatVnd(initialTarget).replace(/đ$/, "") : "");
+  const [enableDropPct, setEnableDropPct] = useState(initial ? initial.dropPct !== null : false);
+  const [dropPct, setDropPct] = useState(initial?.dropPct ? String(initial.dropPct) : "10");
+  const [notifyLow, setNotifyLow] = useState(initial?.notifyLow ?? false);
+  const [enableScore, setEnableScore] = useState(initial ? initial.minDealScore !== null : false);
+  const [minDealScore, setMinDealScore] = useState(initial?.minDealScore ? String(initial.minDealScore) : "80");
+  const [notifyBackInStock, setNotifyBackInStock] = useState(initial?.notifyBackInStock ?? false);
+  const [channelMode, setChannelMode] = useState<ChannelMode>(initialChannel(initial));
 
-  // Initialize the condition checkbox states
-  const initialConfig = existingWatch?.config;
-  const suggestedTarget = suggestTargetPrice(currentPrice);
+  const [dirty, setDirty] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<null | "status" | "delete">(null);
+  const [showPriceError, setShowPriceError] = useState(false);
 
-  const [enableTarget, setEnableTarget] = useState(
-    initialConfig ? initialConfig.targetPrice !== null : true,
-  );
-  const [targetPrice, setTargetPrice] = useState<string>(
-    initialConfig?.targetPrice
-      ? String(initialConfig.targetPrice)
-      : suggestedTarget
-        ? String(suggestedTarget)
-        : "",
-  );
+  // Open / close the native dialog in step with the parent's state.
+  useEffect(() => {
+    const d = dialogRef.current;
+    if (!d) return;
+    if (isOpen && !d.open) d.showModal();
+    if (!isOpen && d.open) d.close();
+  }, [isOpen]);
 
-  const [enableDropPct, setEnableDropPct] = useState(
-    initialConfig ? initialConfig.dropPct !== null : false,
-  );
-  const [dropPct, setDropPct] = useState<string>(
-    initialConfig?.dropPct ? String(initialConfig.dropPct) : "10",
-  );
+  const parsed = parseVndInput(targetText);
+  const target = parsed.ok ? parsed.value : null;
+  const priceProblem = !enableTarget
+    ? null
+    : !parsed.ok
+      ? PRICE_ERRORS[parsed.reason]
+      : parsed.value > MAX_TARGET
+        ? "Số tiền quá lớn. Kiểm tra lại số chữ số 0."
+        : null;
+  const serverErrors = state.status === "error" ? state.errors : {};
+  const isSaved = state.status === "saved" && !dirty;
+  const targetError = (showPriceError && priceProblem) || serverErrors.targetPrice || null;
 
-  const [notifyLow, setNotifyLow] = useState(
-    initialConfig ? initialConfig.notifyLow : false,
-  );
+  // A failed save leaves the form unsaved even though "dirty" was reset on submit.
+  const unsaved = (dirty || state.status === "error") && !isSaving;
 
-  const [enableScore, setEnableScore] = useState(
-    initialConfig ? initialConfig.minDealScore !== null : false,
-  );
-  const [minDealScore, setMinDealScore] = useState<string>(
-    initialConfig?.minDealScore ? String(initialConfig.minDealScore) : "80",
-  );
-
-  const [notifyBackInStock, setNotifyBackInStock] = useState(
-    initialConfig ? initialConfig.notifyBackInStock : false,
-  );
-
-  const [channelMode, setChannelMode] = useState<string>(() => {
-    if (!initialConfig?.channels) return "account";
-    if (
-      initialConfig.channels.includes("email") &&
-      initialConfig.channels.includes("push")
-    )
-      return "both";
-    if (initialConfig.channels.includes("email")) return "email";
-    if (initialConfig.channels.includes("push")) return "push";
-    return "account";
-  });
-
-  if (!isOpen) return null;
-
-  const errors = state.status === "error" ? state.errors : {};
-  const isSaved = state.status === "saved";
-
-  const handleDelete = async () => {
-    if (!existingWatch) return;
-    if (confirm("Bạn có chắc chắn muốn xóa theo dõi sản phẩm này không?")) {
-      setIsDeleting(true);
-      try {
-        await deleteWatch(existingWatch.id);
-        onClose();
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Lỗi khi xóa");
-      } finally {
-        setIsDeleting(false);
-      }
+  const requestClose = () => {
+    if (unsaved) {
+      setConfirmDiscard(true);
+      return;
     }
+    setConfirmDiscard(false);
+    onClose();
   };
 
-  const handleToggleStatus = async (newStatus: "active" | "paused" | "done") => {
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    if (priceProblem) {
+      e.preventDefault();
+      setShowPriceError(true);
+      document.getElementById(`${uid}-target`)?.focus();
+      return;
+    }
+    setDirty(false);
+  };
+
+  const runStatus = async (next: "active" | "paused") => {
     if (!existingWatch) return;
-    setIsTogglingStatus(true);
+    setBusy("status");
+    setActionError(null);
     try {
-      await setWatchStatus(existingWatch.id, newStatus);
+      await setWatchStatus(existingWatch.id, next);
       onClose();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Lỗi cập nhật trạng thái");
+      unstable_rethrow(err);
+      setActionError(err instanceof Error && err.message.startsWith("Đã đạt") ? err.message : "Chưa đổi được trạng thái. Hãy thử lại.");
     } finally {
-      setIsTogglingStatus(false);
+      setBusy(null);
     }
   };
 
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="watch-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-    >
-      <div className="relative w-full max-w-lg rounded-3xl border border-border bg-background p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
-        {/* Close button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-5 top-5 rounded-full p-1.5 text-muted hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
-          aria-label="Đóng"
-        >
-          ✕
-        </button>
+  const runDelete = async () => {
+    if (!existingWatch) return;
+    setBusy("delete");
+    setActionError(null);
+    try {
+      await deleteWatch(existingWatch.id);
+      onClose();
+    } catch (err) {
+      unstable_rethrow(err);
+      setActionError("Chưa xóa được theo dõi. Hãy thử lại.");
+      setConfirmDelete(false);
+    } finally {
+      setBusy(null);
+    }
+  };
 
-        <div className="space-y-1 mb-6">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🔔</span>
-            <h2
-              id="watch-modal-title"
-              className="text-lg font-bold tracking-tight text-foreground sm:text-xl"
-            >
-              {existingWatch ? "Chỉnh sửa theo dõi giá" : "Theo dõi giá sản phẩm"}
-            </h2>
+  const gap = target != null && price != null ? price - target : null;
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={`${uid}-title`}
+      onCancel={(e) => {
+        e.preventDefault(); // Esc: same path as the close button, so unsaved edits are protected
+        requestClose();
+      }}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) requestClose(); // click on the backdrop
+      }}
+      className="m-auto max-h-[90dvh] w-[min(34rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-line bg-surface p-0 text-ink shadow-lift backdrop:bg-night/60"
+    >
+      <div className="flex max-h-[90dvh] flex-col">
+        <div className="shrink-0 border-b border-line bg-surface px-7 pb-4 pt-6 max-[760px]:px-5 max-[760px]:pb-3.5 max-[760px]:pt-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 id={`${uid}-title`} className="display text-[22px] font-bold leading-tight max-[760px]:text-[20px]">
+                {existingWatch ? "Sửa theo dõi giá" : "Theo dõi giá"}
+              </h2>
+              <p className="mt-1 line-clamp-2 text-[14px] text-ink-2 [overflow-wrap:anywhere]" title={productName}>
+                {productName}
+                {variantKey && <span className="text-ink-3"> · {variantLabel(variantKey)}</span>}
+              </p>
+              <p className="mt-1 text-[14px] text-ink-3">
+                Giá hiện tại:{" "}
+                {price != null ? <b className="num font-bold text-ink">{formatVnd(price)}</b> : "chưa có giá"}
+              </p>
+            </div>
+            <button type="button" onClick={requestClose} aria-label="Đóng" className="-mr-2 -mt-1 inline-flex size-11 shrink-0 items-center justify-center rounded-md text-ink-2 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink">
+              <CloseIcon />
+            </button>
           </div>
-          <p className="text-xs text-muted leading-relaxed">
-            <span className="font-semibold text-foreground">{productName}</span>
-            {variantKey && ` · Phiên bản: ${variantKey}`}
-          </p>
-          {currentPrice && (
-            <p className="text-xs text-muted">
-              Giá hiện tại:{" "}
-              <strong className="text-foreground">
-                {formatVnd(currentPrice)}
-              </strong>
-            </p>
+
+          {confirmDiscard && (
+            <div role="alert" className="mt-4 rounded-md border border-line-strong bg-surface-2 p-3.5">
+              <p className="text-[15px] font-semibold">Bạn có thay đổi chưa lưu. Đóng và bỏ các thay đổi này?</p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <button type="button" className={secondaryBtn} onClick={() => setConfirmDiscard(false)} autoFocus>
+                  Tiếp tục sửa
+                </button>
+                <button
+                  type="button"
+                  className={secondaryBtn}
+                  onClick={() => {
+                    setConfirmDiscard(false);
+                    setDirty(false);
+                    onClose();
+                  }}
+                >
+                  Bỏ thay đổi
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
-        {isSaved ? (
-          <div className="space-y-6 text-center py-6">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-2xl font-bold">
-              ✓
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-base font-bold text-foreground">
-                Đã lưu theo dõi giá thành công!
-              </h3>
-              <p className="text-xs text-muted">
-                Hệ thống sẽ tự động theo dõi và gửi thông báo khi giá đạt điều
-                kiện bạn đã đặt.
+        <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-7 pt-5 max-[760px]:px-5 max-[760px]:pb-5 max-[760px]:pt-4">
+          {isSaved ? (
+            <div className="py-6 text-center">
+              <span className="mx-auto inline-flex size-14 items-center justify-center rounded-full bg-accent text-on-accent">
+                <CheckCircleIcon className="size-7" strokeWidth={2} />
+              </span>
+              <h3 className="display mt-3 text-[22px] font-bold">Đã lưu theo dõi</h3>
+              <p className="mx-auto mt-1 max-w-[40ch] text-[15px] text-ink-2">
+                Kairo sẽ kiểm tra giá định kỳ và báo cho bạn khi có điều kiện được đáp ứng.
               </p>
+              <button type="button" onClick={onClose} className={`${primaryBtn} mt-5`}>
+                Xong
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl bg-foreground px-6 py-2 text-xs font-semibold text-background hover:opacity-90"
-            >
-              Hoàn tất
-            </button>
-          </div>
-        ) : (
-          <form action={formAction} className="space-y-6">
+          ) : (
+            <form action={formAction} onSubmit={onSubmit} onChange={() => setDirty(true)} noValidate className="space-y-5">
             <input type="hidden" name="variantId" value={variantId} />
             <input type="hidden" name="path" value={currentPath} />
 
-            {/* General error */}
-            {errors._form && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs font-medium text-red-600 dark:text-red-400">
-                {errors._form}
-              </div>
+            {(serverErrors._form || serverErrors.variantId || serverErrors.channels) && (
+              <p role="alert" className="flex items-start gap-2 rounded-md bg-avoid-soft p-3 text-[14px] font-semibold text-avoid">
+                <AlertIcon className="mt-0.5 size-4" />
+                <span>{serverErrors._form ?? serverErrors.variantId ?? serverErrors.channels}</span>
+              </p>
             )}
 
-            {/* Price alert conditions */}
-            <div className="space-y-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-muted">
-                Điều kiện nhận thông báo (chọn ít nhất 1)
-              </span>
+            <fieldset className="space-y-3">
+              <legend className="mb-2 text-[15px] font-bold">Báo cho tôi khi (chọn ít nhất 1)</legend>
 
               {/* 1. Target price */}
-              <div className="rounded-2xl border border-border p-3.5 space-y-2">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enableTarget}
-                    onChange={(e) => setEnableTarget(e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-foreground accent-foreground"
-                  />
-                  <span className="text-xs font-semibold text-foreground">
-                    Khi giá xuống dưới mức mục tiêu
-                  </span>
+              <div className={conditionBox}>
+                <label className="flex min-h-6 cursor-pointer items-center gap-3">
+                  <input type="checkbox" checked={enableTarget} onChange={(e) => setEnableTarget(e.target.checked)} className="size-5 accent-primary" />
+                  <span className="text-[15px] font-medium">Giá xuống tới mức tôi đặt</span>
                 </label>
                 {enableTarget && (
-                  <div className="pl-7 space-y-1">
-                    <div className="flex items-center gap-2">
+                  <div className="mt-3 pl-8">
+                    <label htmlFor={`${uid}-target`} className="sr-only">
+                      Giá mục tiêu
+                    </label>
+                    <div className="relative">
                       <input
+                        id={`${uid}-target`}
                         type="text"
-                        name="targetPrice"
-                        value={targetPrice}
-                        onChange={(e) => setTargetPrice(e.target.value)}
-                        placeholder="Ví dụ: 1.200.000"
-                        className="w-full rounded-xl border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={targetText}
+                        onChange={(e) => {
+                          setTargetText(formatTyping(e.target.value));
+                          setShowPriceError(false);
+                        }}
+                        onBlur={() => {
+                          if (target != null) setTargetText(formatVnd(target).replace(/đ$/, ""));
+                          setShowPriceError(Boolean(priceProblem));
+                        }}
+                        placeholder="Ví dụ: 2.399.000 hoặc 2tr4"
+                        aria-invalid={Boolean(targetError)}
+                        aria-describedby={`${uid}-target-help`}
+                        className={`${inputClass} num pr-9 text-[18px] font-bold`}
                       />
-                      <span className="text-xs text-muted shrink-0">₫</span>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[16px] text-ink-3">đ</span>
                     </div>
-                    {suggestedTarget && (
-                      <p className="text-[11px] text-muted">
-                        Gợi ý (−10%): {formatVnd(suggestedTarget)}
-                      </p>
-                    )}
-                    {errors.targetPrice && (
-                      <p className="text-xs text-red-500">
-                        {errors.targetPrice}
-                      </p>
+                    {/* The server only accepts digits: send the understood integer, not the typed text. */}
+                    <input type="hidden" name="targetPrice" value={target != null && !priceProblem ? String(target) : ""} />
+
+                    <div id={`${uid}-target-help`} aria-live="polite">
+                      {targetError ? (
+                        <FieldError id={`${uid}-target-error`}>{targetError}</FieldError>
+                      ) : target != null ? (
+                        <TargetDistance target={target} price={price} gap={gap} typed={targetText} />
+                      ) : null}
+                    </div>
+
+                    {suggested != null && target !== suggested && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTargetText(formatVnd(suggested).replace(/đ$/, ""));
+                          setDirty(true);
+                          setShowPriceError(false);
+                        }}
+                        className="mt-2.5 inline-flex min-h-10 items-center rounded-md border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas"
+                      >
+                        Dùng gợi ý {formatVnd(suggested)} (thấp hơn 10%)
+                      </button>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* 2. Percentage drop */}
-              <div className="rounded-2xl border border-border p-3.5 space-y-2">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enableDropPct}
-                    onChange={(e) => setEnableDropPct(e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-foreground accent-foreground"
-                  />
-                  <span className="text-xs font-semibold text-foreground">
-                    Khi giá giảm thêm theo %
-                  </span>
+              {/* 2. % drop */}
+              <div className={conditionBox}>
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input type="checkbox" checked={enableDropPct} onChange={(e) => setEnableDropPct(e.target.checked)} className="size-5 accent-primary" />
+                  <span className="text-[15px] font-medium">Giá giảm thêm một tỷ lệ</span>
                 </label>
                 {enableDropPct && (
-                  <div className="pl-7 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        name="dropPct"
-                        min={1}
-                        max={90}
-                        value={dropPct}
-                        onChange={(e) => setDropPct(e.target.value)}
-                        placeholder="10"
-                        className="w-24 rounded-xl border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
-                      />
-                      <span className="text-xs text-muted">
-                        % so với lúc tạo theo dõi
-                      </span>
-                    </div>
-                    {errors.dropPct && (
-                      <p className="text-xs text-red-500">{errors.dropPct}</p>
-                    )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2 pl-8">
+                    <label htmlFor={`${uid}-drop`} className="sr-only">
+                      Phần trăm giảm
+                    </label>
+                    <input
+                      id={`${uid}-drop`}
+                      name="dropPct"
+                      type="text"
+                      inputMode="numeric"
+                      value={dropPct}
+                      onChange={(e) => setDropPct(e.target.value.replace(/[^\d]/g, "").slice(0, 2))}
+                      aria-invalid={Boolean(serverErrors.dropPct)}
+                      className={`${inputClass} num w-20 text-center`}
+                    />
+                    <span className="text-[14px] text-ink-2">% so với lúc bắt đầu theo dõi (1–90%)</span>
+                    {serverErrors.dropPct && <FieldError id={`${uid}-drop-error`}>{serverErrors.dropPct}</FieldError>}
                   </div>
                 )}
               </div>
 
-              {/* 3. Hits the 90-day low */}
-              <div className="rounded-2xl border border-border p-3.5">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="notifyLow"
-                    checked={notifyLow}
-                    onChange={(e) => setNotifyLow(e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-foreground accent-foreground"
-                  />
-                  <div>
-                    <span className="text-xs font-semibold text-foreground">
-                      Chạm mức giá đáy 90 ngày
-                    </span>
-                    <p className="text-[11px] text-muted">
-                      Chỉ báo khi có tối thiểu 14 ngày và 10 quan sát lịch sử giá
-                    </p>
-                  </div>
-                </label>
-              </div>
+              {/* 3. Recorded low */}
+              <label className={`flex cursor-pointer items-start gap-3 ${conditionBox}`}>
+                <input type="checkbox" name="notifyLow" checked={notifyLow} onChange={(e) => setNotifyLow(e.target.checked)} className="mt-0.5 size-5 accent-primary" />
+                <span>
+                  <span className="block text-[15px] font-medium">Giá chạm mức thấp nhất 90 ngày</span>
+                  <span className="block text-[13px] text-ink-3">Chỉ báo khi hệ thống đã ghi nhận đủ 14 ngày giá.</span>
+                </span>
+              </label>
 
               {/* 4. Deal Score */}
-              <div className="rounded-2xl border border-border p-3.5 space-y-2">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enableScore}
-                    onChange={(e) => setEnableScore(e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-foreground accent-foreground"
-                  />
-                  <span className="text-xs font-semibold text-foreground">
-                    Khi Deal Score đạt mức cao
-                  </span>
+              <div className={conditionBox}>
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input type="checkbox" checked={enableScore} onChange={(e) => setEnableScore(e.target.checked)} className="size-5 accent-primary" />
+                  <span className="text-[15px] font-medium">Deal Score đạt từ mức tôi chọn</span>
                 </label>
                 {enableScore && (
-                  <div className="pl-7 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        name="minDealScore"
-                        min={1}
-                        max={100}
-                        value={minDealScore}
-                        onChange={(e) => setMinDealScore(e.target.value)}
-                        placeholder="80"
-                        className="w-24 rounded-xl border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
-                      />
-                      <span className="text-xs text-muted">/ 100 điểm</span>
-                    </div>
-                    {errors.minDealScore && (
-                      <p className="text-xs text-red-500">
-                        {errors.minDealScore}
-                      </p>
-                    )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2 pl-8">
+                    <label htmlFor={`${uid}-score`} className="sr-only">
+                      Deal Score tối thiểu
+                    </label>
+                    <input
+                      id={`${uid}-score`}
+                      name="minDealScore"
+                      type="text"
+                      inputMode="numeric"
+                      value={minDealScore}
+                      onChange={(e) => setMinDealScore(e.target.value.replace(/[^\d]/g, "").slice(0, 3))}
+                      aria-invalid={Boolean(serverErrors.minDealScore)}
+                      className={`${inputClass} num w-20 text-center`}
+                    />
+                    <span className="text-[14px] text-ink-2">/100 điểm</span>
+                    {serverErrors.minDealScore && <FieldError id={`${uid}-score-error`}>{serverErrors.minDealScore}</FieldError>}
                   </div>
                 )}
               </div>
 
               {/* 5. Back in stock */}
-              <div className="rounded-2xl border border-border p-3.5">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    name="notifyBackInStock"
-                    checked={notifyBackInStock}
-                    onChange={(e) => setNotifyBackInStock(e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-foreground accent-foreground"
-                  />
-                  <div>
-                    <span className="text-xs font-semibold text-foreground">
-                      Khi có hàng trở lại
-                    </span>
-                    <p className="text-[11px] text-muted">
-                      Báo khi sản phẩm từ trạng thái hết hàng chuyển sang còn
-                      hàng
-                    </p>
-                  </div>
-                </label>
-              </div>
-            </div>
+              <label className={`flex cursor-pointer items-start gap-3 ${conditionBox}`}>
+                <input type="checkbox" name="notifyBackInStock" checked={notifyBackInStock} onChange={(e) => setNotifyBackInStock(e.target.checked)} className="mt-0.5 size-5 accent-primary" />
+                <span>
+                  <span className="block text-[15px] font-medium">Có hàng trở lại</span>
+                  <span className="block text-[13px] text-ink-3">Báo khi sản phẩm chuyển từ hết hàng sang còn hàng.</span>
+                </span>
+              </label>
+            </fieldset>
 
-            {/* Channel override */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <label className="text-xs font-bold uppercase tracking-wider text-muted">
-                Kênh nhận cảnh báo
+            {folders && (
+              <div>
+                <label htmlFor={`${uid}-folder`} className="text-[15px] font-bold">
+                  Thư mục
+                </label>
+                <select
+                  id={`${uid}-folder`}
+                  name="folderId"
+                  value={folderChoice}
+                  onChange={(e) => setFolderChoice(e.target.value)}
+                  className={`${inputClass} mt-1.5`}
+                >
+                  <option value="">Chưa xếp thư mục</option>
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor={`${uid}-channel`} className="text-[15px] font-bold">
+                Nhận thông báo qua
               </label>
               <select
+                id={`${uid}-channel`}
                 value={channelMode}
-                onChange={(e) => setChannelMode(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
+                onChange={(e) => setChannelMode(e.target.value as ChannelMode)}
+                className={`${inputClass} mt-1.5`}
               >
-                <option value="account">
-                  Theo cài đặt tài khoản (Mặc định)
-                </option>
-                <option value="email">Chỉ gửi qua Email</option>
-                <option value="push">Chỉ gửi qua Web Push</option>
-                <option value="both">Gửi cả Email và Web Push</option>
+                <option value="account">Theo cài đặt tài khoản</option>
+                <option value="email">Chỉ email</option>
+                <option value="push">Chỉ thông báo trình duyệt</option>
+                <option value="both">Cả email và thông báo trình duyệt</option>
               </select>
-
-              {/* Hidden input carrying the channel for the selected mode */}
-              {channelMode === "account" && (
-                <input type="hidden" name="channel" value="account" />
-              )}
-              {channelMode === "email" && (
-                <input type="hidden" name="channel" value="email" />
-              )}
-              {channelMode === "push" && (
-                <input type="hidden" name="channel" value="push" />
-              )}
-              {channelMode === "both" && (
+              {channelMode === "both" ? (
                 <>
                   <input type="hidden" name="channel" value="email" />
                   <input type="hidden" name="channel" value="push" />
                 </>
+              ) : (
+                <input type="hidden" name="channel" value={channelMode} />
               )}
             </div>
 
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border">
-              {existingWatch ? (
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {existingWatch.status === "active" ? (
-                    <button
-                      type="button"
-                      disabled={isTogglingStatus}
-                      onClick={() => handleToggleStatus("paused")}
-                      className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-muted hover:text-foreground"
-                    >
-                      Tạm dừng
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={isTogglingStatus}
-                      onClick={() => handleToggleStatus("active")}
-                      className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-                    >
-                      Kích hoạt lại
-                    </button>
-                  )}
+            {actionError && (
+              <p role="alert" className="flex items-start gap-2 text-[14px] font-semibold text-avoid">
+                <AlertIcon className="mt-0.5 size-4" />
+                {actionError}
+              </p>
+            )}
 
+            {existingWatch && confirmDelete && (
+              <div role="alert" className="rounded-md border border-avoid bg-surface p-3.5">
+                <p className="text-[15px] font-semibold">Xóa theo dõi này? Bạn sẽ không nhận thông báo giá cho sản phẩm này nữa.</p>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  <button type="button" className={secondaryBtn} onClick={() => setConfirmDelete(false)} autoFocus>
+                    Giữ lại
+                  </button>
+                  <button type="button" className={dangerBtn} disabled={busy === "delete"} onClick={runDelete}>
+                    {busy === "delete" ? "Đang xóa…" : "Xóa theo dõi"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+              {existingWatch ? (
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={isDeleting}
-                    onClick={handleDelete}
-                    className="rounded-xl border border-red-500/20 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                    className={secondaryBtn}
+                    disabled={busy != null || isSaving}
+                    onClick={() => runStatus(existingWatch.status === "active" ? "paused" : "active")}
                   >
+                    {busy === "status" ? "Đang cập nhật…" : existingWatch.status === "active" ? "Tạm dừng" : "Theo dõi lại"}
+                  </button>
+                  <button type="button" className={secondaryBtn} disabled={busy != null || isSaving} onClick={() => setConfirmDelete(true)}>
                     Xóa
                   </button>
                 </div>
               ) : (
-                <div></div>
+                <span />
               )}
-
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-xl border border-border px-4 py-2 text-xs font-medium text-muted hover:text-foreground"
-                >
+              <div className="flex flex-wrap gap-2 max-[420px]:w-full max-[420px]:[&>*]:flex-1">
+                <button type="button" onClick={requestClose} className={secondaryBtn}>
                   Hủy
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="rounded-xl bg-foreground px-5 py-2 text-xs font-semibold text-background hover:opacity-90 disabled:opacity-50"
-                >
-                  {isSaving ? "Đang lưu..." : "Lưu theo dõi"}
+                <button type="submit" disabled={isSaving || busy != null} aria-busy={isSaving} className={primaryBtn}>
+                  {isSaving ? "Đang lưu…" : "Lưu theo dõi"}
                 </button>
               </div>
             </div>
           </form>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </dialog>
+  );
+}
+
+/** What the input was understood as, and how far it is from today's price, in words first. */
+function TargetDistance({ target, price, gap, typed }: { target: number; price: number | null; gap: number | null; typed: string }) {
+  const understood = /[a-zà-ỹ]/i.test(typed) ? (
+    <span>
+      Hiểu là <b className="num text-ink">{formatVnd(target)}</b>.{" "}
+    </span>
+  ) : null;
+
+  if (price == null || gap == null) {
+    return <p className="mt-1.5 text-[14px] text-ink-2">{understood}Chưa có giá hiện tại để so sánh.</p>;
+  }
+  if (gap <= 0) {
+    return (
+      <p className="mt-1.5 flex items-start gap-1.5 text-[14px] text-ink">
+        <InfoIcon className="mt-0.5 size-4 text-ink-2" />
+        <span>
+          {understood}
+          {gap === 0 ? "Bằng" : "Cao hơn"} giá hiện tại, nên bạn sẽ được báo ngay ở lần kiểm tra giá tới. Muốn chờ giá giảm, hãy đặt thấp hơn{" "}
+          <span className="num font-semibold">{formatVnd(price)}</span>.
+        </span>
+      </p>
+    );
+  }
+  const pct = Math.round((gap / price) * 100);
+  return (
+    <p className="mt-1.5 text-[14px] text-ink-2">
+      {understood}
+      Còn <b className="num text-[16px] text-ink">{formatVnd(gap)}</b> nữa{" "}
+      <span className="text-ink-3">({pct < 1 ? "chưa tới 1%" : `giảm thêm ${pct}%`} so với giá hiện tại)</span>
+      {pct >= 60 && <span className="mt-1 block text-ink">Mức này thấp hơn nhiều so với giá hiện tại. Kiểm tra lại số chữ số 0.</span>}
+    </p>
   );
 }

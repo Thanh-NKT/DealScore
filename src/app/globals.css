@@ -1,52 +1,193 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens: DESIGN.md ("Bảng giá sáng"). DESIGN.md is the source of truth;
+ * values here must match its frontmatter and the dark values in its Colors section.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --rec-buy: #15803d;        --rec-buy-bg: #dcfce7;
-  --rec-wait: #a16207;       --rec-wait-bg: #fef9c3;
-  --rec-avoid: #b91c1c;      --rec-avoid-bg: #fee2e2;
-  --rec-unknown: #525252;    --rec-unknown-bg: #f5f5f5;
-  --warn: #b45309;           --warn-bg: #fffbeb;
-  --muted: #737373;
-  --border: #e5e5e5;
+  --canvas: #EFECE5;
+  --surface: #F7F6F1;
+  --surface-2: #E8E5DC;
+  --line: #DCD9CF;
+  --line-strong: #8C887E;
+  --ink: #18191D;
+  --ink-2: #45484F;
+  --ink-3: #656870;
+  --primary: #1F5666;
+  --primary-hover: #17424F;
+  --primary-soft: #DFECEF;
+  --on-primary: #FFFFFF;
+  --accent: #C7E866;
+  --accent-soft: #EBF1D8;
+  --on-accent: #15161A;
+  --night: #15161A;
+  --night-2: #1C1E24;
+  --night-line: #6B6E76;
+  --night-ink: #FFFFFF;
+  --night-ink-2: #C9CBD1;
+  --night-ink-3: #A9ACB4;
+  --buy: #0B7A48;      --buy-soft: #E2EEE7;
+  --wait: #9A5B00;     --wait-soft: #F3E7C6;
+  --avoid: #B42318;    --avoid-soft: #F3E0DD;
+  --unknown: #62656D;  --unknown-soft: #E8E5DC;
+  --tint-peach: #F2E3D5; --tint-lilac: #EBE1EF; --tint-violet: #DFECEF;
+  --tint-sky: #DFECF5;   --tint-butter: #F3E7C6; --tint-mint: #E2EEE7;
+  --focus: #1F5666;
+  --grad-primary: linear-gradient(135deg, #17424F 0%, #1F5666 50%, #2B7A8E 100%);
+  --grad-warm: linear-gradient(135deg, #8F5300 0%, #B4690E 52%, #C9821E 100%);
+  --grad-deal: linear-gradient(135deg, #17424F 0%, #0B7A48 100%);
+  --lift: 0 12px 32px -12px rgb(21 22 26 / 0.22);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: light;
 }
 
+/* Dark: a soft, comfortable Slate Charcoal palette with Nordic Petrol Slate buttons & accents. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --rec-buy: #4ade80;      --rec-buy-bg: #14321f;
-    --rec-wait: #facc15;     --rec-wait-bg: #332b0d;
-    --rec-avoid: #f87171;    --rec-avoid-bg: #3b1616;
-    --rec-unknown: #a3a3a3;  --rec-unknown-bg: #1f1f1f;
-    --warn: #fbbf24;         --warn-bg: #2b2009;
-    --muted: #a3a3a3;
-    --border: #2e2e2e;
+  :root:not([data-theme="light"]) {
+    --canvas: #181B22; --surface: #222630; --surface-2: #2C313E; --line: #363C4B; --line-strong: #4E5668;
+    --ink: #F4F5F7; --ink-2: #CBD0DA; --ink-3: #949BA8;
+    --primary: #3B8EA5; --primary-hover: #317B90; --primary-soft: #1B333B; --on-primary: #FFFFFF;
+    --accent: #D4F66B; --accent-soft: #283318; --on-accent: #15161A;
+    --night: #14171D; --night-2: #1E222B; --night-line: #4E5668;
+    --night-ink: #FFFFFF; --night-ink-2: #CBD0DA; --night-ink-3: #949BA8;
+    --buy: #34D399; --buy-soft: #17362A; --wait: #F59E0B; --wait-soft: #382B14;
+    --avoid: #F87171; --avoid-soft: #3C1D1D; --unknown: #949BA8; --unknown-soft: #2C313E;
+    --tint-peach: #3B2C22; --tint-lilac: #36283E; --tint-violet: #1B333B;
+    --tint-sky: #1E3142; --tint-butter: #382B14; --tint-mint: #17362A;
+    --focus: #489FB5;
+    --grad-primary: linear-gradient(135deg, #6EC3DA 0%, #3B8EA5 52%, #2DD4BF 100%);
+    --grad-warm: linear-gradient(135deg, #F4C978 0%, #E0AF53 52%, #F59E0B 100%);
+    --grad-deal: linear-gradient(135deg, #6EC3DA 0%, #34D399 100%);
+    --lift: 0 12px 32px -12px rgb(0 0 0 / 0.5);
+    color-scheme: dark;
   }
 }
 
+:root[data-theme="dark"] {
+  --canvas: #181B22; --surface: #222630; --surface-2: #2C313E; --line: #363C4B; --line-strong: #4E5668;
+  --ink: #F4F5F7; --ink-2: #CBD0DA; --ink-3: #949BA8;
+  --primary: #3B8EA5; --primary-hover: #317B90; --primary-soft: #1B333B; --on-primary: #FFFFFF;
+  --accent: #D4F66B; --accent-soft: #283318; --on-accent: #15161A;
+  --night: #14171D; --night-2: #1E222B; --night-line: #4E5668;
+  --night-ink: #FFFFFF; --night-ink-2: #CBD0DA; --night-ink-3: #949BA8;
+  --buy: #34D399; --buy-soft: #17362A; --wait: #F59E0B; --wait-soft: #382B14;
+  --avoid: #F87171; --avoid-soft: #3C1D1D; --unknown: #949BA8; --unknown-soft: #2C313E;
+  --tint-peach: #3B2C22; --tint-lilac: #36283E; --tint-violet: #1B333B;
+  --tint-sky: #1E3142; --tint-butter: #382B14; --tint-mint: #17362A;
+  --focus: #489FB5;
+  --grad-primary: linear-gradient(135deg, #6EC3DA 0%, #3B8EA5 52%, #2DD4BF 100%);
+  --grad-warm: linear-gradient(135deg, #F4C978 0%, #E0AF53 52%, #F59E0B 100%);
+  --grad-deal: linear-gradient(135deg, #6EC3DA 0%, #34D399 100%);
+  --lift: 0 12px 32px -12px rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-rec-buy: var(--rec-buy);
-  --color-rec-buy-bg: var(--rec-buy-bg);
-  --color-rec-wait: var(--rec-wait);
-  --color-rec-wait-bg: var(--rec-wait-bg);
-  --color-rec-avoid: var(--rec-avoid);
-  --color-rec-avoid-bg: var(--rec-avoid-bg);
-  --color-rec-unknown: var(--rec-unknown);
-  --color-rec-unknown-bg: var(--rec-unknown-bg);
-  --color-warn: var(--warn);
-  --color-warn-bg: var(--warn-bg);
-  --color-muted: var(--muted);
-  --color-border: var(--border);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-night: var(--night);
+  --color-night-2: var(--night-2);
+  --color-night-line: var(--night-line);
+  --color-night-ink: var(--night-ink);
+  --color-night-ink-2: var(--night-ink-2);
+  --color-night-ink-3: var(--night-ink-3);
+  --color-buy: var(--buy);
+  --color-buy-soft: var(--buy-soft);
+  --color-wait: var(--wait);
+  --color-wait-soft: var(--wait-soft);
+  --color-avoid: var(--avoid);
+  --color-avoid-soft: var(--avoid-soft);
+  --color-unknown: var(--unknown);
+  --color-unknown-soft: var(--unknown-soft);
+  --color-tint-peach: var(--tint-peach);
+  --color-tint-lilac: var(--tint-lilac);
+  --color-tint-violet: var(--tint-violet);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-butter: var(--tint-butter);
+  --color-tint-mint: var(--tint-mint);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-lift: var(--lift);
+  --ease-out: var(--ease-out);
+  --font-sans: var(--font-text);
+  --font-text: var(--font-jakarta), "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-jakarta), "Segoe UI", system-ui, sans-serif;
+}
+
+/* Numerals and display: Plus Jakarta Sans, tabular lining figures, crisp fintech tracking. */
+@utility num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.02em;
+}
+
+@utility display {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+@utility text-gradient-primary {
+  background-image: var(--grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-gradient-warm {
+  background-image: var(--grad-warm);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility text-gradient-deal {
+  background-image: var(--grad-deal);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+input, select, textarea { caret-color: var(--primary); }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
+
+/* The one authored motion: a verdict settles in when it first appears. */
+@keyframes verdict-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .verdict-in { animation: verdict-in 420ms var(--ease-out) both; }
 }

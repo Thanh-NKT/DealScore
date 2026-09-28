@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeWatch } from "@/lib/watch/describe";
+import { describeWatch, scheduledText } from "@/lib/watch/describe";
 import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/account/notification-settings";
 import type { VariantSnapshot, WatchConfig, WatchState } from "@/lib/watch/types";
 
@@ -70,10 +70,52 @@ describe("describeWatch", () => {
         latestAlert: { id: "a1", createdAt: "t", deliverAfter: "2026-09-24T01:00:00Z", deliveries: [{ channel: "email", status: "pending", sentAt: null }] },
       }),
     );
-    expect(pending.alertStatus).toEqual({ kind: "scheduled", deliverAfter: "2026-09-24T01:00:00Z", reason: "daily_digest" });
+    expect(pending.alertStatus).toEqual({
+      kind: "scheduled",
+      deliverAfter: "2026-09-24T01:00:00Z",
+      reason: "daily_digest",
+      text: "Sẽ gửi trong bản tóm tắt hằng ngày lúc 08:00",
+    });
+  });
+
+  it("alertStatus: waiting for the weekly digest names the weekday and hour (Vietnam time)", () => {
+    const v = describeWatch(
+      input({
+        settings: { ...DEFAULT_NOTIFICATION_SETTINGS, frequency: "weekly_digest", digestWeekday: 1, digestHour: 8 },
+        // 2026-09-28T01:00Z = Monday 08:00 in Vietnam
+        latestAlert: { id: "a1", createdAt: "t", deliverAfter: "2026-09-28T01:00:00Z", deliveries: [{ channel: "push", status: "pending", sentAt: null }] },
+      }),
+    );
+    expect(v.alertStatus).toEqual({
+      kind: "scheduled",
+      deliverAfter: "2026-09-28T01:00:00Z",
+      reason: "weekly_digest",
+      text: "Sẽ gửi trong bản tóm tắt Thứ Hai lúc 08:00",
+    });
+  });
+
+  it("alertStatus: instant + pending → held by quiet hours", () => {
+    const v = describeWatch(
+      input({
+        latestAlert: { id: "a1", createdAt: "t", deliverAfter: "2026-09-24T00:00:00Z", deliveries: [{ channel: "email", status: "pending", sentAt: null }] },
+      }),
+    );
+    expect(v.alertStatus).toMatchObject({ reason: "quiet_hours", text: "Sẽ gửi lúc 07:00, khi hết giờ im lặng" });
   });
 
   it("conditions use evaluateConditions", () => {
     expect(describeWatch(input()).conditions).toEqual([{ key: "target_price", state: false }]);
+  });
+});
+
+describe("scheduledText", () => {
+  it("weekday comes from the Vietnam date (Sunday 23:00 UTC is Monday in Vietnam)", () => {
+    expect(scheduledText("weekly_digest", "2026-09-27T23:00:00Z")).toBe("Sẽ gửi trong bản tóm tắt Thứ Hai lúc 06:00");
+  });
+  it("Sunday is 'Chủ nhật'", () => {
+    expect(scheduledText("weekly_digest", "2026-09-27T12:00:00Z")).toBe("Sẽ gửi trong bản tóm tắt Chủ nhật lúc 19:00");
+  });
+  it("invalid date → generic text", () => {
+    expect(scheduledText("daily_digest", "t")).toBe("Sẽ gửi sau");
   });
 });

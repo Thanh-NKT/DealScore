@@ -103,6 +103,28 @@ describe("updateNotificationSettings", () => {
   });
 });
 
+describe("updateNotificationSettings — weekly digest", () => {
+  it("writes frequency weekly_digest and digest_weekday", async () => {
+    const r = await actions.updateNotificationSettings(
+      { status: "idle" },
+      form({ emailEnabled: "on", frequency: "weekly_digest", digestHour: "19", digestWeekday: "6" }),
+    );
+    expect(r).toEqual({ status: "saved" });
+    expect(serverUpdate).toHaveBeenCalledWith(
+      "notification_settings",
+      expect.objectContaining({ frequency: "weekly_digest", digest_hour: 19, digest_weekday: 6 }),
+    );
+  });
+  it("invalid weekday → error on digestWeekday, nothing written", async () => {
+    const r = await actions.updateNotificationSettings(
+      { status: "idle" },
+      form({ frequency: "weekly_digest", digestHour: "8", digestWeekday: "9" }),
+    );
+    expect(r).toEqual({ status: "error", errors: { digestWeekday: expect.any(String) } });
+    expect(serverUpdate).not.toHaveBeenCalled();
+  });
+});
+
 describe("requestAccountDeletion", () => {
   it("wrong confirmation word → error", async () => {
     const r = await actions.requestAccountDeletion({ status: "idle" }, form({ confirm: "xoa" }));

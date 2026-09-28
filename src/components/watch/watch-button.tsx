@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+import Link from "next/link";
 import { WatchModal } from "@/components/watch/watch-modal";
+import { formatVnd } from "@/lib/format";
+import { BellIcon, BellOffIcon } from "@/components/ui/icons";
 import type { WatchConfig } from "@/lib/watch/types";
 
 interface WatchButtonProps {
@@ -19,6 +21,17 @@ interface WatchButtonProps {
   currentPath: string;
 }
 
+const BTN =
+  "inline-flex h-[52px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-5 text-[15px] font-bold transition-colors duration-150 ease-out cursor-pointer";
+const IDLE = "border-wait/35 bg-wait-soft/80 text-wait hover:bg-wait-soft";
+const WATCHING = "border-accent bg-accent text-on-accent hover:opacity-92";
+const PAUSED = "border-line-strong bg-surface-2 text-ink-2 hover:bg-surface";
+
+/**
+ * Entry point to a Watch on the product detail page.
+ * Uses BellIcon for consistency with the Watch page and keeps a fixed 54px height
+ * so it aligns horizontally with BuyButton and ShareButton.
+ */
 export function WatchButton({
   isLoggedIn,
   productName,
@@ -28,38 +41,67 @@ export function WatchButton({
   existingWatch,
   currentPath,
 }: WatchButtonProps) {
-  const router = useRouter();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const handleClick = () => {
-    if (!isLoggedIn) {
-      router.push(`/login?next=${encodeURIComponent(currentPath)}`);
-    } else {
-      setIsModalOpen(true);
-    }
-  };
+  if (!isLoggedIn) {
+    return (
+      <Link
+        href={`/login?next=${encodeURIComponent(currentPath)}`}
+        title="Đăng nhập để nhận thông báo khi giá giảm"
+        className={`${BTN} ${IDLE}`}
+      >
+        <BellIcon className="size-4.5 shrink-0" strokeWidth={2.2} />
+        <span>Theo dõi giá</span>
+      </Link>
+    );
+  }
 
-  const isWatched = existingWatch?.status === "active";
+  const status = existingWatch?.status;
+  const target = existingWatch?.config.targetPrice ?? null;
+
+  const label =
+    status === "active"
+      ? target != null
+        ? `Đang báo ≤ ${formatVnd(target)}`
+        : "Đang theo dõi giá"
+      : status === "paused"
+        ? "Đã tạm dừng báo giá"
+        : status === "done"
+          ? "Đặt lại theo dõi"
+          : "Theo dõi giá";
+
+  const styleClass = status === "active" ? WATCHING : status === "paused" ? PAUSED : IDLE;
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={handleClick}
-        className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
-          isWatched
-            ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
-            : "border border-border bg-background text-foreground hover:bg-black/5 dark:hover:bg-white/5"
-        }`}
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        title={
+          status === "active"
+            ? "Bấm để chỉnh mức giá mục tiêu hoặc điều kiện báo"
+            : "Đặt mức giá mong muốn để nhận thông báo"
+        }
+        className={`${BTN} ${styleClass}`}
       >
-        <span>{isWatched ? "✓" : "🔔"}</span>
-        <span>{isWatched ? "Đang theo dõi" : "Theo dõi giá"}</span>
+        {status === "paused" ? (
+          <BellOffIcon className="size-4.5 shrink-0" strokeWidth={2.2} />
+        ) : (
+          <BellIcon className="size-4.5 shrink-0" strokeWidth={2.2} />
+        )}
+        <span className="truncate">{label}</span>
       </button>
 
-      {isLoggedIn && (
+      {open && (
         <WatchModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          isOpen
+          onClose={() => {
+            setOpen(false);
+            triggerRef.current?.focus();
+          }}
           productName={productName}
           variantKey={variantKey}
           variantId={variantId}

@@ -77,8 +77,10 @@ Lệnh này cần `db:link` chạy trước (nó dùng cờ `--linked`).
 
 - **SMTP:** host `smtp.resend.com`, port `465`, user `resend`, pass = `RESEND_API_KEY`, sender = `EMAIL_FROM`.
 - **Site URL** = `NEXT_PUBLIC_SITE_URL`; **Redirect URLs** = `${NEXT_PUBLIC_SITE_URL}/**`.
-- **Template** `Magic Link` **và** `Confirm signup` = nội dung `supabase/templates/login.html`,
-  subject "Đăng nhập Kairo". Người dùng mới nhận template confirm, người cũ nhận magic link.
+- **Providers → Email:** bật *Confirm email*; mật khẩu tối thiểu 8 ký tự, yêu cầu *letters and digits*
+  (khớp `config.toml` và `src/lib/auth/password.ts`).
+- **Template** `Confirm signup` = `supabase/templates/confirm-signup.html` (subject "Xác nhận email Kairo");
+  `Reset Password` = `supabase/templates/reset-password.html` (subject "Đặt lại mật khẩu Kairo").
 - **Rate limit** gửi email mỗi giờ: đặt theo gói Resend. `max_frequency` = 60 giây.
 - **Xác minh domain gửi** trên Resend (SPF, DKIM, DMARC) **trước** khi mở đăng ký.
 - Đổi `config.toml` ở local thì phải `supabase stop && supabase start` — Auth chỉ nạp cấu hình lúc khởi động.

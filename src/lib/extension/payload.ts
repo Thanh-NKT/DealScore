@@ -3,6 +3,9 @@
  * untrusted input from a web page: strict types, bounded sizes, no free text beyond a short model
  * name, and a server-chosen timestamp when the client's clock looks off.
  */
+import { normalizeVoucher } from "@/lib/vouchers/normalize";
+import { sanitizeImageUrls, MAX_LISTING_IMAGES } from "@/lib/product/images";
+import type { VoucherDiscountType, VoucherKind } from "@/lib/vouchers/types";
 
 export interface ObservationModel {
   modelId: string | null;
@@ -10,6 +13,20 @@ export interface ObservationModel {
   price: number;
   originalPrice: number | null;
   stock: number | null;
+}
+
+/**
+ * A voucher label the extension read. Scope (seller / listing) is bound server-side from our own
+ * listing row, and codes are never taken from the extension: a code typed into a page by anyone
+ * must not reach other users as if it were real.
+ */
+export interface ExtensionVoucher {
+  kind: VoucherKind;
+  discountType: VoucherDiscountType;
+  discountValue: number;
+  maxDiscount: number | null;
+  minSpend: number;
+  expiresAt: string | null;
 }
 
 export interface ObservationPayload {
@@ -20,6 +37,33 @@ export interface ObservationPayload {
   models: ObservationModel[];
   freeShipping: boolean | null;
   hasVoucher: boolean | null;
+  vouchers?: ExtensionVoucher[];
+  /** https URLs on the marketplace image CDN only. */
+  images?: string[];
+}
+
+export const MAX_EXTENSION_VOUCHERS = 20;
+export const MAX_EXTENSION_IMAGES = MAX_LISTING_IMAGES;
+
+// Placeholder scope: lets normalizeVoucher() check the terms; the real scope is bound on save.
+const CHECK_SCOPE = { marketplace: "shopee", listingId: "00000000-0000-0000-0000-000000000000", sellerId: "00000000-0000-0000-0000-000000000000" };
+
+/** Valid voucher labels only (invalid ones are dropped, not fatal), code stripped. */
+function extensionVouchers(raw: unknown[]): ExtensionVoucher[] {
+  const out: ExtensionVoucher[] = [];
+  for (const r of raw) {
+    const v = normalizeVoucher(isObj(r) ? { ...r, code: null, listingOnly: false } : r, CHECK_SCOPE);
+    if (!v) continue;
+    out.push({
+      kind: v.kind,
+      discountType: v.discountType,
+      discountValue: v.discountValue,
+      maxDiscount: v.maxDiscount,
+      minSpend: v.minSpend,
+      expiresAt: v.expiresAt,
+    });
+  }
+  return out;
 }
 
 const MAX_MODELS = 50;
@@ -63,6 +107,14 @@ export function validateObservationPayload(
     });
   }
 
+  // Optional extras. Oversized lists are rejected outright (a real page never has that many).
+  if (body.vouchers !== undefined && (!Array.isArray(body.vouchers) || body.vouchers.length > MAX_EXTENSION_VOUCHERS)) {
+    return { ok: false, error: "vouchers" };
+  }
+  if (body.images !== undefined && (!Array.isArray(body.images) || body.images.length > MAX_EXTENSION_IMAGES)) {
+    return { ok: false, error: "images" };
+  }
+
   const claimed = typeof body.observedAt === "string" ? Date.parse(body.observedAt) : NaN;
   const observedAt =
     Number.isFinite(claimed) && Math.abs(claimed - now.getTime()) <= CLOCK_SKEW_MS ? new Date(claimed) : now;
@@ -76,6 +128,8 @@ export function validateObservationPayload(
       models,
       freeShipping: optBool(body.freeShipping),
       hasVoucher: optBool(body.hasVoucher),
+      vouchers: Array.isArray(body.vouchers) ? extensionVouchers(body.vouchers) : [],
+      images: sanitizeImageUrls(body.images, "shopee", MAX_EXTENSION_IMAGES),
     },
   };
 }

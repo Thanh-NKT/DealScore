@@ -19,6 +19,12 @@ describe("computeDealScore — percentile mid-rank", () => {
     expect(r.reasons).toContain("✓ Đang ở mức đáy ghi nhận");
   });
 
+  it("a price within 0.5% of the low is worded, never 'cao hơn 0%'", () => {
+    const r = computeDealScore({ price: 1003, history: daily(30, (i) => 1000 + i * 20), now: NOW });
+    expect(r.reasons).toContain("✓ Gần như bằng mức đáy ghi nhận");
+    expect(r.reasons.join(" ")).not.toMatch(/cao hơn 0%/);
+  });
+
   it("a price below all history has rank 0, above all history rank 1", () => {
     const hist = daily(30, (i) => 1000 + i * 10);
     expect(computeDealScore({ price: 900, history: hist, now: NOW }).stats.percentileRank).toBe(0);

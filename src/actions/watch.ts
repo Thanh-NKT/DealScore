@@ -5,10 +5,18 @@ import { notFound } from "next/navigation";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { saveWatchForUser, type WatchActionResult } from "@/lib/watch/queries";
+import {
+  createFolderForUser,
+  deleteFolderForUser,
+  moveWatchForUser,
+  renameFolderForUser,
+  saveWatchForUser,
+  type FolderActionResult,
+  type WatchActionResult,
+} from "@/lib/watch/queries";
 import { trackAfter } from "@/lib/analytics/track";
 
-export type { WatchActionResult } from "@/lib/watch/queries";
+export type { FolderActionResult, WatchActionResult } from "@/lib/watch/queries";
 
 export async function saveWatch(
   prev: WatchActionResult,
@@ -85,4 +93,43 @@ export async function deleteWatch(watchId: string): Promise<void> {
 
   trackAfter("watch_deleted", { userId: user.id });
   revalidatePath("/account/watch");
+}
+
+// Folder actions. Identity always comes from the session (requireUser → getUser), never from arguments;
+// every query is also filtered by user.id on top of RLS.
+
+const INVALID_INPUT: FolderActionResult = { status: "error", error: "Dữ liệu không hợp lệ." };
+
+export async function createFolder(name: string): Promise<FolderActionResult> {
+  const user = await requireUser({ path: "/account/watch" });
+  const result = await createFolderForUser(await createClient(), user.id, name);
+  if (result.status === "ok") revalidatePath("/account/watch");
+  return result;
+}
+
+export async function renameFolder(folderId: string, name: string): Promise<FolderActionResult> {
+  const user = await requireUser({ path: "/account/watch" });
+  if (typeof folderId !== "string") return INVALID_INPUT;
+  const result = await renameFolderForUser(await createClient(), user.id, folderId, name);
+  if (result.status === "ok") revalidatePath("/account/watch");
+  return result;
+}
+
+export async function deleteFolder(folderId: string): Promise<FolderActionResult> {
+  const user = await requireUser({ path: "/account/watch" });
+  if (typeof folderId !== "string") return INVALID_INPUT;
+  const result = await deleteFolderForUser(await createClient(), user.id, folderId);
+  if (result.status === "ok") revalidatePath("/account/watch");
+  return result;
+}
+
+export async function moveWatchToFolder(
+  watchId: string,
+  folderId: string | null,
+): Promise<FolderActionResult> {
+  const user = await requireUser({ path: "/account/watch" });
+  if (typeof watchId !== "string" || (folderId !== null && typeof folderId !== "string")) return INVALID_INPUT;
+  const result = await moveWatchForUser(await createClient(), user.id, watchId, folderId);
+  if (result.status === "ok") revalidatePath("/account/watch");
+  return result;
 }

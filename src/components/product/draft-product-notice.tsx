@@ -1,30 +1,35 @@
+import { InfoIcon } from "@/components/ui/icons";
+
 interface DraftProductNoticeProps {
   isDraft: boolean;
 }
 
+/**
+ * Calm surface-2 note with an info icon, like the fake-sale note.
+ * Shown on products created on the fly from a pasted link (ingest → status 'draft', decision Đ6).
+ * Calm and short: says what is limited (one seller, a short price record) and why, without
+ * suggesting anything is wrong with the product or the seller.
+ */
 export function DraftProductNotice({ isDraft }: DraftProductNoticeProps) {
-  if (!isDraft) {
-    return null;
-  }
+  if (!isDraft) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-black/[0.02] p-4 text-sm dark:bg-white/[0.02]">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h4 className="font-semibold text-foreground">Sản phẩm mới thêm</h4>
-          <p className="mt-1 text-xs text-muted leading-relaxed">
-            Chúng tôi vừa bắt đầu theo dõi sản phẩm này. Cần khoảng 14 ngày để có đủ dữ liệu chấm điểm.
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled
-          className="shrink-0 cursor-not-allowed rounded-lg border border-border bg-black/5 px-3 py-2 text-xs font-medium text-muted dark:bg-white/5"
-          title="Tính năng Watch sẽ có ở giai đoạn tiếp theo"
-        >
-          🔔 Tạo Watch theo dõi
-        </button>
+    <aside
+      role="note"
+      aria-labelledby="draft-notice-heading"
+      className="grid grid-cols-[20px_minmax(0,1fr)] gap-x-2.5 rounded-md border border-line bg-surface-2 px-4 py-3.5"
+    >
+      <InfoIcon className="mt-0.5 size-[18px] text-ink" strokeWidth={2} />
+      <div className="min-w-0">
+        <h3 id="draft-notice-heading" className="text-[14px] font-bold text-ink">
+          Sản phẩm mới được thêm
+        </h3>
+        <p className="mt-0.5 max-w-[75ch] text-[14px] leading-normal text-ink-2">
+          Kairo vừa bắt đầu theo dõi sản phẩm này từ đường link được dán vào, nên hiện chỉ có giá của người bán đó
+          và lịch sử giá còn ngắn. Khi hệ thống ghi nhận đủ khoảng 14 ngày và đối chiếu được với người bán khác,
+          Deal Score và phần so sánh sẽ đầy đủ hơn.
+        </p>
       </div>
-    </div>
+    </aside>
   );
 }

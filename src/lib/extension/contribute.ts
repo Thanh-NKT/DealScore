@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { corroborate, type ApiObs, type ExtObs, WINDOW_HOURS } from "@/lib/extension/corroborate";
@@ -5,6 +6,7 @@ import type { ObservationModel, ObservationPayload } from "@/lib/extension/paylo
 import { normalizeText } from "@/lib/matching/attributes";
 import { recomputeDealScores } from "@/lib/pricing/recompute-scores";
 import { toVnDate } from "@/lib/format";
+import { saveListingExtras } from "@/lib/listing-extras";
 
 type Client = SupabaseClient<Database>;
 
@@ -36,6 +38,15 @@ export function mapModelsToOffers(models: ObservationModel[], offers: OfferRef[]
   return out;
 }
 
+/**
+ * Reporter id stored in vouchers.reporters. That column is public catalog data, so the contributor
+ * ("u:<user id>" / "ip:<hash>") is hashed again: stable per contributor, not linkable to an account.
+ */
+export function voucherReporterId(contributor: string): string {
+  const salt = process.env.LOOKUP_IP_SALT || "kairo_lookup_dev_salt";
+  return crypto.createHash("sha256").update(`voucher-reporter:${contributor}:${salt}`).digest("hex").slice(0, 32);
+}
+
 /** Record one contribution (listing must already be in the catalog), then try to promote. */
 export async function recordContribution(
   client: Client,
@@ -59,6 +70,21 @@ export async function recordContribution(
     variantId: o.variant_id,
     variantKey: (o.product_variants as { variant_key: string } | null)?.variant_key ?? null,
   }));
+  // Vouchers / images: stored as reports; vouchers show only once ≥ 2 contributors saw them
+  // (activeVouchers), images only fill a listing that has none. Never fails the price contribution.
+  if ((p.vouchers?.length ?? 0) > 0 || (p.images?.length ?? 0) > 0) {
+    try {
+      await saveListingExtras(client, listing.id, {
+        images: p.images,
+        vouchers: p.vouchers,
+        source: "extension",
+        reporter: voucherReporterId(contributor),
+      });
+    } catch (err) {
+      console.error("saveListingExtras from extension failed:", err);
+    }
+  }
+
   const mapped = mapModelsToOffers(p.models, offers);
   if (mapped.length === 0) return { status: "recorded", recorded: 0, promoted: 0 };
 

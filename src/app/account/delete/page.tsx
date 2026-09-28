@@ -8,57 +8,29 @@ export default async function DeleteAccountPage() {
   await requireUser({ path: "/account/delete" });
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-12 sm:py-16">
-      <div className="rounded-3xl border border-red-500/20 bg-red-500/[0.02] p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="space-y-2 text-center">
-          <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-sm mb-1">
-            ⚠
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-red-600 dark:text-red-400 sm:text-2xl">
-            Xác nhận xóa tài khoản
-          </h1>
-          <p className="text-xs text-muted leading-relaxed">
-            Hành động này sẽ bắt đầu quá trình xóa tài khoản Kairo của bạn.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-red-500/10 bg-background/50 p-4 text-xs leading-relaxed text-muted space-y-3">
-          <p className="font-semibold text-foreground">
-            Những điều sẽ xảy ra khi bạn xác nhận:
-          </p>
-          <ul className="list-disc pl-4 space-y-1.5">
-            <li>
-              Mọi cảnh báo giá (email và push) sẽ <strong>dừng ngay lập tức</strong>.
-            </li>
-            <li>
-              Bạn sẽ bị <strong>đăng xuất khỏi tất cả thiết bị</strong>.
-            </li>
-            <li>
-              Trong vòng <strong>30 ngày</strong>, tài khoản được giữ ở trạng thái
-              chờ xóa. Bạn có thể đăng nhập lại bất kỳ lúc nào để khôi phục.
-            </li>
-            <li>
-              Sau 30 ngày, toàn bộ hồ sơ, danh sách Watch và lịch sử cảnh báo sẽ
-              bị <strong>xóa vĩnh viễn</strong> và không thể khôi phục.
-            </li>
-            <li>
-              Lịch sử lượt bấm mua hàng được giữ lại độc lập (tách khỏi tài
-              khoản, không còn gắn với danh tính của bạn) để đối soát hoa hồng
-              với sàn thương mại điện tử.
-            </li>
-          </ul>
+    <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <nav aria-label="Đường dẫn" className="mb-3 text-[13px]">
+        <Link href="/account" className="inline-flex min-h-10 items-center gap-1 text-ink-2 underline-offset-4 hover:text-ink hover:underline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-4">
+            <path d="m15 6-6 6 6 6" />
+          </svg>
+          Tài khoản
+        </Link>
+      </nav>
+      <div className="space-y-6 rounded-lg border border-line bg-surface p-7 max-[760px]:p-5">
+        <div>
+          <h1 className="display text-[28px] font-extrabold leading-[1.15] text-ink max-[760px]:text-[24px]">Xóa tài khoản</h1>
+          <p className="mt-1.5 text-[15px] text-ink-2">Đọc kỹ những gì sẽ xảy ra trước khi xác nhận.</p>
         </div>
 
         <DeleteAccountForm />
 
-        <div className="text-center pt-2">
-          <Link
-            href="/account"
-            className="text-xs font-semibold text-muted hover:text-foreground"
-          >
-            ← Hủy và quay lại Tài khoản
-          </Link>
-        </div>
+        <Link
+          href="/account"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line-strong bg-surface text-[15px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+        >
+          Giữ tài khoản và quay lại
+        </Link>
       </div>
     </main>
   );

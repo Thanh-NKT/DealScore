@@ -28,7 +28,7 @@ export interface TestUser {
 
 /**
  * Create a real user in auth.users (the trigger also creates users + notification_settings).
- * The password is ONLY for tests; the product has no password sign-in.
+ * Random password that satisfies the letters_digits rule in config.toml.
  */
 export async function createTestUser(): Promise<TestUser> {
   const email = `test-${randomUUID()}@kairo.test`;

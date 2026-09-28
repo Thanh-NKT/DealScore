@@ -12,19 +12,19 @@ export const contentType = "image/png";
 
 // Colors from globals.css (light theme) — the image has no CSS variables.
 const C = {
-  label: "#F3F0E8",
-  raised: "#FBFAF6",
-  hairline: "#D5CFC1",
-  ink: "#1C1B19",
-  ink3: "#645F54",
-  primary: "#4B2E83",
+  canvas: "#F5F4EF",
+  surface: "#FFFFFF",
+  line: "#E4E2DA",
+  ink: "#15161A",
+  ink3: "#62656D",
+  primary: "#4330E6",
 };
 
 const VERDICT: Record<Recommendation, { text: string; fg: string; bg: string }> = {
-  buy: { text: "Nên mua", fg: "#1D6A42", bg: "#E1EFE5" },
-  wait: { text: "Có thể chờ", fg: "#845600", bg: "#F5EBD3" },
-  avoid: { text: "Chưa nên mua", fg: "#A0261C", bg: "#F6E0DC" },
-  insufficient_data: { text: "Chưa đủ dữ liệu", fg: "#5B574F", bg: "#E8E4DA" },
+  buy: { text: "Nên mua", fg: "#0B7A48", bg: "#E3F4EA" },
+  wait: { text: "Có thể chờ", fg: "#9A5B00", bg: "#FFF3C9" },
+  avoid: { text: "Chưa nên mua", fg: "#B42318", bg: "#FDE7E4" },
+  insufficient_data: { text: "Chưa đủ dữ liệu", fg: "#62656D", bg: "#EFEEE8" },
 };
 
 /**
@@ -75,7 +75,7 @@ export default async function Image({ params }: { params: Promise<{ category: st
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: C.label,
+          background: C.canvas,
           padding: 64,
           fontFamily: FONT_STACK,
           color: C.ink,
@@ -87,9 +87,9 @@ export default async function Image({ params }: { params: Promise<{ category: st
           style={{
             display: "flex",
             flexDirection: "column",
-            background: C.raised,
-            border: `2px solid ${C.hairline}`,
-            borderRadius: 8,
+            background: C.surface,
+            border: `2px solid ${C.line}`,
+            borderRadius: 20,
             padding: 48,
             gap: 20,
           }}
@@ -110,8 +110,8 @@ export default async function Image({ params }: { params: Promise<{ category: st
                   fontWeight: 700,
                   color: verdict.fg,
                   background: verdict.bg,
-                  borderRadius: 4,
-                  padding: "8px 20px",
+                  borderRadius: 999,
+                  padding: "8px 24px",
                 }}
               >
                 {verdict.text}

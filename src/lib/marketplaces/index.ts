@@ -32,6 +32,11 @@ export interface MarketplaceAdapter {
   isConfigured(): boolean;
   /** Hosts /go may redirect a buyer to. */
   targetHosts: ReadonlySet<string>;
+  /**
+   * CDN hosts product images may come from, as domain suffixes: "susercontent.com" allows
+   * "down-vn.img.susercontent.com". Anything else is dropped (listings.images, spec §5).
+   */
+  imageHosts: readonly string[];
 }
 
 const shopee: MarketplaceAdapter = {
@@ -55,6 +60,8 @@ const shopee: MarketplaceAdapter = {
   },
   isConfigured: isShopeeConfigured,
   targetHosts: new Set([...SHOPEE_HOSTS, ...SHORT_HOSTS, "shp.ee"]),
+  // down-vn.img.susercontent.com (current CDN), cf.shopee.vn / cvf.shopee.vn (older image hosts).
+  imageHosts: ["susercontent.com", "cf.shopee.vn", "cvf.shopee.vn"],
 };
 
 const tiktok: MarketplaceAdapter = {
@@ -71,6 +78,8 @@ const tiktok: MarketplaceAdapter = {
   },
   isConfigured: () => false,
   targetHosts: new Set(["www.tiktok.com", "shop.tiktok.com", "vt.tiktok.com"]),
+  // Assumption (no data source yet): TikTok Shop images are served from these ByteDance CDNs.
+  imageHosts: ["ibyteimg.com", "tiktokcdn.com"],
 };
 
 const lazada: MarketplaceAdapter = {
@@ -87,6 +96,8 @@ const lazada: MarketplaceAdapter = {
   },
   isConfigured: () => false,
   targetHosts: new Set(["www.lazada.vn", "s.lazada.vn", "c.lazada.vn"]),
+  // Assumption (no data source yet): Lazada images are served from these Alibaba CDNs.
+  imageHosts: ["slatic.net", "alicdn.com"],
 };
 
 export const MARKETPLACES: readonly MarketplaceAdapter[] = [shopee, tiktok, lazada];
@@ -125,4 +136,11 @@ export function allTargetHosts(): ReadonlySet<string> {
 /** Marketplaces the collector can refresh right now. */
 export function configuredMarketplaces(): MarketplaceId[] {
   return MARKETPLACES.filter((m) => m.isConfigured()).map((m) => m.id);
+}
+
+/** Whether an image host belongs to this marketplace's CDN allow-list (exact or subdomain match). */
+export function isAllowedImageHost(marketplace: string, host: string): boolean {
+  const h = host.toLowerCase();
+  const suffixes = getAdapter(marketplace)?.imageHosts ?? [];
+  return suffixes.some((s) => h === s || h.endsWith("." + s));
 }

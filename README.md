@@ -32,8 +32,8 @@ chuẩn hóa theo variant, chấm **Deal Score** có giải thích, và trả l�
    pnpm dev
    ```
 
-   Mở http://localhost:3000 — trang chủ hiển thị trạng thái kết nối Supabase và
-   một demo Deal Score.
+   Mở http://localhost:3000. Muốn kiểm tra kết nối và migration, chạy `supabase status`
+   và `pnpm test:db` (Supabase local).
 
 ## Cấu trúc
 
@@ -43,7 +43,6 @@ src/
     page.tsx               Landing + demo Deal Score
     layout.tsx
   components/
-    supabase-status.tsx    Kiểm tra kết nối + đếm catalog (Server Component)
   lib/
     deal-score.ts          Deal Score v0 + Buy/Wait + Fake Sale (mục C)
     database.types.ts       Kiểu DB (khớp migration; nên regen bằng CLI)

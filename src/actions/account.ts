@@ -93,6 +93,8 @@ export async function updateNotificationSettings(
   }
 
   revalidatePath("/account/notifications");
+  // The Watch page sidebar shows (and edits) the same settings.
+  revalidatePath("/account/watch");
   return { status: "saved" };
 }
 

@@ -18,6 +18,9 @@ export function OPTIONS(request: NextRequest) {
  * POST /api/extension/observations — prices the extension read on a Shopee page, sent only when
  * the user turned sharing on. Stored raw; they reach the price history only once corroborated
  * (src/lib/extension/corroborate.ts). 60 contributions / hour / contributor.
+ * Optional `vouchers` (≤ 20 labels, codes ignored) and `images` (≤ 12 CDN URLs) are validated in
+ * payload.ts and saved via saveListingExtras(): vouchers need ≥ 2 reporters before they are shown,
+ * images only fill a listing that has none.
  */
 export async function POST(request: NextRequest) {
   if (!extensionOriginAllowed(request)) return extForbidden(request);

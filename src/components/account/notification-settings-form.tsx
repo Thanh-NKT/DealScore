@@ -1,249 +1,299 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
+import { unstable_rethrow } from "next/navigation";
+import { updateNotificationSettings, type ActionResult } from "@/actions/account";
 import {
-  updateNotificationSettings,
-  type ActionResult,
-} from "@/actions/account";
-import type {
-  Frequency,
-  NotificationSettings,
-  SettingsField,
+  WEEKDAYS,
+  WEEKDAY_LABELS,
+  type Frequency,
+  type IsoWeekday,
+  type NotificationSettings,
+  type SettingsField,
 } from "@/lib/account/notification-settings";
+import { AlertIcon, CheckIcon, InfoIcon } from "@/components/ui/icons";
+import { PushSetup } from "./push-setup";
 
 interface NotificationSettingsFormProps {
   initialSettings: NotificationSettings;
 }
 
-export function NotificationSettingsForm({
-  initialSettings,
-}: NotificationSettingsFormProps) {
-  const [state, formAction, isPending] = useActionState(
-    updateNotificationSettings,
-    { status: "idle" } as ActionResult<SettingsField>,
-  );
+type Result = ActionResult<SettingsField>;
 
-  const [frequency, setFrequency] = useState<Frequency>(
-    initialSettings.frequency,
+const hour = (h: number) => `${String(h).padStart(2, "0")}:00`;
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+async function submit(prev: Result, form: FormData): Promise<Result> {
+  try {
+    return await updateNotificationSettings(prev, form);
+  } catch (err) {
+    unstable_rethrow(err); // expired session → login
+    return { status: "error", errors: {} };
+  }
+}
+
+const SELECT =
+  "min-h-11 rounded-md border border-line-strong bg-surface px-3 text-[16px] text-ink transition-colors duration-150 ease-out focus:border-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
+
+type Form = {
+  email: boolean;
+  push: boolean;
+  frequency: Frequency;
+  digestHour: number;
+  digestWeekday: IsoWeekday;
+  quiet: boolean;
+  quietStart: number;
+  quietEnd: number;
+};
+
+function fromSettings(s: NotificationSettings): Form {
+  return {
+    email: s.emailEnabled,
+    push: s.pushEnabled,
+    frequency: s.frequency,
+    digestHour: s.digestHour,
+    digestWeekday: s.digestWeekday,
+    quiet: s.quietStart !== null && s.quietEnd !== null,
+    quietStart: s.quietStart ?? 22,
+    quietEnd: s.quietEnd ?? 7,
+  };
+}
+
+const same = (a: Form, b: Form) => (Object.keys(a) as Array<keyof Form>).every((k) => a[k] === b[k]);
+
+function FieldError({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-2 flex basis-full items-start gap-1.5 text-[14px] font-semibold text-avoid">
+      <AlertIcon className="mt-0.5 size-4 shrink-0" />
+      {children}
+    </p>
   );
-  const [hasQuietHours, setHasQuietHours] = useState<boolean>(
-    initialSettings.quietStart !== null && initialSettings.quietEnd !== null,
-  );
+}
+
+/**
+ * Notification preferences with an explicit saved / unsaved / error state: the form tracks what is on
+ * the server, marks unsaved edits (and warns before leaving the page with them), gently warns when
+ * every channel is off, and keeps everything typed when saving fails.
+ */
+export function NotificationSettingsForm({ initialSettings }: NotificationSettingsFormProps) {
+  const uid = useId();
+  const [state, formAction, pending] = useActionState(submit, { status: "idle" } as Result);
+  const [values, setValues] = useState<Form>(() => fromSettings(initialSettings));
+  const [baseline, setBaseline] = useState<Form>(() => fromSettings(initialSettings));
+  const [submitted, setSubmitted] = useState<Form | null>(null);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  // When a save succeeds, what was submitted becomes the new baseline.
+  const [seen, setSeen] = useState(state);
+  if (state !== seen) {
+    setSeen(state);
+    if (state.status === "saved" && submitted) {
+      setBaseline(submitted);
+      setSavedAt(new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date()));
+    }
+  }
+
+  const dirty = !same(values, baseline);
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => setValues((prev) => ({ ...prev, [k]: v }));
+
+  // Leaving the page with unsaved edits asks first (browser dialog).
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
 
   const errors = state.status === "error" ? state.errors : {};
+  const failed = state.status === "error" && !pending;
+  const quietSame = values.quiet && values.quietStart === values.quietEnd;
+  const noChannel = !values.email && !values.push;
 
   return (
-    <form action={formAction} className="space-y-8">
-      {state.status === "saved" && (
-        <div
-          role="status"
-          className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-        >
-          ✓ Cài đặt thông báo đã được lưu thành công.
-        </div>
-      )}
-
-      {/* 1. Notification channels */}
-      <section className="space-y-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
-          1. Kênh nhận thông báo
+    <form
+      action={formAction}
+      onSubmit={(e) => {
+        if (quietSame || pending) {
+          e.preventDefault();
+          return;
+        }
+        setSubmitted(values);
+      }}
+      className="space-y-7"
+    >
+      <section aria-labelledby={`${uid}-channels`} className="space-y-3">
+        <h2 id={`${uid}-channels`} className="display text-[20px] font-bold leading-tight text-ink">
+          Nhận thông báo giá qua
         </h2>
-        <div className="space-y-3 rounded-2xl border border-border p-4">
-          <label className="flex items-center justify-between cursor-pointer">
-            <div>
-              <span className="text-sm font-semibold text-foreground">
-                Email
-              </span>
-              <p className="text-xs text-muted">
-                Nhận thông báo biến động giá qua email đã đăng ký
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              name="emailEnabled"
-              defaultChecked={initialSettings.emailEnabled}
-              className="h-4 w-4 rounded border-border text-foreground accent-foreground focus:ring-foreground"
-            />
+        <div className="divide-y divide-line rounded-md border border-line bg-surface">
+          <label className="flex min-h-11 cursor-pointer items-start justify-between gap-4 p-4 transition-colors duration-150 ease-out hover:bg-surface-2">
+            <span>
+              <span className="block text-[15px] font-semibold text-ink">Email</span>
+              <span className="mt-0.5 block text-[14px] text-ink-2">Gửi tới email bạn dùng để đăng nhập.</span>
+            </span>
+            <input type="checkbox" name="emailEnabled" checked={values.email} onChange={(e) => set("email", e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-primary" />
           </label>
-
-          <hr className="border-border" />
-
-          <label className="flex items-center justify-between cursor-pointer">
-            <div>
-              <span className="text-sm font-semibold text-foreground">
-                Thông báo Web Push
-              </span>
-              <p className="text-xs text-muted">
-                Nhận cảnh báo trực tiếp trên trình duyệt (iPhone yêu cầu thêm vào
-                Màn hình chính / PWA iOS 16.4+)
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              name="pushEnabled"
-              defaultChecked={initialSettings.pushEnabled}
-              className="h-4 w-4 rounded border-border text-foreground accent-foreground focus:ring-foreground"
-            />
-          </label>
-        </div>
-      </section>
-
-      {/* 2. Frequency */}
-      <section className="space-y-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
-          2. Tần suất gửi thông báo
-        </h2>
-        <div className="space-y-3 rounded-2xl border border-border p-4">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name="frequency"
-              value="instant"
-              checked={frequency === "instant"}
-              onChange={() => setFrequency("instant")}
-              className="mt-0.5 h-4 w-4 text-foreground accent-foreground"
-            />
-            <div>
-              <span className="text-xs font-semibold text-foreground">
-                Tức thì (Khuyến nghị)
-              </span>
-              <p className="text-xs text-muted">
-                Gửi thông báo ngay khi giá biến động đạt điều kiện bạn đã đặt
-              </p>
-            </div>
-          </label>
-
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name="frequency"
-              value="daily_digest"
-              checked={frequency === "daily_digest"}
-              onChange={() => setFrequency("daily_digest")}
-              className="mt-0.5 h-4 w-4 text-foreground accent-foreground"
-            />
-            <div>
-              <span className="text-xs font-semibold text-foreground">
-                Tóm tắt hằng ngày
-              </span>
-              <p className="text-xs text-muted">
-                Gộp tất cả biến động giá trong ngày vào duy nhất 1 email
-              </p>
-            </div>
-          </label>
-
-          {/* Digest hour (when daily_digest is selected) */}
-          {frequency === "daily_digest" && (
-            <div className="pt-3 border-t border-border flex items-center gap-3">
-              <label htmlFor="digestHour" className="text-xs text-muted">
-                Giờ gửi tóm tắt:
-              </label>
-              <select
-                id="digestHour"
-                name="digestHour"
-                defaultValue={initialSettings.digestHour}
-                className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
-              >
-                {Array.from({ length: 24 }).map((_, i) => (
-                  <option key={i} value={i}>
-                    {i}:00 (Giờ VN)
-                  </option>
-                ))}
-              </select>
-              {errors.digestHour && (
-                <span className="text-xs text-red-500">
-                  {errors.digestHour}
+          <div className="p-4">
+            <label className="flex cursor-pointer items-start justify-between gap-4">
+              <span>
+                <span className="block text-[15px] font-semibold text-ink">Thông báo trên trình duyệt</span>
+                <span className="mt-0.5 block text-[14px] text-ink-2">
+                  Hiện ngay trên máy tính hoặc điện thoại. Trên iPhone cần thêm Kairo vào Màn hình chính (iOS 16.4 trở lên).
                 </span>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 3. Quiet hours */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted">
-            3. Giờ im lặng (Tạm hoãn thông báo)
-          </h2>
-          <label className="flex items-center gap-2 cursor-pointer text-xs text-muted">
-            <input
-              type="checkbox"
-              checked={hasQuietHours}
-              onChange={(e) => setHasQuietHours(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-border text-foreground accent-foreground"
-            />
-            Bật giờ im lặng
-          </label>
-        </div>
-
-        {hasQuietHours ? (
-          <div className="rounded-2xl border border-border p-4 space-y-3">
-            <p className="text-xs text-muted leading-relaxed">
-              Thông báo phát sinh trong khung giờ này sẽ được giữ lại và gửi sau
-              khi hết giờ im lặng (hỗ trợ khung giờ vắt qua nửa đêm, ví dụ 22:00
-              đến 07:00).
-            </p>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label htmlFor="quietStart" className="text-xs text-muted">
-                  Từ:
-                </label>
-                <select
-                  id="quietStart"
-                  name="quietStart"
-                  defaultValue={initialSettings.quietStart ?? 22}
-                  className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
-                >
-                  {Array.from({ length: 24 }).map((_, i) => (
-                    <option key={i} value={i}>
-                      {i}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label htmlFor="quietEnd" className="text-xs text-muted">
-                  Đến:
-                </label>
-                <select
-                  id="quietEnd"
-                  name="quietEnd"
-                  defaultValue={initialSettings.quietEnd ?? 7}
-                  className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
-                >
-                  {Array.from({ length: 24 }).map((_, i) => (
-                    <option key={i} value={i}>
-                      {i}:00
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {(errors.quietStart || errors.quietEnd) && (
-              <p className="text-xs text-red-500">
-                {errors.quietStart || errors.quietEnd}
-              </p>
+              </span>
+              <input type="checkbox" name="pushEnabled" checked={values.push} onChange={(e) => set("push", e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-primary" />
+            </label>
+            {/* The channel above is account-wide; each browser must also be allowed to receive. */}
+            <PushSetup onEnabled={() => set("push", true)} />
+            {values.push && !baseline.push && (
+              <p className="mt-2 text-[13px] text-ink-2">Bấm “Lưu cài đặt” ở cuối trang để bắt đầu nhận thông báo trên trình duyệt.</p>
             )}
           </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border p-4 text-xs text-muted">
-            Chưa bật giờ im lặng. Thông báo sẽ được gửi bất kể thời điểm trong
-            ngày.
-          </div>
+        </div>
+        {noChannel && (
+          <p role="status" className="flex items-start gap-2 rounded-md bg-surface-2 p-3.5 text-[14px] text-ink">
+            <InfoIcon className="mt-0.5 size-4 shrink-0" />
+            <span>
+              Khi tắt cả hai kênh, bạn sẽ không nhận được thông báo giá nào. Các sản phẩm vẫn được theo dõi, và bạn có thể xem giá trong “Đang theo dõi” bất cứ lúc nào.
+            </span>
+          </p>
         )}
       </section>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="w-full sm:w-auto rounded-xl bg-foreground px-6 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {isPending ? "Đang lưu..." : "Lưu cài đặt thông báo"}
-      </button>
+      <fieldset className="space-y-3">
+        <legend className="display mb-3 text-[20px] font-bold leading-tight text-ink">Tần suất</legend>
+        <div className="divide-y divide-line rounded-md border border-line bg-surface">
+          {(
+            [
+              ["instant", "Ngay khi có", "Báo ngay khi giá đạt điều kiện bạn đặt."],
+              ["daily_digest", "Tóm tắt mỗi ngày", "Gộp mọi thay đổi trong ngày vào một thông báo."],
+              ["weekly_digest", "Tóm tắt mỗi tuần", "Gộp mọi thay đổi trong tuần vào một thông báo, vào ngày bạn chọn."],
+            ] as const
+          ).map(([value, label, hint]) => (
+            <label key={value} className="flex cursor-pointer items-start gap-3 p-4 transition-colors duration-150 ease-out hover:bg-surface-2">
+              <input type="radio" name="frequency" value={value} checked={values.frequency === value} onChange={() => set("frequency", value)} className="mt-0.5 size-5 shrink-0 accent-primary" />
+              <span>
+                <span className="block text-[15px] font-semibold text-ink">{label}</span>
+                <span className="mt-0.5 block text-[14px] text-ink-2">{hint}</span>
+              </span>
+            </label>
+          ))}
+          {values.frequency !== "instant" && (
+            <div className="flex flex-wrap items-center gap-3 p-4">
+              {values.frequency === "weekly_digest" && (
+                <>
+                  <label htmlFor={`${uid}-weekday`} className="text-[15px] text-ink-2">
+                    Ngày nhận
+                  </label>
+                  <select
+                    id={`${uid}-weekday`}
+                    name="digestWeekday"
+                    value={values.digestWeekday}
+                    onChange={(e) => set("digestWeekday", Number(e.target.value) as IsoWeekday)}
+                    aria-invalid={Boolean(errors.digestWeekday) || undefined}
+                    className={SELECT}
+                  >
+                    {WEEKDAYS.map((d) => (
+                      <option key={d} value={d}>
+                        {WEEKDAY_LABELS[d]}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+              <label htmlFor={`${uid}-digest`} className="text-[15px] text-ink-2">
+                {values.frequency === "weekly_digest" ? "lúc" : "Gửi tóm tắt lúc"}
+              </label>
+              <select id={`${uid}-digest`} name="digestHour" value={values.digestHour} onChange={(e) => set("digestHour", Number(e.target.value))} className={`${SELECT} num`}>
+                {HOURS.map((h) => (
+                  <option key={h} value={h}>
+                    {hour(h)}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[13px] text-ink-3">giờ Việt Nam</span>
+              {errors.digestHour && <FieldError>{errors.digestHour}</FieldError>}
+              {errors.digestWeekday && <FieldError>{errors.digestWeekday}</FieldError>}
+            </div>
+          )}
+          {/* Keep the saved weekday when another frequency is chosen. */}
+          {values.frequency !== "weekly_digest" && <input type="hidden" name="digestWeekday" value={values.digestWeekday} />}
+          {values.frequency === "instant" && <input type="hidden" name="digestHour" value={values.digestHour} />}
+        </div>
+      </fieldset>
+
+      <section aria-labelledby={`${uid}-quiet`} className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id={`${uid}-quiet`} className="display text-[20px] font-bold leading-tight text-ink">
+            Giờ im lặng
+          </h2>
+          <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 text-[15px] font-semibold text-ink">
+            <input type="checkbox" checked={values.quiet} onChange={(e) => set("quiet", e.target.checked)} className="size-5 accent-primary" />
+            Bật
+          </label>
+        </div>
+        {values.quiet ? (
+          <div className="space-y-3 rounded-md bg-surface-2 p-4">
+            <p className="text-[14px] text-ink-2">Thông báo đến trong khoảng này được giữ lại và gửi khi hết giờ im lặng. Khoảng giờ có thể qua nửa đêm, ví dụ 22:00 đến 07:00.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <label htmlFor={`${uid}-qs`} className="text-[15px] text-ink-2">
+                Từ
+              </label>
+              <select id={`${uid}-qs`} name="quietStart" value={values.quietStart} onChange={(e) => set("quietStart", Number(e.target.value))} aria-invalid={quietSame || undefined} className={`${SELECT} num`}>
+                {HOURS.map((h) => (
+                  <option key={h} value={h}>
+                    {hour(h)}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor={`${uid}-qe`} className="text-[15px] text-ink-2">
+                đến
+              </label>
+              <select id={`${uid}-qe`} name="quietEnd" value={values.quietEnd} onChange={(e) => set("quietEnd", Number(e.target.value))} aria-invalid={quietSame || undefined} className={`${SELECT} num`}>
+                {HOURS.map((h) => (
+                  <option key={h} value={h}>
+                    {hour(h)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {quietSame && <FieldError>Giờ bắt đầu và giờ kết thúc cần khác nhau.</FieldError>}
+            {(errors.quietStart || errors.quietEnd) && <FieldError>{errors.quietStart || errors.quietEnd}</FieldError>}
+          </div>
+        ) : (
+          <p className="rounded-md bg-surface-2 p-4 text-[14px] text-ink-2">Đang tắt: thông báo được gửi vào mọi giờ trong ngày.</p>
+        )}
+      </section>
+
+      <div className="sticky bottom-0 -mx-7 -mb-7 flex flex-wrap items-center justify-between gap-3 rounded-b-lg border-t border-line bg-surface px-7 py-4 max-[760px]:-mx-5 max-[760px]:-mb-5 max-[760px]:px-5">
+        <p aria-live="polite" className="text-[14px]">
+          {pending ? (
+            <span className="text-ink-2">Đang lưu…</span>
+          ) : failed ? (
+            <span className="inline-flex items-start gap-1.5 font-semibold text-avoid">
+              <AlertIcon className="mt-0.5 size-4 shrink-0" />
+              Chưa lưu được. Các lựa chọn của bạn vẫn còn, hãy thử lại.
+            </span>
+          ) : dirty ? (
+            <span className="font-medium text-ink">Có thay đổi chưa lưu</span>
+          ) : savedAt ? (
+            <span className="inline-flex items-center gap-1.5 text-ink-2">
+              <CheckIcon className="size-4" />
+              Đã lưu lúc {savedAt}
+            </span>
+          ) : (
+            <span className="text-ink-3">Chưa có thay đổi</span>
+          )}
+        </p>
+        <button
+          type="submit"
+          disabled={pending || quietSame || (!dirty && !failed)}
+          aria-busy={pending}
+          className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 text-[15px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3"
+        >
+          {pending ? "Đang lưu…" : "Lưu cài đặt"}
+        </button>
+      </div>
     </form>
   );
 }

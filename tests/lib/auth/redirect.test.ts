@@ -24,6 +24,9 @@ describe("safeNextPath", () => {
     [""],
     ["ssd"],
     ["/abc\u0000def"],
+    ["/register"],
+    ["/forgot-password"],
+    ["/reset-password?x=1"],
   ])("rejects %j", (raw) => {
     expect(safeNextPath(raw)).toBe("/");
   });

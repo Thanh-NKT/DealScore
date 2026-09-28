@@ -1,86 +1,167 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { SearchItem } from "@/lib/search";
-import { formatVnd } from "@/lib/format";
-import { RECOMMENDATION_LABEL } from "@/lib/pricing/deal-score";
+import type { Recommendation } from "@/lib/pricing/deal-score";
+import { discountPercent, formatVnd } from "@/lib/format";
+import { ScoreRing, VerdictTag } from "@/components/product/verdict-tag";
+import { ProductImage } from "@/components/ui/product-image";
+import { UpdatedAt } from "@/components/product/updated-at";
+import { ClockIcon, TrendDownIcon } from "@/components/ui/icons";
 
 interface ProductCardProps {
   item: SearchItem;
+  /** Link target; defaults to the product page. Radar links straight to the variant that dropped. */
+  href?: string;
+  /** Optional category display name when brand is absent. */
+  categoryName?: string;
+  /**
+   * One line under the title saying why this card is on a discovery list, e.g.
+   * "Thấp hơn 18% so với trung vị 30 ngày".
+   */
+  insight?: { icon: ReactNode; text: string };
 }
 
-export function ProductCard({ item }: ProductCardProps) {
-  const { slug, canonicalName, brand, image, categorySlug, bestPrice, originalPrice, score, recommendation } = item;
+/** A price of 0 or below is a marketplace data error, not a free product: treat it as missing. */
+function validPrice(value: number | null | undefined): number | null {
+  return value != null && Number.isFinite(value) && value > 0 ? value : null;
+}
 
-  const colorMap = {
-    buy: "text-rec-buy bg-rec-buy-bg",
-    wait: "text-rec-wait bg-rec-wait-bg",
-    avoid: "text-rec-avoid bg-rec-avoid-bg",
-    insufficient_data: "text-rec-unknown bg-rec-unknown-bg",
-  };
+export function VerdictRow({
+  score,
+  recommendation,
+}: {
+  score: number | null | undefined;
+  recommendation: Recommendation | null | undefined;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <VerdictTag recommendation={recommendation} className="shrink-0" />
+      <div className="flex items-center gap-2">
+        <span className="text-[12px] whitespace-nowrap text-ink-3 max-[240px]:hidden" aria-hidden="true">
+          Deal Score
+        </span>
+        <ScoreRing score={score} recommendation={recommendation} size="sm" showBadge />
+      </div>
+    </div>
+  );
+}
 
-  const badgeColor = recommendation ? colorMap[recommendation] : colorMap.insufficient_data;
-  const label = recommendation ? RECOMMENDATION_LABEL[recommendation] : "⚪ Chưa đủ dữ liệu";
+/**
+ * Product showcase card:
+ * - Top stage: clean image frame with subtle hover zoom, floating brand/offer pill (top-left) and
+ *   discount badge (top-right).
+ * - Middle: 2-line product title + optional discovery insight chip.
+ * - Bottom hero capsule: Best Price + Savings on the left, SVG Deal Score Progress Ring + corner
+ *   verdict badge on the right, followed by a compact freshness & CTA footer.
+ */
+export function ProductCard({ item, href, categoryName, insight }: ProductCardProps) {
+  const { slug, canonicalName, brand, image, categorySlug, score, recommendation, lastObservedAt } = item;
+  const name = canonicalName?.trim() || "Sản phẩm chưa có tên";
+  const price = validPrice(item.bestPrice);
+  const listed = validPrice(item.originalPrice);
+  const off = discountPercent(price, listed);
+  const saved = price != null && listed != null && listed > price ? listed - price : null;
+  const brandName = brand?.trim() || categoryName?.trim();
+  const offersCount = (item as unknown as { offerCount?: number }).offerCount;
 
   return (
     <Link
-      href={`/${categorySlug}/${slug}`}
-      className="group flex flex-col justify-between rounded-2xl border border-border bg-background p-4 transition hover:border-foreground/40 hover:shadow-md"
+      href={href ?? `/${categorySlug}/${slug}`}
+      title={name}
+      className="@container group flex min-w-0 flex-col gap-3 rounded-[20px] border border-line bg-surface p-3.5 text-ink transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/45 hover:shadow-lift"
     >
-      <div className="space-y-3">
-        {/* Product image */}
-        <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-border bg-black/[0.02] dark:bg-white/[0.02]">
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image}
-              alt={canonicalName}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-muted">
-              Kairo
-            </div>
-          )}
-        </div>
+      {/* 1. Product Image Stage */}
+      <div className="relative h-[204px] w-full shrink-0 overflow-hidden rounded-[14px] border border-line/60 bg-surface-2">
+        <ProductImage
+          src={image}
+          className="size-full p-4"
+          imgClassName="transition-transform duration-300 ease-out group-hover:scale-105"
+          iconClassName="size-14 text-ink-3/60"
+        />
 
-        {/* Brand + name */}
-        <div>
-          {brand && (
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-              {brand}
-            </div>
-          )}
-          <h3 className="line-clamp-2 text-sm font-semibold text-foreground group-hover:text-foreground/80">
-            {canonicalName}
-          </h3>
-        </div>
+        {/* Top-left Brand / Multi-offer Pill */}
+        {offersCount && offersCount > 1 ? (
+          <span className="absolute left-2.5 top-2.5 rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-[11px] font-bold text-ink-2 backdrop-blur-md shadow-2xs">
+            Đã gom {offersCount} nơi bán
+          </span>
+        ) : brandName ? (
+          <span className="absolute left-2.5 top-2.5 max-w-[65%] truncate rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-[11px] font-bold text-ink-2 backdrop-blur-md shadow-2xs">
+            {brandName}
+          </span>
+        ) : null}
+
+        {/* Top-right Discount Badge */}
+        {off != null && off > 0 && (
+          <span className="num absolute right-2.5 top-2.5 inline-flex items-center gap-0.5 rounded-full bg-buy px-2.5 py-1 text-[12px] font-extrabold text-canvas shadow-xs">
+            <TrendDownIcon className="size-3" strokeWidth={2.6} />
+            −{off}%
+          </span>
+        )}
       </div>
 
-      {/* Price + Deal Score */}
-      <div className="mt-4 border-t border-border pt-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="text-base font-extrabold text-foreground">
-              {bestPrice != null ? formatVnd(bestPrice) : "Chưa có giá"}
+      {/* 2. Product Title & Discovery Signal */}
+      <div className="flex min-w-0 flex-1 flex-col gap-2.5 px-0.5">
+        <h3 className="line-clamp-2 min-h-[42px] text-[15px] font-semibold leading-[1.38] text-ink [overflow-wrap:anywhere] transition-colors group-hover:text-primary">
+          {name}
+        </h3>
+
+        {insight && (
+          <div className="flex items-center gap-1.5 rounded-[8px] border border-primary/15 bg-primary-soft/45 px-2.5 py-1.5 text-[12px] font-semibold text-ink">
+            <span aria-hidden="true" className="shrink-0 [&>svg]:size-3.5">
+              {insight.icon}
+            </span>
+            <span className="truncate">{insight.text}</span>
+          </div>
+        )}
+
+        {/* 3. Signature Kairo Price + Deal Score Capsule */}
+        <div className="mt-auto flex flex-col gap-2 pt-0.5">
+          <div className="flex items-center justify-between gap-3 rounded-[12px] border border-line/80 bg-surface-2/45 p-3 transition-colors group-hover:border-primary/25 group-hover:bg-surface-2/75">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              {saved != null && saved > 0 ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-buy">
+                  Tiết kiệm <span className="num">{formatVnd(saved)}</span>
+                </span>
+              ) : (
+                <span className="text-[11px] font-medium text-ink-3">Giá tốt nhất hiện tại</span>
+              )}
+
+              {price != null ? (
+                <span className="num truncate text-[22px] font-extrabold leading-tight tracking-tight text-ink">
+                  {formatVnd(price)}
+                </span>
+              ) : (
+                <span className="text-[14px] font-semibold leading-tight text-ink-3">Chưa có giá</span>
+              )}
+
+              {off != null && listed != null ? (
+                <span className="flex items-center gap-1.5 text-[12px] text-ink-3">
+                  <span>Giá gốc</span>
+                  <s className="num decoration-[1.5px]">{formatVnd(listed)}</s>
+                </span>
+              ) : (
+                <span className="text-[11px] text-ink-3">Ghi nhận trên Shopee</span>
+              )}
             </div>
-            {originalPrice != null && bestPrice != null && originalPrice > bestPrice && (
-              <div className="text-[11px] text-muted">
-                <s>{formatVnd(originalPrice)}</s>
-              </div>
-            )}
+
+            <div className=" flex shrink-0 flex-col items-center gap-0.5">
+              <ScoreRing score={score} recommendation={recommendation} size="sm" showBadge />
+            </div>
           </div>
 
-          <div
-            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold ${badgeColor}`}
-            title={label}
-          >
-            {score != null ? (
-              <>
-                <span>{score}</span>
-                <span className="text-[9px] opacity-80">/100</span>
-              </>
+          {/* 4. Compact Footer: Timestamp + Hover Action */}
+          <div className="flex items-center justify-between gap-2 px-0.5 text-[12px] text-ink-3">
+            {lastObservedAt ? (
+              <span className="inline-flex min-w-0 items-center gap-1 truncate">
+                <ClockIcon className="size-3.5 shrink-0 text-ink-3" />
+                <UpdatedAt iso={lastObservedAt} variant="compact" />
+              </span>
             ) : (
-              <span className="text-[10px]">⚪ Thiếu dữ liệu</span>
+              <span>Đang theo dõi giá</span>
             )}
+            <span className="shrink-0 font-semibold text-primary transition-transform duration-150 group-hover:translate-x-0.5">
+              Xem giá →
+            </span>
           </div>
         </div>
       </div>

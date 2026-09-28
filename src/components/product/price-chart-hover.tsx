@@ -1,128 +1,123 @@
 "use client";
 
-import { useState, useRef, type PointerEvent } from "react";
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { formatVnd } from "@/lib/format";
 
-interface Point {
+export interface HoverPoint {
+  /** Coordinates in the chart's viewBox units. */
   x: number;
   y: number;
-  day: string;
+  day: string; // 'YYYY-MM-DD'
   price: number;
+  /** Flash-sale price that day, shown for context but excluded from the line. */
+  flashPrice: number | null;
 }
 
 interface PriceChartHoverProps {
-  points: Point[];
+  points: HoverPoint[];
   width: number;
   height: number;
+  plotTop: number;
+  plotBottom: number;
+  className?: string;
 }
 
-export function PriceChartHover({ points, width, height }: PriceChartHoverProps) {
-  const [activePoint, setActivePoint] = useState<Point | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+const WEEKDAYS = ["Chủ nhật", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu", "Thứ bảy"];
 
-  if (!points || points.length === 0) {
-    return null;
-  }
+function formatDay(day: string): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return day;
+  return `${WEEKDAYS[d.getUTCDay()]}, ${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`;
+}
 
-  const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const scaleX = width / rect.width;
-    const mouseX = (e.clientX - rect.left) * scaleX;
+/**
+ * Hover / touch / keyboard read-out over the server-rendered chart. Pointer: nearest recorded day.
+ * Touch keeps vertical page scrolling (`touch-pan-y`) so the chart never traps a phone user.
+ * Keyboard: focus the chart, then ←/→ (Home/End) move day by day; a live region reads the value.
+ */
+export function PriceChartHover({ points, width, height, plotTop, plotBottom, className = "" }: PriceChartHoverProps) {
+  const [index, setIndex] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
-    // Find the point nearest to mouseX
-    let closest = points[0];
-    let minDiff = Math.abs(points[0].x - mouseX);
+  if (!points || points.length === 0) return null;
+  const active = index != null ? points[Math.min(index, points.length - 1)] : null;
 
+  const nearest = (clientX: number) => {
+    const el = ref.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0) return null; // hidden variant (desktop vs phone chart)
+    const x = ((clientX - rect.left) / rect.width) * width;
+    let best = 0;
     for (let i = 1; i < points.length; i++) {
-      const diff = Math.abs(points[i].x - mouseX);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closest = points[i];
-      }
+      if (Math.abs(points[i].x - x) < Math.abs(points[best].x - x)) best = i;
     }
-
-    setActivePoint(closest);
+    return best;
   };
 
-  const handlePointerLeave = () => {
-    setActivePoint(null);
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const i = nearest(e.clientX);
+    if (i != null) setIndex(i);
   };
 
-  const formatDate = (d: string) => {
-    try {
-      const p = d.split("-");
-      if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
-      return d;
-    } catch {
-      return d;
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const last = points.length - 1;
+    const current = index ?? last;
+    const next =
+      e.key === "ArrowLeft" ? Math.max(0, current - 1)
+      : e.key === "ArrowRight" ? Math.min(last, current + 1)
+      : e.key === "Home" ? 0
+      : e.key === "End" ? last
+      : null;
+    if (e.key === "Escape") {
+      setIndex(null);
+      return;
     }
+    if (next == null) return;
+    e.preventDefault();
+    setIndex(next);
   };
+
+  const leftPct = active ? (active.x / width) * 100 : 0;
+  const shift = leftPct < 18 ? "translate-x-0" : leftPct > 82 ? "-translate-x-full" : "-translate-x-1/2";
 
   return (
     <div
-      ref={containerRef}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
-      className="absolute inset-0 cursor-crosshair touch-none"
+      ref={ref}
+      tabIndex={0}
+      role="group"
+      aria-label="Xem giá từng ngày: dùng phím mũi tên trái, phải"
+      onPointerMove={onPointerMove}
+      onPointerDown={onPointerMove}
+      onPointerLeave={() => setIndex(null)}
+      onFocus={() => setIndex((i) => i ?? points.length - 1)}
+      onBlur={() => setIndex(null)}
+      onKeyDown={onKeyDown}
+      className={`absolute inset-0 cursor-crosshair touch-pan-y rounded-md outline-offset-4 ${className}`}
     >
-      {activePoint && (
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="pointer-events-none absolute inset-0 h-full w-full"
-        >
-          {/* Vertical guide line */}
-          <line
-            x1={activePoint.x}
-            y1={16}
-            x2={activePoint.x}
-            y2={height - 32}
-            stroke="currentColor"
-            strokeWidth="1"
-            strokeDasharray="3 3"
-            className="text-foreground/40"
-          />
-
-          {/* Highlighted point */}
-          <circle
-            cx={activePoint.x}
-            cy={activePoint.y}
-            r="4.5"
-            className="fill-foreground stroke-background stroke-2"
-          />
-
-          {/* Tooltip box */}
-          <g
-            transform={`translate(${Math.min(
-              Math.max(activePoint.x - 60, 64),
-              width - 130,
-            )}, ${Math.max(activePoint.y - 48, 16)})`}
+      {active && (
+        <>
+          <svg viewBox={`0 0 ${width} ${height}`} className="pointer-events-none absolute inset-0 size-full" aria-hidden="true">
+            <line x1={active.x} x2={active.x} y1={plotTop} y2={plotBottom} className="stroke-primary" strokeWidth={1.5} strokeDasharray="4 4" />
+            <circle cx={active.x} cy={active.y} r={6} className="fill-primary stroke-surface" strokeWidth={2.5} />
+          </svg>
+          <div
+            className={`pointer-events-none absolute top-0 ${shift} whitespace-nowrap rounded-md border border-line bg-surface px-3 py-2 shadow-lift`}
+            style={{ left: `${leftPct}%` }}
           >
-            <rect
-              width="120"
-              height="36"
-              rx="6"
-              className="fill-foreground text-background shadow-md"
-            />
-            <text
-              x="60"
-              y="15"
-              textAnchor="middle"
-              className="fill-background text-[10px] font-medium"
-            >
-              {formatDate(activePoint.day)}
-            </text>
-            <text
-              x="60"
-              y="29"
-              textAnchor="middle"
-              className="fill-background text-xs font-bold"
-            >
-              {formatVnd(activePoint.price)}
-            </text>
-          </g>
-        </svg>
+            <p className="text-[12px] font-semibold text-ink-3">{formatDay(active.day)}</p>
+            <p className="num text-[18px] font-extrabold leading-tight text-ink">{formatVnd(active.price)}</p>
+            {active.flashPrice != null && (
+              <p className="text-[12px] text-ink-3">
+                Flash sale <span className="num">{formatVnd(active.flashPrice)}</span> (không tính)
+              </p>
+            )}
+          </div>
+        </>
       )}
+      <p className="sr-only" aria-live="polite">
+        {active ? `${formatDay(active.day)}: ${formatVnd(active.price)}` : ""}
+      </p>
     </div>
   );
 }

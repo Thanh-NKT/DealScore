@@ -88,3 +88,33 @@ describe("advanced filters (Phase 2)", () => {
     expect(qs).toBe("q=ssd&rating=4.5&freeship=1");
   });
 });
+
+describe("marketplace filter (?market=)", () => {
+  const markets = (qs: string) => parseSearchParams(new URLSearchParams(qs)).marketplaces;
+
+  it("parses a comma list, in canonical order, deduped and case-insensitive", () => {
+    expect(markets("market=lazada,SHOPEE,shopee")).toEqual(["shopee", "lazada"]);
+  });
+
+  it("also tolerates repeated market params", () => {
+    expect(markets("market=lazada&market=tiktok")).toEqual(["tiktok", "lazada"]);
+    expect(parseSearchParams({ market: ["lazada", "shopee"] }).marketplaces).toEqual(["shopee", "lazada"]);
+  });
+
+  it("drops unknown ids; nothing known means no filter", () => {
+    expect(markets("market=shopee,amazon")).toEqual(["shopee"]);
+    expect(markets("market=amazon")).toBeUndefined();
+    expect(markets("market=")).toBeUndefined();
+    expect(markets("")).toBeUndefined();
+  });
+
+  it("serializes as one comma-separated market param and round-trips", () => {
+    const sp = toSearchParams(parseSearchParams(new URLSearchParams("q=ssd&market=lazada&market=shopee")));
+    expect(sp.getAll("market")).toEqual(["shopee,lazada"]);
+    expect(parseSearchParams(sp).marketplaces).toEqual(["shopee", "lazada"]);
+  });
+
+  it("writes nothing when no marketplace is selected", () => {
+    expect(toSearchParams({ q: "ssd", marketplaces: [] }).has("market")).toBe(false);
+  });
+});

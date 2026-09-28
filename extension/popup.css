@@ -1,41 +1,212 @@
-/* Kairo popup — DESIGN.md tokens ("Nhãn giá kệ hàng"), light and dark. */
-:root {
-  --label: #f3f0e8; --raised: #fbfaf6; --rail: #e6e1d5; --hair: #d5cfc1;
-  --ink: #1c1b19; --ink2: #4f4b43; --ink3: #645f54; --primary: #4b2e83; --on: #fbfaf6;
-  color-scheme: light dark;
+/* Kairo popup — UI Mockup design tokens */
+* {
+  box-sizing: border-box;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --label: #191815; --raised: #22211e; --rail: #2c2a26; --hair: #3a3833;
-    --ink: #eeeae1; --ink2: #c3bdb0; --ink3: #a29c8f; --primary: #b9a2e6; --on: #191815;
-  }
-}
-* { box-sizing: border-box; }
+
 body {
-  margin: 0; width: 320px; padding: 16px; background: var(--label); color: var(--ink);
-  font: 14px/1.5 "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  margin: 0;
+  width: 360px;
+  background: #F5F4EF;
+  color: #15161A;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
-header { display: flex; align-items: center; gap: 8px; }
-.mark {
-  display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center;
-  border-radius: 2px; background: var(--ink); color: var(--label); font-weight: 700;
+
+.popup-wrap {
+  display: flex;
+  flex-direction: column;
 }
-h1 { margin: 0; font-size: 18px; }
-h2 { margin: 16px 0 6px; font-size: 15px; }
-.lead { margin: 10px 0 0; color: var(--ink2); }
-.muted { margin: 0; color: var(--ink2); }
-a { color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
-.switch { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
-.switch input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--ink); flex: none; }
-details { margin-top: 8px; color: var(--ink2); }
-summary { cursor: pointer; font-weight: 600; color: var(--ink); min-height: 32px; display: flex; align-items: center; }
-details ul { margin: 4px 0 0; padding-left: 18px; font-size: 13px; }
-.adv { border-top: 1px solid var(--hair); margin-top: 16px; padding-top: 4px; }
-.adv label { display: block; font-size: 13px; color: var(--ink3); margin: 4px 0; }
-select { width: 100%; min-height: 36px; border: 1px solid var(--ink3); border-radius: 4px; background: var(--raised); color: var(--ink); padding: 0 8px; }
-.btn {
-  display: flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 16px;
-  border-radius: 4px; background: var(--primary); color: var(--on); text-decoration: none; font-weight: 600;
+
+/* Header */
+.pop-header {
+  height: 54px;
+  background: #15161A;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
 }
-.btn:hover { background: color-mix(in oklab, var(--primary) 86%, var(--ink)); }
-:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.logo-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #D4F66B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-title {
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  flex-grow: 1;
+}
+
+.badge-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #1C1E24;
+  border: 1px solid #6B6E76;
+  font-size: 12px;
+  font-weight: 600;
+  color: #C9CBD1;
+  white-space: nowrap;
+}
+
+/* Main */
+.pop-main {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Cards */
+.card {
+  background: #FFFFFF;
+  border: 1px solid #E4E2DA;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #62656D;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.account-status {
+  margin: 0;
+  font-size: 13px;
+  color: #45484F;
+  line-height: 1.5;
+}
+
+.account-status a {
+  color: #4330E6;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.account-status a:hover {
+  text-decoration: underline;
+}
+
+/* Switch */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.switch-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #15161A;
+}
+
+.custom-switch {
+  width: 18px;
+  height: 18px;
+  accent-color: #4330E6;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Details */
+.pop-details, .adv-details {
+  font-size: 12px;
+  color: #62656D;
+  margin-top: 4px;
+}
+
+.pop-details summary, .adv-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #4330E6;
+  outline: none;
+}
+
+.pop-details ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adv-details {
+  border-top: 1px solid #E4E2DA;
+  padding-top: 8px;
+}
+
+.select-group {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.select-group label {
+  font-size: 12px;
+  color: #62656D;
+}
+
+.custom-select {
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid #8F8C82;
+  background: #FFFFFF;
+  font-size: 13px;
+  color: #15161A;
+  outline: none;
+}
+
+/* Actions */
+.action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-primary {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #4330E6;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: #2E1FB8;
+}
+
+.pop-disclaimer {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #62656D;
+  text-align: center;
+}

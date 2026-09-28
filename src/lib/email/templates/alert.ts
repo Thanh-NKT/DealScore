@@ -42,22 +42,22 @@ export function renderAlertEmail(input: { items: AlertEmailItem[]; unsubscribeAl
         .join("");
       const baseline =
         it.baselinePrice != null
-          ? ` <span style="color:#555">(lúc bắt đầu theo dõi: ${e(formatVnd(it.baselinePrice))})</span>`
+          ? ` <span style="color:#62656D">(lúc bắt đầu theo dõi: ${e(formatVnd(it.baselinePrice))})</span>`
           : "";
-      return `<div style="border:1px solid #ddd;border-radius:12px;padding:16px;margin:0 0 16px">
-<h3 style="margin:0 0 4px">${e(it.productName)} <span style="color:#555;font-weight:normal">— ${e(it.variantKey)}</span></h3>
+      return `<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
+<h3 style="margin:0 0 4px">${e(it.productName)} <span style="color:#62656D;font-weight:normal">— ${e(it.variantKey)}</span></h3>
 <p style="margin:4px 0;font-size:20px"><strong>${e(formatVnd(it.price))}</strong>${baseline}</p>
 ${score}<ul style="margin:8px 0;padding-left:20px">${reasons}</ul>
-<p style="margin:12px 0 4px"><a href="${e(it.buyUrl)}" style="display:inline-block;padding:10px 16px;background:#ee4d2d;color:#fff;border-radius:8px;text-decoration:none">Mua trên Shopee</a></p>
+<p style="margin:12px 0 4px"><a href="${e(it.buyUrl)}" style="display:inline-block;padding:10px 16px;background:#4330E6;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Mua trên Shopee</a></p>
 <p style="margin:4px 0;font-size:13px"><a href="${e(it.manageUrl)}">Quản lý Watch</a> · <a href="${e(it.pauseUrl)}">Tạm dừng Watch này</a></p>
 </div>`;
     })
     .join("");
 
-  const html = `<!doctype html><html lang="vi"><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;line-height:1.5;max-width:600px">
+  const html = `<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:#15161A;line-height:1.5;max-width:600px">
 ${htmlItems}
-<p style="color:#555;font-size:12px">${e(DISCLOSURE)}</p>
-<p style="color:#555;font-size:12px"><a href="${e(input.unsubscribeAllUrl)}">Tắt toàn bộ email thông báo</a></p>
+<p style="color:#62656D;font-size:12px">${e(DISCLOSURE)}</p>
+<p style="color:#62656D;font-size:12px"><a href="${e(input.unsubscribeAllUrl)}">Tắt toàn bộ email thông báo</a></p>
 </body></html>`;
 
   const text = [

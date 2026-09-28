@@ -13,6 +13,13 @@ import { fromRow, DEFAULT_NOTIFICATION_SETTINGS, type Channel } from "@/lib/acco
 import { describeWatch, type LatestAlert, type WatchView } from "@/lib/watch/describe";
 import { loadVariantSnapshots } from "@/lib/watch/snapshot";
 import type { ConditionKey, WatchConfig, WatchState } from "@/lib/watch/types";
+import {
+  MAX_FOLDERS,
+  nextSortOrder,
+  sortFolders,
+  validateFolderName,
+  type WatchFolder,
+} from "@/lib/watch/folders";
 
 export interface MyWatchItem {
   id: string;
@@ -30,6 +37,8 @@ export interface MyWatchItem {
   config: WatchConfig;
   view: WatchView;
   createdAt: string;
+  /** null = not filed in any folder. */
+  folderId: string | null;
 }
 
 /** `client` is injectable so tests can use a real DB; defaults to the server client (RLS). */
@@ -47,7 +56,7 @@ export async function listMyWatches(
       `
       id, status, variant_id, target_price, drop_pct, notify_low, min_deal_score,
       notify_back_in_stock, channels, baseline_price, cond_state, last_alert_price,
-      last_alerted_at, last_in_stock, created_at,
+      last_alerted_at, last_in_stock, created_at, folder_id,
       product_variants!inner (
         id,
         variant_key,
@@ -189,6 +198,7 @@ export async function listMyWatches(
       config,
       view,
       createdAt: row.created_at,
+      folderId: row.folder_id,
     });
   }
 
@@ -347,4 +357,130 @@ export async function saveWatchForUser(
     config.notifyBackInStock,
   ].filter(Boolean).length;
   return { status: "saved", watchId, created: !existing, variantId, conditionCount };
+}
+
+// ─── Folders ────────────────────────────────────────────────────────────────
+
+export type FolderActionResult =
+  | { status: "ok"; folder?: WatchFolder }
+  | { status: "error"; error: string };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FOLDER_LIMIT_ERROR = `Mỗi tài khoản có tối đa ${MAX_FOLDERS} thư mục.`;
+const FOLDER_DUPLICATE_ERROR = "Bạn đã có thư mục với tên này.";
+const FOLDER_NOT_FOUND_ERROR = "Không tìm thấy thư mục này.";
+
+type FolderRow = Database["public"]["Tables"]["watch_folders"]["Row"];
+const toFolder = (r: Pick<FolderRow, "id" | "name" | "sort_order">): WatchFolder => ({
+  id: r.id,
+  name: r.name,
+  sortOrder: r.sort_order,
+});
+
+/** The user's folders in display order. Filtered by user_id on top of RLS. */
+export async function listMyFolders(userId: string, client?: Client): Promise<WatchFolder[]> {
+  const supabase = client ?? (await createClient());
+  const { data, error } = await supabase
+    .from("watch_folders")
+    .select("id, name, sort_order")
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true });
+  if (error) throw new Error(`Failed to load Watch folders: ${error.message}`);
+  return sortFolders((data ?? []).map(toFolder));
+}
+
+/** Core of createFolder. `supabase` is the user's OWN client (RLS). */
+export async function createFolderForUser(
+  supabase: Client,
+  userId: string,
+  rawName: unknown,
+): Promise<FolderActionResult> {
+  const existing = await listMyFolders(userId, supabase);
+  const name = validateFolderName(rawName, existing);
+  if (!name.ok) return { status: "error", error: name.error };
+  if (existing.length >= MAX_FOLDERS) return { status: "error", error: FOLDER_LIMIT_ERROR };
+
+  const { data, error } = await supabase
+    .from("watch_folders")
+    .insert({ user_id: userId, name: name.value, sort_order: nextSortOrder(existing) })
+    .select("id, name, sort_order")
+    .single();
+  if (error) {
+    if (error.code === "23505") return { status: "error", error: FOLDER_DUPLICATE_ERROR };
+    // The name was validated above, so a check violation here is the 20-folder trigger.
+    if (error.code === "23514") return { status: "error", error: FOLDER_LIMIT_ERROR };
+    throw new Error(`Failed to create Watch folder: ${error.message}`);
+  }
+  return { status: "ok", folder: toFolder(data) };
+}
+
+export async function renameFolderForUser(
+  supabase: Client,
+  userId: string,
+  folderId: string,
+  rawName: unknown,
+): Promise<FolderActionResult> {
+  if (!UUID_RE.test(folderId)) return { status: "error", error: FOLDER_NOT_FOUND_ERROR };
+  const existing = await listMyFolders(userId, supabase);
+  if (!existing.some((f) => f.id === folderId)) return { status: "error", error: FOLDER_NOT_FOUND_ERROR };
+  const name = validateFolderName(rawName, existing, folderId);
+  if (!name.ok) return { status: "error", error: name.error };
+
+  const { data, error } = await supabase
+    .from("watch_folders")
+    .update({ name: name.value })
+    .eq("id", folderId)
+    .eq("user_id", userId)
+    .select("id, name, sort_order");
+  if (error) {
+    if (error.code === "23505") return { status: "error", error: FOLDER_DUPLICATE_ERROR };
+    throw new Error(`Failed to rename Watch folder: ${error.message}`);
+  }
+  if (!data || data.length === 0) return { status: "error", error: FOLDER_NOT_FOUND_ERROR };
+  return { status: "ok", folder: toFolder(data[0]) };
+}
+
+/** Deleting a folder keeps its Watches: folder_id goes back to null (FK on delete set null). */
+export async function deleteFolderForUser(
+  supabase: Client,
+  userId: string,
+  folderId: string,
+): Promise<FolderActionResult> {
+  if (!UUID_RE.test(folderId)) return { status: "error", error: FOLDER_NOT_FOUND_ERROR };
+  const { data, error } = await supabase
+    .from("watch_folders")
+    .delete()
+    .eq("id", folderId)
+    .eq("user_id", userId)
+    .select("id");
+  if (error) throw new Error(`Failed to delete Watch folder: ${error.message}`);
+  if (!data || data.length === 0) return { status: "error", error: FOLDER_NOT_FOUND_ERROR };
+  return { status: "ok" };
+}
+
+/** File a Watch into one of the user's folders (null = unfiled). The DB trigger rejects others' folders. */
+export async function moveWatchForUser(
+  supabase: Client,
+  userId: string,
+  watchId: string,
+  folderId: string | null,
+): Promise<FolderActionResult> {
+  if (!UUID_RE.test(watchId)) return { status: "error", error: "Không tìm thấy theo dõi này." };
+  if (folderId !== null && !UUID_RE.test(folderId)) return { status: "error", error: FOLDER_NOT_FOUND_ERROR };
+
+  const { data, error } = await supabase
+    .from("watches")
+    .update({ folder_id: folderId })
+    .eq("id", watchId)
+    .eq("user_id", userId)
+    .select("id");
+  if (error) {
+    // watches_check_folder (not the owner's folder) or a folder deleted meanwhile (FK).
+    if (error.code === "23514" || error.code === "23503") {
+      return { status: "error", error: FOLDER_NOT_FOUND_ERROR };
+    }
+    throw new Error(`Failed to move Watch to folder: ${error.message}`);
+  }
+  if (!data || data.length === 0) return { status: "error", error: "Không tìm thấy theo dõi này." };
+  return { status: "ok" };
 }

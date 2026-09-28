@@ -16,6 +16,8 @@ describe("validateObservationPayload", () => {
         models: [{ modelId: null, name: "2TB", price: 2_390_000, originalPrice: 2_990_000, stock: 12 }],
         freeShipping: true,
         hasVoucher: null,
+        vouchers: [],
+        images: [],
       },
     });
   });
@@ -42,6 +44,50 @@ describe("validateObservationPayload", () => {
     expect(skewed.ok && skewed.value.observedAt).toBe(NOW.toISOString());
     const fine = validateObservationPayload({ ...ok, observedAt: "2026-09-25T11:55:00Z" }, NOW);
     expect(fine.ok && fine.value.observedAt).toBe("2026-09-25T11:55:00.000Z");
+  });
+});
+
+describe("validateObservationPayload — vouchers and images", () => {
+  const cdn = "https://down-vn.img.susercontent.com/file/vn-11134207-abc";
+
+  it("keeps valid voucher labels, strips codes and drops invalid ones", () => {
+    const r = validateObservationPayload(
+      {
+        ...ok,
+        vouchers: [
+          { kind: "shop", discountType: "amount", discountValue: 50_000, minSpend: 1_000_000, code: "SHOPX50" },
+          { kind: "shop", discountType: "percent", discountValue: 8, maxDiscount: 150_000 },
+          { kind: "shop", discountType: "percent", discountValue: 250 },
+          { kind: "bogus", discountType: "amount", discountValue: 1 },
+          "not an object",
+        ],
+      },
+      NOW,
+    );
+    expect(r.ok && r.value.vouchers).toEqual([
+      { kind: "shop", discountType: "amount", discountValue: 50_000, maxDiscount: null, minSpend: 1_000_000, expiresAt: null },
+      { kind: "shop", discountType: "percent", discountValue: 8, maxDiscount: 150_000, minSpend: 0, expiresAt: null },
+    ]);
+  });
+
+  it("keeps only https images on the Shopee CDN", () => {
+    const r = validateObservationPayload(
+      {
+        ...ok,
+        images: [cdn, cdn, "http://cf.shopee.vn/file/x", "https://evil.com/x.jpg", "https://susercontent.com.evil.com/x", "javascript:alert(1)", 42],
+      },
+      NOW,
+    );
+    expect(r.ok && r.value.images).toEqual([cdn]);
+  });
+
+  it.each([
+    ["vouchers not an array", { ...ok, vouchers: "x" }],
+    ["more than 20 vouchers", { ...ok, vouchers: Array.from({ length: 21 }, () => ({})) }],
+    ["images not an array", { ...ok, images: {} }],
+    ["more than 12 images", { ...ok, images: Array.from({ length: 13 }, (_, i) => `${cdn}${i}`) }],
+  ])("rejects %s", (_label, body) => {
+    expect(validateObservationPayload(body, NOW).ok).toBe(false);
   });
 });
 

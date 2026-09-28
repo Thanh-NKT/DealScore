@@ -18,6 +18,7 @@
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --local --schema public > src/lib/database.types.ts",
     "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
+    "seed:images": "tsx --env-file=.env.local scripts/seed-images.ts",
     "scores:recompute": "tsx --env-file=.env.local scripts/recompute-deal-scores.ts",
     "test:db": "vitest run --config vitest.db.config.mts",
     "alerts:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-alerts.ts",
@@ -27,9 +28,9 @@
     "db:backup": "tsx --env-file=.env.local scripts/db-backup.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.7",
     "@fontsource/be-vietnam-pro": "^5.3.0",
     "@sentry/nextjs": "^11.0.0",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
     "csv-parse": "^7.0.2",
     "next": "16.3.5",

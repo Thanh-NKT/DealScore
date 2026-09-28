@@ -5,15 +5,21 @@ import { daysBetween, discountPercent, formatVnd, toVnDate } from "@/lib/format"
 const nbsp = (s: string) => s.replace(/ /g, " ");
 
 describe("formatVnd", () => {
-  it("formats Vietnamese-style", () => {
-    expect(nbsp(formatVnd(1_234_000))).toBe("1.234.000 ₫");
+  it("formats Vietnamese-style: dot thousands, đ suffix, no space (DESIGN.md price rule)", () => {
+    expect(formatVnd(1_234_000)).toBe("1.234.000đ");
+    expect(formatVnd(189_000)).toBe("189.000đ");
+    expect(formatVnd(0)).toBe("0đ");
+  });
+
+  it("formats large prices without abbreviating", () => {
+    expect(formatVnd(1_250_000_000)).toBe("1.250.000.000đ");
   });
 
   it("rounds to an integer", () => {
-    expect(nbsp(formatVnd(1000.6))).toBe("1.001 ₫");
+    expect(formatVnd(1000.6)).toBe("1.001đ");
   });
 
-  it("returns a dash when there is no value — never shows 0 ₫", () => {
+  it("returns a dash when there is no value — never shows 0đ", () => {
     expect(formatVnd(null)).toBe("—");
     expect(formatVnd(undefined)).toBe("—");
     expect(formatVnd(Number.NaN)).toBe("—");

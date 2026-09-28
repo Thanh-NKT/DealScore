@@ -23,6 +23,14 @@ export interface ShopeeItemDetail {
     stock: number | null;
     isFlashSale: boolean;
   }>;
+  /** Gallery image URLs as returned (unsanitized — saveListingExtras() filters them). Default []. */
+  images?: string[];
+  /**
+   * Vouchers shown for the item, raw (normalizeVoucher() validates them). Shape is an assumption
+   * like G1–G6 until the API spike: { kind, discountType, discountValue, maxDiscount?, minSpend?,
+   * code?, startsAt?, expiresAt?, listingOnly? }. Default [].
+   */
+  vouchers?: unknown[];
   /** 'seed' = fake data, written to price_observations.source so it never mixes with real prices. */
   source: "api" | "seed";
 }
@@ -66,6 +74,7 @@ export async function getItemDetail(
 }
 
 function fakeItemDetail(shopId: string, itemId: string): ShopeeItemDetail {
+  const inAWeek = new Date(Date.now() + 7 * 86_400_000).toISOString();
   return {
     shopId,
     itemId,
@@ -83,6 +92,16 @@ function fakeItemDetail(shopId: string, itemId: string): ShopeeItemDetail {
         stock: 50,
         isFlashSale: false,
       },
+    ],
+    // CDN-shaped URLs so they pass the image allow-list; they do not resolve (dev only).
+    images: [
+      `https://down-vn.img.susercontent.com/file/vn-kairo-fake-${itemId}-1`,
+      `https://down-vn.img.susercontent.com/file/vn-kairo-fake-${itemId}-2`,
+    ],
+    // No codes: Shopee usually shows none, and a made-up code must never look real.
+    vouchers: [
+      { kind: "shop", discountType: "amount", discountValue: 20_000, minSpend: 300_000, expiresAt: inAWeek },
+      { kind: "platform", discountType: "percent", discountValue: 8, maxDiscount: 50_000, minSpend: 0, expiresAt: inAWeek },
     ],
     source: "seed",
   };

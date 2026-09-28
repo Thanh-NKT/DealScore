@@ -181,10 +181,22 @@
       .map(function (b) {
         return b.textContent || "";
       });
+    // ASSUMPTION E2: the product gallery is the block of CDN images near the top of the page;
+    // recommendation tiles further down are left out. The server re-checks every URL.
+    var imageUrls = Array.prototype.slice
+      .call(document.images)
+      .filter(function (img) {
+        var r = img.getBoundingClientRect();
+        return r.top + window.scrollY < 1000 && r.width >= 40 && r.height >= 40;
+      })
+      .map(function (img) {
+        return img.currentSrc || img.src;
+      });
     return KairoShopee.readProductPage({
       href: location.href,
       text: (document.body && document.body.innerText) || "",
       selectedOptions: selected,
+      imageUrls: imageUrls,
     });
   }
 

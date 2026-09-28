@@ -1,13 +1,34 @@
 import type { Database } from "@/lib/database.types";
 
 export type Channel = "email" | "push";
-export type Frequency = "instant" | "daily_digest";
+export type Frequency = "instant" | "daily_digest" | "weekly_digest";
+export const FREQUENCIES: readonly Frequency[] = ["instant", "daily_digest", "weekly_digest"];
+
+/** ISO weekday, Vietnam time: 1 = Monday … 7 = Sunday. */
+export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/** UI copy (Vietnamese) for each ISO weekday. */
+export const WEEKDAY_LABELS: Record<IsoWeekday, string> = {
+  1: "Thứ Hai",
+  2: "Thứ Ba",
+  3: "Thứ Tư",
+  4: "Thứ Năm",
+  5: "Thứ Sáu",
+  6: "Thứ Bảy",
+  7: "Chủ nhật",
+};
+export const WEEKDAYS: readonly IsoWeekday[] = [1, 2, 3, 4, 5, 6, 7];
+
+export function isIsoWeekday(n: unknown): n is IsoWeekday {
+  return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 7;
+}
 
 export interface NotificationSettings {
   emailEnabled: boolean;
   pushEnabled: boolean;
   frequency: Frequency;
   digestHour: number; // 0–23, Vietnam time
+  digestWeekday: IsoWeekday; // weekly digest only
   quietStart: number | null; // 0–23, Vietnam time; both null or both set
   quietEnd: number | null;
 }
@@ -17,6 +38,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   pushEnabled: false,
   frequency: "instant",
   digestHour: 8,
+  digestWeekday: 1,
   quietStart: null,
   quietEnd: null,
 };
@@ -32,6 +54,7 @@ export function fromRow(row: NotificationSettingsRow): NotificationSettings {
     pushEnabled: row.push_enabled,
     frequency: row.frequency as Frequency,
     digestHour: row.digest_hour,
+    digestWeekday: isIsoWeekday(row.digest_weekday) ? row.digest_weekday : 1,
     quietStart: row.quiet_start,
     quietEnd: row.quiet_end,
   };
@@ -43,6 +66,7 @@ export function toRow(s: NotificationSettings): NotificationSettingsUpdate {
     push_enabled: s.pushEnabled,
     frequency: s.frequency,
     digest_hour: s.digestHour,
+    digest_weekday: s.digestWeekday,
     quiet_start: s.quietStart,
     quiet_end: s.quietEnd,
     updated_at: new Date().toISOString(),
@@ -74,10 +98,23 @@ export function parseNotificationSettings(
   // Frequency
   const freqRaw = get("frequency") ?? "instant";
   let frequency: Frequency = "instant";
-  if (freqRaw === "instant" || freqRaw === "daily_digest") {
-    frequency = freqRaw;
+  if ((FREQUENCIES as readonly string[]).includes(freqRaw)) {
+    frequency = freqRaw as Frequency;
   } else {
-    errors.frequency = "Tần suất không hợp lệ (chọn Tức thì hoặc Tóm tắt hằng ngày).";
+    errors.frequency =
+      "Tần suất không hợp lệ (chọn Ngay khi có, Tóm tắt mỗi ngày hoặc Tóm tắt mỗi tuần).";
+  }
+
+  // Digest weekday (ISO 1–7). Absent → Monday; only used by the weekly digest.
+  const weekdayRaw = get("digestWeekday");
+  let digestWeekday: IsoWeekday = 1;
+  if (weekdayRaw !== undefined && weekdayRaw.trim() !== "") {
+    const parsed = Number(weekdayRaw);
+    if (isIsoWeekday(parsed)) {
+      digestWeekday = parsed;
+    } else {
+      errors.digestWeekday = "Ngày nhận tóm tắt không hợp lệ (chọn từ Thứ Hai đến Chủ nhật).";
+    }
   }
 
   // Digest hour (0-23)
@@ -143,10 +180,25 @@ export function parseNotificationSettings(
       pushEnabled,
       frequency,
       digestHour,
+      digestWeekday,
       quietStart,
       quietEnd,
     },
   };
+}
+
+/** Settings → the form fields parseNotificationSettings reads (round-trips exactly). */
+export function toFormFields(s: NotificationSettings): Record<string, string> {
+  const f: Record<string, string> = {
+    frequency: s.frequency,
+    digestHour: String(s.digestHour),
+    digestWeekday: String(s.digestWeekday),
+    quietStart: s.quietStart === null ? "" : String(s.quietStart),
+    quietEnd: s.quietEnd === null ? "" : String(s.quietEnd),
+  };
+  if (s.emailEnabled) f.emailEnabled = "on";
+  if (s.pushEnabled) f.pushEnabled = "on";
+  return f;
 }
 
 /**

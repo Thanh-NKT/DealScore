@@ -31,3 +31,27 @@ export function nextRetryAt(attempts: number, now: Date): Date | null {
   const minutes = RETRY_DELAYS_MINUTES[Math.min(attempts - 1, RETRY_DELAYS_MINUTES.length - 1)];
   return new Date(now.getTime() + minutes * 60_000);
 }
+
+/**
+ * A digest (daily, and especially weekly) can hold several alerts for the same Watch: the 24h cooldown
+ * allows one per day. Keep only the newest alert per (user, channel, Watch) and report the older ones,
+ * so one email / push never lists the same product twice. `createdAt` gives each alert event's time.
+ */
+export function latestPerWatch(
+  rows: ClaimedDelivery[],
+  createdAt: (alertEventId: string) => string,
+): Array<{ keep: ClaimedDelivery; older: ClaimedDelivery[] }> {
+  const map = new Map<string, ClaimedDelivery[]>();
+  for (const r of rows) {
+    const key = `${r.channel}:${r.userId}:${r.watchId}`;
+    map.set(key, [...(map.get(key) ?? []), r]);
+  }
+  return [...map.values()].map((list) => {
+    // Newest first; ties keep claim order so the result is deterministic.
+    const sorted = list
+      .map((d, i) => ({ d, i, t: Date.parse(createdAt(d.alertEventId)) || 0 }))
+      .sort((a, b) => b.t - a.t || a.i - b.i)
+      .map((x) => x.d);
+    return { keep: sorted[0], older: sorted.slice(1) };
+  });
+}

@@ -4,8 +4,18 @@
     {
       "name": "dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": [
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "mockup",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/serve-mockup.mjs"
+      ],
+      "port": 4173
     }
   ]
 }

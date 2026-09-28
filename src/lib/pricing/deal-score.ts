@@ -191,6 +191,9 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
   const diffFromLow = Math.round(((price - low) / low) * 100);
   if (price <= low) {
     reasons.push("✓ Đang ở mức đáy ghi nhận");
+  } else if (diffFromLow === 0) {
+    // Above the low by < 0.5%: "cao hơn 0%" reads as a contradiction, so say it in words.
+    reasons.push("✓ Gần như bằng mức đáy ghi nhận");
   } else if (diffFromLow <= 5) {
     reasons.push(`✓ Chỉ cao hơn ${diffFromLow}% so với đáy ghi nhận`);
   }

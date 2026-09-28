@@ -37,6 +37,9 @@ export function safeNextPath(
     if (
       pathname === "/login" ||
       pathname === "/dang-nhap" || // legacy URL, 308-redirects to /login
+      pathname === "/register" ||
+      pathname === "/forgot-password" ||
+      pathname === "/reset-password" ||
       pathname.startsWith("/auth/")
     ) {
       return fallback;

@@ -45,3 +45,8 @@ docs/superpowers
 
 # database backups (pnpm db:backup) — never commit
 /backups
+
+docs
+UI-mockup
+.claude
+.impeccable

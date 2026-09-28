@@ -39,6 +39,17 @@ routing only (`page`, `layout`, `route`, …). Everything else lives outside it:
   Vietnamese paths 308-redirect via `LEGACY_ROUTES` in `next.config.ts` — keep them: links in
   already-sent emails depend on them.
 
+## UI / design system
+
+Visual system is `DESIGN.md` ("Bàn giá sáng", normative, tokens in its frontmatter; sidecar
+`.impeccable/design.json`). Code checklist for new screens: `.impeccable/ui-conventions.md`.
+Tokens live in `src/app/globals.css` (light + dark) — use token classes (`bg-surface`, `text-ink`,
+`border-line-strong`, `bg-primary text-on-primary`, …), never hex literals (they break dark mode).
+Reuse `VerdictTag` / `ScoreRing` (`src/components/product/verdict-tag.tsx`) and `ProductCard`.
+Numbers use the `num` utility (Plus Jakarta Sans, tabular), headings `display`; text ≥ 11px (11px only for nano labels). Page frame
+`max-w-[1440px] px-4 sm:px-6 lg:px-14`. `UI-mockup/` is the original reference; `docs/design-system/specimen.html`
+is the retired "Nhãn giá kệ hàng" world — don't copy it.
+
 ## Next.js 16 gotchas
 
 This repo targets Next.js 16 (see `@AGENTS.md` — read `node_modules/next/dist/docs/` before
@@ -70,11 +81,15 @@ Never mix these up; the choice encodes the security model.
   `src/lib/affiliate/import.ts`, `src/app/api/cron/conversions/route.ts`, `scripts/import-conversions.ts`,
   `src/lib/collector/run.ts`, `src/lib/pricing/backtest-job.ts`, `src/app/api/cron/{collector,backtest}/route.ts`,
   `scripts/run-{collector,backtest}.ts`, `src/app/api/health/route.ts`, `src/lib/analytics/track.ts`,
-  `src/lib/extension/contribute.ts`, `src/app/api/extension/observations/route.ts`.
+  `src/lib/extension/contribute.ts`, `src/app/api/extension/observations/route.ts`,
+  `src/lib/listing-extras.ts` + `src/lib/vouchers/store.ts` (`upsertVouchers`, called with the admin client),
+  `src/app/api/vouchers/refresh/route.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
-  quyền trong `proxy.ts`). Link email dùng luồng `token_hash` qua `src/app/auth/confirm/route.ts`.
+  quyền trong `proxy.ts`). Đăng nhập bằng **email + mật khẩu** (`src/actions/auth.ts`, quy tắc mật khẩu ở
+  `src/lib/auth/password.ts`, khớp `config.toml`). Link email (xác nhận đăng ký, đặt lại mật khẩu) dùng luồng
+  `token_hash` qua `src/app/auth/confirm/route.ts`; `type=recovery` đi thẳng `/reset-password`, bỏ qua AuthGate.
 - **Watch & Alert (1.3/1.4):** hàm thuần `decideAlert()` (`src/lib/watch/decide.ts`) quyết định có báo
   không; `tests/lib/alerts/scenarios.test.ts` là cam kết "không spam" — đừng sửa kỳ vọng ở đó để test xanh.
   Ngưỡng nằm ở `src/lib/watch/constants.ts` (và `50` trong trigger `watches_enforce_limit`). Truy vấn có thể
@@ -86,8 +101,6 @@ Never mix these up; the choice encodes the security model.
   Deal Score / search / alert **không** được đọc dữ liệu affiliate (test `no-bias`).
 - **Test DB:** `pnpm test:db` chạy `tests/db/**` trên Supabase local (helper tự chặn URL khác). Script
   chạy bằng `tsx` bị biên dịch sang CJS — **không** dùng `await` ở cấp cao nhất, bọc trong `main()`.
-- `src/lib/supabase/proxy.ts` — `updateSession()`, called from `src/proxy.ts` on every
-  request to refresh the auth token. Do not insert logic between `createServerClient` and the
 - **Matching v0 (1.9):** `src/lib/matching/` chấm offer ↔ variant **verified** (brand + model + dung lượng/màu/size).
   ≥ 0.95 → `ingest_shopee_item` gắn `auto`; thấp hơn → product draft + `match_candidates` (duyệt ở Admin — xem
   `docs/admin-checklist.md`). Giá hiện tại của variant luôn tính lại bằng RPC `refresh_variant_current_price`.
@@ -142,8 +155,8 @@ large; the migration notes partitioning / TimescaleDB as future work.
 ### Environment
 
 Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
-`SUPABASE_SERVICE_ROLE_KEY`. The landing page renders a live Supabase connection/schema status
-(`src/components/supabase-status.tsx`) — useful for confirming env + migration are in place.
+`SUPABASE_SERVICE_ROLE_KEY`. To confirm env + migrations are in place, run `supabase status` and
+`pnpm test:db` (local Supabase).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

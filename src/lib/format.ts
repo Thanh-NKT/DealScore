@@ -2,19 +2,18 @@
  * Formatting helpers for currency, discount percentages and dates.
  */
 
+const vndNumber = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 });
+
 /**
- * Format VND currency ("1.234.000 ₫").
+ * Format VND the way Vietnamese shoppers write it ("1.234.000đ"): dot thousands,
+ * "đ" suffix, no space (DESIGN.md price rule).
  * Rounds to an integer. Returns "—" for null or undefined.
  */
 export function formatVnd(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) {
     return "—";
   }
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(Math.round(value));
+  return `${vndNumber.format(Math.round(value))}đ`;
 }
 
 /**

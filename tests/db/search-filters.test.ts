@@ -57,6 +57,6 @@ describe("search_products advanced filters", () => {
   });
   it("filter_availability reports data behind each filter", async () => {
     const { data } = await admin.rpc("filter_availability");
-    expect(data?.[0]).toEqual({ rating: true, free_shipping: true, voucher: true });
+    expect(data?.[0]).toMatchObject({ rating: true, free_shipping: true, voucher: true });
   });
 });

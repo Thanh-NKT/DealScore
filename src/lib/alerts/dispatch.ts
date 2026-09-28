@@ -7,7 +7,7 @@ import { sendEmail } from "@/lib/email";
 import { listUnsubscribeHeaders, renderAlertEmail, type AlertEmailItem } from "@/lib/email/templates/alert";
 import { describeTriggers } from "@/lib/alerts/triggers-text";
 import { signUnsubscribeToken } from "@/lib/alerts/unsubscribe-token";
-import { groupDeliveries, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
+import { groupDeliveries, latestPerWatch, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
 import type { TriggerType } from "@/lib/watch/types";
 import { siteUrl } from "@/lib/site-url";
 import { buildPushPayload } from "@/lib/push/payload";
@@ -33,6 +33,7 @@ const n = (v: unknown) => (v == null ? null : Number(v));
 
 interface EventDetail {
   id: string;
+  createdAt: string;
   watchId: string;
   triggerTypes: TriggerType[];
   price: number;
@@ -52,7 +53,7 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
   const { data, error } = await client
     .from("alert_events")
     .select(
-      `id, watch_id, trigger_types, price, offer_id, baseline_price, previous_alert_price, deal_score, recommendation, score_reasons,
+      `id, created_at, watch_id, trigger_types, price, offer_id, baseline_price, previous_alert_price, deal_score, recommendation, score_reasons,
        offers(listings(marketplace)),
        watches!inner(status, channels, target_price, variant_id,
          product_variants!inner(variant_key, products!inner(slug, canonical_name, image, categories(slug))),
@@ -68,6 +69,7 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
     const p = w.product_variants.products;
     map.set(r.id, {
       id: r.id,
+      createdAt: r.created_at,
       watchId: r.watch_id,
       triggerTypes: r.trigger_types as TriggerType[],
       price: Number(r.price),
@@ -144,6 +146,19 @@ export async function dispatchDueDeliveries(
     if (reason) skips.set(reason, [...(skips.get(reason) ?? []), c.deliveryId]);
     else ready.push(c);
   }
+  // Digests (weekly especially) can hold several alerts for one Watch: send only the newest,
+  // carrying the triggers of the older ones, and mark those as superseded.
+  const mergedTriggers = new Map<string, TriggerType[]>();
+  const latest: ClaimedDelivery[] = [];
+  for (const { keep, older } of latestPerWatch(ready, (id) => events.get(id)?.createdAt ?? "")) {
+    latest.push(keep);
+    if (older.length === 0) continue;
+    skips.set("superseded", [...(skips.get("superseded") ?? []), ...older.map((d) => d.deliveryId)]);
+    const triggers = new Set<TriggerType>(events.get(keep.alertEventId)!.triggerTypes);
+    for (const d of older) for (const t of events.get(d.alertEventId)!.triggerTypes) triggers.add(t);
+    mergedTriggers.set(keep.alertEventId, [...triggers]);
+  }
+
   for (const [reason, ids] of skips) {
     await update(ids, { status: "skipped", skip_reason: reason });
     stats.skipped += ids.length;
@@ -152,7 +167,7 @@ export async function dispatchDueDeliveries(
   const site = siteUrl();
   const secret = process.env.UNSUBSCRIBE_SECRET;
 
-  for (const group of groupDeliveries(ready)) {
+  for (const group of groupDeliveries(latest)) {
     if (opts.deadline && Date.now() > opts.deadline) {
       // Return unfinished work to pending so the next run picks it up immediately.
       await update(group.deliveries.map((d) => d.deliveryId), { status: "pending", claimed_at: null });
@@ -180,7 +195,7 @@ export async function dispatchDueDeliveries(
           baselinePrice: e.baselinePrice,
           dealScore: e.dealScore,
           recommendation: e.recommendation,
-          triggerTexts: describeTriggers(e.triggerTypes, {
+          triggerTexts: describeTriggers(mergedTriggers.get(e.id) ?? e.triggerTypes, {
             price: e.price,
             targetPrice: e.watch.targetPrice,
             baselinePrice: e.baselinePrice,

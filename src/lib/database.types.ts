@@ -535,6 +535,7 @@ export type Database = {
           external_item_id: string
           first_seen_at: string
           id: string
+          images: string[]
           last_observed_at: string | null
           marketplace: string
           refresh_priority: number
@@ -547,6 +548,7 @@ export type Database = {
           external_item_id: string
           first_seen_at?: string
           id?: string
+          images?: string[]
           last_observed_at?: string | null
           marketplace: string
           refresh_priority?: number
@@ -559,6 +561,7 @@ export type Database = {
           external_item_id?: string
           first_seen_at?: string
           id?: string
+          images?: string[]
           last_observed_at?: string | null
           marketplace?: string
           refresh_priority?: number
@@ -663,6 +666,7 @@ export type Database = {
       notification_settings: {
         Row: {
           digest_hour: number
+          digest_weekday: number
           email_enabled: boolean
           frequency: string
           push_enabled: boolean
@@ -673,6 +677,7 @@ export type Database = {
         }
         Insert: {
           digest_hour?: number
+          digest_weekday?: number
           email_enabled?: boolean
           frequency?: string
           push_enabled?: boolean
@@ -683,6 +688,7 @@ export type Database = {
         }
         Update: {
           digest_hour?: number
+          digest_weekday?: number
           email_enabled?: boolean
           frequency?: string
           push_enabled?: boolean
@@ -1118,6 +1124,110 @@ export type Database = {
           },
         ]
       }
+      vouchers: {
+        Row: {
+          code: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          first_seen_at: string
+          id: string
+          kind: string
+          last_seen_at: string
+          listing_id: string | null
+          marketplace: string
+          max_discount: number | null
+          min_spend: number
+          reporters: string[]
+          seller_id: string | null
+          source: string
+          starts_at: string | null
+        }
+        Insert: {
+          code?: string | null
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          first_seen_at?: string
+          id?: string
+          kind: string
+          last_seen_at?: string
+          listing_id?: string | null
+          marketplace: string
+          max_discount?: number | null
+          min_spend?: number
+          reporters?: string[]
+          seller_id?: string | null
+          source: string
+          starts_at?: string | null
+        }
+        Update: {
+          code?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          first_seen_at?: string
+          id?: string
+          kind?: string
+          last_seen_at?: string
+          listing_id?: string | null
+          marketplace?: string
+          max_discount?: number | null
+          min_spend?: number
+          reporters?: string[]
+          seller_id?: string | null
+          source?: string
+          starts_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vouchers_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vouchers_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watch_folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watch_folders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       watches: {
         Row: {
           baseline_price: number | null
@@ -1127,6 +1237,7 @@ export type Database = {
           created_at: string
           drop_pct: number | null
           folder: string | null
+          folder_id: string | null
           id: string
           last_alert_price: number | null
           last_alerted_at: string | null
@@ -1151,6 +1262,7 @@ export type Database = {
           created_at?: string
           drop_pct?: number | null
           folder?: string | null
+          folder_id?: string | null
           id?: string
           last_alert_price?: number | null
           last_alerted_at?: string | null
@@ -1175,6 +1287,7 @@ export type Database = {
           created_at?: string
           drop_pct?: number | null
           folder?: string | null
+          folder_id?: string | null
           id?: string
           last_alert_price?: number | null
           last_alerted_at?: string | null
@@ -1192,6 +1305,13 @@ export type Database = {
           variant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "watches_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "watch_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "watches_product_id_fkey"
             columns: ["product_id"]
@@ -1328,6 +1448,7 @@ export type Database = {
         Args: never
         Returns: {
           free_shipping: boolean
+          marketplaces: string[]
           rating: boolean
           voucher: boolean
         }[]
@@ -1421,6 +1542,7 @@ export type Database = {
           p_free_shipping?: boolean
           p_has_voucher?: boolean
           p_limit?: number
+          p_marketplaces?: string[]
           p_max_price?: number
           p_min_price?: number
           p_min_rating?: number
@@ -1477,6 +1599,10 @@ export type Database = {
           matched: number
           updated: number
         }[]
+      }
+      upsert_vouchers: {
+        Args: { p_items: Json; p_reporter?: string; p_source: string }
+        Returns: number
       }
       variant_tracking_since: {
         Args: { p_variant_id: string }

@@ -14,6 +14,7 @@ import { recomputeDealScores } from "@/lib/pricing/recompute-scores";
 import { evaluateWatches } from "@/lib/alerts/evaluate";
 import { toVnDate } from "@/lib/format";
 import { configuredMarketplaces } from "@/lib/marketplaces";
+import { saveListingExtras } from "@/lib/listing-extras";
 
 /**
  * One collector run (1.10): Collector → Price DB → Deal Engine → Alert Engine.
@@ -109,8 +110,9 @@ export async function runCollector(
     const { shopId, itemId } = splitExternalId(listing.externalItemId);
     try {
       let payload: Record<string, unknown>;
+      let detail: ShopeeItemDetail | null = null;
       try {
-        const detail = await fetchDetail(shopId, itemId);
+        detail = await fetchDetail(shopId, itemId);
         payload = {
           listing_id: listing.id,
           run_id: run.id,
@@ -134,6 +136,17 @@ export async function runCollector(
       if (error) throw new Error(`record_observations: ${error.message}`);
       for (const v of variantIds ?? []) touched.add(v);
       ok++;
+
+      // Images + vouchers are extras: a failure here never undoes the recorded price.
+      if (detail && ((detail.images?.length ?? 0) > 0 || (detail.vouchers?.length ?? 0) > 0)) {
+        try {
+          await saveListingExtras(client, listing.id, { images: detail.images, vouchers: detail.vouchers, source: detail.source });
+        } catch (err) {
+          if (errors.length < MAX_ERROR_MESSAGES) {
+            errors.push(`${listing.externalItemId} extras: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
+      }
     } catch (err) {
       if (err instanceof ShopeeUnavailableError) {
         // Upstream is down: stop instead of hammering it with the rest of the batch.

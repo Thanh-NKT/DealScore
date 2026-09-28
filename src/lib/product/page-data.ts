@@ -6,6 +6,17 @@ import {
 } from "@/lib/pricing/variant-pricing";
 import type { DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
+import { productGallery } from "@/lib/product/images";
+import { listVouchersForListing } from "@/lib/vouchers/store";
+import { activeVouchers } from "@/lib/vouchers/select";
+import type { Voucher } from "@/lib/vouchers/types";
+
+/** The listing behind an offer — what vouchers are scoped to. */
+export interface OfferListing {
+  listingId: string;
+  sellerId: string | null;
+  marketplace: string;
+}
 
 export interface ProductPageData {
   product: {
@@ -30,6 +41,10 @@ export interface ProductPageData {
   selectedVariantId: string;
   pricing: VariantPricing;
   dailyPrices: DailyPriceRow[];
+  /** Main product image first, then images of the matched listings (spec §5). */
+  galleryImages?: string[];
+  /** offerId → its listing, for the selected variant's offers. */
+  offerListings?: Record<string, OfferListing>;
 }
 
 export async function loadProductPageData(params: {
@@ -99,7 +114,7 @@ export async function loadProductPageData(params: {
         .select(`
           id, match_status,
           listings (
-            marketplace, url, title, status, last_observed_at,
+            id, seller_id, images, marketplace, url, title, status, last_observed_at,
             sellers ( name, rating, rating_count, is_official )
           ),
           affiliate_offers ( eligible )
@@ -177,6 +192,19 @@ export async function loadProductPageData(params: {
       flash_min_price: h.flash_min_price != null ? Number(h.flash_min_price) : null,
     }));
 
+    const offerListings: Record<string, OfferListing> = {};
+    const galleryListings: Array<{ marketplace: string; images: string[] }> = [];
+    for (const o of offersRes.data || []) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listing = (Array.isArray(o.listings) ? o.listings[0] : o.listings) as any;
+      if (!listing?.id) continue;
+      offerListings[o.id] = { listingId: listing.id, sellerId: listing.seller_id ?? null, marketplace: listing.marketplace };
+      // Only photos of listings matched to this product: a pending match may be another item.
+      if (o.match_status === "auto" || o.match_status === "manual") {
+        galleryListings.push({ marketplace: listing.marketplace, images: listing.images ?? [] });
+      }
+    }
+
     const trackingSince = (trackingSinceRes.data as string | null) || (dailyPrices[0]?.day ?? null);
 
     const pricing = buildVariantPricing({
@@ -209,10 +237,27 @@ export async function loadProductPageData(params: {
       selectedVariantId: targetVariantId,
       pricing,
       dailyPrices,
+      galleryImages: productGallery(product.image, galleryListings),
+      offerListings,
     };
   } catch (err) {
     // Infrastructure errors must surface, never disguised as "not found".
     console.error("loadProductPageData error:", err);
     throw err;
+  }
+}
+
+/**
+ * Vouchers that apply to this offer's listing right now (activeVouchers rules). A failed read is
+ * logged and treated as "no vouchers collected": vouchers are an extra, never worth a broken page.
+ */
+export async function loadActiveVouchers(listing: OfferListing, now = new Date()): Promise<Voucher[]> {
+  try {
+    const supabase = await createClient();
+    const list = await listVouchersForListing(supabase, { ...listing, now });
+    return activeVouchers(list, { now, ...listing });
+  } catch (err) {
+    console.error("loadActiveVouchers failed:", err);
+    return [];
   }
 }

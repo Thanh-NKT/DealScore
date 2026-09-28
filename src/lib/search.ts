@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { MARKETPLACES, type MarketplaceId } from "@/lib/marketplaces";
 
 export interface SearchParams {
   q?: string;
@@ -13,6 +14,8 @@ export interface SearchParams {
   minRating?: MinRating;
   freeShipping?: boolean;
   hasVoucher?: boolean;
+  /** Keep products sold on at least one of these marketplaces (`?market=shopee,lazada`). */
+  marketplaces?: MarketplaceId[];
 }
 
 export const MIN_RATINGS = [4.5, 4.8] as const;
@@ -41,6 +44,21 @@ export interface SearchResult {
 
 const PAGE_SIZE = 24;
 const AUTOCOMPLETE_LIMIT = 8;
+
+/**
+ * `?market=shopee,lazada` (repeated `market=` also accepted) → known marketplace ids, deduped and in
+ * MARKETPLACES order so one selection has exactly one URL. Unknown ids are dropped; none → undefined.
+ */
+export function parseMarketplaces(values: readonly string[]): MarketplaceId[] | undefined {
+  const wanted = new Set(
+    values
+      .flatMap((v) => v.split(","))
+      .map((v) => v.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const ids = MARKETPLACES.map((m) => m.id).filter((id) => wanted.has(id));
+  return ids.length > 0 ? ids : undefined;
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -94,6 +112,8 @@ export function parseSearchParams(
   const freeShipping = getParam("freeship") === "1" ? true : undefined;
   const hasVoucher = getParam("voucher") === "1" ? true : undefined;
 
+  const marketplaces = parseMarketplaces(getAllParams("market"));
+
   const rawSort = getParam("sort");
   const validSorts = ["relevance", "deal_score", "price_asc", "price_desc", "updated"] as const;
   let sort: SearchParams["sort"] = validSorts.find((s) => s === rawSort);
@@ -118,6 +138,7 @@ export function parseSearchParams(
     minRating,
     freeShipping,
     hasVoucher,
+    marketplaces,
   };
 }
 
@@ -136,6 +157,8 @@ export function toSearchParams(p: SearchParams): URLSearchParams {
   if (p.minRating != null) sp.set("rating", String(p.minRating));
   if (p.freeShipping) sp.set("freeship", "1");
   if (p.hasVoucher) sp.set("voucher", "1");
+  const markets = parseMarketplaces(p.marketplaces ?? []);
+  if (markets) sp.set("market", markets.join(","));
   // Don't write default values into the URL: doing so produces two different paths
   // for the same page — duplicate content, harmful to SEO (section 1.7).
   const defaultSort = p.q ? "relevance" : "updated";
@@ -173,6 +196,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     p_min_rating: params.minRating ?? undefined,
     p_free_shipping: params.freeShipping ?? undefined,
     p_has_voucher: params.hasVoucher ?? undefined,
+    p_marketplaces: parseMarketplaces(params.marketplaces ?? []),
   });
 
   // Do NOT swallow errors and do NOT return made-up data. For a price-lookup product, showing
@@ -210,6 +234,8 @@ export interface FilterFacets {
   brands: string[];
   /** Which advanced filters have data behind them; the UI hides the empty ones. */
   advanced: AdvancedFilterAvailability;
+  /** Marketplaces with matched offers, in MARKETPLACES order. The filter needs ≥ 2 (PRODUCT.md). */
+  marketplaces: MarketplaceId[];
 }
 
 export interface AdvancedFilterAvailability {
@@ -243,6 +269,7 @@ export async function getFilterFacets(): Promise<FilterFacets> {
   const advanced: AdvancedFilterAvailability = avail
     ? { rating: avail.rating, freeShipping: avail.free_shipping, voucher: avail.voucher }
     : NO_ADVANCED_FILTERS;
+  const marketplaces = parseMarketplaces(avail?.marketplaces ?? []) ?? [];
 
   if (catRes.error) throw new Error(`Failed to read categories: ${catRes.error.message}`);
   if (brandRes.error) throw new Error(`Failed to read brands: ${brandRes.error.message}`);
@@ -252,7 +279,7 @@ export async function getFilterFacets(): Promise<FilterFacets> {
     .filter((b): b is string => !!b)
     .sort((a, b) => a.localeCompare(b, "vi"));
 
-  return { categories: catRes.data ?? [], brands, advanced };
+  return { categories: catRes.data ?? [], brands, advanced, marketplaces };
 }
 
 export interface AutocompleteItem {
@@ -273,6 +300,8 @@ export async function autocompleteProducts(q: string): Promise<AutocompleteItem[
     p_sort: "relevance",
     p_limit: AUTOCOMPLETE_LIMIT,
     p_offset: 0,
+    // Suggestions are unfiltered (spec §12): no marketplace restriction.
+    p_marketplaces: undefined,
   });
   if (error) throw new Error(`Search suggestions failed: ${error.message}`);
 

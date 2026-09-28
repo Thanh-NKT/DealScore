@@ -4,6 +4,7 @@ import { getItemDetail, ShopeeUnavailableError } from "@/lib/shopee/client";
 import { slugify } from "@/lib/slug";
 import { bestMatch, type MatchCandidate, type MatchResult } from "@/lib/matching/match";
 import { loadMatchCandidates } from "@/lib/matching/candidates";
+import { saveListingExtras } from "@/lib/listing-extras";
 
 function toRpcMatch(m: MatchResult | null) {
   return m ? { variant_id: m.variantId, confidence: m.confidence, reason: m.reason } : null;
@@ -113,6 +114,24 @@ export async function ingestShopeeItem(params: {
   if (error || !data) {
     console.error("ingest_shopee_item error:", error?.message);
     return { status: "error", code: "internal" };
+  }
+
+  // Images + vouchers after the price is in: a failure here must not fail the lookup.
+  if ((detail.images?.length ?? 0) > 0 || (detail.vouchers?.length ?? 0) > 0) {
+    try {
+      const { data: listing, error: lErr } = await supabase
+        .from("listings")
+        .select("id")
+        .eq("marketplace", "shopee")
+        .eq("external_item_id", externalItemId(shopId, itemId))
+        .maybeSingle();
+      if (lErr) throw new Error(lErr.message);
+      if (listing) {
+        await saveListingExtras(supabase, listing.id, { images: detail.images, vouchers: detail.vouchers, source: detail.source });
+      }
+    } catch (err) {
+      console.error("saveListingExtras after ingest failed:", err);
+    }
   }
 
   const r = data as {

@@ -69,8 +69,78 @@
   }
 
   /**
+   * "50k" → 50000, "1tr" / "1,5tr" → 1000000 / 1500000, "50.000" → 50000. Null when unreadable.
+   */
+  function parseAmount(raw) {
+    var m = /^(\d+(?:[.,]\d+)*)\s*(k|tr|triệu)?$/i.exec(String(raw || "").trim());
+    if (!m) return null;
+    var n;
+    if (m[2]) {
+      n = Number(m[1].replace(",", ".")) * (m[2].toLowerCase() === "k" ? 1000 : 1000000);
+    } else {
+      n = Number(m[1].replace(/[.,]/g, ""));
+    }
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+  }
+
+  var MONEY = "₫\\s?(\\d[\\d.,]*\\s*(?:k|tr|triệu)?)";
+  var MAX_VOUCHERS = 20;
+
+  /**
+   * ASSUMPTION E2: the shop voucher block follows a "Mã Giảm Giá Của Shop" heading and lists labels
+   * like "Giảm ₫50k", "Giảm 8% Giảm tối đa ₫150k", "Đơn tối thiểu ₫1tr". Returns voucher terms only
+   * (kind 'shop', never a code); [] when the block is not there.
+   */
+  function parseVouchers(text) {
+    var t = String(text || "").slice(0, 20000);
+    var head = /mã giảm giá của shop|voucher của shop/i.exec(t);
+    if (!head) return [];
+    var section = t.slice(head.index + head[0].length, head.index + head[0].length + 1500);
+    var starts = [];
+    var re = new RegExp("Giảm\\s+(?!tối đa)(?:" + MONEY + "|(\\d{1,3})\\s*%)", "gi");
+    var m;
+    while ((m = re.exec(section)) && starts.length < MAX_VOUCHERS) starts.push({ index: m.index, amount: m[1], pct: m[2] });
+    var out = [];
+    for (var i = 0; i < starts.length; i++) {
+      var entry = section.slice(starts[i].index, i + 1 < starts.length ? starts[i + 1].index : section.length);
+      var min = new RegExp("Đơn tối thiểu\\s+" + MONEY, "i").exec(entry);
+      var minSpend = min ? parseAmount(min[1]) : 0;
+      if (min && minSpend == null) continue;
+      if (starts[i].pct) {
+        var pct = Number(starts[i].pct);
+        if (!(pct > 0 && pct <= 100)) continue;
+        var cap = new RegExp("tối đa\\s+" + MONEY, "i").exec(entry);
+        out.push({ kind: "shop", discountType: "percent", discountValue: pct, maxDiscount: cap ? parseAmount(cap[1]) : null, minSpend: minSpend });
+      } else {
+        var amount = parseAmount(starts[i].amount);
+        if (amount == null) continue;
+        out.push({ kind: "shop", discountType: "amount", discountValue: amount, maxDiscount: null, minSpend: minSpend });
+      }
+    }
+    return out;
+  }
+
+  var IMAGE_HOST = /^https:\/\/([a-z0-9-]+\.)*(susercontent\.com|cf\.shopee\.vn|cvf\.shopee\.vn)\//i;
+  var MAX_IMAGES = 12;
+
+  /**
+   * Gallery image URLs: https on Shopee's image CDN only, thumbnail suffix ("_tn") dropped so the
+   * full image is stored, deduplicated, at most 12. The server re-checks every URL.
+   */
+  function pickGalleryImages(srcs) {
+    var out = [];
+    (srcs || []).forEach(function (src) {
+      if (out.length >= MAX_IMAGES || typeof src !== "string" || !IMAGE_HOST.test(src)) return;
+      var clean = src.split("#")[0].replace(/_tn(\.webp)?$/, "");
+      if (out.indexOf(clean) < 0) out.push(clean);
+    });
+    return out;
+  }
+
+  /**
    * Everything the extension may send for one page: never personal data, only the product facts.
-   * input = { href, text, selectedOptions: string[] }. Returns null when nothing is reliable.
+   * input = { href, text, selectedOptions: string[], imageUrls?: string[] }. Returns null when
+   * nothing is reliable. `vouchers` / `images` are only included when the page had some.
    */
   function readProductPage(input) {
     var item = itemIdFromUrl(input.href);
@@ -83,25 +153,30 @@
       .filter(Boolean)
       .join(", ")
       .slice(0, 100);
-    return {
-      item: item,
-      modelName: name || null,
-      observation: price
-        ? {
-            marketplace: "shopee",
-            item: item,
-            models: [{ modelId: null, name: name, price: price.price, originalPrice: price.originalPrice, stock: parseStock(input.text) }],
-            freeShipping: parseFreeShipping(input.text),
-            hasVoucher: parseVoucher(input.text),
-          }
-        : null,
-    };
+    var observation = null;
+    if (price) {
+      observation = {
+        marketplace: "shopee",
+        item: item,
+        models: [{ modelId: null, name: name, price: price.price, originalPrice: price.originalPrice, stock: parseStock(input.text) }],
+        freeShipping: parseFreeShipping(input.text),
+        hasVoucher: parseVoucher(input.text),
+      };
+      var vouchers = parseVouchers(input.text);
+      if (vouchers.length) observation.vouchers = vouchers;
+      var images = pickGalleryImages(input.imageUrls);
+      if (images.length) observation.images = images;
+    }
+    return { item: item, modelName: name || null, observation: observation };
   }
 
   var api = {
     itemIdFromUrl: itemIdFromUrl,
     parsePrice: parsePrice,
     parseStock: parseStock,
+    parseAmount: parseAmount,
+    parseVouchers: parseVouchers,
+    pickGalleryImages: pickGalleryImages,
     readProductPage: readProductPage,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

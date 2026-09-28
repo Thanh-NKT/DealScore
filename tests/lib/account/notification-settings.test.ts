@@ -5,6 +5,7 @@ import {
   isQuietHour,
   parseNotificationSettings,
   resolveChannels,
+  toFormFields,
   toRow,
   type NotificationSettings,
 } from "@/lib/account/notification-settings";
@@ -21,6 +22,7 @@ describe("parseNotificationSettings", () => {
         pushEnabled: false,
         frequency: "daily_digest",
         digestHour: 20,
+        digestWeekday: 1,
         quietStart: null,
         quietEnd: null,
       },
@@ -57,6 +59,42 @@ describe("parseNotificationSettings", () => {
   });
 });
 
+describe("parseNotificationSettings — weekly digest", () => {
+  it("weekly_digest with a weekday", () => {
+    const r = parseNotificationSettings({ frequency: "weekly_digest", digestHour: "19", digestWeekday: "7" });
+    expect(r.ok && r.value).toMatchObject({ frequency: "weekly_digest", digestHour: 19, digestWeekday: 7 });
+  });
+
+  it("weekday absent → Monday (1)", () => {
+    const r = parseNotificationSettings({ frequency: "weekly_digest", digestHour: "8" });
+    expect(r.ok && r.value.digestWeekday).toBe(1);
+  });
+
+  it.each(["0", "8", "1.5", "thu-hai", "-1"])("weekday %s → Vietnamese error on digestWeekday", (w) => {
+    const r = parseNotificationSettings({ frequency: "weekly_digest", digestHour: "8", digestWeekday: w });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(Object.keys(r.errors)).toEqual(["digestWeekday"]);
+      expect(r.errors.digestWeekday).toMatch(/Thứ Hai/);
+    }
+  });
+
+  it("unknown frequency error names all three options", () => {
+    const r = parseNotificationSettings({ frequency: "monthly" });
+    expect(!r.ok && r.errors.frequency).toMatch(/mỗi tuần/);
+  });
+});
+
+describe("toFormFields", () => {
+  it.each<NotificationSettings>([
+    base,
+    { ...base, emailEnabled: false, pushEnabled: true, frequency: "weekly_digest", digestHour: 20, digestWeekday: 6 },
+    { ...base, frequency: "daily_digest", quietStart: 22, quietEnd: 7 },
+  ])("round-trips through parseNotificationSettings (%#)", (s) => {
+    expect(parseNotificationSettings(toFormFields(s))).toEqual({ ok: true, value: s });
+  });
+});
+
 describe("fromRow / toRow", () => {
   it("round trip", () => {
     const row = {
@@ -65,6 +103,7 @@ describe("fromRow / toRow", () => {
       push_enabled: true,
       frequency: "daily_digest",
       digest_hour: 9,
+      digest_weekday: 5,
       quiet_start: 23,
       quiet_end: 6,
       updated_at: "2026-09-23T00:00:00Z",
@@ -75,10 +114,11 @@ describe("fromRow / toRow", () => {
       pushEnabled: true,
       frequency: "daily_digest",
       digestHour: 9,
+      digestWeekday: 5,
       quietStart: 23,
       quietEnd: 6,
     });
-    expect(toRow(s)).toMatchObject({ email_enabled: true, digest_hour: 9, quiet_start: 23, quiet_end: 6 });
+    expect(toRow(s)).toMatchObject({ email_enabled: true, digest_hour: 9, digest_weekday: 5, quiet_start: 23, quiet_end: 6 });
   });
 });
 

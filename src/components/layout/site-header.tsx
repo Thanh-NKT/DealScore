@@ -1,73 +1,66 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
-import { signOut } from "@/actions/account";
+import { BellIcon, MonitorIcon, TrendUpIcon } from "@/components/ui/icons";
+import { AccountMenu, HeaderNav } from "./header-nav";
+import { ThemeToggle } from "./theme-toggle";
 
+/**
+ * Sticky site header matching UI mockup (72px, solid white, 1440px max width, 56px gutters on desktop).
+ * Contains logo, primary nav, extension button, notification bell, and account/login.
+ */
 export async function SiteHeader() {
-  const user = await getCurrentUser();
+  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
+  try {
+    user = await getCurrentUser();
+  } catch (err) {
+    // Let Next's own control-flow errors (dynamic usage during prerender, redirects) through.
+    unstable_rethrow(err);
+    console.error("SiteHeader: getCurrentUser failed", err);
+  }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
-        {/* Logo & Brand */}
-        <div className="flex items-center gap-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-foreground font-black tracking-wider text-base"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background font-black text-xs">
-              K
+    <header className="sticky top-0 z-40 w-full shrink-0 border-b border-line bg-surface">
+      {/* Phones: logo + actions on the first row, the nav on its own scrollable row, so nothing overlaps at 375px. */}
+      <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-14 max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-1 max-[760px]:pt-3">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-7 max-[760px]:contents">
+          <Link href="/" aria-label="Kairo — Trang chủ" className="flex shrink-0 items-center gap-2.5 text-ink">
+            <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-primary text-on-primary shadow-2xs">
+              <TrendUpIcon className="size-5" strokeWidth={2.4} />
             </span>
-            <span>KAIRO</span>
+            <span className="display text-[22px] font-bold tracking-tight">Kairo</span>
           </Link>
-
-          <nav className="hidden sm:flex items-center gap-4 text-xs font-medium text-muted">
-            <Link
-              href="/search"
-              className="transition-colors hover:text-foreground"
-            >
-              Tìm kiếm
-            </Link>
-            <Link
-              href="/account/watch"
-              className="transition-colors hover:text-foreground"
-            >
-              Watch của tôi
-            </Link>
-          </nav>
+          <div className="min-w-0 max-[760px]:order-last max-[760px]:-mx-4 max-[760px]:w-[calc(100%+2rem)] max-[760px]:overflow-x-auto max-[760px]:px-2.5 max-[760px]:pb-1.5 max-[760px]:[scrollbar-width:none]">
+          <HeaderNav signedIn={Boolean(user)} />
+          </div>
         </div>
 
-        {/* Auth / Account */}
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2.5">
+          <Link
+            href="/extension"
+            className="flex h-11 items-center gap-2 rounded-[12px] border border-line bg-surface-2/60 px-3.5 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary/40 hover:bg-surface-2 max-[680px]:hidden"
+          >
+            <MonitorIcon className="size-[18px] text-primary" />
+            <span>Cài tiện ích</span>
+          </Link>
+
+          <ThemeToggle />
+
+          <Link
+            href="/account/notifications"
+            aria-label="Thông báo"
+            className="relative flex size-11 items-center justify-center rounded-[12px] border border-line bg-surface-2/60 text-ink transition-colors duration-150 ease-out hover:border-primary/40 hover:bg-surface-2"
+          >
+            <BellIcon className="size-5" />
+            <span className="absolute right-[10px] top-[9px] size-[9px] rounded-full border-2 border-surface bg-red-500" />
+          </Link>
+
           {user ? (
-            <div className="flex items-center gap-3">
-              <Link
-                href="/account/watch"
-                className="inline-flex sm:hidden text-xs text-muted hover:text-foreground"
-              >
-                Watch
-              </Link>
-              <Link
-                href="/account"
-                className="flex items-center gap-2 rounded-full border border-border bg-black/[0.02] px-3 py-1 text-xs font-medium text-foreground hover:bg-black/5 dark:bg-white/[0.02] dark:hover:bg-white/5"
-              >
-                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                <span className="max-w-[120px] truncate sm:max-w-[180px]">
-                  {user.email ?? "Tài khoản"}
-                </span>
-              </Link>
-              <form action={signOut} className="hidden sm:inline-block">
-                <button
-                  type="submit"
-                  className="text-xs text-muted hover:text-foreground px-1"
-                >
-                  Đăng xuất
-                </button>
-              </form>
-            </div>
+            <AccountMenu email={user.email ?? null} />
           ) : (
             <Link
               href="/login"
-              className="inline-flex items-center justify-center rounded-lg bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
+              className="flex h-11 items-center justify-center rounded-[12px] px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
             >
               Đăng nhập
             </Link>

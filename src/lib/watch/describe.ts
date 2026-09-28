@@ -1,4 +1,10 @@
-import type { Channel, NotificationSettings } from "@/lib/account/notification-settings";
+import {
+  WEEKDAY_LABELS,
+  type Channel,
+  type IsoWeekday,
+  type NotificationSettings,
+} from "@/lib/account/notification-settings";
+import type { DealScoreResult } from "@/lib/pricing/deal-score";
 import { evaluateConditions } from "@/lib/watch/conditions";
 import type {
   ConditionKey,
@@ -19,6 +25,8 @@ export interface WatchView {
   price: number | null;
   inStock: boolean;
   isStale: boolean;
+  observedAt: string | null;
+  deal: DealScoreResult | null;
   target: {
     amount: number;
     gap: number;
@@ -37,9 +45,30 @@ export interface WatchView {
     | {
         kind: "scheduled";
         deliverAfter: string;
-        reason: "quiet_hours" | "daily_digest";
+        reason: ScheduledReason;
+        /** Vietnamese copy, e.g. "Sẽ gửi trong bản tóm tắt Thứ Hai lúc 08:00". */
+        text: string;
       };
   sortKey: number;
+}
+
+export type ScheduledReason = "quiet_hours" | "daily_digest" | "weekly_digest";
+
+const VN_OFFSET_MS = 7 * 3_600_000;
+const hh = (h: number) => `${String(h).padStart(2, "0")}:00`;
+
+/** User-facing line for an alert held back until `deliverAfter` (shown in Vietnam time). */
+export function scheduledText(reason: ScheduledReason, deliverAfter: string): string {
+  const d = new Date(deliverAfter);
+  if (Number.isNaN(d.getTime())) return "Sẽ gửi sau";
+  const vn = new Date(d.getTime() + VN_OFFSET_MS); // UTC fields = Vietnam wall time
+  const hour = hh(vn.getUTCHours());
+  if (reason === "weekly_digest") {
+    const weekday = (((vn.getUTCDay() + 6) % 7) + 1) as IsoWeekday;
+    return `Sẽ gửi trong bản tóm tắt ${WEEKDAY_LABELS[weekday]} lúc ${hour}`;
+  }
+  if (reason === "daily_digest") return `Sẽ gửi trong bản tóm tắt hằng ngày lúc ${hour}`;
+  return `Sẽ gửi lúc ${hour}, khi hết giờ im lặng`;
 }
 
 export function describeWatch(input: {
@@ -140,12 +169,13 @@ export function describeWatch(input: {
         channels: sentChannels,
       };
     } else if (pendingDeliveries.length > 0) {
-      const reason =
-        settings.frequency === "daily_digest" ? "daily_digest" : "quiet_hours";
+      const reason: ScheduledReason =
+        settings.frequency === "instant" ? "quiet_hours" : settings.frequency;
       alertStatus = {
         kind: "scheduled",
         deliverAfter: latestAlert.deliverAfter,
         reason,
+        text: scheduledText(reason, latestAlert.deliverAfter),
       };
     }
   }
@@ -154,6 +184,8 @@ export function describeWatch(input: {
     price,
     inStock,
     isStale,
+    observedAt: snapshot.observedAt,
+    deal: snapshot.deal,
     target: targetInfo,
     changeSinceStart,
     conditions,

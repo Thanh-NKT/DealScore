@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const auth = { signInWithOtp: vi.fn(), verifyOtp: vi.fn() };
+const auth = {
+  signInWithPassword: vi.fn(),
+  signUp: vi.fn(),
+  resend: vi.fn(),
+  resetPasswordForEmail: vi.fn(),
+  updateUser: vi.fn(),
+  getUser: vi.fn(),
+};
 const profile = { data: { consent_version: "2026-09-23", deleted_at: null }, error: null };
 const client = {
   auth,
@@ -20,7 +27,9 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { requestLoginCode, verifyLoginCode } = await import("@/actions/auth");
+const { signIn, signUp, resendConfirmation, requestPasswordReset, updatePassword } = await import("@/actions/auth");
+
+const IDLE = { status: "idle" } as const;
 
 function form(entries: Record<string, string>) {
   const f = new FormData();
@@ -33,54 +42,141 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SITE_URL = "https://kairo.test";
 });
 
-describe("requestLoginCode", () => {
-  it("malformed email → error, Supabase not called", async () => {
-    const r = await requestLoginCode({ status: "idle" }, form({ email: "abc", next: "/" }));
-    expect(r).toMatchObject({ status: "error", error: { code: "invalid_email" } });
-    expect(auth.signInWithOtp).not.toHaveBeenCalled();
+describe("signIn", () => {
+  it("malformed email / empty password → field errors, Supabase not called", async () => {
+    const r = await signIn(IDLE, form({ email: "abc", password: "", next: "/" }));
+    expect(r).toMatchObject({ status: "error", fields: { email: expect.any(String), password: "Nhập mật khẩu." } });
+    expect(auth.signInWithPassword).not.toHaveBeenCalled();
   });
 
-  it("sends with emailRedirectTo carrying the sanitized ?next=", async () => {
-    auth.signInWithOtp.mockResolvedValue({ data: {}, error: null });
-    const r = await requestLoginCode(
-      { status: "idle" },
-      form({ email: " An@Kairo.VN ", next: "https://evil.com" }),
-    );
-    expect(r).toEqual({ status: "sent", email: "an@kairo.vn", next: "/" });
-    expect(auth.signInWithOtp).toHaveBeenCalledWith({
-      email: "an@kairo.vn",
-      options: { shouldCreateUser: true, emailRedirectTo: "https://kairo.test/auth/confirm?next=%2F" },
-    });
+  it("does not apply sign-up rules to existing passwords", async () => {
+    auth.signInWithPassword.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    await expect(signIn(IDLE, form({ email: "an@kairo.vn", password: "old", next: "/" }))).rejects.toMatchObject({ url: "/" });
   });
 
-  it("rate limit error → mapped to rate_limited", async () => {
-    auth.signInWithOtp.mockResolvedValue({
-      data: {},
-      error: { code: "over_email_send_rate_limit", message: "after 30 seconds", status: 429 },
-    });
-    const r = await requestLoginCode({ status: "idle" }, form({ email: "an@kairo.vn", next: "/x" }));
-    expect(r).toMatchObject({ status: "error", error: { code: "rate_limited", retryAfterSeconds: 30 }, next: "/x" });
+  it("wrong credentials → generic message", async () => {
+    auth.signInWithPassword.mockResolvedValue({ data: { user: null }, error: { code: "invalid_credentials", status: 400 } });
+    const r = await signIn(IDLE, form({ email: " An@Kairo.VN ", password: "abc12345", next: "/x" }));
+    expect(r).toMatchObject({ status: "error", error: { code: "invalid_credentials" }, email: "an@kairo.vn", next: "/x" });
+    expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: "an@kairo.vn", password: "abc12345" });
+  });
+
+  it("unconfirmed email → email_not_confirmed", async () => {
+    auth.signInWithPassword.mockResolvedValue({ data: { user: null }, error: { code: "email_not_confirmed", status: 400 } });
+    const r = await signIn(IDLE, form({ email: "an@kairo.vn", password: "abc12345", next: "/" }));
+    expect(r).toMatchObject({ status: "error", error: { code: "email_not_confirmed" } });
+  });
+
+  it("success → redirect to the sanitized next", async () => {
+    auth.signInWithPassword.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    await expect(
+      signIn(IDLE, form({ email: "an@kairo.vn", password: "abc12345", next: "https://evil.com" })),
+    ).rejects.toMatchObject({ url: "/" });
+    await expect(
+      signIn(IDLE, form({ email: "an@kairo.vn", password: "abc12345", next: "/ssd/a" })),
+    ).rejects.toMatchObject({ url: "/ssd/a" });
   });
 });
 
-describe("verifyLoginCode", () => {
-  it("code not exactly 6 digits → otp_invalid, Supabase not called", async () => {
-    const r = await verifyLoginCode({ status: "idle" }, form({ email: "an@kairo.vn", token: "12ab", next: "/" }));
-    expect(r).toMatchObject({ status: "error", error: { code: "otp_invalid" } });
-    expect(auth.verifyOtp).not.toHaveBeenCalled();
+describe("signUp", () => {
+  it("weak password → field error, Supabase not called", async () => {
+    const r = await signUp(IDLE, form({ email: "an@kairo.vn", password: "abcdefgh", next: "/" }));
+    expect(r).toMatchObject({ status: "error", fields: { password: "Mật khẩu cần có ít nhất một chữ số." } });
+    expect(auth.signUp).not.toHaveBeenCalled();
   });
 
-  it("success → redirect to next", async () => {
-    auth.verifyOtp.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
-    await expect(
-      verifyLoginCode({ status: "idle" }, form({ email: "an@kairo.vn", token: "123456", next: "/ssd/a" })),
-    ).rejects.toMatchObject({ url: "/ssd/a" });
-    expect(auth.verifyOtp).toHaveBeenCalledWith({ email: "an@kairo.vn", token: "123456", type: "email" });
+  it("confirmation differs → field error, Supabase not called", async () => {
+    const r = await signUp(IDLE, form({ email: "an@kairo.vn", password: "abc12345", confirm: "abc12346", next: "/" }));
+    expect(r).toMatchObject({ status: "error", fields: { confirm: "Hai mật khẩu chưa khớp nhau." } });
+    expect(auth.signUp).not.toHaveBeenCalled();
   });
 
-  it("expired code → otp_expired", async () => {
-    auth.verifyOtp.mockResolvedValue({ data: { user: null }, error: { code: "otp_expired", status: 403 } });
-    const r = await verifyLoginCode({ status: "idle" }, form({ email: "an@kairo.vn", token: "123456", next: "/" }));
-    expect(r).toMatchObject({ status: "error", error: { code: "otp_expired" } });
+  it("success → check_email with the confirm redirect", async () => {
+    auth.signUp.mockResolvedValue({ data: { user: { id: "u1", identities: [] }, session: null }, error: null });
+    const r = await signUp(IDLE, form({ email: "an@kairo.vn", password: "abc12345", confirm: "abc12345", next: "/ssd/a" }));
+    expect(r).toEqual({ status: "check_email", email: "an@kairo.vn", next: "/ssd/a" });
+    expect(auth.signUp).toHaveBeenCalledWith({
+      email: "an@kairo.vn",
+      password: "abc12345",
+      options: { emailRedirectTo: "https://kairo.test/auth/confirm?next=%2Fssd%2Fa" },
+    });
+  });
+
+  it("session returned (confirmations off) → signed in straight away", async () => {
+    auth.signUp.mockResolvedValue({ data: { user: { id: "u1" }, session: {} }, error: null });
+    await expect(signUp(IDLE, form({ email: "an@kairo.vn", password: "abc12345", confirm: "abc12345", next: "/x" }))).rejects.toMatchObject({ url: "/x" });
+  });
+});
+
+describe("resendConfirmation", () => {
+  it("resends the signup email", async () => {
+    auth.resend.mockResolvedValue({ data: {}, error: null });
+    const r = await resendConfirmation(IDLE, form({ email: "an@kairo.vn", next: "/" }));
+    expect(r).toMatchObject({ status: "check_email" });
+    expect(auth.resend).toHaveBeenCalledWith({
+      type: "signup",
+      email: "an@kairo.vn",
+      options: { emailRedirectTo: "https://kairo.test/auth/confirm?next=%2F" },
+    });
+  });
+});
+
+describe("requestPasswordReset", () => {
+  it("unknown email still answers check_email (no enumeration)", async () => {
+    auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: { code: "user_not_found", status: 404 } });
+    const r = await requestPasswordReset(IDLE, form({ email: "ghost@kairo.vn" }));
+    expect(r).toMatchObject({ status: "check_email", email: "ghost@kairo.vn" });
+    expect(auth.resetPasswordForEmail).toHaveBeenCalledWith("ghost@kairo.vn", {
+      redirectTo: "https://kairo.test/auth/confirm?next=%2Freset-password",
+    });
+  });
+
+  it("rate limited → error with wait time", async () => {
+    auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: { status: 429, message: "after 20 seconds" } });
+    const r = await requestPasswordReset(IDLE, form({ email: "an@kairo.vn" }));
+    expect(r).toMatchObject({ status: "error", error: { code: "rate_limited", retryAfterSeconds: 20 } });
+  });
+});
+
+describe("updatePassword", () => {
+  it("no session → back to forgot-password", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: null } });
+    await expect(updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12345" }))).rejects.toMatchObject({
+      url: "/forgot-password?error=link_expired",
+    });
+  });
+
+  it("mismatched confirmation → field error, updateUser not called", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "an@kairo.vn" } } });
+    const r = await updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12346" }));
+    expect(r).toMatchObject({ status: "error", fields: { confirm: "Hai mật khẩu chưa khớp nhau." } });
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("same password → same_password", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "an@kairo.vn" } } });
+    auth.updateUser.mockResolvedValue({ data: {}, error: { code: "same_password", status: 422 } });
+    const r = await updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12345" }));
+    expect(r).toMatchObject({ status: "error", error: { code: "same_password" } });
+  });
+
+  it("success → /account", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "an@kairo.vn" } } });
+    auth.updateUser.mockResolvedValue({ data: {}, error: null });
+    await expect(updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12345" }))).rejects.toMatchObject({
+      url: "/account",
+    });
+    expect(auth.updateUser).toHaveBeenCalledWith({ password: "abc12345" });
+  });
+});
+
+describe("no state ever echoes the password", () => {
+  it("error states have no password key", async () => {
+    const states = [
+      await signUp(IDLE, form({ email: "an@kairo.vn", password: "short", next: "/" })),
+      await signIn(IDLE, form({ email: "bad", password: "abc12345", next: "/" })),
+    ];
+    for (const s of states) expect(JSON.stringify(s)).not.toContain("abc12345");
+    for (const s of states) expect(s).not.toHaveProperty("password");
   });
 });

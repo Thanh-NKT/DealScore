@@ -45,7 +45,7 @@ const item = (o: Partial<AlertEmailItem> = {}): AlertEmailItem => ({
   baselinePrice: 3_000_000,
   dealScore: 82,
   recommendation: "buy",
-  triggerTexts: ["Giá đã xuống dưới mức bạn đặt (2.600.000 ₫)"],
+  triggerTexts: ["Giá đã xuống dưới mức bạn đặt (2.600.000đ)"],
   scoreReasons: ["✓ Thấp hơn 12% so với giá trung vị 90 ngày"],
   buyUrl: "https://kairo.vn/go/shopee/o1?src=email&watch=w1&alert=a1",
   manageUrl: "https://kairo.vn/account/watch/w1",
