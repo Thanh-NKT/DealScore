@@ -61,28 +61,12 @@ export const FLAG_PHRASES: Array<[string, IntentFlag]> = [
   ["kem voucher", "hasVoucher"],
 ];
 
-/** Vietnamese color phrases (accepted only right after "mau"), longest first. */
-export const VI_COLOR_PHRASES: Array<[string, string]> = [
-  ["xanh duong", "blue"],
-  ["xanh la", "green"],
-  ["xanh", "blue"],
-  ["den", "black"],
-  ["trang", "white"],
-  ["xam", "gray"],
-  ["bac", "silver"],
-  ["do", "red"],
-  ["hong", "pink"],
-  ["tim", "purple"],
-  ["vang", "gold"],
-  ["cam", "orange"],
-];
-
-/** English color words, accepted anywhere. */
-export const EN_COLOR_WORDS: Readonly<Record<string, string>> = {
-  black: "black", white: "white", gray: "gray", grey: "gray", silver: "silver", blue: "blue",
-  red: "red", green: "green", pink: "pink", purple: "purple", gold: "gold", yellow: "yellow",
-  orange: "orange",
-};
+/**
+ * Stop phrases removed whole with the filler words (same condition, no chip). Needed where a
+ * filler word would otherwise leave half a phrase behind — "chinh hang" minus filler "hang"
+ * would leave "chinh", and leftover words are AND-ed in full-text search.
+ */
+export const STOP_PHRASES: readonly string[] = ["chinh hang"];
 
 /** Canonical color → Vietnamese chip word ("Màu đen"). */
 export const COLOR_LABELS: Readonly<Record<string, string>> = {

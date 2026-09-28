@@ -65,7 +65,7 @@ function extractSize(folded: string): number | null {
 }
 
 /** Longest phrases first so "xanh la" wins over "xanh". */
-const VI_COLORS: Array<[string, string]> = [
+export const VI_COLORS: Array<[string, string]> = [
   ["xanh duong", "blue"],
   ["xanh la", "green"],
   ["xanh", "blue"],
@@ -80,7 +80,7 @@ const VI_COLORS: Array<[string, string]> = [
   ["cam", "orange"],
 ];
 
-const EN_COLORS: Record<string, string> = {
+export const EN_COLORS: Record<string, string> = {
   black: "black",
   white: "white",
   gray: "gray",

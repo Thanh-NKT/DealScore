@@ -10,13 +10,12 @@ import { extractPriceRange } from "@/lib/intent/price";
 import {
   CATEGORY_SYNONYMS,
   COLOR_LABELS,
-  EN_COLOR_WORDS,
   FILLER_WORDS,
   FLAG_PHRASES,
   NEED_PHRASES,
   SORT_LABELS,
   SORT_PHRASES,
-  VI_COLOR_PHRASES,
+  STOP_PHRASES,
 } from "@/lib/intent/lexicon";
 import {
   EMPTY_INTENT_TEXT_LIMIT,
@@ -27,7 +26,7 @@ import {
 } from "@/lib/intent/types";
 import { MARKETPLACES, type MarketplaceId } from "@/lib/marketplaces";
 import { brandForms } from "@/lib/matching/aliases";
-import { extractAttributes, normalizeText } from "@/lib/matching/attributes";
+import { EN_COLORS, extractAttributes, normalizeText, VI_COLORS } from "@/lib/matching/attributes";
 
 export type { IntentChip, IntentChipKind, IntentSort, IntentVocab, QueryIntent } from "@/lib/intent/types";
 export { EMPTY_INTENT_TEXT_LIMIT } from "@/lib/intent/types";
@@ -198,9 +197,9 @@ function parse(input: string, vocab: IntentVocab): QueryIntent {
       const t = tokens[i];
       if (t.owner) continue;
       const next = tokens[i + 1];
-      if (CAPACITY_TOKEN_RE.test(t.key)) {
+      if (CAPACITY_TOKEN_RE.test(bare(t))) {
         consume(tokens, i, 1, "attr");
-      } else if (NUMBER_RE.test(t.key) && next && !next.owner && (next.key === "tb" || next.key === "gb")) {
+      } else if (NUMBER_RE.test(bare(t)) && next && !next.owner && (next.key === "tb" || next.key === "gb")) {
         consume(tokens, i, 2, "attr");
       } else continue;
       if (first < 0) first = i;
@@ -222,7 +221,7 @@ function parse(input: string, vocab: IntentVocab): QueryIntent {
       const m = SIZE_TOKEN_RE.exec(bare(t));
       if (m && isSize(m[1])) {
         consume(tokens, i, 1, "attr");
-      } else if (NUMBER_RE.test(t.key) && isSize(t.key) && next && !next.owner && SIZE_UNITS.has(bare(next))) {
+      } else if (NUMBER_RE.test(bare(t)) && isSize(bare(t)) && next && !next.owner && SIZE_UNITS.has(bare(next))) {
         consume(tokens, i, 2, "attr");
       } else continue;
       if (first < 0) first = i;
@@ -235,14 +234,14 @@ function parse(input: string, vocab: IntentVocab): QueryIntent {
 
   if (attrs.color != null) {
     const color = attrs.color;
-    const viColors = byLength(VI_COLOR_PHRASES);
+    const viColors = byLength(VI_COLORS);
     let first = -1;
     for (let i = 0; i < tokens.length; i++) {
       const t = tokens[i];
       if (t.owner) continue;
       if (t.key === "mau") {
         const next = tokens[i + 1];
-        if (next && !next.owner && EN_COLOR_WORDS[next.key] === color) {
+        if (next && !next.owner && EN_COLORS[next.key] === color) {
           consume(tokens, i, 2, "attr");
           if (first < 0) first = i;
           continue;
@@ -255,7 +254,7 @@ function parse(input: string, vocab: IntentVocab): QueryIntent {
             break;
           }
         }
-      } else if (EN_COLOR_WORDS[t.key] === color) {
+      } else if (EN_COLORS[t.key] === color) {
         consume(tokens, i, 1, "attr");
         if (first < 0) first = i;
       }
@@ -359,12 +358,13 @@ function parse(input: string, vocab: IntentVocab): QueryIntent {
   boosts.sort((a, b) => a.index - b.index);
   for (const { term } of boosts) if (!intent.boostTerms.includes(term)) intent.boostTerms.push(term);
 
-  // 9. Filler words — only when something else was extracted or the query is long enough.
+  // 9. Stop phrases + filler words (longest first, so "chinh hang" goes whole) — only when
+  // something else was extracted or the query is long enough.
   const extracted = chips.length > 0 || intent.boostTerms.length > 0;
   if (extracted || tokens.length >= 4) {
     scanPhrases(
       tokens,
-      [...FILLER_WORDS].map((w): [string, true] => [w, true]),
+      [...STOP_PHRASES, ...FILLER_WORDS].map((w): [string, true] => [w, true]),
       "filler",
       () => {},
     );

@@ -45,6 +45,11 @@ const CASES: Array<[string, Partial<QueryIntent>]> = [
   ["tai nghe sony white", { categorySlug: "tai-nghe", brands: ["Sony"], color: "white", text: "" }],
   ["bàn phím màu xanh dương", { categorySlug: "ban-phim", color: "blue", text: "" }],
 
+  ["màn hình 23.8 inch", { categorySlug: "man-hinh", sizeInch: 23.8, text: "" }],
+  ["man hinh 23,8 inch", { categorySlug: "man-hinh", sizeInch: 23.8, text: "" }],
+  ["ssd 1.5tb", { categorySlug: "ssd", capacityGb: 1536, text: "" }],
+  ["Samsung Chính Hãng", { brands: ["Samsung"], text: "" }],
+
   // Category synonyms.
   ["keyboard keychron", { categorySlug: "ban-phim", brands: ["Keychron"], text: "" }],
   ["mouse logi", { categorySlug: "chuot", brands: ["Logitech"], text: "" }],
