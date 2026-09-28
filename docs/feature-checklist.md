@@ -164,7 +164,6 @@
 - [ ] Shopping Mission (mô tả nhu cầu → shortlist 3 sản phẩm)
 - [ ] Mission tự theo dõi (Watch nhiều sản phẩm)
 - [ ] Cá nhân hóa (Deal Feed + ranking + recommendation)
-- [ ] Kênh alert mới: Telegram bot, Zalo
 - [ ] Voucher & Effective Price
 - [ ] User preferences (brand/danh mục/giá/sàn)
 
