@@ -8,6 +8,7 @@ import { ClockIcon, SearchIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
 import { LookupProblem } from "@/components/lookup/lookup-problem";
 import { isLookupable, looksLikeLink, marketOf, slowMessage, useLookup } from "@/components/lookup/use-lookup";
+import { buttonClass } from "@/components/ui/button";
 
 interface Suggestion {
   productId: string;
@@ -136,7 +137,7 @@ export function HeroSearchForm() {
           method="get"
           role="search"
           onSubmit={onSubmit}
-          className="flex items-center gap-2.5 rounded-[20px] border-2 border-line-strong bg-surface p-2 pl-4 transition-colors focus-within:border-primary sm:pl-5"
+          className="flex items-center gap-2.5 rounded-lg border-2 border-line-strong bg-surface p-2 pl-4 transition-colors focus-within:border-primary sm:pl-5"
         >
           <SearchIcon className="size-[22px] shrink-0 text-ink-2 max-[380px]:hidden" />
           <label htmlFor={`${uid}-home-q`} className="sr-only">
@@ -165,11 +166,11 @@ export function HeroSearchForm() {
             aria-describedby={`${uid}-status`}
             readOnly={lookup.loading}
             placeholder="Gõ tên sản phẩm, nhu cầu, hoặc dán link Shopee…"
-            className="h-[52px] min-w-0 flex-1 border-none bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-3 focus:outline-none focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
+            className="h-13 min-w-0 flex-1 border-none bg-transparent text-body text-ink outline-none placeholder:text-ink-3 focus:outline-none focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
           />
 
           {canLookup && !lookup.loading && (
-            <span className="hidden shrink-0 items-center rounded-sm bg-primary-soft px-2.5 py-1 text-[12px] font-semibold text-primary sm:inline-flex">
+            <span className="hidden shrink-0 items-center rounded-sm bg-primary-soft px-2.5 py-1 text-micro font-semibold text-primary sm:inline-flex">
               Link Shopee
             </span>
           )}
@@ -195,7 +196,7 @@ export function HeroSearchForm() {
             <button
               type="button"
               onClick={lookup.cancel}
-              className="flex h-[52px] shrink-0 items-center justify-center rounded-[12px] border border-line-strong bg-surface px-5 text-[15px] font-semibold text-ink transition-colors hover:bg-surface-2"
+              className="flex h-13 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface px-5 text-control font-semibold text-ink transition-colors hover:bg-surface-2"
             >
               Hủy
             </button>
@@ -203,7 +204,7 @@ export function HeroSearchForm() {
             <button
               type="submit"
               disabled={lookup.navigating}
-              className="flex h-[52px] shrink-0 items-center justify-center rounded-[12px] bg-primary px-6 text-[16px] font-bold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover disabled:opacity-60 max-[480px]:px-4 max-[480px]:text-[15px]"
+              className={buttonClass({ size: "lg", className: "shrink-0 max-[480px]:px-4 max-[480px]:text-control" })}
             >
               {lookup.navigating ? "Đang mở…" : canLookup ? "Phân tích link" : "Kiểm tra giá"}
             </button>
@@ -215,7 +216,7 @@ export function HeroSearchForm() {
             id={`${uid}-list`}
             role="listbox"
             aria-label="Gợi ý sản phẩm"
-            className="absolute z-50 mt-2 max-h-80 w-full overflow-auto rounded-[12px] border border-line bg-surface py-1.5 shadow-lift"
+            className="absolute z-50 mt-2 max-h-80 w-full overflow-auto rounded-md border border-line bg-surface py-1.5 shadow-lift"
           >
             {suggestions.map((s, i) => {
               const name = s.name?.trim() || "Sản phẩm chưa có tên";
@@ -237,15 +238,15 @@ export function HeroSearchForm() {
                     <ProductImage src={s.image} className="bg-surface-2! p-0.5" iconClassName="size-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-medium text-ink" title={name}>
+                    <p className="truncate text-body-sm font-medium text-ink" title={name}>
                       {name}
                     </p>
-                    {s.brand?.trim() && <p className="truncate text-[12px] text-ink-3">{s.brand.trim()}</p>}
+                    {s.brand?.trim() && <p className="truncate text-micro text-ink-3">{s.brand.trim()}</p>}
                   </div>
                   {price != null ? (
-                    <span className="num shrink-0 text-[14px] font-bold text-ink">{formatVnd(price)}</span>
+                    <span className="num shrink-0 text-body-sm font-bold text-ink">{formatVnd(price)}</span>
                   ) : (
-                    <span className="shrink-0 text-[12px] text-ink-3">Chưa có giá</span>
+                    <span className="shrink-0 text-micro text-ink-3">Chưa có giá</span>
                   )}
                 </li>
               );
@@ -256,7 +257,7 @@ export function HeroSearchForm() {
 
       <div id={`${uid}-status`} aria-live="polite" className="empty:hidden">
         {lookup.loading && (
-          <p className="flex items-center gap-1.5 text-[14px] text-ink-2">
+          <p className="flex items-center gap-1.5 text-body-sm text-ink-2">
             <ClockIcon className="size-4 text-primary" />
             {slowMessage(lookup.slow)}
           </p>
@@ -267,12 +268,12 @@ export function HeroSearchForm() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 pt-0.5">
-        <span className="text-[13px] font-semibold text-ink-3">Thử tìm:</span>
+        <span className="text-label font-semibold text-ink-3">Thử tìm:</span>
         {QUICK_QUERIES.map((q) => (
           <Link
             key={q}
             href={`/search?q=${encodeURIComponent(q)}`}
-            className="flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+            className="flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-label font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
           >
             <SearchIcon className="size-3.5 text-primary" />
             {q}

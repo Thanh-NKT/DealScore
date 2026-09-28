@@ -1,5 +1,5 @@
 /**
- * Display names and brand color tokens for marketplace codes stored in `listings.marketplace`
+ * Display names and brand colours (DESIGN.md "Màu sàn"; fills darkened where needed for 4.5:1 text contrast) for marketplace codes stored in `listings.marketplace`
  * (shopee | tiktok | lazada | tiki | sendo …).
  */
 const MARKETPLACE_NAMES: Record<string, string> = {
@@ -19,10 +19,10 @@ export interface MarketplaceTheme {
 
 const MARKETPLACE_THEMES: Record<string, MarketplaceTheme> = {
   shopee: {
-    primaryBtn: "bg-[#EE4D2D] text-white hover:bg-[#D73818] shadow-xs",
+    primaryBtn: "bg-[#D73818] text-white hover:bg-[#B92F14] shadow-xs",
     secondaryBtn:
-      "border border-[#EE4D2D]/35 bg-[#EE4D2D]/10 text-[#D73818] hover:bg-[#EE4D2D] hover:text-white dark:text-[#FF7A59]",
-    badge: "border border-[#EE4D2D]/30 bg-[#EE4D2D]/12 text-[#D73818] dark:text-[#FF7A59]",
+      "border border-[#EE4D2D]/35 bg-[#EE4D2D]/10 text-[#B3301A] hover:bg-[#D73818] hover:text-white dark:text-[#FF7A59]",
+    badge: "border border-[#EE4D2D]/30 bg-[#EE4D2D]/12 text-[#B3301A] dark:text-[#FF7A59]",
   },
   lazada: {
     primaryBtn: "bg-[#0F146D] text-white hover:bg-[#1C249E] dark:bg-[#2E38E0] dark:hover:bg-[#3F49F0] shadow-xs",
@@ -32,15 +32,15 @@ const MARKETPLACE_THEMES: Record<string, MarketplaceTheme> = {
       "border border-[#0F146D]/25 bg-[#0F146D]/10 text-[#0F146D] dark:border-[#6B75FF]/35 dark:bg-[#6B75FF]/15 dark:text-[#9BA2FF]",
   },
   tiki: {
-    primaryBtn: "bg-[#1A94FF] text-white hover:bg-[#0D7FE6] shadow-xs",
+    primaryBtn: "bg-[#0B6FD1] text-white hover:bg-[#0A5FB3] shadow-xs",
     secondaryBtn:
-      "border border-[#1A94FF]/40 bg-[#1A94FF]/10 text-[#0D7FE6] hover:bg-[#1A94FF] hover:text-white dark:text-[#5CB3FF]",
-    badge: "border border-[#1A94FF]/30 bg-[#1A94FF]/12 text-[#0D7FE6] dark:text-[#5CB3FF]",
+      "border border-[#1A94FF]/40 bg-[#1A94FF]/10 text-[#0B63B8] hover:bg-[#0B6FD1] hover:text-white dark:text-[#5CB3FF]",
+    badge: "border border-[#1A94FF]/30 bg-[#1A94FF]/12 text-[#0B63B8] dark:text-[#5CB3FF]",
   },
   tiktok: {
-    primaryBtn: "bg-[#161823] text-white hover:bg-[#292C3E] dark:bg-[#FE2C55] dark:hover:bg-[#E02046] shadow-xs",
+    primaryBtn: "bg-[#161823] text-white hover:bg-[#292C3E] dark:bg-[#E0204A] dark:hover:bg-[#C81A40] shadow-xs",
     secondaryBtn:
-      "border border-[#161823]/35 bg-[#161823]/8 text-[#161823] hover:bg-[#161823] hover:text-white dark:border-[#FE2C55]/40 dark:bg-[#FE2C55]/15 dark:text-[#FF6B88] dark:hover:bg-[#FE2C55] dark:hover:text-white",
+      "border border-[#161823]/35 bg-[#161823]/8 text-[#161823] hover:bg-[#161823] hover:text-white dark:border-[#FE2C55]/40 dark:bg-[#FE2C55]/15 dark:text-[#FF6B88] dark:hover:bg-[#E0204A] dark:hover:text-white",
     badge:
       "border border-[#161823]/25 bg-[#161823]/10 text-[#161823] dark:border-[#FE2C55]/35 dark:bg-[#FE2C55]/15 dark:text-[#FF6B88]",
   },

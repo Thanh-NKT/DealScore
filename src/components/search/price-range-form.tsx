@@ -24,7 +24,7 @@ function check(raw: string): Check {
 }
 
 const field =
-  "h-11 w-full min-w-0 rounded-[12px] border border-line-strong bg-surface px-3 text-[14px] text-ink placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
+  "h-11 w-full min-w-0 rounded-md border border-line-strong bg-surface px-3 text-body-sm text-ink placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
 
 /**
  * Price range with the same input rules as the watch form ("500.000", "2tr", "1,5 triệu").
@@ -105,7 +105,7 @@ export function PriceRangeForm({ hidden, min, max }: PriceRangeFormProps) {
 
       <div id={`${uid}-msg`} aria-live="polite">
         {showErrors && error && (
-          <div className="flex items-start gap-1.5 text-[14px] font-medium text-ink">
+          <div className="flex items-start gap-1.5 text-body-sm font-medium text-ink">
             <AlertIcon className="mt-0.5 size-4" />
             <span>
               {error}
@@ -129,7 +129,7 @@ export function PriceRangeForm({ hidden, min, max }: PriceRangeFormProps) {
 
       <button
         type="submit"
-        className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line-strong bg-surface text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line-strong bg-surface text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
       >
         Áp dụng khoảng giá
       </button>

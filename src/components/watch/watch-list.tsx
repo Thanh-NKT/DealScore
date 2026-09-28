@@ -14,6 +14,8 @@ import { groupByFolder, type WatchFolder } from "@/lib/watch/folders";
 import type { NotificationSettings } from "@/lib/account/notification-settings";
 import { ALL, FolderNav, UNFILED, type FolderFilter } from "@/components/watch/folder-nav";
 import { WatchNotifyBox } from "@/components/watch/watch-notify-box";
+import { buttonClass } from "@/components/ui/button";
+import { segmentClass, segmentTrack } from "@/components/ui/segmented";
 import {
   BellIcon,
   BellOffIcon,
@@ -122,7 +124,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         setConfirmDelete(null);
       } catch (err) {
         unstable_rethrow(err);
-        setRowError({ id, message: err instanceof Error && err.message.startsWith("Đã đạt") ? err.message : fallback });
+        setRowError({ id, message: err instanceof Error && err.message.startsWith("Bạn đang theo dõi đủ") ? err.message : fallback });
       } finally {
         setPendingId(null);
       }
@@ -191,29 +193,29 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         {/* Header Row: Title & Paste Link Search */}
         <div className="flex flex-col gap-4 min-[900px]:flex-row min-[900px]:items-center min-[900px]:justify-between">
           <div className="flex flex-col gap-2">
-            <h1 className="font-[family-name:var(--font-display)] text-[32px] font-extrabold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[36px]">
+            <h1 className="display text-stat font-extrabold leading-[1.1] tracking-[-0.02em] text-ink sm:text-price-md">
               Đang theo dõi
             </h1>
-            <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-ink-2">
+            <div className="flex flex-wrap items-center gap-2 text-label font-medium text-ink-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-0.5 shadow-xs">
-                <span className="font-[family-name:var(--font-display)] font-bold text-ink">
+                <span className="display font-bold text-ink">
                   {items.length}
                 </span>
                 <span>sản phẩm</span>
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-soft bg-primary-soft/60 px-2.5 py-0.5 text-primary-hover">
                 <BellIcon className="size-3.5" strokeWidth={2.2} fill="currentColor" />
-                <span className="font-[family-name:var(--font-display)] font-bold">
+                <span className="display font-bold">
                   {alertsOnCount}
                 </span>
-                <span>đang bật cảnh báo</span>
+                <span>đang bật thông báo</span>
               </span>
             </div>
           </div>
 
           <form
             onSubmit={handlePasteSubmit}
-            className="flex w-full max-w-[500px] items-center gap-2.5 rounded-xl border border-line-strong bg-surface p-1.5 pl-3.5 shadow-sm transition-colors focus-within:border-primary"
+            className="flex w-full max-w-[500px] items-center gap-2.5 rounded-md border border-line-strong bg-surface p-1.5 pl-3.5 shadow-sm transition-colors focus-within:border-primary"
           >
             <svg
               width="18"
@@ -238,11 +240,11 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
               value={pasteUrl}
               onChange={(e) => setPasteUrl(e.target.value)}
               placeholder="Dán link sản phẩm Shopee…"
-              className="h-10 min-w-0 flex-1 border-none bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-3"
+              className="h-10 min-w-0 flex-1 border-none bg-transparent text-body-sm text-ink outline-none placeholder:text-ink-3"
             />
             <button
               type="submit"
-              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm bg-primary px-3.5 text-[13px] font-bold text-on-primary transition-colors hover:bg-primary-hover"
+              className={buttonClass({ size: "sm", rounded: "sm", className: "shrink-0" })}
             >
               <BellIcon className="size-4" strokeWidth={2.2} />
               <span>Theo dõi giá</span>
@@ -252,43 +254,43 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
 
         {/* 3 Summary Tiles */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-xs">
+          <div className="flex items-center gap-3 rounded-md border border-line bg-surface px-4 py-3 shadow-xs">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-wait-soft text-wait">
               <TargetIcon className="size-4" strokeWidth={2.2} />
             </span>
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="font-[family-name:var(--font-display)] text-[22px] font-extrabold leading-none text-ink">
+              <span className="display text-h3 font-extrabold leading-none text-ink">
                 {reachedCount}
               </span>
-              <span className="truncate text-[13px] font-medium text-ink-2">
-                Chạm giá mục tiêu
+              <span className="truncate text-label font-medium text-ink-2">
+                Đã chạm giá mong muốn
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-xs">
+          <div className="flex items-center gap-3 rounded-md border border-line bg-surface px-4 py-3 shadow-xs">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-primary-soft text-primary-hover">
               <TrendDownIcon className="size-4" strokeWidth={2.2} />
             </span>
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="font-[family-name:var(--font-display)] text-[22px] font-extrabold leading-none text-ink">
+              <span className="display text-h3 font-extrabold leading-none text-ink">
                 {droppedCount}
               </span>
-              <span className="truncate text-[13px] font-medium text-ink-2">
-                Giảm giá 7 ngày qua
+              <span className="truncate text-label font-medium text-ink-2">
+                Rẻ hơn lúc bắt đầu theo dõi
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-xs">
+          <div className="flex items-center gap-3 rounded-md border border-line bg-surface px-4 py-3 shadow-xs">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-buy-soft text-buy">
               <CheckCircleIcon className="size-4" strokeWidth={2.2} />
             </span>
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="font-[family-name:var(--font-display)] text-[22px] font-extrabold leading-none text-ink">
+              <span className="display text-h3 font-extrabold leading-none text-ink">
                 {goodDealsCount}
               </span>
-              <span className="truncate text-[13px] font-medium text-ink-2">
+              <span className="truncate text-label font-medium text-ink-2">
                 Đang ở mức Nên mua
               </span>
             </div>
@@ -299,7 +301,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         <div
           role="group"
           aria-label="Lọc theo trạng thái"
-          className="inline-flex max-w-full flex-wrap gap-1 self-start rounded-xl border border-line bg-surface-2 p-1"
+          className={segmentTrack({ className: "flex-wrap self-start" })}
         >
           {TABS.map((t) => {
             const count = items.filter((i) => i.status === t.key).length;
@@ -310,11 +312,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                 type="button"
                 aria-pressed={isActive}
                 onClick={() => setActiveTab(t.key)}
-                className={`inline-flex h-9 items-center gap-2 rounded-sm px-3.5 text-[13px] transition-colors ${
-                  isActive
-                    ? "bg-surface font-bold text-ink shadow-xs"
-                    : "font-semibold text-ink-2 hover:text-ink"
-                }`}
+                className={segmentClass(isActive)}
               >
                 {t.key === "active" ? (
                   <BellIcon className="size-3.5 shrink-0" strokeWidth={2.2} />
@@ -325,7 +323,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                 )}
                 <span>{t.label}</span>
                 <span
-                  className={`font-[family-name:var(--font-display)] inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${
+                  className={`display inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-nano font-bold ${
                     isActive
                       ? "bg-primary-soft text-primary-hover"
                       : "bg-surface text-ink-3"
@@ -340,17 +338,17 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
 
         {/* Tracked Items Table */}
         {folderFilteredItems.length === 0 ? (
-          <div className="rounded-[20px] border border-dashed border-line-strong bg-surface p-12 text-center">
-            <p className="font-[family-name:var(--font-display)] text-[20px] font-bold text-ink">
+          <div className="rounded-lg border border-dashed border-line-strong bg-surface p-12 text-center">
+            <p className="display text-h4 font-bold text-ink">
               {currentTabInfo.empty}
             </p>
-            <p className="mx-auto mt-2 max-w-[46ch] text-[15px] text-ink-2">
+            <p className="mx-auto mt-2 max-w-[46ch] text-control text-ink-2">
               {currentTabInfo.hint}
             </p>
             {activeTab === "active" && (
               <Link
                 href="/search"
-                className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-bold text-on-primary transition-colors hover:bg-primary-hover"
+                className={buttonClass({ size: "md", className: "mt-5" })}
               >
                 <SearchIcon className="size-[18px]" />
                 <span>Tìm sản phẩm</span>
@@ -358,11 +356,11 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
             )}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[20px] border border-line bg-surface shadow-sm">
+          <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
             {/* Table Header */}
             <div
               aria-hidden="true"
-              className="hidden grid-cols-[minmax(0,2.8fr)_minmax(0,1.15fr)_104px_minmax(0,1.55fr)_240px] gap-4 border-b border-line bg-canvas px-6 py-3.5 text-[13px] font-bold text-ink-3 min-[1080px]:grid"
+              className="hidden grid-cols-[minmax(0,2.8fr)_minmax(0,1.15fr)_104px_minmax(0,1.55fr)_240px] gap-4 border-b border-line bg-canvas px-6 py-3.5 text-label font-bold text-ink-3 min-[1080px]:grid"
             >
               <span>Sản phẩm</span>
               <span>Giá hiện tại</span>
@@ -379,7 +377,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                 const href = `/${product.categorySlug}/${product.slug}?variant=${encodeURIComponent(variant.id)}`;
                 const busy = pendingId === item.id;
                 const alertOn = item.status === "active";
-                const updatedAgo = view.observedAt ? timeVN(view.observedAt) : "5 phút trước";
+                const updatedAgo = view.observedAt ? timeVN(view.observedAt) : null;
                 const folderName = item.folderId ? folderNameById.get(item.folderId) : undefined;
                 const tintBg = getTint(product.slug || item.id);
 
@@ -388,10 +386,10 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                 const chgAmount = change?.amount ?? 0;
                 const chgLabel =
                   change == null
-                    ? "Chưa đủ 7 ngày"
+                    ? "Chưa có giá để so"
                     : chgAmount === 0
-                      ? "— 7 ngày"
-                      : `${chgAmount < 0 ? "↓ " : "↑ "}${formatVnd(Math.abs(chgAmount))} · 7d`;
+                      ? "Không đổi từ lúc theo dõi"
+                      : `${chgAmount < 0 ? "↓ " : "↑ "}${formatVnd(Math.abs(chgAmount))} từ lúc theo dõi`;
                 const chgColor =
                   change == null || chgAmount === 0
                     ? "text-ink-3"
@@ -437,9 +435,9 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                   ? "Đang xử lý…"
                   : alertOn
                     ? view.alertStatus.kind === "scheduled"
-                      ? `Cảnh báo đang bật (${view.alertStatus.text}) — Bấm để tạm dừng`
-                      : "Cảnh báo đang bật — Bấm để tạm dừng"
-                    : "Cảnh báo đã tắt — Bấm để bật lại";
+                      ? `Thông báo đang bật (${view.alertStatus.text}). Bấm để tạm dừng`
+                      : "Thông báo đang bật. Bấm để tạm dừng"
+                    : "Thông báo đang tắt. Bấm để bật lại";
 
                 return (
                   <div
@@ -450,7 +448,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                     {/* Col 1: Product info */}
                     <div className="flex min-w-0 items-center gap-3.5">
                       <div
-                        className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+                        className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md"
                         style={{ backgroundColor: tintBg }}
                       >
                         {product.image ? (
@@ -482,14 +480,14 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                         <Link
                           href={href}
                           title={name}
-                          className="line-clamp-1 text-[14px] font-semibold leading-snug text-ink hover:underline"
+                          className="line-clamp-1 text-body-sm font-semibold leading-snug text-ink hover:underline"
                         >
                           {name}
                         </Link>
                         {(variant.key || folderName) && (
-                          <div className="flex flex-wrap items-center gap-2 text-[12px] text-ink-3">
+                          <div className="flex flex-wrap items-center gap-2 text-micro text-ink-3">
                             {variant.key && (
-                              <span className="inline-flex h-5 min-w-[56px] items-center justify-center rounded bg-surface-2 px-2 text-[12px] font-semibold text-ink-2">
+                              <span className="inline-flex h-5 min-w-[56px] items-center justify-center rounded-sm bg-surface-2 px-2 text-micro font-semibold text-ink-2">
                                 {variantLabel(variant.key)}
                               </span>
                             )}
@@ -502,21 +500,21 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                           </div>
                         )}
                         <span
-                          className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] text-ink-3"
-                          title={`Cập nhật ${updatedAgo}`}
+                          className="inline-flex items-center gap-1 whitespace-nowrap text-micro text-ink-3"
+                          title={updatedAgo ? `Cập nhật ${updatedAgo}` : undefined}
                         >
                           <ClockIcon className="size-3.5 text-ink-3" />
-                          <span>{updatedAgo}</span>
+                          <span>{updatedAgo ?? "Chưa rõ thời điểm cập nhật"}</span>
                         </span>
                       </div>
                     </div>
 
                     {/* Col 2: Current price */}
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-[family-name:var(--font-display)] whitespace-nowrap text-[18px] font-bold text-ink">
+                      <span className="display whitespace-nowrap text-title font-bold text-ink">
                         {price != null ? formatVnd(price) : "—"}
                       </span>
-                      <span className={`whitespace-nowrap text-[12px] font-semibold ${chgColor}`}>
+                      <span className={`whitespace-nowrap text-micro font-semibold ${chgColor}`}>
                         {chgLabel}
                       </span>
                     </div>
@@ -554,7 +552,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                           )}
                         </svg>
                         <span
-                          className={`font-[family-name:var(--font-display)] absolute text-[15px] font-extrabold leading-none ${
+                          className={`display absolute text-control font-extrabold leading-none ${
                             score != null ? "text-ink" : "text-ink-3"
                           }`}
                         >
@@ -571,7 +569,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                           ) : recKey === "avoid" ? (
                             <DashIcon className="size-2.5" strokeWidth={3} />
                           ) : (
-                            <span className="text-[10px] font-bold leading-none">?</span>
+                            <span className="text-nano font-bold leading-none">?</span>
                           )}
                         </span>
                       </div>
@@ -581,13 +579,13 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                     <div className="flex flex-col justify-center gap-1.5">
                       {hasTarget ? (
                         <>
-                          <div className="flex items-baseline justify-between gap-2 text-[13px]">
-                            <span className="font-[family-name:var(--font-display)] whitespace-nowrap font-bold text-ink">
+                          <div className="flex items-baseline justify-between gap-2 text-label">
+                            <span className="display whitespace-nowrap font-bold text-ink">
                               {formatVnd(target.amount)}
                             </span>
                             <span
                               title={reached ? "Đã đạt giá mong muốn" : `Còn cách giá mong muốn ${formatVnd(gap)}`}
-                              className={`inline-flex items-center gap-0.5 whitespace-nowrap text-[12px] font-semibold ${
+                              className={`inline-flex items-center gap-0.5 whitespace-nowrap text-micro font-semibold ${
                                 reached ? "text-buy" : "text-ink-3"
                               }`}
                             >
@@ -609,10 +607,10 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                         <button
                           type="button"
                           onClick={() => setEditing(item)}
-                          className="inline-flex h-10 items-center gap-1.5 self-start whitespace-nowrap rounded-xl border border-dashed border-line-strong px-3 text-[13px] font-semibold text-ink-2 transition-colors hover:border-ink hover:bg-canvas hover:text-ink"
+                          className="inline-flex h-10 items-center gap-1.5 self-start whitespace-nowrap rounded-md border border-dashed border-line-strong px-3 text-label font-semibold text-ink-2 transition-colors hover:border-ink hover:bg-canvas hover:text-ink"
                         >
                           <TargetIcon className="size-4 shrink-0" />
-                          <span>Đặt mục tiêu</span>
+                          <span>Đặt giá mong muốn</span>
                         </button>
                       )}
                     </div>
@@ -621,14 +619,9 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                     <div className="flex items-center gap-1.5">
                       <Link
                         href={href}
-                        title={reached ? "Liên kết tiếp thị" : undefined}
-                        className={`flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-xl px-3 text-[13px] font-bold transition-colors ${
-                          reached
-                            ? "bg-primary text-on-primary hover:bg-primary-hover"
-                            : "border border-line-strong bg-surface text-ink hover:bg-canvas"
-                        }`}
+                        className={buttonClass({ variant: reached ? "primary" : "secondary", size: "sm", className: "flex-1" })}
                       >
-                        {reached ? "Đến Shopee" : "Xem giá"}
+                        {reached ? "Xem giá mới" : "Xem giá"}
                       </Link>
                       <button
                         type="button"
@@ -643,7 +636,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                             "Chưa đổi được trạng thái."
                           )
                         }
-                        className={`relative inline-flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors ${
+                        className={`relative inline-flex size-10 shrink-0 items-center justify-center rounded-md border transition-colors ${
                           alertOn
                             ? "border-primary-soft bg-primary-soft text-primary-hover hover:bg-primary-soft/80"
                             : "border-line-strong bg-surface text-ink-3 hover:bg-canvas hover:text-ink"
@@ -666,7 +659,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                         onClick={() => setEditing(item)}
                         aria-label={`Sửa theo dõi ${name}`}
                         title="Sửa"
-                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink-2 transition-colors hover:bg-canvas hover:text-ink"
+                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-ink-2 transition-colors hover:bg-canvas hover:text-ink"
                       >
                         <PencilIcon className="size-4" />
                       </button>
@@ -675,7 +668,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                         onClick={() => setConfirmDelete(item.id)}
                         aria-label={`Xóa theo dõi ${name}`}
                         title="Xóa"
-                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink-2 transition-colors hover:border-avoid hover:bg-avoid-soft hover:text-avoid"
+                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-ink-2 transition-colors hover:border-avoid hover:bg-avoid-soft hover:text-avoid"
                       >
                         <TrashIcon className="size-4" />
                       </button>
@@ -691,17 +684,20 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         {confirmDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-night/60 p-4">
             <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-lift">
-              <h3 className="font-[family-name:var(--font-display)] text-[20px] font-bold text-ink">
-                Xác nhận xóa theo dõi?
+              <h3 className="display text-h4 font-bold text-ink">
+                {(() => {
+                  const target = items.find((i) => i.id === confirmDelete)?.product.name?.trim();
+                  return target ? `Xóa theo dõi “${target}”?` : "Xóa theo dõi sản phẩm này?";
+                })()}
               </h3>
-              <p className="mt-2 text-[14px] text-ink-2">
+              <p className="mt-2 text-body-sm text-ink-2">
                 Bạn sẽ không nhận thông báo khi giá sản phẩm này giảm nữa.
               </p>
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(null)}
-                  className="h-10 rounded-xl border border-line-strong px-4 text-[14px] font-semibold text-ink"
+                  className="h-10 rounded-md border border-line-strong px-4 text-body-sm font-semibold text-ink"
                 >
                   Giữ lại
                 </button>
@@ -714,7 +710,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                       "Chưa xóa được theo dõi."
                     )
                   }
-                  className="h-10 rounded-xl bg-avoid px-4 text-[14px] font-semibold text-canvas"
+                  className="h-10 rounded-md bg-avoid px-4 text-body-sm font-semibold text-canvas"
                 >
                   Xóa theo dõi
                 </button>
@@ -744,12 +740,12 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         )}
 
         {rowError && (
-          <p role="alert" className="text-[14px] font-semibold text-avoid">
+          <p role="alert" className="text-body-sm font-semibold text-avoid">
             {rowError.message}
           </p>
         )}
 
-        <p className="max-w-[75ch] text-[13px] leading-[1.45] text-ink-3">
+        <p className="max-w-[75ch] text-label leading-[1.45] text-ink-3">
           Nếu bạn mua qua liên kết, Kairo có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
         </p>
       </main>

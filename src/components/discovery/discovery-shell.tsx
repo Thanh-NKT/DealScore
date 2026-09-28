@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { ReactNode, SVGProps } from "react";
 import { InfoIcon } from "@/components/ui/icons";
+import { buttonClass } from "@/components/ui/button";
+import { pillClass } from "@/components/ui/pill";
+import { segmentClass, segmentTrack } from "@/components/ui/segmented";
 
 /**
  * Shared frame for the discovery lists (/radar, /trending): the answer first (title + one plain
@@ -20,30 +23,19 @@ export function DiscoveryShell({
   footnote?: ReactNode;
 }) {
   return (
-    <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
+    <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-8 sm:px-6 sm:py-12 lg:px-14">
       <header className="max-w-[68ch] space-y-3">
-        <h1 className="display text-[30px] font-extrabold leading-[1.1] text-ink text-balance sm:text-[40px]">{title}</h1>
-        <p className="text-[16px] leading-relaxed text-ink-2 text-pretty">{lead}</p>
+        <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-ink text-balance sm:text-h1">{title}</h1>
+        <p className="text-body leading-relaxed text-ink-2 text-pretty">{lead}</p>
       </header>
       {controls && <div className="mt-7 space-y-3">{controls}</div>}
       <div className="mt-7 space-y-6">{children}</div>
       {footnote && (
-        <p className="mt-12 max-w-[75ch] border-t border-line pt-5 text-[13px] leading-[1.45] text-ink-3">{footnote}</p>
+        <p className="mt-12 max-w-[75ch] border-t border-line pt-5 text-label leading-[1.45] text-ink-3">{footnote}</p>
       )}
     </main>
   );
 }
-
-const PILL_TONE = {
-  light: {
-    base: "border-line bg-surface text-ink-2 hover:border-primary/40 hover:text-primary",
-    active: "border-primary bg-primary font-bold text-on-primary shadow-xs",
-  },
-  night: {
-    base: "border-night-line text-night-ink hover:bg-night-2",
-    active: "border-accent bg-accent font-semibold text-on-accent",
-  },
-} as const;
 
 /**
  * Category filter as a strip of pill links. The current one is marked with aria-current and, on a
@@ -63,7 +55,6 @@ export function CategoryStrip({
 }) {
   if (categories.length === 0) return null;
   const items = [{ slug: undefined as string | undefined, name: "Tất cả" }, ...categories];
-  const t = PILL_TONE[tone];
   return (
     <nav aria-label="Lọc theo danh mục" className="-mx-4 overflow-x-auto px-4 py-1 [scrollbar-width:thin] sm:mx-0 sm:overflow-visible sm:px-0">
       <ul className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
@@ -74,9 +65,7 @@ export function CategoryStrip({
               <Link
                 href={hrefFor(c.slug)}
                 aria-current={active ? "page" : undefined}
-                className={`inline-flex min-h-10 items-center whitespace-nowrap rounded-full border px-4 text-[14px] font-medium transition-colors duration-150 ease-out ${
-                  active ? t.active : t.base
-                }`}
+                className={pillClass(active, { tone })}
               >
                 {c.name}
               </Link>
@@ -98,15 +87,13 @@ export function SegmentedLinks({
 }) {
   return (
     <nav aria-label={label}>
-      <ul className="inline-flex max-w-full gap-1 rounded-[12px] border border-line bg-surface-2 p-1">
+      <ul className={segmentTrack()}>
         {options.map((o) => (
           <li key={o.href} className="min-w-0">
             <Link
               href={o.href}
               aria-current={o.active ? "page" : undefined}
-              className={`inline-flex min-h-10 items-center justify-center rounded-[8px] px-4 text-[14px] transition-colors duration-150 ease-out max-[400px]:px-3 ${
-                o.active ? "bg-primary font-bold text-on-primary shadow-xs" : "font-medium text-ink-2 hover:bg-surface/70 hover:text-ink"
-              }`}
+              className={segmentClass(o.active, { size: "md", className: "max-[400px]:px-3" })}
             >
               {o.text}
             </Link>
@@ -126,7 +113,7 @@ function Chevron({ dir, ...p }: SVGProps<SVGSVGElement> & { dir: "left" | "right
 }
 
 const PAGE_LINK =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
 
 export function Pager({ page, totalPages, hrefFor }: { page: number; totalPages: number; hrefFor: (p: number) => string }) {
   if (totalPages <= 1) return null;
@@ -138,8 +125,8 @@ export function Pager({ page, totalPages, hrefFor }: { page: number; totalPages:
           Trang trước
         </Link>
       )}
-      <span className="text-[13px] text-ink-3">
-        Trang <span className="num text-[16px] font-bold text-ink">{page}</span> / <span className="num text-[16px]">{totalPages}</span>
+      <span className="text-label text-ink-3">
+        Trang <span className="num text-body font-bold text-ink">{page}</span> / <span className="num text-body">{totalPages}</span>
       </span>
       {page < totalPages && (
         <Link href={hrefFor(page + 1)} className={PAGE_LINK}>
@@ -175,12 +162,12 @@ export function DiscoveryEmpty({
     >
       <InfoIcon className={`mt-0.5 size-6 shrink-0 ${night ? "text-night-ink-2" : "text-ink-2"}`} />
       <div className="min-w-0">
-        <h2 className="display text-[18px] font-bold leading-[1.3] sm:text-[22px]">{title}</h2>
-        <p className={`mt-1.5 max-w-[68ch] text-[16px] leading-relaxed ${night ? "text-night-ink-2" : "text-ink-2"}`}>{body}</p>
+        <h2 className="display text-title font-bold leading-[1.3] sm:text-h3">{title}</h2>
+        <p className={`mt-1.5 max-w-[68ch] text-body leading-relaxed ${night ? "text-night-ink-2" : "text-ink-2"}`}>{body}</p>
         {action && (
           <Link
             href={action.href}
-            className="mt-4 inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-[16px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover"
+            className={buttonClass({ size: "md", className: "mt-4" })}
           >
             {action.text}
           </Link>

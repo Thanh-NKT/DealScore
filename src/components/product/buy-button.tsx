@@ -24,7 +24,7 @@ interface BuyButtonProps {
 
 const BASE =
   "inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 font-semibold transition-colors duration-150 ease-out";
-const SIZE = { md: "min-h-11 text-[14px]", lg: "min-h-13 text-[16px] font-bold" } as const;
+const SIZE = { md: "min-h-11 text-body-sm", lg: "min-h-13 text-body font-bold" } as const;
 
 export function BuyButton({
   offerId,
@@ -52,7 +52,7 @@ export function BuyButton({
           {unavailable}
         </button>
         {unavailable !== "Tạm hết hàng" && (
-          <span className="text-center text-[12px] text-ink-3">Kairo chưa có liên kết tới trang bán trên {name}.</span>
+          <span className="text-center text-micro text-ink-3">Kairo chưa có liên kết tới trang bán trên {name}.</span>
         )}
       </div>
     );
@@ -73,7 +73,7 @@ export function BuyButton({
         <span className="sr-only">(mở trong thẻ mới{affiliate ? ", liên kết tiếp thị" : ""})</span>
       </a>
       {affiliate && affiliateLabel && (
-        <span className="inline-flex items-center justify-center gap-1 text-center text-[12px] font-semibold text-ink-3" aria-hidden="true">
+        <span className="inline-flex items-center justify-center gap-1 text-center text-micro font-semibold text-ink-3" aria-hidden="true">
           <LinkIcon className="size-3.5" />
           Liên kết tiếp thị
         </span>

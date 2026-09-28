@@ -3,6 +3,7 @@
 import { useId, useMemo, useState, type MouseEvent, type TouchEvent } from "react";
 import type { DailyPriceRow } from "@/lib/pricing/price-history";
 import { formatVnd } from "@/lib/format";
+import { SegmentedControl } from "@/components/ui/segmented";
 
 interface InteractivePriceChartProps {
   rows: DailyPriceRow[];
@@ -150,65 +151,55 @@ export function InteractivePriceChart({
         : `${formatDay(activeItem.day)} (${daysDiff} ngày trước)`;
 
   return (
-    <div className="flex flex-col gap-5 rounded-[20px] border border-line bg-surface p-6 sm:p-7">
+    <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6 sm:p-7">
       {/* Header with Variant & Range Toggles */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2.5">
-            <h2 className="display text-[22px] font-bold tracking-tight text-ink">Lịch sử giá</h2>
+            <h2 className="display text-h3 font-bold tracking-tight text-ink">Lịch sử giá</h2>
             {variantTitle && (
-              <span className="rounded-[8px] border border-line bg-surface-2 px-2.5 py-0.5 text-[12px] font-semibold text-ink-2">
+              <span className="rounded-sm border border-line bg-surface-2 px-2.5 py-0.5 text-micro font-semibold text-ink-2">
                 {variantTitle}
               </span>
             )}
           </div>
-          <span className="text-[13px] text-ink-3">
+          <span className="text-label text-ink-3">
             {m < range
               ? `Mới có ${m} ngày dữ liệu. Rê chuột lên biểu đồ để xem giá từng ngày.`
               : "Giá thấp nhất mỗi ngày trên các nơi bán đã gom. Rê chuột để xem từng ngày."}
           </span>
         </div>
 
-        <div role="group" aria-label="Khoảng thời gian" className="flex gap-1 rounded-[12px] bg-surface-2 p-1">
-          {([7, 30, 90] as const).map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => {
-                setRange(r);
-                setHoverIndex(null);
-              }}
-              aria-pressed={range === r}
-              className={`min-w-[68px] h-10 rounded-[8px] text-[13px] font-semibold transition-colors cursor-pointer ${
-                range === r
-                  ? "bg-surface text-ink shadow-xs"
-                  : "bg-transparent text-ink-2 hover:text-ink"
-              }`}
-            >
-              {r} ngày
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          label="Khoảng thời gian"
+          value={range}
+          options={([7, 30, 90] as const).map((r) => ({ value: r, label: `${r} ngày` }))}
+          onChange={(r) => {
+            setRange(r);
+            setHoverIndex(null);
+          }}
+          segmentClassName="min-w-[68px]"
+        />
       </div>
 
       {/* 4 Stats Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="flex flex-col gap-0.5 rounded-[12px] bg-buy-soft p-3 sm:px-3.5">
-          <span className="text-[12px] font-semibold text-buy">Thấp nhất</span>
-          <span className="num display text-[18px] font-bold text-buy">{formatVnd(stats.lo)}</span>
+        <div className="flex flex-col gap-0.5 rounded-md bg-buy-soft p-3 sm:px-3.5">
+          <span className="text-micro font-semibold text-buy">Thấp nhất</span>
+          <span className="num display text-title font-bold text-buy">{formatVnd(stats.lo)}</span>
         </div>
-        <div className="flex flex-col gap-0.5 rounded-[12px] bg-surface-2 p-3 sm:px-3.5">
-          <span className="text-[12px] font-semibold text-ink-3">Giá trung vị</span>
-          <span className="num display text-[18px] font-bold text-ink">{formatVnd(stats.med)}</span>
+        <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
+          <span className="text-micro font-semibold text-ink-3">Giá trung vị</span>
+          <span className="num display text-title font-bold text-ink">{formatVnd(stats.med)}</span>
         </div>
-        <div className="flex flex-col gap-0.5 rounded-[12px] bg-surface-2 p-3 sm:px-3.5">
-          <span className="text-[12px] font-semibold text-ink-3">Cao nhất</span>
-          <span className="num display text-[18px] font-bold text-ink">{formatVnd(stats.hi)}</span>
+        <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
+          <span className="text-micro font-semibold text-ink-3">Cao nhất</span>
+          <span className="num display text-title font-bold text-ink">{formatVnd(stats.hi)}</span>
         </div>
-        <div className="flex flex-col gap-0.5 rounded-[12px] bg-surface-2 p-3 sm:px-3.5">
-          <span className="text-[12px] font-semibold text-ink-3">So với giá trung vị</span>
+        <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
+          <span className="text-micro font-semibold text-ink-3">So với giá trung vị</span>
           <span
-            className={`num display text-[18px] font-bold ${
+            className={`num display text-title font-bold ${
               stats.diffMedPct <= 0 ? "text-buy" : "text-avoid"
             }`}
           >
@@ -219,7 +210,7 @@ export function InteractivePriceChart({
       </div>
 
       {/* Active Point Inspector Card */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-[12px] bg-surface-2 px-4 py-2.5 text-[13px] text-ink">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-surface-2 px-4 py-2.5 text-label text-ink">
         <span className="flex items-center gap-1.5 font-medium">
           <span className="size-2 rounded-full bg-primary" />
           <span>
@@ -228,7 +219,7 @@ export function InteractivePriceChart({
         </span>
         <span>
           Giá ghi nhận:{" "}
-          <strong className="num text-[16px] font-bold text-primary">{formatVnd(activeItem.price)}</strong>
+          <strong className="num text-body font-bold text-primary">{formatVnd(activeItem.price)}</strong>
         </span>
         <span className="text-ink-3">
           {activeIdx === m - 1 ? "Giá hiện tại" : "Thấp nhất trong ngày"}
@@ -240,19 +231,19 @@ export function InteractivePriceChart({
         {/* Y-axis Labels */}
         <span
           style={{ top: `${Math.max(4, Math.min(250, getY(stats.hi) - 10))}px` }}
-          className="absolute left-0 text-[12px] text-ink-3"
+          className="absolute left-0 text-micro text-ink-3"
         >
           {formatVnd(stats.hi)}
         </span>
         <span
           style={{ top: `${Math.max(4, Math.min(250, getY(stats.med) - 10))}px` }}
-          className="absolute left-0 text-[12px] font-semibold text-ink-2"
+          className="absolute left-0 text-micro font-semibold text-ink-2"
         >
           {formatVnd(stats.med)}
         </span>
         <span
           style={{ top: `${Math.max(4, Math.min(250, getY(stats.lo) - 10))}px` }}
-          className="absolute left-0 text-[12px] font-semibold text-buy"
+          className="absolute left-0 text-micro font-semibold text-buy"
         >
           {formatVnd(stats.lo)}
         </span>
@@ -369,7 +360,7 @@ export function InteractivePriceChart({
       </div>
 
       {/* X-axis date labels */}
-      <div className="flex justify-between pl-24 text-[12px] text-ink-3">
+      <div className="flex justify-between pl-24 text-micro text-ink-3">
         <span>{range} ngày trước</span>
         <span>{Math.round((range * 2) / 3)} ngày trước</span>
         <span>{Math.round(range / 3)} ngày trước</span>
@@ -377,7 +368,7 @@ export function InteractivePriceChart({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-5 pl-24 pt-1 text-[13px] text-ink-2">
+      <div className="flex flex-wrap items-center gap-5 pl-24 pt-1 text-label text-ink-2">
         <span className="flex items-center gap-2">
           <span className="h-[3px] w-4.5 rounded-full bg-primary" />
           <span>Giá thấp nhất mỗi ngày</span>

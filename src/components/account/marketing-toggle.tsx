@@ -49,8 +49,8 @@ export function MarketingToggle({ initialOptIn = false }: MarketingToggleProps) 
     <div className="space-y-1.5">
       <div className="flex items-start justify-between gap-4">
         <label htmlFor={`${uid}-switch`} className="min-w-0 cursor-pointer">
-          <span className="block text-[15px] font-semibold text-ink">Email về deal nổi bật và tính năng mới</span>
-          <span className="mt-0.5 block text-[14px] text-ink-2">Không ảnh hưởng tới thông báo giá của các sản phẩm bạn theo dõi.</span>
+          <span className="block text-control font-semibold text-ink">Email về deal nổi bật và tính năng mới</span>
+          <span className="mt-0.5 block text-body-sm text-ink-2">Không ảnh hưởng tới thông báo giá của các sản phẩm bạn theo dõi.</span>
         </label>
         <button
           id={`${uid}-switch`}
@@ -80,7 +80,7 @@ export function MarketingToggle({ initialOptIn = false }: MarketingToggleProps) 
         </button>
       </div>
 
-      <p id={`${uid}-status`} aria-live="polite" className="min-h-5 text-[13px]">
+      <p id={`${uid}-status`} aria-live="polite" className="min-h-5 text-label">
         {pending ? (
           <span className="text-ink-2">Đang lưu…</span>
         ) : status.kind === "saved" ? (

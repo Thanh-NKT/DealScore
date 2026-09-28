@@ -67,7 +67,7 @@ export function VerdictTag({ recommendation, size = "sm", note, className = "" }
   if (size === "sm") {
     return (
       <span
-        className={`inline-flex min-h-7 max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border py-1 pl-2 pr-3 text-[13px] font-semibold leading-tight ${tone} ${className}`}
+        className={`inline-flex min-h-7 max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border py-1 pl-2 pr-3 text-label font-semibold leading-tight ${tone} ${className}`}
       >
         <Icon className="size-4 shrink-0" strokeWidth={2.2} />
         {text}
@@ -77,13 +77,13 @@ export function VerdictTag({ recommendation, size = "sm", note, className = "" }
 
   return (
     <div
-      className={`verdict-in flex items-start gap-3 rounded-[14px] border px-4 py-3 text-[16px] font-bold leading-snug ${tone} ${className}`}
+      className={`verdict-in flex items-start gap-3 rounded-tile border px-4 py-3 text-body font-bold leading-snug ${tone} ${className}`}
     >
       <Icon className="mt-0.5 size-5 shrink-0" strokeWidth={2.2} />
       <div className="flex min-w-0 flex-col gap-0.5">
         <span>{text}</span>
         {note && (
-          <span className="text-[13.5px] font-normal leading-relaxed text-ink-2">{note}</span>
+          <span className="text-body-sm font-normal leading-relaxed text-ink-2">{note}</span>
         )}
       </div>
     </div>
@@ -160,11 +160,11 @@ export function ScoreRing({
           )}
         </svg>
         <div className="relative z-10 flex flex-col items-center justify-center">
-          <span className="num display text-[28px] font-extrabold leading-none tracking-tight text-ink">
+          <span className="num display text-h2 font-extrabold leading-none tracking-tight text-ink">
             {value != null ? String(value) : "—"}
           </span>
           {value != null && (
-            <span className="num mt-0.5 text-[11px] font-semibold leading-none text-ink-3">/100</span>
+            <span className="num mt-0.5 text-nano font-semibold leading-none text-ink-3">/100</span>
           )}
         </div>
         {showBadge && (
@@ -179,7 +179,7 @@ export function ScoreRing({
             ) : key === "avoid" ? (
               <DashIcon className="size-3.5" strokeWidth={3} />
             ) : (
-              <span className="text-[12px] font-bold leading-none">?</span>
+              <span className="text-micro font-bold leading-none">?</span>
             )}
           </span>
         )}
@@ -189,7 +189,7 @@ export function ScoreRing({
 
   const isSm = size === "sm";
   const boxClass = isSm ? "size-12" : "size-13";
-  const textClass = isSm ? "text-[15px]" : "text-[17px]";
+  const textClass = isSm ? "text-control" : "text-num-sm";
   const circumference = 122.5; // 2 * Math.PI * 19.5
   const dashArray =
     value != null
@@ -262,7 +262,7 @@ export function ScoreRing({
           ) : key === "avoid" ? (
             <DashIcon className="size-2.5" strokeWidth={3} />
           ) : (
-            <span className="text-[10px] font-bold leading-none">?</span>
+            <span className="text-nano font-bold leading-none">?</span>
           )}
         </span>
       )}

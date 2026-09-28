@@ -6,6 +6,8 @@ import type { SearchItem } from "@/lib/search";
 import type { RadarItem, TrendingItem } from "@/lib/discovery";
 import { ProductCard } from "@/components/search/product-card";
 import { BellIcon, CheckCircleIcon, ClockIcon, TrendDownIcon } from "@/components/ui/icons";
+import { buttonClass } from "@/components/ui/button";
+import { segmentClass, segmentTrack } from "@/components/ui/segmented";
 
 type TabKey = "featured" | "drops" | "watched" | "updated";
 
@@ -36,12 +38,12 @@ const TABS: Array<{
     label: "Mới giảm giá",
     subtitle: "Sản phẩm có giá hiện tại thấp hơn thật so với trung vị 30 ngày",
     seeAllHref: "/radar",
-    seeAllLabel: "Mở Radar giảm giá",
+    seeAllLabel: "Xem tất cả giảm giá thật",
   },
   {
     key: "watched",
     label: "Được theo dõi nhiều",
-    subtitle: "Sản phẩm đang được nhiều người dùng đặt mức giá mục tiêu",
+    subtitle: "Sản phẩm đang được nhiều người theo dõi giá",
     seeAllHref: "/trending",
     seeAllLabel: "Mở bảng Xu hướng",
   },
@@ -79,33 +81,33 @@ export function HomeProductTabs({
   return (
     <section
       aria-labelledby="showcase-title"
-      className="space-y-6 rounded-[24px] border border-line bg-surface/60 p-5 sm:p-7"
+      className="space-y-6 rounded-hero border border-line bg-surface/60 p-5 sm:p-7"
     >
       {/* Header + Segmented Tab Bar */}
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-[12px] font-bold text-primary">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-micro font-bold text-primary">
               <CheckCircleIcon className="size-3.5" strokeWidth={2.4} />
               Chọn lọc tự động
             </span>
             <Link
               href={currentMeta.seeAllHref}
-              className="text-[13px] font-semibold text-primary underline-offset-4 hover:underline"
+              className="text-label font-semibold text-primary underline-offset-4 hover:underline"
             >
               {currentMeta.seeAllLabel} →
             </Link>
           </div>
-          <h2 id="showcase-title" className="display text-[28px] font-bold leading-[1.2] tracking-tight text-ink sm:text-[32px]">
+          <h2 id="showcase-title" className="display text-h2 font-bold leading-[1.2] tracking-tight text-ink sm:text-stat">
             Khám phá <span className="text-gradient-primary">giá tốt hôm nay</span>
           </h2>
-          <p className="text-[14px] leading-normal text-ink-2">{currentMeta.subtitle}</p>
+          <p className="text-body-sm leading-normal text-ink-2">{currentMeta.subtitle}</p>
         </div>
 
         <div
           role="tablist"
           aria-label="Chế độ xem sản phẩm"
-          className="flex flex-wrap gap-1 rounded-[12px] border border-line bg-surface-2 p-1"
+          className={segmentTrack({ display: "flex", className: "flex-wrap" })}
         >
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -127,11 +129,7 @@ export function HomeProductTabs({
                   setActiveTab(tab.key);
                   setExpanded(false);
                 }}
-                className={`inline-flex h-9 items-center gap-1.5 rounded-[8px] px-3.5 text-[13px] transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-primary font-bold text-on-primary shadow-xs"
-                    : "font-medium text-ink-2 hover:bg-surface/70 hover:text-ink"
-                }`}
+                className={segmentClass(isActive)}
               >
                 <Icon className={`size-3.5 ${isActive ? "text-on-primary" : "text-ink-3"}`} />
                 {tab.label}
@@ -186,10 +184,10 @@ export function HomeProductTabs({
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-[20px] border border-line bg-surface py-12 text-center">
-            <p className="text-[15px] font-semibold text-ink">Chưa có sản phẩm giảm sâu hôm nay</p>
-            <Link href="/radar" className="text-[13px] font-semibold text-primary hover:underline">
-              Mở trang Radar giảm giá →
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line bg-surface py-12 text-center">
+            <p className="text-control font-semibold text-ink">Chưa có sản phẩm giảm sâu hôm nay</p>
+            <Link href="/radar" className="text-label font-semibold text-primary hover:underline">
+              Xem tất cả giảm giá thật →
             </Link>
           </div>
         )
@@ -215,9 +213,9 @@ export function HomeProductTabs({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-[20px] border border-line bg-surface py-12 text-center">
-            <p className="text-[15px] font-semibold text-ink">Chưa có dữ liệu theo dõi nổi bật trong tuần</p>
-            <Link href="/trending" className="text-[13px] font-semibold text-primary hover:underline">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line bg-surface py-12 text-center">
+            <p className="text-control font-semibold text-ink">Chưa có dữ liệu theo dõi nổi bật trong tuần</p>
+            <Link href="/trending" className="text-label font-semibold text-primary hover:underline">
               Mở trang Xu hướng →
             </Link>
           </div>
@@ -242,13 +240,13 @@ export function HomeProductTabs({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="inline-flex h-10 items-center gap-2 rounded-[12px] border border-line-strong bg-surface px-5 text-[13px] font-semibold text-ink transition-colors hover:bg-surface-2"
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-line-strong bg-surface px-5 text-label font-semibold text-ink transition-colors hover:bg-surface-2"
           >
             {expanded ? "Thu gọn danh sách" : `Xem thêm sản phẩm (${Math.min(8, activeTotalCount)} sản phẩm)`}
           </button>
           <Link
             href={currentMeta.seeAllHref}
-            className="inline-flex h-10 items-center gap-1.5 rounded-[12px] bg-primary px-5 text-[13px] font-bold text-on-primary transition-colors hover:bg-primary-hover"
+            className={buttonClass({ size: "sm" })}
           >
             {currentMeta.seeAllLabel} →
           </Link>

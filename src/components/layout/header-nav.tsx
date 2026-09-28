@@ -8,7 +8,7 @@ import { ChevronDownIcon } from "@/components/ui/icons";
 
 // Phones: the nav sits on its own scrollable row under the logo, so full labels fit; desktop: inline.
 const NAV_LINK =
-  "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-[12px] px-3.5 text-[14px] transition-colors duration-150 ease-out max-[760px]:h-10 max-[760px]:px-3";
+  "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md px-3.5 text-body-sm transition-colors duration-150 ease-out max-[760px]:h-10 max-[760px]:px-3";
 
 /** Primary navigation matching UI mockup. The current section is marked (aria-current) with surface-2. */
 export function HeaderNav({ signedIn }: { signedIn: boolean }) {
@@ -73,7 +73,7 @@ export function AccountMenu({ email }: { email: string | null }) {
     };
   }, [open]);
 
-  const item = "flex min-h-11 w-full items-center px-3 text-left text-[15px] text-ink hover:bg-surface-2";
+  const item = "flex min-h-11 w-full items-center px-3 text-left text-control text-ink hover:bg-surface-2";
 
   return (
     <div ref={wrapRef} className="relative">
@@ -84,9 +84,9 @@ export function AccountMenu({ email }: { email: string | null }) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         title={label}
-        className="inline-flex min-h-11 max-w-[14rem] items-center gap-2 rounded-full border border-line bg-surface pl-1.5 pr-2.5 text-[14px] font-medium text-ink transition-colors duration-150 ease-out hover:border-line-strong max-[640px]:max-w-[9rem]"
+        className="inline-flex min-h-11 max-w-[14rem] items-center gap-2 rounded-full border border-line bg-surface pl-1.5 pr-2.5 text-body-sm font-medium text-ink transition-colors duration-150 ease-out hover:border-line-strong max-[640px]:max-w-[9rem]"
       >
-        <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-bold text-on-accent">
+        <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-label font-bold text-on-accent">
           {initial}
         </span>
         <span className="min-w-0 truncate max-[400px]:sr-only">{label}</span>
@@ -95,9 +95,9 @@ export function AccountMenu({ email }: { email: string | null }) {
 
       {open && (
         <div role="menu" aria-label="Tài khoản" className="absolute right-0 top-[calc(100%+6px)] z-50 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-md border border-line bg-surface py-1 shadow-lift">
-          <p className="border-b border-line px-3 py-2 text-[13px] text-ink-3">
+          <p className="border-b border-line px-3 py-2 text-label text-ink-3">
             Đăng nhập với
-            <span className="block truncate text-[14px] font-medium text-ink" title={label}>
+            <span className="block truncate text-body-sm font-medium text-ink" title={label}>
               {label}
             </span>
           </p>
@@ -105,7 +105,7 @@ export function AccountMenu({ email }: { email: string | null }) {
             Tài khoản
           </Link>
           <Link role="menuitem" href="/account/watch" className={item}>
-            Watch của tôi
+            Sản phẩm đang theo dõi
           </Link>
           <Link role="menuitem" href="/account/notifications" className={item}>
             Cài đặt thông báo

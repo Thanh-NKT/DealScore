@@ -10,12 +10,12 @@ interface OfferListProps {
 
 const VISIBLE_ROWS = 8;
 
-export const OFFER_CARD = "flex flex-col gap-5 rounded-[20px] border border-line bg-surface p-6 sm:p-7";
+export const OFFER_CARD = "flex flex-col gap-5 rounded-lg border border-line bg-surface p-6 sm:p-7";
 export const OFFER_GRID =
   "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 min-[761px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(7rem,auto)_9rem]";
 export const MARKETPLACE_CHIP =
-  "inline-block max-w-full truncate rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-ink-2";
-export const NEUTRAL_CHIP = "rounded-lg bg-buy-soft px-2 py-0.5 text-[12px] font-bold text-buy";
+  "inline-block max-w-full truncate rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2";
+export const NEUTRAL_CHIP = "rounded-lg bg-buy-soft px-2 py-0.5 text-micro font-bold text-buy";
 export const AFFILIATE_SENTENCE =
   "Các nút “Đến …” là liên kết tiếp thị. Nếu bạn mua qua liên kết, Kairo có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.";
 
@@ -54,7 +54,7 @@ function OfferRow({
 
   return (
     <div
-      className={`grid grid-cols-1 items-center gap-3 rounded-[14px] border p-4 transition-colors min-[761px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_136px] min-[761px]:gap-4 ${
+      className={`grid grid-cols-1 items-center gap-3 rounded-tile border p-4 transition-colors min-[761px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_136px] min-[761px]:gap-4 ${
         primary
           ? "border-buy/40 bg-buy-soft/20"
           : "border-line bg-surface hover:border-line-strong"
@@ -63,28 +63,28 @@ function OfferRow({
       {/* Col 1: Seller / Shop */}
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${mBadge}`}>
+          <span className={`rounded-md px-2 py-0.5 text-nano font-bold ${mBadge}`}>
             {marketplaceName(offer.marketplace)}
           </span>
           {offer.sellerIsOfficial && (
-            <span className="rounded-sm bg-primary-soft px-2 py-0.5 text-[11px] font-bold text-primary">
+            <span className="rounded-sm bg-primary-soft px-2 py-0.5 text-nano font-bold text-primary">
               Chính hãng
             </span>
           )}
           {isBest && (
-            <span className="inline-flex items-center gap-1 rounded-sm bg-buy px-2 py-0.5 text-[11px] font-bold text-canvas">
+            <span className="inline-flex items-center gap-1 rounded-sm bg-buy px-2 py-0.5 text-nano font-bold text-canvas">
               <CheckCircleIcon className="size-3" strokeWidth={2.5} />
               Giá tốt nhất
             </span>
           )}
         </div>
-        <span className="truncate text-[14px] font-semibold text-ink" title={seller}>
+        <span className="truncate text-body-sm font-semibold text-ink" title={seller}>
           {seller}
         </span>
       </div>
 
       {/* Col 2: Rating & Stock */}
-      <div className="flex flex-col gap-0.5 text-[13px] text-ink-2">
+      <div className="flex flex-col gap-0.5 text-label text-ink-2">
         <div>
           {hasRating ? (
             <span className="inline-flex items-center gap-1">
@@ -95,35 +95,41 @@ function OfferRow({
             <span className="text-ink-3">Chưa có đánh giá</span>
           )}
         </div>
-        <span className={`text-[12px] font-medium ${offer.inStock ? "text-buy" : "text-ink-3"}`}>
-          {offer.inStock ? "● Còn hàng" : "○ Tạm hết hàng"}
+        <span className={`inline-flex items-center gap-1.5 text-micro font-medium ${offer.inStock ? "text-buy" : "text-ink-3"}`}>
+          <span
+            aria-hidden="true"
+            className={`size-1.5 rounded-full ${offer.inStock ? "bg-buy" : "border border-ink-3"}`}
+          />
+          {offer.inStock ? "Còn hàng" : "Tạm hết hàng"}
         </span>
       </div>
 
       {/* Col 3: Perks / Flash sale */}
-      <div className="text-[13px] text-ink-2">
+      <div className="text-label text-ink-2">
         {offer.isFlashSale ? (
-          <span className="inline-flex items-center gap-1 rounded-sm bg-wait-soft px-2 py-0.5 text-[12px] font-semibold text-wait">
+          <span className="inline-flex items-center gap-1 rounded-sm bg-wait-soft px-2 py-0.5 text-micro font-semibold text-wait">
             <ClockIcon className="size-3.5" /> Flash sale
           </span>
         ) : offer.sellerIsOfficial ? (
-          <span className="font-medium text-ink-2">Bảo hành chính hãng</span>
+          <span className="font-medium text-ink-2">Gian hàng chính hãng</span>
         ) : (
-          <span className="text-ink-3">Giao hàng tiêu chuẩn</span>
+          <span className="text-ink-3" aria-label="Không có ưu đãi">
+            —
+          </span>
         )}
       </div>
 
       {/* Col 4: Price & Diff */}
       <div className="flex flex-col items-start gap-0.5 min-[761px]:items-end">
         {price != null ? (
-          <span className="num display text-[19px] font-extrabold tracking-tight text-ink">
+          <span className="num display text-price-row font-extrabold tracking-tight text-ink">
             {formatVnd(price)}
           </span>
         ) : (
-          <span className="text-[14px] font-medium text-ink-3">Chưa có giá</span>
+          <span className="text-body-sm font-medium text-ink-3">Chưa có giá</span>
         )}
         {diffFromBest != null && (
-          <span className="num text-[11px] font-medium text-ink-3">
+          <span className="num text-nano font-medium text-ink-3">
             +{formatVnd(diffFromBest)}
           </span>
         )}
@@ -152,10 +158,10 @@ export function OfferList({ offers }: OfferListProps) {
   if (list.length === 0) {
     return (
       <section aria-labelledby="offers-heading" className={OFFER_CARD}>
-        <h2 id="offers-heading" className="display text-[22px] font-bold tracking-tight text-ink">
+        <h2 id="offers-heading" className="display text-h3 font-bold tracking-tight text-ink">
           So giá nơi bán
         </h2>
-        <p className="rounded-xl border border-dashed border-line-strong p-5 text-[14px] text-ink-3">
+        <p className="rounded-md border border-dashed border-line-strong p-5 text-body-sm text-ink-3">
           Chưa có nơi bán nào được theo dõi cho phiên bản này.
         </p>
       </section>
@@ -173,15 +179,15 @@ export function OfferList({ offers }: OfferListProps) {
     <section aria-labelledby="offers-heading" className={OFFER_CARD}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-4">
         <div className="flex flex-col gap-0.5">
-          <h2 id="offers-heading" className="display text-[22px] font-bold tracking-tight text-ink">
+          <h2 id="offers-heading" className="display text-h3 font-bold tracking-tight text-ink">
             So giá {list.length} nơi bán
           </h2>
-          <span className="text-[13px] text-ink-3">
+          <span className="text-label text-ink-3">
             Đã gom các gian hàng bán cùng mẫu, cùng phân loại · xếp từ giá thấp nhất
           </span>
         </div>
         {cheapestPrice != null && (
-          <span className="rounded-full bg-buy-soft px-3 py-1 text-[12px] font-bold text-buy">
+          <span className="rounded-full bg-buy-soft px-3 py-1 text-micro font-bold text-buy">
             Từ <span className="num">{formatVnd(cheapestPrice)}</span>
           </span>
         )}
@@ -190,10 +196,10 @@ export function OfferList({ offers }: OfferListProps) {
       <div className="flex flex-col gap-2.5">
         <div
           aria-hidden="true"
-          className="hidden grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_136px] gap-4 px-4 pb-1 text-[12px] font-bold text-ink-3 min-[761px]:grid"
+          className="hidden grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_136px] gap-4 px-4 pb-1 text-micro font-bold text-ink-3 min-[761px]:grid"
         >
           <span>Nơi bán & gian hàng</span>
-          <span>Đánh giá · Kho</span>
+          <span>Đánh giá · Tình trạng</span>
           <span>Ưu đãi</span>
           <span className="text-right">Mức giá</span>
           <span />
@@ -213,7 +219,7 @@ export function OfferList({ offers }: OfferListProps) {
 
         {rest.length > 0 && (
           <details className="group pt-1">
-            <summary className="flex min-h-10 cursor-pointer list-none items-center justify-center rounded-xl border border-line bg-surface-2/50 text-[13px] font-semibold text-primary hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-10 cursor-pointer list-none items-center justify-center rounded-md border border-line bg-surface-2/50 text-label font-semibold text-primary hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
               <span className="group-open:hidden">Xem thêm {rest.length} nơi bán khác</span>
               <span className="hidden group-open:inline">Thu gọn danh sách</span>
             </summary>
@@ -232,7 +238,7 @@ export function OfferList({ offers }: OfferListProps) {
         )}
       </div>
 
-      <span className="text-[12px] leading-[1.45] text-ink-3">
+      <span className="text-micro leading-[1.45] text-ink-3">
         {AFFILIATE_SENTENCE}
       </span>
     </section>

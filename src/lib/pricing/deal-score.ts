@@ -199,7 +199,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
   }
 
   if (bestOffer && bestOffer > 0 && price <= bestOffer) {
-    reasons.push("✓ Đang là offer rẻ nhất cho mẫu này");
+    reasons.push("✓ Đang là nơi bán rẻ nhất cho mẫu này");
   }
 
   if (daysCovered < 30) {

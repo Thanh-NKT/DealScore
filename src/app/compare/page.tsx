@@ -51,7 +51,7 @@ function pickHref(keep: { a?: string; b?: string }, picked: string): string {
 function PickList({ items, keep, exclude }: { items: SearchItem[]; keep: { a?: string; b?: string }; exclude?: string }) {
   const rows = items.filter((i) => i.slug !== exclude);
   if (rows.length === 0) {
-    return <p className="text-[14px] text-ink-2">Không tìm thấy sản phẩm nào khớp. Thử tên ngắn hơn hoặc tên hãng.</p>;
+    return <p className="text-body-sm text-ink-2">Không tìm thấy sản phẩm nào khớp. Thử tên ngắn hơn hoặc tên hãng.</p>;
   }
   return (
     <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
@@ -60,10 +60,10 @@ function PickList({ items, keep, exclude }: { items: SearchItem[]; keep: { a?: s
           <Link href={pickHref(keep, i.slug)} className="flex min-h-16 items-center gap-3.5 px-4 py-3 transition-colors duration-150 ease-out hover:bg-surface-2">
             <ProductImage src={i.image} className="size-12 shrink-0 rounded-md bg-surface-2! p-1" iconClassName="size-5" />
             <span className="min-w-0 flex-1">
-              <span className="line-clamp-2 text-[14px] font-semibold text-ink [overflow-wrap:anywhere]">{i.canonicalName}</span>
-              <span className="num text-[18px] font-extrabold text-ink">{i.bestPrice != null ? formatVnd(i.bestPrice) : "Chưa có giá"}</span>
+              <span className="line-clamp-2 text-body-sm font-semibold text-ink [overflow-wrap:anywhere]">{i.canonicalName}</span>
+              <span className="num text-title font-extrabold text-ink">{i.bestPrice != null ? formatVnd(i.bestPrice) : "Chưa có giá"}</span>
             </span>
-            <span className="inline-flex min-h-10 shrink-0 items-center rounded-md border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink">Chọn</span>
+            <span className="inline-flex min-h-10 shrink-0 items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink">Chọn</span>
           </Link>
         </li>
       ))}
@@ -79,10 +79,10 @@ function ChosenLabel({ data, position }: { data: ProductPageData; position: "A" 
     <div className="flex items-center gap-4 rounded-lg border border-line bg-surface p-4">
       <ProductImage src={data.product.image} className="size-16 shrink-0 rounded-md bg-surface-2! p-1.5" iconClassName="size-6" />
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-[12px] font-semibold text-ink-3">Sản phẩm {position} đã chọn</p>
-        <p className="line-clamp-2 text-[14px] font-semibold text-ink [overflow-wrap:anywhere]">{data.product.canonicalName}</p>
+        <p className="text-micro font-semibold text-ink-3">Sản phẩm {position} đã chọn</p>
+        <p className="line-clamp-2 text-body-sm font-semibold text-ink [overflow-wrap:anywhere]">{data.product.canonicalName}</p>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="num text-[18px] font-extrabold">{price != null ? formatVnd(price) : "—"}</span>
+          <span className="num text-title font-extrabold">{price != null ? formatVnd(price) : "—"}</span>
           <VerdictTag recommendation={verdict} />
           <ScoreRing score={h?.score} recommendation={verdict} size="sm" />
         </div>
@@ -105,8 +105,8 @@ export default async function ComparePage({ searchParams }: PageProps) {
 
   const heading = (
     <header className="max-w-[68ch] space-y-2">
-      <h1 className="display text-[40px] leading-[1.1] font-extrabold text-ink max-sm:text-[30px]">So sánh hai sản phẩm</h1>
-      <p className="text-[16px] leading-relaxed text-ink-2">
+      <h1 className="display text-h1 leading-[1.1] font-extrabold text-ink max-sm:text-h1-sm">So sánh hai sản phẩm</h1>
+      <p className="text-body leading-relaxed text-ink-2">
         Đặt hai sản phẩm cạnh nhau: giá hôm nay, Deal Score, mức so với lịch sử giá và thông số.
       </p>
     </header>
@@ -114,7 +114,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
 
   if (a === "error" || b === "error") {
     return (
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-8 sm:px-6 sm:py-12">
+      <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 px-4 py-8 sm:px-6 sm:py-12 lg:px-14">
         {heading}
         <DiscoveryEmpty title="Chưa tải được dữ liệu" body="Có lỗi khi đọc giá. Hãy thử lại sau ít phút." action={{ href: `/compare?${new URLSearchParams(Object.entries(sp).filter(([, v]) => v) as [string, string][])}`, text: "Thử lại" }} />
       </main>
@@ -123,8 +123,8 @@ export default async function ComparePage({ searchParams }: PageProps) {
 
   if (a && b && a.product.id !== b.product.id) {
     return (
-      <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-8 sm:px-6 sm:py-12">
-        <h1 className="display text-[40px] leading-[1.1] font-extrabold text-ink max-sm:text-[30px]">So sánh</h1>
+      <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 px-4 py-8 sm:px-6 sm:py-12 lg:px-14">
+        <h1 className="display text-h1 leading-[1.1] font-extrabold text-ink max-sm:text-h1-sm">So sánh</h1>
         <CompareView comparison={buildComparison(a, b)} />
       </main>
     );
@@ -139,17 +139,17 @@ export default async function ComparePage({ searchParams }: PageProps) {
   }) : null;
 
   return (
-    <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 py-8 sm:px-6 sm:py-12 [&>*]:max-w-3xl">
+    <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 px-4 py-8 sm:px-6 sm:py-12 lg:px-14 [&>*]:max-w-3xl">
       {heading}
 
       {(aSlug && !a) || (bSlug && !b) ? (
-        <p className="flex items-start gap-2.5 rounded-md bg-surface-2 p-3.5 text-[14px] text-ink">
+        <p className="flex items-start gap-2.5 rounded-md bg-surface-2 p-3.5 text-body-sm text-ink">
           <InfoIcon className="mt-0.5 size-[18px] shrink-0 text-ink-2" />
           Không tìm thấy một trong hai sản phẩm trong link. Hãy chọn lại bên dưới.
         </p>
       ) : null}
       {a && b && a.product.id === b.product.id && (
-        <p className="flex items-start gap-2.5 rounded-md bg-surface-2 p-3.5 text-[14px] text-ink">
+        <p className="flex items-start gap-2.5 rounded-md bg-surface-2 p-3.5 text-body-sm text-ink">
           <InfoIcon className="mt-0.5 size-[18px] shrink-0 text-ink-2" />
           Hai bên đang là cùng một sản phẩm. Hãy chọn một sản phẩm khác để so sánh.
         </p>
@@ -158,15 +158,15 @@ export default async function ComparePage({ searchParams }: PageProps) {
       {kept && <ChosenLabel data={kept} position={keep.a ? "A" : "B"} />}
 
       <section aria-labelledby="pick-heading" className="space-y-3">
-        <h2 id="pick-heading" className="display text-[22px] font-bold text-ink max-sm:text-[18px]">
+        <h2 id="pick-heading" className="display text-h3 font-bold text-ink max-sm:text-title">
           {kept ? "Chọn sản phẩm để so sánh cùng" : "Chọn sản phẩm đầu tiên"}
         </h2>
         <SearchBox initialQuery={q ?? ""} compare={keep} />
         {q && (results ? <PickList items={results.items} keep={keep} exclude={kept?.product.slug} /> : (
-          <p className="text-[14px] text-ink-2">Chưa tìm được lúc này. Hãy thử lại.</p>
+          <p className="text-body-sm text-ink-2">Chưa tìm được lúc này. Hãy thử lại.</p>
         ))}
         {!kept && !q && (
-          <p className="text-[13px] leading-[1.45] text-ink-3">Mẹo: trên trang sản phẩm, bấm “So sánh” để bắt đầu từ sản phẩm đang xem.</p>
+          <p className="text-label leading-[1.45] text-ink-3">Mẹo: trên trang sản phẩm, bấm “So sánh” để bắt đầu từ sản phẩm đang xem.</p>
         )}
       </section>
     </main>

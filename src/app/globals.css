@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Design tokens: DESIGN.md ("Bảng giá sáng"). DESIGN.md is the source of truth;
+ * Design tokens: DESIGN.md ("Bàn giá sáng"). DESIGN.md is the source of truth;
  * values here must match its frontmatter and the dark values in its Colors section.
  */
 :root {
@@ -12,7 +12,7 @@
   --line-strong: #8C887E;
   --ink: #18191D;
   --ink-2: #45484F;
-  --ink-3: #656870;
+  --ink-3: #5E6168;
   --primary: #1F5666;
   --primary-hover: #17424F;
   --primary-soft: #DFECEF;
@@ -26,8 +26,8 @@
   --night-ink: #FFFFFF;
   --night-ink-2: #C9CBD1;
   --night-ink-3: #A9ACB4;
-  --buy: #0B7A48;      --buy-soft: #E2EEE7;
-  --wait: #9A5B00;     --wait-soft: #F3E7C6;
+  --buy: #0A7043;      --buy-soft: #E2EEE7;
+  --wait: #8F5400;     --wait-soft: #F3E7C6;
   --avoid: #B42318;    --avoid-soft: #F3E0DD;
   --unknown: #62656D;  --unknown-soft: #E8E5DC;
   --tint-peach: #F2E3D5; --tint-lilac: #EBE1EF; --tint-violet: #DFECEF;
@@ -35,26 +35,26 @@
   --focus: #1F5666;
   --grad-primary: linear-gradient(135deg, #17424F 0%, #1F5666 50%, #2B7A8E 100%);
   --grad-warm: linear-gradient(135deg, #8F5300 0%, #B4690E 52%, #C9821E 100%);
-  --grad-deal: linear-gradient(135deg, #17424F 0%, #0B7A48 100%);
+  --grad-deal: linear-gradient(135deg, #17424F 0%, #0A7043 100%);
   --lift: 0 12px 32px -12px rgb(21 22 26 / 0.22);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   color-scheme: light;
 }
 
-/* Dark: a soft, comfortable Slate Charcoal palette with Nordic Petrol Slate buttons & accents. */
+/* Dark: Slate Charcoal. The petrol primary is lifted for text contrast, so text on it is dark. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #181B22; --surface: #222630; --surface-2: #2C313E; --line: #363C4B; --line-strong: #4E5668;
+    --canvas: #181B22; --surface: #222630; --surface-2: #2C313E; --line: #363C4B; --line-strong: #737B8D;
     --ink: #F4F5F7; --ink-2: #CBD0DA; --ink-3: #949BA8;
-    --primary: #3B8EA5; --primary-hover: #317B90; --primary-soft: #1B333B; --on-primary: #FFFFFF;
+    --primary: #5BAFC6; --primary-hover: #4A9DB4; --primary-soft: #1B333B; --on-primary: #0F1013;
     --accent: #D4F66B; --accent-soft: #283318; --on-accent: #15161A;
-    --night: #14171D; --night-2: #1E222B; --night-line: #4E5668;
+    --night: #14171D; --night-2: #1E222B; --night-line: #737B8D;
     --night-ink: #FFFFFF; --night-ink-2: #CBD0DA; --night-ink-3: #949BA8;
     --buy: #34D399; --buy-soft: #17362A; --wait: #F59E0B; --wait-soft: #382B14;
     --avoid: #F87171; --avoid-soft: #3C1D1D; --unknown: #949BA8; --unknown-soft: #2C313E;
     --tint-peach: #3B2C22; --tint-lilac: #36283E; --tint-violet: #1B333B;
     --tint-sky: #1E3142; --tint-butter: #382B14; --tint-mint: #17362A;
-    --focus: #489FB5;
+    --focus: #5BAFC6;
     --grad-primary: linear-gradient(135deg, #6EC3DA 0%, #3B8EA5 52%, #2DD4BF 100%);
     --grad-warm: linear-gradient(135deg, #F4C978 0%, #E0AF53 52%, #F59E0B 100%);
     --grad-deal: linear-gradient(135deg, #6EC3DA 0%, #34D399 100%);
@@ -64,17 +64,17 @@
 }
 
 :root[data-theme="dark"] {
-  --canvas: #181B22; --surface: #222630; --surface-2: #2C313E; --line: #363C4B; --line-strong: #4E5668;
+  --canvas: #181B22; --surface: #222630; --surface-2: #2C313E; --line: #363C4B; --line-strong: #737B8D;
   --ink: #F4F5F7; --ink-2: #CBD0DA; --ink-3: #949BA8;
-  --primary: #3B8EA5; --primary-hover: #317B90; --primary-soft: #1B333B; --on-primary: #FFFFFF;
+  --primary: #5BAFC6; --primary-hover: #4A9DB4; --primary-soft: #1B333B; --on-primary: #0F1013;
   --accent: #D4F66B; --accent-soft: #283318; --on-accent: #15161A;
-  --night: #14171D; --night-2: #1E222B; --night-line: #4E5668;
+  --night: #14171D; --night-2: #1E222B; --night-line: #737B8D;
   --night-ink: #FFFFFF; --night-ink-2: #CBD0DA; --night-ink-3: #949BA8;
   --buy: #34D399; --buy-soft: #17362A; --wait: #F59E0B; --wait-soft: #382B14;
   --avoid: #F87171; --avoid-soft: #3C1D1D; --unknown: #949BA8; --unknown-soft: #2C313E;
   --tint-peach: #3B2C22; --tint-lilac: #36283E; --tint-violet: #1B333B;
   --tint-sky: #1E3142; --tint-butter: #382B14; --tint-mint: #17362A;
-  --focus: #489FB5;
+  --focus: #5BAFC6;
   --grad-primary: linear-gradient(135deg, #6EC3DA 0%, #3B8EA5 52%, #2DD4BF 100%);
   --grad-warm: linear-gradient(135deg, #F4C978 0%, #E0AF53 52%, #F59E0B 100%);
   --grad-deal: linear-gradient(135deg, #6EC3DA 0%, #34D399 100%);
@@ -118,9 +118,42 @@
   --color-tint-sky: var(--tint-sky);
   --color-tint-butter: var(--tint-butter);
   --color-tint-mint: var(--tint-mint);
+  /* Radius scale (DESIGN.md "Shapes"). rounded-xl is Tailwind's 12px: use rounded-md instead. */
+  --radius-xs: 4px;
   --radius-sm: 8px;
+  --radius-inner: 10px;
   --radius-md: 12px;
+  --radius-tile: 14px;
+  --radius-frame: 16px;
   --radius-lg: 20px;
+  --radius-hero: 24px;
+
+  /*
+   * Type scale (DESIGN.md "Typography"). Size only: line-height is set with leading-* where it
+   * matters, exactly like the arbitrary text-[Npx] classes these replace. Never add a size here
+   * without adding its role to DESIGN.md. ESLint rejects new text-[Npx] / rounded-[Npx].
+   */
+  --text-nano: 11px;
+  --text-micro: 12px;
+  --text-label: 13px;
+  --text-body-sm: 14px;
+  --text-control: 15px;
+  --text-body: 16px;
+  --text-num-sm: 17px;
+  --text-title: 18px;
+  --text-price-row: 19px;
+  --text-h4: 20px;
+  --text-h3: 22px;
+  --text-price-input: 24px;
+  --text-h2-sm: 26px;
+  --text-h2: 28px;
+  --text-h1-sm: 30px;
+  --text-stat: 32px;
+  --text-price-sm: 34px;
+  --text-price-md: 36px;
+  --text-h1: 40px;
+  --text-price-hero: 44px;
+  --text-display: 62px;
   --shadow-lift: var(--lift);
   --ease-out: var(--ease-out);
   --font-sans: var(--font-text);

@@ -136,7 +136,7 @@ export async function requestAccountDeletion(
     return {
       status: "error",
       errors: {
-        confirm: 'Vui lòng gõ chính xác chữ "XÓA" để xác nhận.',
+        confirm: 'Gõ chữ "XÓA" để xác nhận.',
       },
     };
   }

@@ -51,7 +51,7 @@ export function CheckEmail({
         <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink">
           <MailIcon className="size-5" />
         </span>
-        <div className="min-w-0 text-[15px] leading-relaxed text-ink-2">
+        <div className="min-w-0 text-control leading-relaxed text-ink-2">
           <p>
             {lead} <b className="font-semibold text-ink [overflow-wrap:anywhere]">{email}</b>.
           </p>
@@ -65,7 +65,7 @@ export function CheckEmail({
           <p>{error}</p>
         </Problem>
       )}
-      {resent && !error && <p className="text-[14px] font-semibold text-ink">Đã gửi lại. Hãy mở thư mới nhất.</p>}
+      {resent && !error && <p className="text-body-sm font-semibold text-ink">Đã gửi lại. Hãy mở thư mới nhất.</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <form action={action}>
@@ -76,7 +76,7 @@ export function CheckEmail({
             {sending ? "Đang gửi…" : countdown > 0 ? `${resendLabel} sau ${countdown} giây` : resendLabel}
           </button>
         </form>
-        <button type="button" onClick={onRestart} className="inline-flex min-h-11 items-center text-[14px] text-ink-2 underline underline-offset-4 hover:text-ink">
+        <button type="button" onClick={onRestart} className="inline-flex min-h-11 items-center text-body-sm text-ink-2 underline underline-offset-4 hover:text-ink">
           Dùng email khác
         </button>
       </div>

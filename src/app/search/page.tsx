@@ -22,7 +22,7 @@ interface SearchPageProps {
 export const dynamic = "force-dynamic";
 
 const PAGE_LINK =
-  "inline-flex min-h-11 items-center rounded-md border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
 
 function hasFilterParams(params: SearchParams): boolean {
   return (
@@ -96,7 +96,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           {/* Results header + sort */}
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0 space-y-1">
-              <h1 className="display text-[26px] font-bold leading-tight tracking-tight text-ink max-sm:text-[22px]">
+              <h1 className="display text-h2-sm font-bold leading-tight tracking-tight text-ink max-sm:text-h3">
                 {loadError ? (
                   "Kết quả tìm kiếm"
                 ) : (
@@ -106,7 +106,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   </>
                 )}
               </h1>
-              <p className="text-[13.5px] text-ink-2">
+              <p className="text-body-sm text-ink-2">
                 {params.q ? (
                   <>
                     Kết quả cho <strong className="font-bold text-primary">&ldquo;{params.q}&rdquo;</strong> · Mỗi thẻ đã gom các nơi bán cùng một mẫu
@@ -161,7 +161,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   ← Trang trước
                 </Link>
               )}
-              <span className="px-1 text-[14px] text-ink-3">
+              <span className="px-1 text-body-sm text-ink-3">
                 Trang <span className="num font-semibold text-ink">{currentPage}</span> / <span className="num">{totalPages}</span>
               </span>
               {currentPage < totalPages && (

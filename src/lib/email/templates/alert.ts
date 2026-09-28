@@ -42,22 +42,22 @@ export function renderAlertEmail(input: { items: AlertEmailItem[]; unsubscribeAl
         .join("");
       const baseline =
         it.baselinePrice != null
-          ? ` <span style="color:#62656D">(lúc bắt đầu theo dõi: ${e(formatVnd(it.baselinePrice))})</span>`
+          ? ` <span style="color:#5E6168">(lúc bắt đầu theo dõi: ${e(formatVnd(it.baselinePrice))})</span>`
           : "";
       return `<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
-<h3 style="margin:0 0 4px">${e(it.productName)} <span style="color:#62656D;font-weight:normal">— ${e(it.variantKey)}</span></h3>
+<h3 style="margin:0 0 4px">${e(it.productName)} <span style="color:#5E6168;font-weight:normal">— ${e(it.variantKey)}</span></h3>
 <p style="margin:4px 0;font-size:20px"><strong>${e(formatVnd(it.price))}</strong>${baseline}</p>
 ${score}<ul style="margin:8px 0;padding-left:20px">${reasons}</ul>
-<p style="margin:12px 0 4px"><a href="${e(it.buyUrl)}" style="display:inline-block;padding:10px 16px;background:#4330E6;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Mua trên Shopee</a></p>
-<p style="margin:4px 0;font-size:13px"><a href="${e(it.manageUrl)}">Quản lý Watch</a> · <a href="${e(it.pauseUrl)}">Tạm dừng Watch này</a></p>
+<p style="margin:12px 0 4px"><a href="${e(it.buyUrl)}" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Mua trên Shopee</a></p>
+<p style="margin:4px 0;font-size:13px"><a href="${e(it.manageUrl)}">Xem sản phẩm đang theo dõi</a> · <a href="${e(it.pauseUrl)}">Tạm dừng thông báo sản phẩm này</a></p>
 </div>`;
     })
     .join("");
 
   const html = `<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:#15161A;line-height:1.5;max-width:600px">
 ${htmlItems}
-<p style="color:#62656D;font-size:12px">${e(DISCLOSURE)}</p>
-<p style="color:#62656D;font-size:12px"><a href="${e(input.unsubscribeAllUrl)}">Tắt toàn bộ email thông báo</a></p>
+<p style="color:#5E6168;font-size:12px">${e(DISCLOSURE)}</p>
+<p style="color:#5E6168;font-size:12px"><a href="${e(input.unsubscribeAllUrl)}">Tắt toàn bộ email thông báo</a></p>
 </body></html>`;
 
   const text = [
@@ -69,9 +69,9 @@ ${htmlItems}
           ? [`Deal Score ${it.dealScore}/100 · ${RECOMMENDATION_LABEL[it.recommendation]}`]
           : []),
         ...[...it.triggerTexts, ...it.scoreReasons.slice(0, 2)].map((r) => `- ${r}`),
-        `Mua trên Shopee: ${it.buyUrl}`,
-        `Quản lý Watch: ${it.manageUrl}`,
-        `Tạm dừng Watch này: ${it.pauseUrl}`,
+        `Đến Shopee: ${it.buyUrl}`,
+        `Xem sản phẩm đang theo dõi: ${it.manageUrl}`,
+        `Tạm dừng thông báo sản phẩm này: ${it.pauseUrl}`,
         "",
       ].join("\n"),
     ),

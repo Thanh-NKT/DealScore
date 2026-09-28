@@ -32,7 +32,7 @@ function Chip({ v, selected, range }: { v: Variant; selected: boolean; range: nu
       scroll={false}
       aria-current={selected ? "true" : undefined}
       title={`${label} (${note})`}
-      className={`inline-flex min-h-11 max-w-full items-center gap-2 rounded-md border px-4 py-1.5 text-[14px] font-semibold transition-colors duration-150 ease-out ${
+      className={`inline-flex min-h-11 max-w-full items-center gap-2 rounded-md border px-4 py-1.5 text-body-sm font-semibold transition-colors duration-150 ease-out ${
         selected
           ? "border-night bg-night text-night-ink"
           : "border-line-strong bg-surface text-ink hover:bg-surface-2"
@@ -40,7 +40,7 @@ function Chip({ v, selected, range }: { v: Variant; selected: boolean; range: nu
     >
       <span className="min-w-0 truncate">{label}</span>
       <span
-        className={`shrink-0 whitespace-nowrap text-[13px] font-medium ${v.inStock && note !== "Chưa có giá" ? "num" : ""} ${
+        className={`shrink-0 whitespace-nowrap text-label font-medium ${v.inStock && note !== "Chưa có giá" ? "num" : ""} ${
           selected ? "text-night-ink-2" : "text-ink-3"
         }`}
       >
@@ -70,7 +70,7 @@ export function VariantPicker({ variants, selectedId, range }: VariantPickerProp
 
   return (
     <nav aria-labelledby="variant-picker-heading" className="space-y-2">
-      <h2 id="variant-picker-heading" className="text-[13px] font-bold text-ink-2">
+      <h2 id="variant-picker-heading" className="text-label font-bold text-ink-2">
         Chọn phiên bản <span className="num font-semibold text-ink-3">({list.length})</span>
       </h2>
       {/* Phones: one swipeable row instead of stacked rows, so the price and verdict stay in the first screen. */}
@@ -81,7 +81,7 @@ export function VariantPicker({ variants, selectedId, range }: VariantPickerProp
       </div>
       {rest.length > 0 && (
         <details className="group">
-          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-[14px] font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:text-primary-hover hover:decoration-primary-hover [&::-webkit-details-marker]:hidden">
+          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-body-sm font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:text-primary-hover hover:decoration-primary-hover [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">Xem thêm {rest.length} phiên bản</span>
             <span className="hidden group-open:inline">Thu gọn</span>
           </summary>

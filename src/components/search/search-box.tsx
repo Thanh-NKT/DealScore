@@ -7,6 +7,7 @@ import { ClockIcon, SearchIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
 import { LookupProblem } from "@/components/lookup/lookup-problem";
 import { isLookupable, looksLikeLink, marketOf, slowMessage, useLookup } from "@/components/lookup/use-lookup";
+import { buttonClass } from "@/components/ui/button";
 
 interface Suggestion {
   productId: string;
@@ -159,7 +160,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
         method="get"
         role="search"
         onSubmit={onSubmit}
-        className={`flex items-center gap-2.5 rounded-[16px] border-2 bg-surface p-1.5 pl-4 transition-colors duration-150 ease-out focus-within:border-primary max-sm:pl-3.5 ${
+        className={`flex items-center gap-2.5 rounded-frame border-2 bg-surface p-1.5 pl-4 transition-colors duration-150 ease-out focus-within:border-primary max-sm:pl-3.5 ${
           secondary ? "border-line" : "border-line-strong"
         }`}
       >
@@ -192,11 +193,11 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           aria-describedby={`${uid}-status`}
           readOnly={lookup.loading}
           placeholder={compare ? "Tên, hãng hoặc model sản phẩm…" : "Tìm tên sản phẩm, hãng, model hoặc dán link Shopee…"}
-          className="h-11 w-full min-w-0 flex-1 bg-transparent text-[16px] text-ink placeholder:text-ink-3 focus:outline-none focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
+          className="h-11 w-full min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
 
         {canLookup && !lookup.loading && !compare && (
-          <span className="hidden shrink-0 items-center rounded-sm bg-primary-soft px-2.5 py-1 text-[12px] font-semibold text-primary sm:inline-flex">
+          <span className="hidden shrink-0 items-center rounded-sm bg-primary-soft px-2.5 py-1 text-micro font-semibold text-primary sm:inline-flex">
             Link Shopee
           </span>
         )}
@@ -222,7 +223,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           <button
             type="button"
             onClick={lookup.cancel}
-            className="inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border border-line-strong bg-surface px-5 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 cursor-pointer"
+            className={buttonClass({ variant: "secondary", size: "md", rounded: "inner", className: "shrink-0" })}
           >
             Hủy
           </button>
@@ -230,11 +231,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           <button
             type="submit"
             disabled={lookup.navigating}
-            className={`inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] px-5 text-[15px] font-bold transition-colors duration-150 ease-out cursor-pointer disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-2 disabled:text-ink-3 max-sm:px-4 ${
-              secondary
-                ? "border border-line-strong bg-surface text-ink hover:bg-surface-2"
-                : "bg-primary text-on-primary hover:bg-primary-hover"
-            }`}
+            className={buttonClass({ variant: secondary ? "secondary" : "primary", size: "md", rounded: "inner", className: "shrink-0 max-sm:px-4" })}
           >
             {lookup.navigating ? "Đang mở…" : canLookup && !compare ? "Phân tích link" : "Tìm kiếm"}
           </button>
@@ -243,13 +240,13 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
 
       <div id={`${uid}-status`} aria-live="polite" className="empty:hidden [&>*]:mt-2">
         {lookup.loading && (
-          <p className="flex items-center gap-1.5 text-[14px] text-ink-2">
+          <p className="flex items-center gap-1.5 text-body-sm text-ink-2">
             <ClockIcon className="size-4" />
             {slowMessage(lookup.slow)}
           </p>
         )}
         {lookup.problem && <LookupProblem problem={lookup.problem} input={trimmed} onRetry={() => void lookup.run(trimmed)} />}
-        {query.length >= MAX_QUERY && <p className="text-[13px] text-ink-3">Từ khóa đã dài tối đa {MAX_QUERY} ký tự.</p>}
+        {query.length >= MAX_QUERY && <p className="text-label text-ink-3">Từ khóa đã dài tối đa {MAX_QUERY} ký tự.</p>}
       </div>
 
       {showList && (
@@ -272,15 +269,15 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
                   <ProductImage src={s.image} className="bg-surface-2! p-0.5" iconClassName="size-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-[14px] font-medium text-ink" title={name}>
+                  <p className="truncate text-body-sm font-medium text-ink" title={name}>
                     {name}
                   </p>
-                  {s.brand?.trim() && <p className="truncate text-[12px] text-ink-3">{s.brand.trim()}</p>}
+                  {s.brand?.trim() && <p className="truncate text-micro text-ink-3">{s.brand.trim()}</p>}
                 </div>
                 {price != null ? (
-                  <span className="num shrink-0 text-[14px] font-bold text-ink">{formatVnd(price)}</span>
+                  <span className="num shrink-0 text-body-sm font-bold text-ink">{formatVnd(price)}</span>
                 ) : (
-                  <span className="shrink-0 text-[12px] text-ink-3">Chưa có giá</span>
+                  <span className="shrink-0 text-micro text-ink-3">Chưa có giá</span>
                 )}
               </li>
             );

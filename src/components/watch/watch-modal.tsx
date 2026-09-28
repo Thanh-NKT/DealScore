@@ -10,6 +10,8 @@ import type { WatchConfig } from "@/lib/watch/types";
 import { AlertIcon, CheckCircleIcon, InfoIcon } from "@/components/ui/icons";
 import { variantLabel } from "@/components/product/variant-label";
 import { formatTyping, parseVndInput, type ParsedPrice } from "./price-input";
+import { buttonClass } from "@/components/ui/button";
+import { inputClass } from "@/components/ui/field";
 
 interface WatchModalProps {
   isOpen: boolean;
@@ -36,9 +38,9 @@ type ChannelMode = "account" | "email" | "push" | "both";
 const MAX_TARGET = 10_000_000_000;
 
 const PRICE_ERRORS: Record<Exclude<ParsedPrice, { ok: true }>["reason"], string> = {
-  empty: "Nhập giá mục tiêu, hoặc bỏ chọn điều kiện này.",
-  zero: "Giá mục tiêu phải lớn hơn 0đ.",
-  negative: "Giá mục tiêu không thể là số âm.",
+  empty: "Nhập giá mong muốn, hoặc bỏ chọn điều kiện này.",
+  zero: "Giá mong muốn phải lớn hơn 0đ.",
+  negative: "Giá mong muốn không thể là số âm.",
   unreadable: "Chưa đọc được số tiền. Thử dạng 2.399.000 hoặc 2tr4.",
   ambiguous: "Thêm đơn vị để rõ số tiền, ví dụ 2,4 triệu hoặc 2.400.000.",
 };
@@ -50,14 +52,10 @@ function initialChannel(config: WatchConfig | undefined): ChannelMode {
   return c.includes("email") ? "email" : "push";
 }
 
-const inputClass =
-  "min-h-11 w-full rounded-md border border-line-strong bg-surface px-3 text-[16px] text-ink placeholder:text-ink-3 transition-colors duration-150 ease-out focus:border-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
-const secondaryBtn =
-  "inline-flex min-h-11 items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-[15px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-3";
-const primaryBtn =
-  "inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 text-[15px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3";
-const dangerBtn =
-  "inline-flex min-h-11 items-center justify-center rounded-md border border-avoid bg-surface px-4 text-[15px] font-semibold text-avoid transition-colors duration-150 ease-out hover:bg-avoid-soft disabled:cursor-not-allowed disabled:border-line disabled:text-ink-3";
+
+const secondaryBtn = buttonClass({ variant: "secondary", size: "md" });
+const primaryBtn = buttonClass({ size: "md" });
+const dangerBtn = buttonClass({ variant: "danger", size: "md" });
 /** One condition = one inner box on the card surface. */
 const conditionBox = "rounded-md bg-surface-2 p-3.5";
 
@@ -71,7 +69,7 @@ function CloseIcon() {
 
 function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <p id={id} className="mt-1.5 flex items-start gap-1.5 text-[14px] font-semibold text-avoid">
+    <p id={id} className="mt-1.5 flex items-start gap-1.5 text-body-sm font-semibold text-avoid">
       <AlertIcon className="mt-0.5 size-4" />
       <span>{children}</span>
     </p>
@@ -194,7 +192,7 @@ export function WatchModal({
       onClose();
     } catch (err) {
       unstable_rethrow(err);
-      setActionError(err instanceof Error && err.message.startsWith("Đã đạt") ? err.message : "Chưa đổi được trạng thái. Hãy thử lại.");
+      setActionError(err instanceof Error && err.message.startsWith("Bạn đang theo dõi đủ") ? err.message : "Chưa đổi được trạng thái. Hãy thử lại.");
     } finally {
       setBusy(null);
     }
@@ -235,14 +233,14 @@ export function WatchModal({
         <div className="shrink-0 border-b border-line bg-surface px-7 pb-4 pt-6 max-[760px]:px-5 max-[760px]:pb-3.5 max-[760px]:pt-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 id={`${uid}-title`} className="display text-[22px] font-bold leading-tight max-[760px]:text-[20px]">
+              <h2 id={`${uid}-title`} className="display text-h3 font-bold leading-tight max-[760px]:text-h4">
                 {existingWatch ? "Sửa theo dõi giá" : "Theo dõi giá"}
               </h2>
-              <p className="mt-1 line-clamp-2 text-[14px] text-ink-2 [overflow-wrap:anywhere]" title={productName}>
+              <p className="mt-1 line-clamp-2 text-body-sm text-ink-2 [overflow-wrap:anywhere]" title={productName}>
                 {productName}
                 {variantKey && <span className="text-ink-3"> · {variantLabel(variantKey)}</span>}
               </p>
-              <p className="mt-1 text-[14px] text-ink-3">
+              <p className="mt-1 text-body-sm text-ink-3">
                 Giá hiện tại:{" "}
                 {price != null ? <b className="num font-bold text-ink">{formatVnd(price)}</b> : "chưa có giá"}
               </p>
@@ -254,7 +252,7 @@ export function WatchModal({
 
           {confirmDiscard && (
             <div role="alert" className="mt-4 rounded-md border border-line-strong bg-surface-2 p-3.5">
-              <p className="text-[15px] font-semibold">Bạn có thay đổi chưa lưu. Đóng và bỏ các thay đổi này?</p>
+              <p className="text-control font-semibold">Bạn có thay đổi chưa lưu. Đóng và bỏ các thay đổi này?</p>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 <button type="button" className={secondaryBtn} onClick={() => setConfirmDiscard(false)} autoFocus>
                   Tiếp tục sửa
@@ -281,8 +279,8 @@ export function WatchModal({
               <span className="mx-auto inline-flex size-14 items-center justify-center rounded-full bg-accent text-on-accent">
                 <CheckCircleIcon className="size-7" strokeWidth={2} />
               </span>
-              <h3 className="display mt-3 text-[22px] font-bold">Đã lưu theo dõi</h3>
-              <p className="mx-auto mt-1 max-w-[40ch] text-[15px] text-ink-2">
+              <h3 className="display mt-3 text-h3 font-bold">Đã lưu theo dõi</h3>
+              <p className="mx-auto mt-1 max-w-[40ch] text-control text-ink-2">
                 Kairo sẽ kiểm tra giá định kỳ và báo cho bạn khi có điều kiện được đáp ứng.
               </p>
               <button type="button" onClick={onClose} className={`${primaryBtn} mt-5`}>
@@ -295,25 +293,25 @@ export function WatchModal({
             <input type="hidden" name="path" value={currentPath} />
 
             {(serverErrors._form || serverErrors.variantId || serverErrors.channels) && (
-              <p role="alert" className="flex items-start gap-2 rounded-md bg-avoid-soft p-3 text-[14px] font-semibold text-avoid">
+              <p role="alert" className="flex items-start gap-2 rounded-md bg-avoid-soft p-3 text-body-sm font-semibold text-avoid">
                 <AlertIcon className="mt-0.5 size-4" />
                 <span>{serverErrors._form ?? serverErrors.variantId ?? serverErrors.channels}</span>
               </p>
             )}
 
             <fieldset className="space-y-3">
-              <legend className="mb-2 text-[15px] font-bold">Báo cho tôi khi (chọn ít nhất 1)</legend>
+              <legend className="mb-2 text-control font-bold">Báo cho tôi khi (chọn ít nhất 1)</legend>
 
               {/* 1. Target price */}
               <div className={conditionBox}>
                 <label className="flex min-h-6 cursor-pointer items-center gap-3">
                   <input type="checkbox" checked={enableTarget} onChange={(e) => setEnableTarget(e.target.checked)} className="size-5 accent-primary" />
-                  <span className="text-[15px] font-medium">Giá xuống tới mức tôi đặt</span>
+                  <span className="text-control font-medium">Giá xuống tới mức tôi đặt</span>
                 </label>
                 {enableTarget && (
                   <div className="mt-3 pl-8">
                     <label htmlFor={`${uid}-target`} className="sr-only">
-                      Giá mục tiêu
+                      Giá mong muốn
                     </label>
                     <div className="relative">
                       <input
@@ -333,9 +331,9 @@ export function WatchModal({
                         placeholder="Ví dụ: 2.399.000 hoặc 2tr4"
                         aria-invalid={Boolean(targetError)}
                         aria-describedby={`${uid}-target-help`}
-                        className={`${inputClass} num pr-9 text-[18px] font-bold`}
+                        className={inputClass({ text: "title", className: "pr-9" })}
                       />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[16px] text-ink-3">đ</span>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-body text-ink-3">đ</span>
                     </div>
                     {/* The server only accepts digits: send the understood integer, not the typed text. */}
                     <input type="hidden" name="targetPrice" value={target != null && !priceProblem ? String(target) : ""} />
@@ -356,7 +354,7 @@ export function WatchModal({
                           setDirty(true);
                           setShowPriceError(false);
                         }}
-                        className="mt-2.5 inline-flex min-h-10 items-center rounded-md border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas"
+                        className="mt-2.5 inline-flex min-h-10 items-center rounded-md border border-line-strong bg-surface px-3 text-label font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas"
                       >
                         Dùng gợi ý {formatVnd(suggested)} (thấp hơn 10%)
                       </button>
@@ -369,7 +367,7 @@ export function WatchModal({
               <div className={conditionBox}>
                 <label className="flex cursor-pointer items-center gap-3">
                   <input type="checkbox" checked={enableDropPct} onChange={(e) => setEnableDropPct(e.target.checked)} className="size-5 accent-primary" />
-                  <span className="text-[15px] font-medium">Giá giảm thêm một tỷ lệ</span>
+                  <span className="text-control font-medium">Giá giảm thêm một tỷ lệ</span>
                 </label>
                 {enableDropPct && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 pl-8">
@@ -384,9 +382,9 @@ export function WatchModal({
                       value={dropPct}
                       onChange={(e) => setDropPct(e.target.value.replace(/[^\d]/g, "").slice(0, 2))}
                       aria-invalid={Boolean(serverErrors.dropPct)}
-                      className={`${inputClass} num w-20 text-center`}
+                      className={inputClass({ width: "auto", className: "num w-20 text-center" })}
                     />
-                    <span className="text-[14px] text-ink-2">% so với lúc bắt đầu theo dõi (1–90%)</span>
+                    <span className="text-body-sm text-ink-2">% so với lúc bắt đầu theo dõi (1–90%)</span>
                     {serverErrors.dropPct && <FieldError id={`${uid}-drop-error`}>{serverErrors.dropPct}</FieldError>}
                   </div>
                 )}
@@ -396,8 +394,8 @@ export function WatchModal({
               <label className={`flex cursor-pointer items-start gap-3 ${conditionBox}`}>
                 <input type="checkbox" name="notifyLow" checked={notifyLow} onChange={(e) => setNotifyLow(e.target.checked)} className="mt-0.5 size-5 accent-primary" />
                 <span>
-                  <span className="block text-[15px] font-medium">Giá chạm mức thấp nhất 90 ngày</span>
-                  <span className="block text-[13px] text-ink-3">Chỉ báo khi hệ thống đã ghi nhận đủ 14 ngày giá.</span>
+                  <span className="block text-control font-medium">Giá chạm mức thấp nhất 90 ngày</span>
+                  <span className="block text-label text-ink-3">Chỉ báo khi hệ thống đã ghi nhận đủ 14 ngày giá.</span>
                 </span>
               </label>
 
@@ -405,7 +403,7 @@ export function WatchModal({
               <div className={conditionBox}>
                 <label className="flex cursor-pointer items-center gap-3">
                   <input type="checkbox" checked={enableScore} onChange={(e) => setEnableScore(e.target.checked)} className="size-5 accent-primary" />
-                  <span className="text-[15px] font-medium">Deal Score đạt từ mức tôi chọn</span>
+                  <span className="text-control font-medium">Deal Score đạt từ mức tôi chọn</span>
                 </label>
                 {enableScore && (
                   <div className="mt-3 flex flex-wrap items-center gap-2 pl-8">
@@ -420,9 +418,9 @@ export function WatchModal({
                       value={minDealScore}
                       onChange={(e) => setMinDealScore(e.target.value.replace(/[^\d]/g, "").slice(0, 3))}
                       aria-invalid={Boolean(serverErrors.minDealScore)}
-                      className={`${inputClass} num w-20 text-center`}
+                      className={inputClass({ width: "auto", className: "num w-20 text-center" })}
                     />
-                    <span className="text-[14px] text-ink-2">/100 điểm</span>
+                    <span className="text-body-sm text-ink-2">/100 điểm</span>
                     {serverErrors.minDealScore && <FieldError id={`${uid}-score-error`}>{serverErrors.minDealScore}</FieldError>}
                   </div>
                 )}
@@ -432,15 +430,15 @@ export function WatchModal({
               <label className={`flex cursor-pointer items-start gap-3 ${conditionBox}`}>
                 <input type="checkbox" name="notifyBackInStock" checked={notifyBackInStock} onChange={(e) => setNotifyBackInStock(e.target.checked)} className="mt-0.5 size-5 accent-primary" />
                 <span>
-                  <span className="block text-[15px] font-medium">Có hàng trở lại</span>
-                  <span className="block text-[13px] text-ink-3">Báo khi sản phẩm chuyển từ hết hàng sang còn hàng.</span>
+                  <span className="block text-control font-medium">Có hàng trở lại</span>
+                  <span className="block text-label text-ink-3">Báo khi sản phẩm chuyển từ hết hàng sang còn hàng.</span>
                 </span>
               </label>
             </fieldset>
 
             {folders && (
               <div>
-                <label htmlFor={`${uid}-folder`} className="text-[15px] font-bold">
+                <label htmlFor={`${uid}-folder`} className="text-control font-bold">
                   Thư mục
                 </label>
                 <select
@@ -448,7 +446,7 @@ export function WatchModal({
                   name="folderId"
                   value={folderChoice}
                   onChange={(e) => setFolderChoice(e.target.value)}
-                  className={`${inputClass} mt-1.5`}
+                  className={inputClass({ className: "mt-1.5" })}
                 >
                   <option value="">Chưa xếp thư mục</option>
                   {folders.map((f) => (
@@ -461,14 +459,14 @@ export function WatchModal({
             )}
 
             <div>
-              <label htmlFor={`${uid}-channel`} className="text-[15px] font-bold">
+              <label htmlFor={`${uid}-channel`} className="text-control font-bold">
                 Nhận thông báo qua
               </label>
               <select
                 id={`${uid}-channel`}
                 value={channelMode}
                 onChange={(e) => setChannelMode(e.target.value as ChannelMode)}
-                className={`${inputClass} mt-1.5`}
+                className={inputClass({ className: "mt-1.5" })}
               >
                 <option value="account">Theo cài đặt tài khoản</option>
                 <option value="email">Chỉ email</option>
@@ -486,7 +484,7 @@ export function WatchModal({
             </div>
 
             {actionError && (
-              <p role="alert" className="flex items-start gap-2 text-[14px] font-semibold text-avoid">
+              <p role="alert" className="flex items-start gap-2 text-body-sm font-semibold text-avoid">
                 <AlertIcon className="mt-0.5 size-4" />
                 {actionError}
               </p>
@@ -494,7 +492,7 @@ export function WatchModal({
 
             {existingWatch && confirmDelete && (
               <div role="alert" className="rounded-md border border-avoid bg-surface p-3.5">
-                <p className="text-[15px] font-semibold">Xóa theo dõi này? Bạn sẽ không nhận thông báo giá cho sản phẩm này nữa.</p>
+                <p className="text-control font-semibold">Xóa theo dõi này? Bạn sẽ không nhận thông báo giá cho sản phẩm này nữa.</p>
                 <div className="mt-2.5 flex flex-wrap gap-2">
                   <button type="button" className={secondaryBtn} onClick={() => setConfirmDelete(false)} autoFocus>
                     Giữ lại
@@ -550,11 +548,11 @@ function TargetDistance({ target, price, gap, typed }: { target: number; price: 
   ) : null;
 
   if (price == null || gap == null) {
-    return <p className="mt-1.5 text-[14px] text-ink-2">{understood}Chưa có giá hiện tại để so sánh.</p>;
+    return <p className="mt-1.5 text-body-sm text-ink-2">{understood}Chưa có giá hiện tại để so sánh.</p>;
   }
   if (gap <= 0) {
     return (
-      <p className="mt-1.5 flex items-start gap-1.5 text-[14px] text-ink">
+      <p className="mt-1.5 flex items-start gap-1.5 text-body-sm text-ink">
         <InfoIcon className="mt-0.5 size-4 text-ink-2" />
         <span>
           {understood}
@@ -566,9 +564,9 @@ function TargetDistance({ target, price, gap, typed }: { target: number; price: 
   }
   const pct = Math.round((gap / price) * 100);
   return (
-    <p className="mt-1.5 text-[14px] text-ink-2">
+    <p className="mt-1.5 text-body-sm text-ink-2">
       {understood}
-      Còn <b className="num text-[16px] text-ink">{formatVnd(gap)}</b> nữa{" "}
+      Còn <b className="num text-body text-ink">{formatVnd(gap)}</b> nữa{" "}
       <span className="text-ink-3">({pct < 1 ? "chưa tới 1%" : `giảm thêm ${pct}%`} so với giá hiện tại)</span>
       {pct >= 60 && <span className="mt-1 block text-ink">Mức này thấp hơn nhiều so với giá hiện tại. Kiểm tra lại số chữ số 0.</span>}
     </p>

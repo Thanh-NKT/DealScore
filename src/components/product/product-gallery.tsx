@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImageMissingIcon } from "@/components/ui/icons";
 
 interface ProductGalleryProps {
@@ -29,6 +29,23 @@ export function ProductGallery({
   };
 
   const safeIdx = images.length > 0 ? Math.min(selectedIdx, images.length - 1) : 0;
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  // Keep the selected thumbnail in view when the main-image arrows move past the visible strip.
+  useEffect(() => {
+    const strip = stripRef.current;
+    const thumb = strip?.children[safeIdx] as HTMLElement | undefined;
+    if (!strip || !thumb) return;
+    const left = thumb.offsetLeft - strip.offsetLeft;
+    if (left < strip.scrollLeft || left + thumb.offsetWidth > strip.scrollLeft + strip.clientWidth) {
+      strip.scrollTo({ left: left - 8, behavior: "smooth" });
+    }
+  }, [safeIdx]);
+
+  const scrollStrip = (dir: -1 | 1) => {
+    const strip = stripRef.current;
+    if (strip) strip.scrollBy({ left: dir * strip.clientWidth * 0.8, behavior: "smooth" });
+  };
   const activeSrc = images[safeIdx] ?? images[0] ?? null;
 
   const prevImage = () => {
@@ -42,9 +59,12 @@ export function ProductGallery({
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Main Image Stage: strictly bounded box so tall/large images scale down to fit without cropping */}
-      <div className="group relative h-[320px] w-full overflow-hidden rounded-[16px] border border-line/80 bg-surface-2/45 sm:h-[380px]">
+    <div className="flex h-full flex-col gap-3">
+      {/*
+        Main image stage. It stretches to the height of the decision column beside it (flex-1), so a
+        product with a single image leaves no empty band; the min heights keep it right on phones.
+      */}
+      <div className="group relative min-h-[320px] w-full flex-1 overflow-hidden rounded-frame border border-line/80 bg-surface-2/45 sm:min-h-[380px]">
         {activeSrc ? (
           <div className="absolute inset-6 flex items-center justify-center sm:inset-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -64,13 +84,13 @@ export function ProductGallery({
         )}
 
         {warranty && (
-          <span className="absolute left-3.5 top-3.5 z-10 rounded-full border border-line/80 bg-surface/92 px-3 py-1 text-[12px] font-semibold text-ink-2 backdrop-blur-md shadow-2xs">
+          <span className="absolute left-3.5 top-3.5 z-10 rounded-full border border-line/80 bg-surface/92 px-3 py-1 text-micro font-semibold text-ink-2 backdrop-blur-md shadow-2xs">
             {warranty}
           </span>
         )}
 
         {images.length > 1 && (
-          <span className="num absolute right-3.5 top-3.5 z-10 rounded-full border border-line/80 bg-surface/90 px-2.5 py-1 text-[11px] font-bold text-ink-2 backdrop-blur-md shadow-2xs">
+          <span className="num absolute right-3.5 top-3.5 z-10 rounded-full border border-line/80 bg-surface/90 px-2.5 py-1 text-nano font-bold text-ink-2 backdrop-blur-md shadow-2xs">
             {safeIdx + 1} / {images.length}
           </span>
         )}
@@ -101,39 +121,70 @@ export function ProductGallery({
         )}
       </div>
 
-      {/* Thumbnails Row */}
+      {/* Thumbnail strip (like the marketplace galleries): every image, scrolls sideways, arrows when it overflows. */}
       {images.length > 1 && (
-        <div className="grid grid-cols-5 gap-2.5 sm:grid-cols-6">
-          {images.slice(0, 6).map((src, idx) => {
-            const isSelected = safeIdx === idx;
-            return (
-              <button
-                key={src}
-                type="button"
-                onClick={() => setSelectedIdx(idx)}
-                aria-label={`Xem ảnh ${idx + 1}`}
-                aria-pressed={isSelected}
-                className={`relative aspect-square overflow-hidden rounded-[10px] bg-surface-2/50 transition-all cursor-pointer ${
-                  isSelected
-                    ? "border-2 border-primary bg-surface ring-2 ring-primary/15"
-                    : "border border-line opacity-75 hover:border-line-strong hover:opacity-100"
-                }`}
-              >
-                <span className="absolute inset-1.5 flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={src}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    onError={() => markFailed(src)}
-                    className="max-h-full max-w-full min-h-0 min-w-0 h-full w-full object-contain"
-                  />
-                </span>
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-1.5">
+          {images.length > 5 && (
+            <button
+              type="button"
+              onClick={() => scrollStrip(-1)}
+              aria-label="Xem các ảnh trước"
+              className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-2 transition-colors hover:border-line-strong hover:text-ink sm:flex cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </button>
+          )}
+          <div
+            ref={stripRef}
+            role="group"
+            aria-label={`Ảnh sản phẩm (${images.length})`}
+            className="flex min-w-0 flex-1 snap-x gap-2.5 overflow-x-auto scroll-smooth py-0.5 [scrollbar-width:none]"
+          >
+            {images.map((src, idx) => {
+              const isSelected = safeIdx === idx;
+              return (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setSelectedIdx(idx)}
+                  aria-label={`Xem ảnh ${idx + 1} trên ${images.length}`}
+                  aria-pressed={isSelected}
+                  className={`relative size-16 shrink-0 snap-start overflow-hidden rounded-inner transition-all cursor-pointer sm:size-[72px] ${
+                    isSelected
+                      ? "border-2 border-primary bg-surface"
+                      : "border border-line bg-surface-2/50 opacity-75 hover:border-line-strong hover:opacity-100"
+                  }`}
+                >
+                  <span className="absolute inset-1.5 flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      onError={() => markFailed(src)}
+                      className="max-h-full max-w-full min-h-0 min-w-0 h-full w-full object-contain"
+                    />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {images.length > 5 && (
+            <button
+              type="button"
+              onClick={() => scrollStrip(1)}
+              aria-label="Xem các ảnh tiếp theo"
+              className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-2 transition-colors hover:border-line-strong hover:text-ink sm:flex cursor-pointer"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
     </div>

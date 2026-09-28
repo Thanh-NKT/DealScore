@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertIcon } from "@/components/ui/icons";
+import { buttonClass } from "@/components/ui/button";
 
 interface UnsubscribeFormProps {
   token: string;
@@ -46,13 +47,13 @@ export function UnsubscribeForm({ token, scopeKind }: UnsubscribeFormProps) {
         type="submit"
         disabled={busy}
         aria-busy={busy}
-        className="inline-flex min-h-[52px] w-full items-center justify-center rounded-md bg-primary px-5 text-[16px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover disabled:cursor-progress disabled:bg-surface-2 disabled:text-ink-3"
+        className={buttonClass({ size: "lg", block: true })}
       >
         {busy ? "Đang xử lý…" : scopeKind === "watch" ? "Tạm dừng thông báo sản phẩm này" : "Tắt email thông báo giá"}
       </button>
       <div aria-live="polite">
         {problem && (
-          <p role="alert" className="flex items-start gap-2 text-left text-[14px] font-semibold text-avoid">
+          <p role="alert" className="flex items-start gap-2 text-left text-body-sm font-semibold text-avoid">
             <AlertIcon className="mt-0.5 size-4 shrink-0" />
             {problem === "invalid"
               ? "Liên kết này không còn dùng được. Bạn có thể tắt thông báo trong phần Thông báo của tài khoản."

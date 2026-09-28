@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BellIcon, CheckIcon, ShieldCheckIcon, TrendUpIcon } from "@/components/ui/icons";
+import { segmentClass, segmentTrack } from "@/components/ui/segmented";
 
 interface AuthShellProps {
   title: string;
@@ -13,8 +14,8 @@ interface AuthShellProps {
 
 /** Only things the product actually does today — no invented numbers. */
 const BENEFITS = [
-  { icon: CheckIcon, text: "Theo dõi giá (Watch) cho tối đa 50 sản phẩm bạn quan tâm." },
-  { icon: BellIcon, text: "Nhận Alert qua email hoặc thông báo trình duyệt khi giá chạm mục tiêu." },
+  { icon: CheckIcon, text: "Theo dõi giá tối đa 50 sản phẩm bạn quan tâm." },
+  { icon: BellIcon, text: "Nhận thông báo qua email hoặc trình duyệt khi giá xuống tới mức bạn muốn." },
   { icon: ShieldCheckIcon, text: "Xuất hoặc xóa dữ liệu của bạn bất cứ lúc nào." },
 ];
 
@@ -36,7 +37,7 @@ export function AuthShell({ title, intro, tab, next, children, footer }: AuthShe
         </span>
 
         {tab && (
-          <nav aria-label="Đăng nhập hoặc tạo tài khoản" className="mt-6 grid grid-cols-2 gap-1 rounded-md bg-surface-2 p-1">
+          <nav aria-label="Đăng nhập hoặc tạo tài khoản" className={segmentTrack({ display: "grid", className: "mt-6 grid-cols-2" })}>
             <TabLink href={withNext("/login", next)} active={tab === "login"}>
               Đăng nhập
             </TabLink>
@@ -46,17 +47,17 @@ export function AuthShell({ title, intro, tab, next, children, footer }: AuthShe
           </nav>
         )}
 
-        <h1 className="display mt-6 text-[28px] font-extrabold leading-[1.15] text-balance text-ink max-[760px]:text-[24px]">{title}</h1>
-        {intro && <div className="mt-2 text-[15px] leading-relaxed text-ink-2 text-pretty">{intro}</div>}
+        <h1 className="display mt-6 text-h2 font-extrabold leading-[1.15] text-balance text-ink max-[760px]:text-price-input">{title}</h1>
+        {intro && <div className="mt-2 text-control leading-relaxed text-ink-2 text-pretty">{intro}</div>}
 
         <div className="mt-7">{children}</div>
 
-        {footer && <div className="mt-7 border-t border-line pt-5 text-[14px] leading-relaxed text-ink-2">{footer}</div>}
+        {footer && <div className="mt-7 border-t border-line pt-5 text-body-sm leading-relaxed text-ink-2">{footer}</div>}
       </section>
 
       <ul className="mt-6 space-y-3 px-1">
         {BENEFITS.map(({ icon: Icon, text }) => (
-          <li key={text} className="flex items-start gap-3 text-[14px] leading-snug text-ink-2">
+          <li key={text} className="flex items-start gap-3 text-body-sm leading-snug text-ink-2">
             <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-sm bg-surface-2 text-ink">
               <Icon className="size-4" strokeWidth={2} />
             </span>
@@ -73,9 +74,7 @@ function TabLink({ href, active, children }: { href: string; active: boolean; ch
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex min-h-10 items-center justify-center rounded-sm text-[15px] transition-colors duration-150 ease-out ${
-        active ? "bg-surface font-semibold text-ink" : "font-medium text-ink-2 hover:text-ink"
-      }`}
+      className={segmentClass(active, { size: "lg" })}
     >
       {children}
     </Link>

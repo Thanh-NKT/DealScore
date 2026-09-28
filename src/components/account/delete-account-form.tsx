@@ -3,7 +3,8 @@
 import { useActionState, useId, useState } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { requestAccountDeletion, type ActionResult } from "@/actions/account";
-import { AlertIcon } from "@/components/ui/icons";
+import { TextField } from "@/components/ui/field";
+import { buttonClass } from "@/components/ui/button";
 
 type Result = ActionResult<"confirm">;
 
@@ -45,17 +46,17 @@ export function DeleteAccountForm() {
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby={`${uid}-what`} className="space-y-3 text-[15px] leading-relaxed text-ink">
-        <h2 id={`${uid}-what`} className="display text-[20px] font-bold leading-tight">
+      <section aria-labelledby={`${uid}-what`} className="space-y-3 text-control leading-relaxed text-ink">
+        <h2 id={`${uid}-what`} className="display text-h4 font-bold leading-tight">
           Những gì sẽ bị xóa
         </h2>
         <ul className="list-disc space-y-1.5 pl-5">
-          <li>Danh sách sản phẩm bạn đang theo dõi (Watch), cùng giá mục tiêu và các điều kiện báo bạn đã đặt.</li>
-          <li>Lịch sử các cảnh báo giá Kairo đã gửi cho bạn.</li>
+          <li>Danh sách sản phẩm bạn đang theo dõi, cùng giá mong muốn và các điều kiện báo bạn đã đặt.</li>
+          <li>Lịch sử các thông báo giá Kairo đã gửi cho bạn.</li>
           <li>Cài đặt thông báo và các trình duyệt đã đăng ký nhận thông báo.</li>
           <li>Email và tài khoản đăng nhập của bạn.</li>
         </ul>
-        <h2 className="display pt-2 text-[20px] font-bold leading-tight">Chuyện gì xảy ra tiếp theo</h2>
+        <h2 className="display pt-2 text-h4 font-bold leading-tight">Chuyện gì xảy ra tiếp theo</h2>
         <ul className="list-disc space-y-1.5 pl-5">
           <li>Kairo ngừng gửi mọi thông báo ngay, và bạn được đăng xuất khỏi tất cả thiết bị.</li>
           <li>
@@ -75,38 +76,27 @@ export function DeleteAccountForm() {
         }}
         className="space-y-4 rounded-md border border-avoid bg-surface p-4"
       >
-        <div>
-          <label htmlFor={`${uid}-confirm`} className="text-[15px] font-semibold text-ink">
-            Gõ chữ <span className="rounded-sm bg-avoid-soft px-1.5 py-0.5 font-bold text-avoid">XÓA</span> để xác nhận
-          </label>
-          <input
-            id={`${uid}-confirm`}
-            name="confirm"
-            type="text"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            value={typed}
-            onChange={(e) => setTyped(e.target.value)}
-            aria-invalid={Boolean(hint || serverError) || undefined}
-            aria-describedby={`${uid}-help`}
-            className="mt-1.5 min-h-12 w-full rounded-md border border-line-strong bg-surface px-4 text-[16px] text-ink transition-colors duration-150 ease-out focus:border-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid"
-          />
-          <div id={`${uid}-help`} aria-live="polite">
-            {(hint || serverError) && (
-              <p className="mt-2 flex items-start gap-1.5 text-[14px] font-semibold text-avoid">
-                <AlertIcon className="mt-0.5 size-4 shrink-0" />
-                {hint ?? serverError}
-              </p>
-            )}
-          </div>
-        </div>
+        <TextField
+          id={`${uid}-confirm`}
+          name="confirm"
+          label={
+            <>
+              Gõ chữ <span className="rounded-sm bg-avoid-soft px-1.5 py-0.5 font-bold text-avoid">XÓA</span> để xác nhận
+            </>
+          }
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          error={hint ?? serverError}
+        />
 
         <button
           type="submit"
           disabled={pending}
           aria-busy={pending}
-          className="inline-flex min-h-12 w-full items-center justify-center rounded-md border-2 border-avoid bg-surface text-[15px] font-bold text-avoid transition-colors duration-150 ease-out hover:bg-avoid-soft disabled:cursor-not-allowed disabled:border-line disabled:text-ink-3"
+          className={buttonClass({ variant: "danger", size: "lg", block: true })}
         >
           {pending ? "Đang gửi yêu cầu xóa…" : "Xóa tài khoản của tôi"}
         </button>

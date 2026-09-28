@@ -22,7 +22,7 @@ interface WatchButtonProps {
 }
 
 const BTN =
-  "inline-flex h-[52px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl border px-5 text-[15px] font-bold transition-colors duration-150 ease-out cursor-pointer";
+  "inline-flex h-13 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md border px-5 text-control font-bold transition-colors duration-150 ease-out cursor-pointer";
 const IDLE = "border-wait/35 bg-wait-soft/80 text-wait hover:bg-wait-soft";
 const WATCHING = "border-accent bg-accent text-on-accent hover:opacity-92";
 const PAUSED = "border-line-strong bg-surface-2 text-ink-2 hover:bg-surface";
@@ -82,7 +82,7 @@ export function WatchButton({
         aria-haspopup="dialog"
         title={
           status === "active"
-            ? "Bấm để chỉnh mức giá mục tiêu hoặc điều kiện báo"
+            ? "Bấm để chỉnh giá mong muốn hoặc điều kiện báo"
             : "Đặt mức giá mong muốn để nhận thông báo"
         }
         className={`${BTN} ${styleClass}`}

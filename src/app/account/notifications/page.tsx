@@ -26,15 +26,15 @@ export default async function NotificationSettingsPage() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-4 py-8 sm:px-6 sm:py-10">
       <div className="space-y-1.5">
-        <nav aria-label="Đường dẫn" className="text-[13px]">
+        <nav aria-label="Đường dẫn" className="text-label">
           <Link href="/account" className="inline-flex min-h-10 items-center gap-1 text-ink-2 underline-offset-4 hover:text-ink hover:underline">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-4"><path d="m15 6-6 6 6 6" /></svg>
             Quay lại Tài khoản
           </Link>
         </nav>
-        <h1 className="display text-[30px] font-extrabold leading-[1.1] text-ink sm:text-[40px]">Cài đặt thông báo</h1>
-        <p className="text-[16px] leading-relaxed text-ink-2">
-          Tùy chỉnh phương thức và thời điểm bạn muốn nhận cảnh báo biến động giá từ Kairo.
+        <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-ink sm:text-h1">Cài đặt thông báo</h1>
+        <p className="text-body leading-relaxed text-ink-2">
+          Tùy chỉnh phương thức và thời điểm bạn muốn nhận thông báo giá từ Kairo.
         </p>
       </div>
 

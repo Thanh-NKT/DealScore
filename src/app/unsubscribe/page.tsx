@@ -10,11 +10,11 @@ interface UnsubscribePageProps {
 }
 
 const CARD = "mx-auto w-full max-w-[480px] space-y-4 rounded-lg border border-line bg-surface p-7 max-[760px]:p-5";
-const TITLE = "display text-[28px] font-extrabold leading-[1.15] text-balance text-ink max-[760px]:text-[24px]";
-const BODY = "max-w-[68ch] text-[16px] leading-[1.6] text-ink-2";
+const TITLE = "display text-h2 font-extrabold leading-[1.15] text-balance text-ink max-[760px]:text-price-input";
+const BODY = "max-w-[68ch] text-body leading-[1.6] text-ink-2";
 const ICON_TILE = "inline-flex size-12 items-center justify-center rounded-md bg-surface-2 text-ink";
 const SECONDARY =
-  "inline-flex min-h-11 items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-[15px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
 
 export default async function UnsubscribePage({ searchParams }: UnsubscribePageProps) {
   const { t: token, done } = await searchParams;
@@ -41,7 +41,7 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
             <Link href={done === "watch" ? "/account/watch" : "/account/notifications"} className={SECONDARY}>
               {done === "watch" ? "Xem danh sách theo dõi" : "Cài đặt thông báo"}
             </Link>
-            <Link href="/" className="inline-flex min-h-11 items-center px-2 text-[15px] font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
+            <Link href="/" className="inline-flex min-h-11 items-center px-2 text-control font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
               Về trang chủ
             </Link>
           </div>
@@ -68,7 +68,7 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
             <Link href="/account/notifications" className={SECONDARY}>
               Cài đặt thông báo
             </Link>
-            <Link href="/" className="inline-flex min-h-11 items-center px-2 text-[15px] font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
+            <Link href="/" className="inline-flex min-h-11 items-center px-2 text-control font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
               Về trang chủ
             </Link>
           </div>
@@ -89,7 +89,7 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
             : "Bạn sẽ không nhận email thông báo giá từ Kairo nữa. Bạn vẫn xem được giá mọi lúc trên trang web."}
         </p>
         <UnsubscribeForm token={token} scopeKind={scope.kind} />
-        <Link href="/" className="inline-flex min-h-11 items-center text-[15px] font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
+        <Link href="/" className="inline-flex min-h-11 items-center text-control font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
           Không, giữ nguyên
         </Link>
       </div>

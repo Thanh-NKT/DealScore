@@ -103,7 +103,7 @@ export function UpdatedAt({ iso, isStale, variant = "default" }: UpdatedAtProps)
 
   if (stale) {
     return (
-      <span role="status" className="inline-flex items-start gap-1.5 rounded-sm border-[1.5px] border-dashed border-line-strong bg-surface px-2.5 py-1.5 text-[13px] font-medium text-ink">
+      <span role="status" className="inline-flex items-start gap-1.5 rounded-sm border-[1.5px] border-dashed border-line-strong bg-surface px-2.5 py-1.5 text-label font-medium text-ink">
         <AlertIcon className="mt-0.5 size-4" />
         <span>
           {time}. Giá có thể đã khác, hãy kiểm tra lại trên sàn.
@@ -114,7 +114,7 @@ export function UpdatedAt({ iso, isStale, variant = "default" }: UpdatedAtProps)
 
   return (
     // Icon + one text run, so a narrow column wraps it as a sentence instead of two side-by-side columns.
-    <span className={`inline-grid grid-cols-[auto_minmax(0,1fr)] items-start gap-1.5 text-[13px] ${aging ? "text-ink-2" : "text-ink-3"}`}>
+    <span className={`inline-grid grid-cols-[auto_minmax(0,1fr)] items-start gap-1.5 text-label ${aging ? "text-ink-2" : "text-ink-3"}`}>
       <ClockIcon className="mt-px size-4" />
       <span>
         {time}

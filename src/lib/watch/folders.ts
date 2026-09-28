@@ -25,9 +25,9 @@ export function validateFolderName(
   existing: ReadonlyArray<Pick<WatchFolder, "id" | "name">> = [],
   ignoreId?: string,
 ): FolderNameResult {
-  if (typeof raw !== "string") return { ok: false, error: "Vui lòng nhập tên thư mục." };
+  if (typeof raw !== "string") return { ok: false, error: "Nhập tên thư mục." };
   const value = raw.normalize("NFC").replace(/\s+/g, " ").trim();
-  if (value.length === 0) return { ok: false, error: "Vui lòng nhập tên thư mục." };
+  if (value.length === 0) return { ok: false, error: "Nhập tên thư mục." };
   if (value.length > MAX_FOLDER_NAME_LENGTH) {
     return { ok: false, error: `Tên thư mục tối đa ${MAX_FOLDER_NAME_LENGTH} ký tự.` };
   }

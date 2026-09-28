@@ -5,6 +5,7 @@ import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { acceptConsent, type ActionResult } from "@/actions/account";
 import { AlertIcon } from "@/components/ui/icons";
+import { buttonClass } from "@/components/ui/button";
 
 interface ConsentFormProps {
   initialNext: string;
@@ -61,7 +62,7 @@ export function ConsentForm({ initialNext }: ConsentFormProps) {
             aria-invalid={Boolean(localError) || undefined}
             className="mt-0.5 size-5 shrink-0 accent-primary"
           />
-          <span className="text-[15px] leading-relaxed text-ink">
+          <span className="text-control leading-relaxed text-ink">
             Tôi đã đọc và đồng ý với{" "}
             <Link href="/terms" target="_blank" className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
               Điều khoản sử dụng
@@ -76,19 +77,19 @@ export function ConsentForm({ initialNext }: ConsentFormProps) {
 
         <label className="flex cursor-pointer items-start gap-3 rounded-md border border-line-strong bg-surface p-3.5 transition-colors duration-150 ease-out hover:bg-surface-2">
           <input type="checkbox" name="marketing" defaultChecked={false} className="mt-0.5 size-5 shrink-0 accent-primary" />
-          <span className="text-[15px] leading-relaxed text-ink">
+          <span className="text-control leading-relaxed text-ink">
             Gửi cho tôi email về deal nổi bật và tính năng mới.{" "}
             <span className="text-ink-3">(không bắt buộc, tắt được bất cứ lúc nào trong phần Thông báo)</span>
           </span>
         </label>
       </fieldset>
 
-      <p className="text-[14px] text-ink-2">
+      <p className="text-body-sm text-ink-2">
         Thông báo giá cho sản phẩm bạn theo dõi không phụ thuộc vào ô thứ hai: bạn vẫn nhận được chúng nếu không chọn nhận email deal.
       </p>
 
       {error && (
-        <p id={`${uid}-err`} role="alert" className="flex items-start gap-2 text-[14px] font-semibold text-avoid">
+        <p id={`${uid}-err`} role="alert" className="flex items-start gap-2 text-body-sm font-semibold text-avoid">
           <AlertIcon className="mt-0.5 size-4 shrink-0" />
           {error}
         </p>
@@ -98,7 +99,7 @@ export function ConsentForm({ initialNext }: ConsentFormProps) {
         type="submit"
         disabled={pending}
         aria-busy={pending}
-        className="inline-flex min-h-[52px] w-full items-center justify-center rounded-md bg-primary text-[16px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3"
+        className={buttonClass({ size: "lg", block: true })}
       >
         {pending ? "Đang lưu…" : "Đồng ý và tiếp tục"}
       </button>

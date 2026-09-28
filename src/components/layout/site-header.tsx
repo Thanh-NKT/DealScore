@@ -25,10 +25,10 @@ export async function SiteHeader() {
       <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-14 max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-1 max-[760px]:pt-3">
         <div className="flex min-w-0 items-center gap-3 sm:gap-7 max-[760px]:contents">
           <Link href="/" aria-label="Kairo — Trang chủ" className="flex shrink-0 items-center gap-2.5 text-ink">
-            <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-primary text-on-primary shadow-2xs">
+            <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-on-primary shadow-2xs">
               <TrendUpIcon className="size-5" strokeWidth={2.4} />
             </span>
-            <span className="display text-[22px] font-bold tracking-tight">Kairo</span>
+            <span className="display text-h3 font-bold tracking-tight">Kairo</span>
           </Link>
           <div className="min-w-0 max-[760px]:order-last max-[760px]:-mx-4 max-[760px]:w-[calc(100%+2rem)] max-[760px]:overflow-x-auto max-[760px]:px-2.5 max-[760px]:pb-1.5 max-[760px]:[scrollbar-width:none]">
           <HeaderNav signedIn={Boolean(user)} />
@@ -38,7 +38,7 @@ export async function SiteHeader() {
         <div className="flex shrink-0 items-center gap-2.5">
           <Link
             href="/extension"
-            className="flex h-11 items-center gap-2 rounded-[12px] border border-line bg-surface-2/60 px-3.5 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary/40 hover:bg-surface-2 max-[680px]:hidden"
+            className="flex h-11 items-center gap-2 rounded-md border border-line bg-surface-2/60 px-3.5 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary/40 hover:bg-surface-2 max-[680px]:hidden"
           >
             <MonitorIcon className="size-[18px] text-primary" />
             <span>Cài tiện ích</span>
@@ -49,10 +49,10 @@ export async function SiteHeader() {
           <Link
             href="/account/notifications"
             aria-label="Thông báo"
-            className="relative flex size-11 items-center justify-center rounded-[12px] border border-line bg-surface-2/60 text-ink transition-colors duration-150 ease-out hover:border-primary/40 hover:bg-surface-2"
+            className="relative flex size-11 items-center justify-center rounded-md border border-line bg-surface-2/60 text-ink transition-colors duration-150 ease-out hover:border-primary/40 hover:bg-surface-2"
           >
+            {/* No unread dot: there is no unread-notification data yet, and a permanent dot is a false signal. */}
             <BellIcon className="size-5" />
-            <span className="absolute right-[10px] top-[9px] size-[9px] rounded-full border-2 border-surface bg-red-500" />
           </Link>
 
           {user ? (
@@ -60,7 +60,7 @@ export async function SiteHeader() {
           ) : (
             <Link
               href="/login"
-              className="flex h-11 items-center justify-center rounded-[12px] px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+              className="flex h-11 items-center justify-center rounded-md px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
             >
               Đăng nhập
             </Link>

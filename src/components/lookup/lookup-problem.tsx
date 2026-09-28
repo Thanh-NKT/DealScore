@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { InfoIcon } from "@/components/ui/icons";
 import { explainLookup, RETRYABLE_LOOKUP, type LookupProblem as Problem } from "./use-lookup";
+import { buttonClass } from "@/components/ui/button";
 
 interface LookupProblemProps {
   problem: Problem;
@@ -21,7 +22,7 @@ export function LookupProblem({ problem, input, onRetry }: LookupProblemProps) {
   const retryable = RETRYABLE_LOOKUP.has(problem.code);
 
   return (
-    <div role="alert" className="flex items-start gap-3 rounded-md border border-line bg-surface-2 p-3.5 text-[14px] leading-normal text-ink">
+    <div role="alert" className="flex items-start gap-3 rounded-md border border-line bg-surface-2 p-3.5 text-body-sm leading-normal text-ink">
       <InfoIcon className="mt-px size-5 shrink-0 text-ink-2" />
       <div className="min-w-0 space-y-1">
         <p className="font-semibold">{what}</p>
@@ -32,7 +33,7 @@ export function LookupProblem({ problem, input, onRetry }: LookupProblemProps) {
               <button
                 type="button"
                 onClick={onRetry}
-                className="inline-flex min-h-10 items-center justify-center rounded-md bg-primary px-4 text-[14px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover"
+                className={buttonClass({ size: "sm" })}
               >
                 Thử lại
               </button>
@@ -40,7 +41,7 @@ export function LookupProblem({ problem, input, onRetry }: LookupProblemProps) {
             {offerSearch && (
               <Link
                 href={searchText ? `/search?q=${encodeURIComponent(searchText)}` : "/search"}
-                className="inline-flex min-h-10 max-w-full items-center rounded-md border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out [overflow-wrap:anywhere] hover:bg-surface-2"
+                className="inline-flex min-h-10 max-w-full items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out [overflow-wrap:anywhere] hover:bg-surface-2"
               >
                 {searchText ? `Tìm “${searchText.length > 40 ? `${searchText.slice(0, 40)}…` : searchText}”` : "Tìm theo tên sản phẩm"}
               </Link>

@@ -4,12 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/actions/account";
 import { MarketingToggle } from "@/components/account/marketing-toggle";
 import { BellIcon } from "@/components/ui/icons";
+import { buttonClass } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
 const CARD = "rounded-lg border border-line bg-surface p-7 max-[760px]:p-5";
 const SECONDARY =
-  "inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-[15px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
 
 function SlidersIcon({ className = "size-5" }: { className?: string }) {
   return (
@@ -52,8 +53,8 @@ export default async function AccountPage() {
       {/* Account header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-1.5">
-          <h1 className="display text-[30px] font-extrabold leading-[1.1] text-ink sm:text-[40px]">Tài khoản của tôi</h1>
-          <p className="text-[15px] text-ink-2 [overflow-wrap:anywhere]">
+          <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-ink sm:text-h1">Tài khoản của tôi</h1>
+          <p className="text-control text-ink-2 [overflow-wrap:anywhere]">
             Đăng nhập với email: <strong className="font-semibold text-ink">{user.email}</strong>
             {joinedDate && (
               <>
@@ -79,22 +80,22 @@ export default async function AccountPage() {
               <span className="inline-flex size-11 items-center justify-center rounded-md bg-accent text-on-accent">
                 <BellIcon className="size-5" strokeWidth={2} />
               </span>
-              <span className="rounded-sm border border-line bg-surface-2 px-2.5 py-1 text-[13px] font-semibold text-ink-2">
+              <span className="rounded-sm border border-line bg-surface-2 px-2.5 py-1 text-label font-semibold text-ink-2">
                 <span className="num">{activeWatchCount ?? 0}</span> đang bật
               </span>
             </div>
             <div>
-              <h2 className="display text-[22px] font-bold leading-tight text-ink max-[760px]:text-[18px]">Sản phẩm đang theo dõi</h2>
-              <p className="mt-1.5 text-[15px] leading-relaxed text-ink-2">
-                Xem khoảng cách tới mức giá mục tiêu, trạng thái biến động giá và các cảnh báo đã nhận.
+              <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Sản phẩm đang theo dõi</h2>
+              <p className="mt-1.5 text-control leading-relaxed text-ink-2">
+                Xem khoảng cách tới giá mong muốn, giá đã thay đổi thế nào và các thông báo giá đã nhận.
               </p>
             </div>
           </div>
           <Link
             href="/account/watch"
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-[15px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover"
+            className={buttonClass({ size: "md", block: true })}
           >
-            Quản lý Watch
+            Xem sản phẩm đang theo dõi
           </Link>
         </section>
 
@@ -104,8 +105,8 @@ export default async function AccountPage() {
               <SlidersIcon />
             </span>
             <div>
-              <h2 className="display text-[22px] font-bold leading-tight text-ink max-[760px]:text-[18px]">Cài đặt thông báo</h2>
-              <p className="mt-1.5 text-[15px] leading-relaxed text-ink-2">
+              <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Cài đặt thông báo</h2>
+              <p className="mt-1.5 text-control leading-relaxed text-ink-2">
                 Tùy chỉnh kênh nhận tin (Email, Web Push), tần suất tức thì hoặc tóm tắt ngày, và khung giờ im lặng.
               </p>
             </div>
@@ -118,24 +119,24 @@ export default async function AccountPage() {
 
       {/* Marketing preferences */}
       <section className={`${CARD} space-y-4`}>
-        <h2 className="display text-[22px] font-bold leading-tight text-ink max-[760px]:text-[18px]">Tùy chọn bản tin &amp; Khuyến mãi</h2>
+        <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Tùy chọn bản tin &amp; Khuyến mãi</h2>
         <MarketingToggle initialOptIn={user.marketingOptIn} />
       </section>
 
       {/* Data & privacy */}
       <section className={`${CARD} space-y-5`}>
         <div>
-          <h2 className="display text-[22px] font-bold leading-tight text-ink max-[760px]:text-[18px]">Dữ liệu cá nhân &amp; Quyền riêng tư</h2>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-ink-2">
+          <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Dữ liệu cá nhân &amp; Quyền riêng tư</h2>
+          <p className="mt-1.5 text-control leading-relaxed text-ink-2">
             Bạn có toàn quyền kiểm soát dữ liệu của mình tại Kairo theo quy định về bảo vệ dữ liệu cá nhân.
           </p>
         </div>
 
         <div className="flex flex-col items-start justify-between gap-4 border-t border-line pt-5 sm:flex-row sm:items-center">
           <div>
-            <h3 className="text-[15px] font-semibold text-ink">Xuất dữ liệu cá nhân</h3>
-            <p className="mt-0.5 text-[14px] text-ink-2">
-              Tải về toàn bộ hồ sơ, cài đặt, danh sách Watch và lịch sử tra cứu dưới dạng file JSON.
+            <h3 className="text-control font-semibold text-ink">Xuất dữ liệu cá nhân</h3>
+            <p className="mt-0.5 text-body-sm text-ink-2">
+              Tải về toàn bộ hồ sơ, cài đặt, danh sách sản phẩm đang theo dõi và lịch sử tra cứu dưới dạng file JSON.
             </p>
           </div>
           <a href="/account/export" download className={SECONDARY}>
@@ -145,14 +146,14 @@ export default async function AccountPage() {
 
         <div className="flex flex-col items-start justify-between gap-4 border-t border-line pt-5 sm:flex-row sm:items-center">
           <div>
-            <h3 className="text-[15px] font-semibold text-avoid">Xóa tài khoản</h3>
-            <p className="mt-0.5 text-[14px] text-ink-2">
+            <h3 className="text-control font-semibold text-avoid">Xóa tài khoản</h3>
+            <p className="mt-0.5 text-body-sm text-ink-2">
               Dừng toàn bộ thông báo giá ngay lập tức. Bạn có thể khôi phục trong vòng 30 ngày.
             </p>
           </div>
           <Link
             href="/account/delete"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-avoid bg-surface px-4 text-[15px] font-semibold text-avoid transition-colors duration-150 ease-out hover:bg-avoid-soft"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-avoid bg-surface px-4 text-control font-semibold text-avoid transition-colors duration-150 ease-out hover:bg-avoid-soft"
           >
             Yêu cầu xóa tài khoản
           </Link>

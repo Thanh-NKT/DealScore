@@ -15,10 +15,10 @@ export async function savePushSubscription(
   try {
     url = new URL(subscription.endpoint);
   } catch {
-    return { ok: false, error: "Endpoint không hợp lệ." };
+    return { ok: false, error: "Trình duyệt chưa bật được thông báo. Kiểm tra quyền thông báo của trang rồi thử lại." };
   }
   if (url.protocol !== "https:" || !subscription.keys?.p256dh || !subscription.keys?.auth) {
-    return { ok: false, error: "Đăng ký thông báo không hợp lệ." };
+    return { ok: false, error: "Trình duyệt chưa bật được thông báo. Kiểm tra quyền thông báo của trang rồi thử lại." };
   }
 
   // A device can switch signed-in users: if the endpoint belongs to another user, delete the old row.

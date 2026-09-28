@@ -5,15 +5,14 @@ import { unstable_rethrow } from "next/navigation";
 import type { AuthFormState, FieldErrors } from "@/actions/auth";
 import { checkPassword } from "@/lib/auth/password";
 import { AlertIcon, CheckIcon, DashIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
+import { buttonClass } from "@/components/ui/button";
+import { FieldMessage, inputClass } from "@/components/ui/field";
 
 export const NETWORK_ERROR = "Chưa kết nối được tới Kairo. Kiểm tra mạng rồi thử lại.";
 
-export const INPUT =
-  "h-12 w-full rounded-md border border-line-strong bg-surface px-4 text-[16px] text-ink placeholder:text-ink-3 transition-colors duration-150 ease-out focus:border-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
-export const PRIMARY =
-  "inline-flex min-h-[52px] w-full items-center justify-center rounded-md bg-primary px-4 text-[16px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3";
-export const SECONDARY =
-  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-line-strong bg-surface px-4 text-[15px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 disabled:cursor-not-allowed disabled:border-line disabled:text-ink-3";
+export const INPUT = inputClass({ size: "lg" });
+export const PRIMARY = buttonClass({ size: "lg", block: true });
+export const SECONDARY = buttonClass({ variant: "secondary", size: "md" });
 export const TEXT_LINK = "font-semibold text-primary underline underline-offset-4 hover:text-primary-hover";
 
 type Action = (prev: AuthFormState, form: FormData) => Promise<AuthFormState>;
@@ -66,26 +65,10 @@ export function Problem({ id, children }: { id?: string; children: React.ReactNo
     <div
       id={id}
       role="alert"
-      className="flex items-start gap-2.5 rounded-md border border-avoid/35 bg-avoid-soft p-3.5 text-[14px] font-semibold text-avoid"
+      className="flex items-start gap-2.5 rounded-md border border-avoid/35 bg-avoid-soft p-3.5 text-body-sm font-semibold text-avoid"
     >
       <AlertIcon className="mt-0.5 size-4 shrink-0" />
       <div className="min-w-0 space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function FieldMessage({ id, error, hint }: { id: string; error?: string | null; hint?: React.ReactNode }) {
-  if (!error && !hint) return null;
-  return (
-    <div id={id} className="mt-1.5 text-[14px] leading-snug">
-      {error ? (
-        <p className="flex items-start gap-1.5 font-semibold text-avoid">
-          <AlertIcon className="mt-0.5 size-4" />
-          {error}
-        </p>
-      ) : (
-        hint
-      )}
     </div>
   );
 }
@@ -128,7 +111,7 @@ export function EmailField({
   const suggestion = !error ? suggestEmail(value.trim()) : null;
   return (
     <div>
-      <label htmlFor={id} className="text-[14px] font-semibold text-ink">
+      <label htmlFor={id} className="text-body-sm font-semibold text-ink">
         Email
       </label>
       <input
@@ -196,7 +179,7 @@ export function PasswordField({
 
   return (
     <div>
-      <label htmlFor={id} className="text-[14px] font-semibold text-ink">
+      <label htmlFor={id} className="text-body-sm font-semibold text-ink">
         {label}
       </label>
       <div className="relative mt-1.5">
@@ -228,14 +211,14 @@ export function PasswordField({
       </div>
       <FieldMessage id={`${id}-msg`} error={error} />
       {checklist && <PasswordChecklist id={`${id}-rules`} password={value} />}
-      {after && <div className="mt-2 flex justify-end text-[14px]">{after}</div>}
+      {after && <div className="mt-2 flex justify-end text-body-sm">{after}</div>}
     </div>
   );
 }
 
 function PasswordChecklist({ id, password }: { id: string; password: string }) {
   return (
-    <ul id={id} aria-label="Yêu cầu mật khẩu" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+    <ul id={id} aria-label="Yêu cầu mật khẩu" className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-label">
       {checkPassword(password).map((c) => (
         <li key={c.rule} className={`flex items-center gap-1.5 transition-colors duration-150 ease-out ${c.ok ? "font-semibold text-ink" : "text-ink-3"}`}>
           {c.ok ? <CheckIcon className="size-4" /> : <DashIcon className="size-4" />}

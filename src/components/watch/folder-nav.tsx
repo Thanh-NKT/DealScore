@@ -5,6 +5,8 @@ import { unstable_rethrow } from "next/navigation";
 import { createFolder, deleteFolder, renameFolder } from "@/actions/watch";
 import { MAX_FOLDERS, MAX_FOLDER_NAME_LENGTH, validateFolderName, type WatchFolder } from "@/lib/watch/folders";
 import { FolderIcon } from "@/components/ui/icons";
+import { buttonClass } from "@/components/ui/button";
+import { inputClass } from "@/components/ui/field";
 
 /** "all" | "unfiled" | a folder id. */
 export type FolderFilter = string;
@@ -19,15 +21,12 @@ interface FolderNavProps {
 }
 
 const rowClass = (isSelected: boolean) =>
-  `flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-3 text-left text-[14px] transition-colors ${
+  `flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-md px-3 text-left text-body-sm transition-colors ${
     isSelected ? "bg-surface-2 font-bold text-ink" : "bg-transparent font-medium text-ink-2 hover:bg-canvas hover:text-ink"
   }`;
-const inputClass =
-  "h-10 w-full min-w-0 rounded-md border border-line-strong bg-surface px-3 text-[15px] text-ink placeholder:text-ink-3 focus:border-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
-const smallBtn =
-  "inline-flex h-10 items-center justify-center rounded-md border border-line-strong bg-surface px-3 text-[13px] font-semibold text-ink transition-colors hover:bg-canvas disabled:text-ink-3";
-const smallPrimary =
-  "inline-flex h-10 items-center justify-center rounded-md bg-primary px-3 text-[13px] font-semibold text-on-primary transition-colors hover:bg-primary-hover disabled:bg-surface-2 disabled:text-ink-3";
+const nameInputClass = inputClass({ size: "sm" });
+const smallBtn = buttonClass({ variant: "secondary", size: "sm" });
+const smallPrimary = buttonClass({ size: "sm" });
 
 const FALLBACK_ERROR = "Chưa lưu được thư mục. Hãy thử lại.";
 
@@ -86,8 +85,8 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
   };
 
   const nameForm = (label: string, submitLabel: string) => (
-    <form onSubmit={submitName} className="flex flex-col gap-2 rounded-xl bg-surface-2 p-2.5">
-      <label htmlFor={`${uid}-name`} className="text-[13px] font-semibold text-ink">
+    <form onSubmit={submitName} className="flex flex-col gap-2 rounded-md bg-surface-2 p-2.5">
+      <label htmlFor={`${uid}-name`} className="text-label font-semibold text-ink">
         {label}
       </label>
       <input
@@ -105,10 +104,10 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
         placeholder="Ví dụ: Nhà bếp"
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${uid}-error` : undefined}
-        className={inputClass}
+        className={nameInputClass}
       />
       {error && (
-        <p id={`${uid}-error`} role="alert" className="text-[13px] font-semibold text-avoid">
+        <p id={`${uid}-error`} role="alert" className="text-label font-semibold text-avoid">
           {error}
         </p>
       )}
@@ -124,8 +123,8 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
   );
 
   return (
-    <nav aria-label="Thư mục" className="flex flex-col gap-1 rounded-[20px] border border-line bg-surface p-4 shadow-sm">
-      <span className="px-3 pb-2 pt-1 text-[13px] font-bold text-ink-3">Thư mục</span>
+    <nav aria-label="Thư mục" className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-4 shadow-sm">
+      <span className="px-3 pb-2 pt-1 text-label font-bold text-ink-3">Thư mục</span>
 
       <FolderRow label="Tất cả" count={counts.all} selected={selected === ALL} onSelect={() => onSelect(ALL)} />
 
@@ -135,11 +134,11 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
         }
         if (mode?.kind === "delete" && mode.id === f.id) {
           return (
-            <div key={f.id} role="alert" className="flex flex-col gap-2 rounded-xl bg-surface-2 p-2.5">
-              <p className="text-[13px] text-ink">
+            <div key={f.id} role="alert" className="flex flex-col gap-2 rounded-md bg-surface-2 p-2.5">
+              <p className="text-label text-ink">
                 Xóa thư mục <b>“{f.name}”</b>? Các theo dõi bên trong vẫn được giữ và chuyển sang “Chưa xếp thư mục”.
               </p>
-              {error && <p className="text-[13px] font-semibold text-avoid">{error}</p>}
+              {error && <p className="text-label font-semibold text-avoid">{error}</p>}
               <div className="flex gap-2">
                 <button type="button" onClick={close} autoFocus className={`${smallBtn} flex-1`}>
                   Giữ lại
@@ -148,7 +147,7 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
                   type="button"
                   disabled={pending}
                   onClick={() => run(() => deleteFolder(f.id), () => selected === f.id && onSelect(ALL))}
-                  className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-avoid bg-surface px-3 text-[13px] font-semibold text-avoid transition-colors hover:bg-avoid-soft disabled:border-line disabled:text-ink-3"
+                  className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-avoid bg-surface px-3 text-label font-semibold text-avoid transition-colors hover:bg-avoid-soft disabled:border-line disabled:text-ink-3"
                 >
                   {pending ? "Đang xóa…" : "Xóa thư mục"}
                 </button>
@@ -200,7 +199,7 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
             setName("");
             setMode({ kind: "create" });
           }}
-          className="mt-1 flex h-11 items-center gap-2.5 rounded-xl border border-dashed border-line-strong px-3 text-[14px] font-medium text-ink-2 transition-colors hover:bg-canvas hover:text-ink disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:bg-transparent"
+          className="mt-1 flex h-11 items-center gap-2.5 rounded-md border border-dashed border-line-strong px-3 text-body-sm font-medium text-ink-2 transition-colors hover:bg-canvas hover:text-ink disabled:cursor-not-allowed disabled:text-ink-3 disabled:hover:bg-transparent"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             <path d="M12 5v14M5 12h14" />
@@ -251,7 +250,7 @@ function FolderRow({
       <button type="button" onClick={onSelect} aria-pressed={selected} className={rowClass(selected)}>
         <FolderIcon className="size-[18px] shrink-0 text-ink-2" />
         <span className="flex-1 truncate">{label}</span>
-        <span className="text-[13px] text-ink-3">{count}</span>
+        <span className="text-label text-ink-3">{count}</span>
       </button>
       {menu && (
         <>
@@ -261,7 +260,7 @@ function FolderRow({
             aria-haspopup="menu"
             aria-expanded={menu.open}
             onClick={() => menu.setOpen(!menu.open)}
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-ink-3 transition-colors hover:bg-canvas hover:text-ink"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-canvas hover:text-ink"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <circle cx="5" cy="12" r="1.75" />
@@ -271,10 +270,10 @@ function FolderRow({
           </button>
           {menu.open && (
             <div role="menu" className="absolute right-0 top-11 z-20 flex w-40 flex-col rounded-md border border-line bg-surface p-1 shadow-lift">
-              <button role="menuitem" type="button" autoFocus onClick={menu.onRename} className="h-10 rounded-sm px-3 text-left text-[14px] font-medium text-ink hover:bg-surface-2">
+              <button role="menuitem" type="button" autoFocus onClick={menu.onRename} className="h-10 rounded-sm px-3 text-left text-body-sm font-medium text-ink hover:bg-surface-2">
                 Đổi tên
               </button>
-              <button role="menuitem" type="button" onClick={menu.onDelete} className="h-10 rounded-sm px-3 text-left text-[14px] font-medium text-avoid hover:bg-avoid-soft">
+              <button role="menuitem" type="button" onClick={menu.onDelete} className="h-10 rounded-sm px-3 text-left text-body-sm font-medium text-avoid hover:bg-avoid-soft">
                 Xóa thư mục
               </button>
             </div>

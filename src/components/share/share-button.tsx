@@ -15,7 +15,7 @@ interface ShareButtonProps {
 }
 
 const SECONDARY =
-  "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 cursor-pointer";
+  "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 cursor-pointer";
 
 type State = { kind: "idle" } | { kind: "copied" } | { kind: "manual" };
 
@@ -80,7 +80,7 @@ export function ShareButton({
         {!iconOnly && <span className="whitespace-nowrap">{copied ? "Đã chép link" : "Chia sẻ"}</span>}
       </button>
       {!iconOnly && (
-        <p id={`${uid}-status`} aria-live="polite" className="text-[13px] leading-[1.45] text-ink-2 empty:hidden">
+        <p id={`${uid}-status`} aria-live="polite" className="text-label leading-[1.45] text-ink-2 empty:hidden">
           {state.kind === "copied" ? "Đã sao chép liên kết." : state.kind === "manual" ? "Sao chép liên kết bên dưới:" : ""}
         </p>
       )}
@@ -96,7 +96,7 @@ export function ShareButton({
           value={url}
           aria-label="Liên kết chia sẻ"
           onFocus={(e) => e.currentTarget.select()}
-          className="mt-1.5 min-h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-[13px] text-ink focus:border-primary"
+          className="mt-1.5 min-h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-label text-ink focus:border-primary"
         />
       )}
     </div>

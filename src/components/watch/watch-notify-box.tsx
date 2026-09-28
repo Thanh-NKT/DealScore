@@ -72,12 +72,12 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
   };
 
   return (
-    <section aria-label="Cài đặt thông báo" className="flex flex-col gap-4 rounded-[20px] border border-line bg-surface p-5 shadow-sm">
-      <span className="font-[family-name:var(--font-display)] text-[18px] font-bold tracking-[-0.02em] text-ink">
+    <section aria-label="Cài đặt thông báo" className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5 shadow-sm">
+      <span className="display text-title font-bold tracking-[-0.02em] text-ink">
         Nhận thông báo qua
       </span>
 
-      <div className="flex flex-col gap-1 text-[14px]">
+      <div className="flex flex-col gap-1 text-body-sm">
         <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-ink">
           <svg {...iconProps}>
             <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 6l-10 7L2 6" />
@@ -88,7 +88,7 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
             checked={settings.emailEnabled}
             disabled={pending}
             onChange={(e) => save({ emailEnabled: e.target.checked })}
-            className="size-[18px] cursor-pointer rounded border-line-strong accent-primary"
+            className="size-[18px] cursor-pointer rounded-xs border-line-strong accent-primary"
           />
         </label>
 
@@ -103,7 +103,7 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
               checked
               disabled={pending}
               onChange={() => save({ pushEnabled: false })}
-              className="size-[18px] cursor-pointer rounded border-line-strong accent-primary"
+              className="size-[18px] cursor-pointer rounded-xs border-line-strong accent-primary"
             />
           </label>
         ) : (
@@ -115,7 +115,7 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
             <Link
               href="/account/notifications"
               aria-label="Bật thông báo trình duyệt trong Cài đặt thông báo"
-              className="inline-flex min-h-8 items-center rounded-lg border border-line-strong bg-surface px-2.5 text-[12px] font-semibold text-ink transition-colors hover:bg-canvas"
+              className="inline-flex min-h-8 items-center rounded-lg border border-line-strong bg-surface px-2.5 text-micro font-semibold text-ink transition-colors hover:bg-canvas"
             >
               Bật
             </Link>
@@ -127,7 +127,7 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
             <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" />
           </svg>
           <span className="flex-1">Telegram</span>
-          <span className="rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-ink-2">Sắp có</span>
+          <span className="rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2">Sắp có</span>
         </div>
 
         <div className="flex min-h-10 items-center gap-2.5 text-ink-3">
@@ -135,14 +135,14 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <span className="flex-1">Zalo</span>
-          <span className="rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-ink-2">Sắp có</span>
+          <span className="rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2">Sắp có</span>
         </div>
       </div>
 
       <div className="h-px bg-line" />
 
-      <fieldset className="flex flex-col gap-1 border-none p-0 text-[14px]" disabled={pending}>
-        <legend className="pb-1 text-[14px] font-bold text-ink">Tần suất</legend>
+      <fieldset className="flex flex-col gap-1 border-none p-0 text-body-sm" disabled={pending}>
+        <legend className="pb-1 text-body-sm font-bold text-ink">Tần suất</legend>
         {FREQUENCY_OPTIONS.map(([value, label]) => (
           <label key={value} className="flex min-h-10 cursor-pointer items-center gap-2.5">
             <input
@@ -158,14 +158,14 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
 
         {settings.frequency === "weekly_digest" && (
           <div className="mt-1 flex flex-wrap items-center gap-2 pl-7">
-            <label htmlFor={`${uid}-weekday`} className="text-[13px] text-ink-2">
+            <label htmlFor={`${uid}-weekday`} className="text-label text-ink-2">
               Ngày nhận
             </label>
             <select
               id={`${uid}-weekday`}
               value={settings.digestWeekday}
               onChange={(e) => save({ digestWeekday: Number(e.target.value) as IsoWeekday })}
-              className="h-10 rounded-md border border-line-strong bg-surface px-2 text-[14px] text-ink focus:border-primary"
+              className="h-10 rounded-md border border-line-strong bg-surface px-2 text-body-sm text-ink focus:border-primary"
             >
               {WEEKDAYS.map((d) => (
                 <option key={d} value={d}>
@@ -176,7 +176,7 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
           </div>
         )}
         {settings.frequency !== "instant" && (
-          <p className="pl-7 text-[12px] text-ink-3">
+          <p className="pl-7 text-micro text-ink-3">
             Gửi lúc <span className="num">{hh(settings.digestHour)}</span> giờ Việt Nam ·{" "}
             <Link href="/account/notifications" className="underline underline-offset-2 hover:text-ink">
               Đổi giờ
@@ -185,7 +185,7 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
         )}
       </fieldset>
 
-      <p aria-live="polite" className="min-h-[18px] text-[12px]">
+      <p aria-live="polite" className="min-h-[18px] text-micro">
         {pending ? (
           <span className="text-ink-3">Đang lưu…</span>
         ) : status === "error" ? (

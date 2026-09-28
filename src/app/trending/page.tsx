@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 const TABS: Record<TrendingMode, { text: string; lead: string; empty: string }> = {
   watched: {
     text: "Nhiều người theo dõi",
-    lead: "Sản phẩm có nhiều Watch đang hoạt động nhất: nhiều người đang chờ giá tốt cho chúng.",
+    lead: "Sản phẩm đang được nhiều người theo dõi giá nhất: nhiều người đang chờ giá tốt cho chúng.",
     empty: "Một sản phẩm cần ít nhất 2 người theo dõi mới được xếp hạng, để không ai bị lộ mình đang chờ mua gì.",
   },
   rising: {

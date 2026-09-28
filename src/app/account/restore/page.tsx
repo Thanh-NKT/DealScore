@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { restoreAccount, signOut } from "@/actions/account";
 import { ClockIcon } from "@/components/ui/icons";
+import { buttonClass } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -33,16 +34,16 @@ export default async function RestoreAccountPage() {
         </span>
 
         <div className="space-y-2">
-          <h1 className="display text-[28px] font-extrabold leading-[1.15] text-ink max-[760px]:text-[24px]">Tài khoản đang chờ xóa</h1>
-          <p className="text-[15px] leading-relaxed text-ink-2 [overflow-wrap:anywhere]">
+          <h1 className="display text-h2 font-extrabold leading-[1.15] text-ink max-[760px]:text-price-input">Tài khoản đang chờ xóa</h1>
+          <p className="text-control leading-relaxed text-ink-2 [overflow-wrap:anywhere]">
             Tài khoản <strong className="font-semibold text-ink">{user.email}</strong> đã được yêu cầu xóa mềm và dự kiến sẽ bị xóa vĩnh viễn vào
             ngày <strong className="num font-semibold text-ink">{purgeDateStr}</strong>.
           </p>
         </div>
 
-        <div className="rounded-md bg-surface-2 p-4 text-[14px] leading-relaxed text-ink-2">
+        <div className="rounded-md bg-surface-2 p-4 text-body-sm leading-relaxed text-ink-2">
           <p>
-            Bạn vẫn đang trong thời hạn 30 ngày cho phép khôi phục. Nếu bạn khôi phục, toàn bộ danh sách Watch và cài đặt thông báo của bạn sẽ
+            Bạn vẫn đang trong thời hạn 30 ngày cho phép khôi phục. Nếu bạn khôi phục, toàn bộ danh sách sản phẩm đang theo dõi và cài đặt thông báo của bạn sẽ
             được kích hoạt trở lại bình thường.
           </p>
         </div>
@@ -51,7 +52,7 @@ export default async function RestoreAccountPage() {
           <form action={restoreAccount}>
             <button
               type="submit"
-              className="inline-flex min-h-[52px] w-full items-center justify-center rounded-md bg-primary px-4 text-[16px] font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover"
+              className={buttonClass({ size: "lg", block: true })}
             >
               Khôi phục tài khoản của tôi
             </button>
@@ -60,7 +61,7 @@ export default async function RestoreAccountPage() {
           <form action={signOut}>
             <button
               type="submit"
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-[15px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
             >
               Không khôi phục, đăng xuất ngay
             </button>

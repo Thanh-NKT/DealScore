@@ -4,6 +4,7 @@ import { useId, useState, type FormEvent } from "react";
 import { ClockIcon, LinkIcon } from "@/components/ui/icons";
 import { LookupProblem } from "./lookup-problem";
 import { slowMessage, useLookup } from "./use-lookup";
+import { buttonClass } from "@/components/ui/button";
 
 interface UrlLookupFormProps {
   autoFocus?: boolean;
@@ -14,9 +15,6 @@ interface UrlLookupFormProps {
    */
   variant?: "hero" | "inline";
 }
-
-const BUTTON_BASE =
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md font-semibold transition-colors duration-150 ease-out";
 
 /**
  * Paste a marketplace link → product page. The link is checked on the client first (instant
@@ -43,7 +41,7 @@ export function UrlLookupForm({ autoFocus = false, variant = "inline" }: UrlLook
     void lookup.run(url);
   };
 
-  const size = hero ? "min-h-13 px-6 text-[16px] font-bold" : "min-h-11 px-5 text-[16px]";
+  const buttonSize = hero ? "lg" : "md";
 
   return (
     <div className={`w-full ${hero ? "space-y-2" : "space-y-3"}`}>
@@ -81,15 +79,15 @@ export function UrlLookupForm({ autoFocus = false, variant = "inline" }: UrlLook
           aria-describedby={`${uid}-status`}
           className={
             hero
-              ? "min-h-13 min-w-0 flex-1 bg-transparent text-[16px] text-ink placeholder:text-ink-3 focus:outline-none read-only:text-ink-2 max-[560px]:rounded-md max-[560px]:border max-[560px]:border-line-strong max-[560px]:px-3.5 max-[560px]:focus:border-primary max-[560px]:focus:outline-2 max-[560px]:focus:outline-offset-2 max-[560px]:focus:outline-(--focus) max-[560px]:aria-[invalid=true]:border-ink"
-              : "min-h-11 min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-3.5 text-[16px] text-ink placeholder:text-ink-3 focus:border-primary focus:outline-2 focus:outline-offset-2 focus:outline-(--focus) read-only:text-ink-2 aria-[invalid=true]:border-ink"
+              ? "min-h-13 min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none read-only:text-ink-2 max-[560px]:rounded-md max-[560px]:border max-[560px]:border-line-strong max-[560px]:px-3.5 max-[560px]:focus:border-primary max-[560px]:focus:outline-2 max-[560px]:focus:outline-offset-2 max-[560px]:focus:outline-(--focus) max-[560px]:aria-[invalid=true]:border-ink"
+              : "min-h-11 min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-3.5 text-body text-ink placeholder:text-ink-3 focus:border-primary focus:outline-2 focus:outline-offset-2 focus:outline-(--focus) read-only:text-ink-2 aria-[invalid=true]:border-ink"
           }
         />
         {lookup.loading ? (
           <button
             type="button"
             onClick={lookup.cancel}
-            className={`${BUTTON_BASE} ${size} border border-line-strong bg-surface text-ink hover:bg-surface-2`}
+            className={buttonClass({ variant: "secondary", size: buttonSize })}
           >
             Hủy
           </button>
@@ -97,7 +95,7 @@ export function UrlLookupForm({ autoFocus = false, variant = "inline" }: UrlLook
           <button
             type="submit"
             disabled={lookup.navigating}
-            className={`${BUTTON_BASE} ${size} bg-primary text-on-primary hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-ink-3`}
+            className={buttonClass({ size: buttonSize })}
           >
             {lookup.navigating ? "Đang mở…" : "Kiểm tra giá"}
           </button>
@@ -106,12 +104,12 @@ export function UrlLookupForm({ autoFocus = false, variant = "inline" }: UrlLook
 
       <div id={`${uid}-status`} aria-live="polite" className={hero ? "empty:hidden [&>*]:mt-1" : undefined}>
         {emptyHint && (
-          <p className="max-w-[68ch] text-[14px] leading-normal text-ink-2">
+          <p className="max-w-[68ch] text-body-sm leading-normal text-ink-2">
             Dán link sản phẩm vào ô trên. Trong ứng dụng Shopee: mở sản phẩm → Chia sẻ → Sao chép liên kết.
           </p>
         )}
         {lookup.loading && (
-          <p className="flex items-center gap-1.5 text-[14px] text-ink-2">
+          <p className="flex items-center gap-1.5 text-body-sm text-ink-2">
             <ClockIcon className="size-4" />
             {slowMessage(lookup.slow)}
           </p>

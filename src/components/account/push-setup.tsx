@@ -58,7 +58,7 @@ async function detect(): Promise<{ state: State; sub: PushSubscription | null }>
 }
 
 const BTN_SECONDARY =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 text-[15px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas disabled:cursor-progress disabled:text-ink-3";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas disabled:cursor-progress disabled:text-ink-3";
 
 /**
  * Turns browser notifications on for THIS device: asks permission, registers /sw.js, subscribes with
@@ -141,11 +141,11 @@ export function PushSetup({ onEnabled }: PushSetupProps) {
     }
   };
 
-  const box = "mt-3 space-y-2.5 rounded-md bg-surface-2 p-3.5 text-[14px] text-ink-2";
+  const box = "mt-3 space-y-2.5 rounded-md bg-surface-2 p-3.5 text-body-sm text-ink-2";
 
   switch (state) {
     case "checking":
-      return <p className="mt-3 text-[14px] text-ink-3">Đang kiểm tra trình duyệt này…</p>;
+      return <p className="mt-3 text-body-sm text-ink-3">Đang kiểm tra trình duyệt này…</p>;
 
     case "unsupported":
       return (
@@ -206,7 +206,7 @@ export function PushSetup({ onEnabled }: PushSetupProps) {
 
     case "working":
       return (
-        <p className="mt-3 text-[14px] text-ink-2" aria-live="polite">
+        <p className="mt-3 text-body-sm text-ink-2" aria-live="polite">
           Đang xử lý… Nếu trình duyệt hỏi, hãy chọn “Cho phép”.
         </p>
       );

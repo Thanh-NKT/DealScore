@@ -14,7 +14,7 @@ interface CatalogListingProps {
 }
 
 const PAGE_LINK =
-  "inline-flex min-h-11 items-center rounded-md border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
 
 /**
  * SSR listing for the SEO landing pages (/{category}, /brand/{brand}), 1.7. Same cards and
@@ -26,17 +26,17 @@ export function CatalogListing({ title, result, basePath, searchHref, loadError 
   const pageHref = (n: number) => (n <= 1 ? basePath : `${basePath}?page=${n}`);
 
   return (
-    <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-4 py-8 sm:px-6 sm:py-12">
+    <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-8 px-4 py-8 sm:px-6 sm:py-12 lg:px-14">
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0 space-y-1.5">
-          <h1 className="display text-[40px] leading-[1.1] font-extrabold text-balance text-ink max-sm:text-[30px]">{title}</h1>
-          <p className="text-[14px] text-ink-3">
+          <h1 className="display text-h1 leading-[1.1] font-extrabold text-balance text-ink max-sm:text-h1-sm">{title}</h1>
+          <p className="text-body-sm text-ink-3">
             <span className="num font-semibold text-ink-2">{result.total}</span> sản phẩm, giá theo dõi hằng ngày
           </p>
         </div>
         <Link
           href={searchHref}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
         >
           Lọc theo giá, sắp xếp
           <span aria-hidden="true">→</span>
@@ -64,7 +64,7 @@ export function CatalogListing({ title, result, basePath, searchHref, loadError 
               ← Trang trước
             </Link>
           )}
-          <span className="px-1 text-[14px] text-ink-3">
+          <span className="px-1 text-body-sm text-ink-3">
             Trang <span className="num font-semibold text-ink">{page}</span> / <span className="num">{totalPages}</span>
           </span>
           {page < totalPages && (

@@ -37,7 +37,7 @@ export function VerdictRow({
     <div className="flex items-center justify-between gap-2">
       <VerdictTag recommendation={recommendation} className="shrink-0" />
       <div className="flex items-center gap-2">
-        <span className="text-[12px] whitespace-nowrap text-ink-3 max-[240px]:hidden" aria-hidden="true">
+        <span className="text-micro whitespace-nowrap text-ink-3 max-[240px]:hidden" aria-hidden="true">
           Deal Score
         </span>
         <ScoreRing score={score} recommendation={recommendation} size="sm" showBadge />
@@ -68,10 +68,10 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
     <Link
       href={href ?? `/${categorySlug}/${slug}`}
       title={name}
-      className="@container group flex min-w-0 flex-col gap-3 rounded-[20px] border border-line bg-surface p-3.5 text-ink transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/45 hover:shadow-lift"
+      className="@container group flex min-w-0 flex-col gap-3 rounded-lg border border-line bg-surface p-3.5 text-ink transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/45 hover:shadow-lift"
     >
       {/* 1. Product Image Stage */}
-      <div className="relative h-[204px] w-full shrink-0 overflow-hidden rounded-[14px] border border-line/60 bg-surface-2">
+      <div className="relative h-[204px] w-full shrink-0 overflow-hidden rounded-tile border border-line/60 bg-surface-2">
         <ProductImage
           src={image}
           className="size-full p-4"
@@ -81,18 +81,18 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
 
         {/* Top-left Brand / Multi-offer Pill */}
         {offersCount && offersCount > 1 ? (
-          <span className="absolute left-2.5 top-2.5 rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-[11px] font-bold text-ink-2 backdrop-blur-md shadow-2xs">
+          <span className="absolute left-2.5 top-2.5 rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-nano font-bold text-ink-2 backdrop-blur-md shadow-2xs">
             Đã gom {offersCount} nơi bán
           </span>
         ) : brandName ? (
-          <span className="absolute left-2.5 top-2.5 max-w-[65%] truncate rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-[11px] font-bold text-ink-2 backdrop-blur-md shadow-2xs">
+          <span className="absolute left-2.5 top-2.5 max-w-[65%] truncate rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-nano font-bold text-ink-2 backdrop-blur-md shadow-2xs">
             {brandName}
           </span>
         ) : null}
 
         {/* Top-right Discount Badge */}
         {off != null && off > 0 && (
-          <span className="num absolute right-2.5 top-2.5 inline-flex items-center gap-0.5 rounded-full bg-buy px-2.5 py-1 text-[12px] font-extrabold text-canvas shadow-xs">
+          <span className="num absolute right-2.5 top-2.5 inline-flex items-center gap-0.5 rounded-full bg-buy px-2.5 py-1 text-micro font-extrabold text-canvas shadow-xs">
             <TrendDownIcon className="size-3" strokeWidth={2.6} />
             −{off}%
           </span>
@@ -101,12 +101,12 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
 
       {/* 2. Product Title & Discovery Signal */}
       <div className="flex min-w-0 flex-1 flex-col gap-2.5 px-0.5">
-        <h3 className="line-clamp-2 min-h-[42px] text-[15px] font-semibold leading-[1.38] text-ink [overflow-wrap:anywhere] transition-colors group-hover:text-primary">
+        <h3 className="line-clamp-2 min-h-[42px] text-control font-semibold leading-[1.38] text-ink [overflow-wrap:anywhere] transition-colors group-hover:text-primary">
           {name}
         </h3>
 
         {insight && (
-          <div className="flex items-center gap-1.5 rounded-[8px] border border-primary/15 bg-primary-soft/45 px-2.5 py-1.5 text-[12px] font-semibold text-ink">
+          <div className="flex items-center gap-1.5 rounded-sm border border-primary/15 bg-primary-soft/45 px-2.5 py-1.5 text-micro font-semibold text-ink">
             <span aria-hidden="true" className="shrink-0 [&>svg]:size-3.5">
               {insight.icon}
             </span>
@@ -114,43 +114,45 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
           </div>
         )}
 
-        {/* 3. Signature Kairo Price + Deal Score Capsule */}
+        {/* 3. Signature Kairo Price + Deal Score Capsule: the verdict words sit on top so the ring never stands alone */}
         <div className="mt-auto flex flex-col gap-2 pt-0.5">
-          <div className="flex items-center justify-between gap-3 rounded-[12px] border border-line/80 bg-surface-2/45 p-3 transition-colors group-hover:border-primary/25 group-hover:bg-surface-2/75">
+          <VerdictTag recommendation={score == null ? null : recommendation} className="self-start" />
+          <div className="flex items-center justify-between gap-3 rounded-md border border-line/80 bg-surface-2/45 p-3 transition-colors group-hover:border-primary/25 group-hover:bg-surface-2/75">
             <div className="flex min-w-0 flex-col gap-0.5">
               {saved != null && saved > 0 ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-buy">
+                <span className="inline-flex items-center gap-1 text-micro font-bold text-buy">
                   Tiết kiệm <span className="num">{formatVnd(saved)}</span>
                 </span>
               ) : (
-                <span className="text-[11px] font-medium text-ink-3">Giá tốt nhất hiện tại</span>
+                <span className="text-micro font-medium text-ink-3">Giá tốt nhất hiện tại</span>
               )}
 
               {price != null ? (
-                <span className="num truncate text-[22px] font-extrabold leading-tight tracking-tight text-ink">
+                <span className="num truncate text-h3 font-extrabold leading-tight tracking-tight text-ink">
                   {formatVnd(price)}
                 </span>
               ) : (
-                <span className="text-[14px] font-semibold leading-tight text-ink-3">Chưa có giá</span>
+                <span className="text-body-sm font-semibold leading-tight text-ink-3">Chưa có giá</span>
               )}
 
               {off != null && listed != null ? (
-                <span className="flex items-center gap-1.5 text-[12px] text-ink-3">
+                <span className="flex items-center gap-1.5 text-micro text-ink-3">
                   <span>Giá gốc</span>
                   <s className="num decoration-[1.5px]">{formatVnd(listed)}</s>
                 </span>
               ) : (
-                <span className="text-[11px] text-ink-3">Ghi nhận trên Shopee</span>
+                <span className="text-micro text-ink-3">Ghi nhận trên Shopee</span>
               )}
             </div>
 
-            <div className=" flex shrink-0 flex-col items-center gap-0.5">
+            <div className="flex shrink-0 flex-col items-center gap-0.5">
               <ScoreRing score={score} recommendation={recommendation} size="sm" showBadge />
+              <span className="text-nano font-semibold text-ink-3" aria-hidden="true">Deal Score</span>
             </div>
           </div>
 
           {/* 4. Compact Footer: Timestamp + Hover Action */}
-          <div className="flex items-center justify-between gap-2 px-0.5 text-[12px] text-ink-3">
+          <div className="flex items-center justify-between gap-2 px-0.5 text-micro text-ink-3">
             {lastObservedAt ? (
               <span className="inline-flex min-w-0 items-center gap-1 truncate">
                 <ClockIcon className="size-3.5 shrink-0 text-ink-3" />

@@ -1,5 +1,6 @@
 import { CheckIcon, DashIcon, InfoIcon } from "@/components/ui/icons";
 import { ScoreRing, VerdictTag } from "@/components/product/verdict-tag";
+import { parseReasons } from "@/lib/pricing/verdict-copy";
 import { MIN_DAYS_FOR_SCORE, MIN_OBSERVATIONS_FOR_SCORE, type Recommendation } from "@/lib/pricing/deal-score";
 
 interface DealScoreBreakdownProps {
@@ -8,10 +9,12 @@ interface DealScoreBreakdownProps {
   reasons?: string[];
 }
 
+// The headline score is computed WITHOUT the cross-offer component (decision Đ7 in
+// src/lib/pricing/variant-pricing.ts), so the 50/30 weights renormalise to 62.5/37.5, then v1 adds
+// small trend / volatility adjustments. Keep this copy in step with the engine.
 const WEIGHTS = [
-  { weight: "50%", label: "Vị trí lịch sử 90d" },
-  { weight: "30%", label: "Khoảng cách đáy" },
-  { weight: "20%", label: "So giá nơi bán" },
+  { weight: "62,5%", label: "Vị trí của giá trong 90 ngày" },
+  { weight: "37,5%", label: "Khoảng cách tới mức thấp nhất" },
 ];
 
 export function DealScoreBreakdown({
@@ -22,23 +25,24 @@ export function DealScoreBreakdown({
   const hasScore = score != null && Number.isFinite(score);
   const scoreVal = hasScore ? Math.min(100, Math.max(0, Math.round(score!))) : null;
 
-  const shownReasons =
+  // Each reason carries its own tone (✓ in the buyer’s favour, ⚠ otherwise); the glyph is drawn as an icon, not text.
+  const shownReasons = parseReasons(
     reasons.length > 0
       ? reasons
       : scoreVal == null
         ? [`Kairo cần ít nhất ${MIN_DAYS_FOR_SCORE} ngày và ${MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá hợp lệ để chấm Deal Score.`]
-        : [];
-  const favourable = recommendation === "buy";
+        : [],
+  );
 
   return (
-    <div className="flex flex-col gap-5 rounded-[20px] border border-line bg-surface p-6 sm:p-7">
+    <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6 sm:p-7">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
         <div className="space-y-1">
-          <h2 className="display text-[22px] font-bold tracking-tight text-ink">
+          <h2 className="display text-h3 font-bold tracking-tight text-ink">
             {scoreVal != null ? "Phân tích Deal Score" : "Đang thu thập dữ liệu"}
           </h2>
-          <p className="text-[13px] text-ink-3">
+          <p className="text-label text-ink-3">
             Chấm điểm tự động từ dữ liệu giá thực tế
           </p>
         </div>
@@ -48,29 +52,29 @@ export function DealScoreBreakdown({
       {/* Reasons list */}
       <div className="flex flex-col gap-2.5">
         {shownReasons.length === 0 && (
-          <p className="text-[14px] leading-relaxed text-ink-2">Chưa có lý do chi tiết cho mức giá này.</p>
+          <p className="text-body-sm leading-relaxed text-ink-2">Chưa có lý do chi tiết cho mức giá này.</p>
         )}
-        {shownReasons.map((r, i) => (
+        {shownReasons.map((r) => (
           <div
-            key={i}
-            className="flex items-start gap-3 rounded-[12px] border border-line/70 bg-surface-2/45 p-3"
+            key={r.text}
+            className="flex items-start gap-3 rounded-md border border-line/70 bg-surface-2/45 p-3"
           >
             <span
-              className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-[8px] ${
-                favourable ? "bg-buy-soft text-buy" : "bg-surface text-ink-2 border border-line"
+              className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-sm ${
+                r.kind === "pro" ? "bg-buy-soft text-buy" : "bg-surface text-ink-2 border border-line"
               }`}
             >
-              {favourable ? <CheckIcon className="size-3.5" strokeWidth={2.5} /> : <DashIcon className="size-3.5" strokeWidth={2.5} />}
+              {r.kind === "pro" ? <CheckIcon className="size-3.5" strokeWidth={2.5} /> : <DashIcon className="size-3.5" strokeWidth={2.5} />}
             </span>
-            <span className="text-[13.5px] leading-relaxed font-medium text-ink">{r}</span>
+            <span className="text-body-sm leading-relaxed font-medium text-ink">{r.text}</span>
           </div>
         ))}
       </div>
 
       {/* Deal Score Scale Bar */}
-      <div className="flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface-2/35 p-4">
+      <div className="flex flex-col gap-2.5 rounded-tile border border-line bg-surface-2/35 p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[12px] font-bold uppercase tracking-wider text-ink-3">Thang đo khuyến nghị</span>
+          <span className="text-label font-bold text-ink-2">Thang đo khuyến nghị</span>
           <VerdictTag recommendation={recommendation} />
         </div>
 
@@ -90,7 +94,7 @@ export function DealScoreBreakdown({
           )}
         </div>
 
-        <div className="grid grid-cols-[50fr_25fr_25fr] gap-1 text-[11px] leading-snug text-ink-3">
+        <div className="grid grid-cols-[50fr_25fr_25fr] gap-1 text-micro leading-snug text-ink-3">
           <div>
             <strong className="num font-bold text-avoid">0–49</strong> · Chưa nên mua
           </div>
@@ -105,25 +109,28 @@ export function DealScoreBreakdown({
 
       {/* 3 Weight Pillars */}
       <div className="space-y-2">
-        <span className="text-[12px] font-bold text-ink-3">Tỷ trọng cấu thành điểm:</span>
-        <div className="grid grid-cols-3 gap-2">
+        <span className="text-micro font-bold text-ink-3">Tỷ trọng cấu thành điểm:</span>
+        <div className="grid grid-cols-2 gap-2">
           {WEIGHTS.map((w) => (
             <div
               key={w.label}
-              className="flex flex-col items-center justify-center rounded-[10px] border border-line bg-surface-2/40 px-2 py-2.5 text-center"
+              className="flex flex-col items-center justify-center rounded-inner border border-line bg-surface-2/40 px-2 py-2.5 text-center"
             >
-              <span className="num display text-[16px] font-extrabold text-primary">{w.weight}</span>
-              <span className="mt-0.5 text-[11px] font-medium leading-tight text-ink-2">{w.label}</span>
+              <span className="num display text-body font-extrabold text-primary">{w.weight}</span>
+              <span className="mt-0.5 text-micro font-medium leading-tight text-ink-2">{w.label}</span>
             </div>
           ))}
         </div>
+        <p className="text-micro leading-relaxed text-ink-3">
+          Sau đó cộng hoặc trừ vài điểm theo xu hướng giá gần đây và mức dao động giá.
+        </p>
       </div>
 
       {/* Compact Footer Note */}
-      <div className="flex items-start gap-2 rounded-[10px] bg-surface-2/60 p-3 text-[12px] leading-relaxed text-ink-3">
+      <div className="flex items-start gap-2 rounded-inner bg-surface-2/60 p-3 text-micro leading-relaxed text-ink-3">
         <InfoIcon className="mt-0.5 size-3.5 shrink-0 text-ink-3" />
         <span>
-          Giá flash sale và hoa hồng tiếp thị không làm thay đổi điểm. Cần tối thiểu {MIN_DAYS_FOR_SCORE} ngày & {MIN_OBSERVATIONS_FOR_SCORE} mốc giá để chấm.
+          Giá flash sale và hoa hồng tiếp thị không làm thay đổi điểm. Cần ít nhất {MIN_DAYS_FOR_SCORE} ngày và {MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá để chấm.
         </span>
       </div>
     </div>

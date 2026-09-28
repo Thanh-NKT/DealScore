@@ -108,7 +108,7 @@ function sellerAdjustment(seller: DealScoreV1Input["seller"]): DealAdjustment | 
     return { kind: "seller", delta: -5, reason: `⚠ Người bán được đánh giá thấp (${seller.rating.toFixed(1)}/5)` };
   }
   if (seller.isOfficial || (seller.rating != null && seller.rating >= 4.8)) {
-    return { kind: "seller", delta: 2, reason: "✓ Shop Mall / người bán uy tín" };
+    return { kind: "seller", delta: 2, reason: "✓ Gian hàng Mall hoặc người bán uy tín" };
   }
   return null;
 }

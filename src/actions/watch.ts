@@ -59,7 +59,7 @@ export async function setWatchStatus(
   if (error) {
     if (error.code === "P0050") {
       throw new Error(
-        "Đã đạt giới hạn 50 Watch đang hoạt động. Vui lòng tạm dừng bớt sản phẩm khác.",
+        "Bạn đang theo dõi đủ 50 sản phẩm. Tạm dừng hoặc xóa bớt một sản phẩm để thêm sản phẩm mới.",
       );
     }
     throw new Error(`Failed to update Watch status: ${error.message}`);
@@ -98,7 +98,7 @@ export async function deleteWatch(watchId: string): Promise<void> {
 // Folder actions. Identity always comes from the session (requireUser → getUser), never from arguments;
 // every query is also filtered by user.id on top of RLS.
 
-const INVALID_INPUT: FolderActionResult = { status: "error", error: "Dữ liệu không hợp lệ." };
+const INVALID_INPUT: FolderActionResult = { status: "error", error: "Chưa lưu được thư mục. Tải lại trang rồi thử lại." };
 
 export async function createFolder(name: string): Promise<FolderActionResult> {
   const user = await requireUser({ path: "/account/watch" });

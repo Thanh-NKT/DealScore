@@ -19,8 +19,8 @@ function SideCard({ side, other, position }: { side: CompareSide; other: Compare
           <ProductImage src={side.image} className="bg-surface-2! p-2 max-sm:p-1.5" iconClassName="size-7 max-sm:size-5" />
         </div>
         <div className="min-w-0 space-y-1">
-          <p className="text-[12px] font-semibold text-ink-3">{position === "a" ? "Sản phẩm A" : "Sản phẩm B"}</p>
-          <h2 className="line-clamp-3 text-[14px] leading-snug font-semibold text-ink [overflow-wrap:anywhere] max-sm:text-[14px]">
+          <p className="text-micro font-semibold text-ink-3">{position === "a" ? "Sản phẩm A" : "Sản phẩm B"}</p>
+          <h2 className="line-clamp-3 text-body-sm leading-snug font-semibold text-ink [overflow-wrap:anywhere] max-sm:text-body-sm">
             <Link href={side.href} className="underline-offset-4 hover:text-primary hover:underline">
               {side.name}
             </Link>
@@ -28,14 +28,14 @@ function SideCard({ side, other, position }: { side: CompareSide; other: Compare
         </div>
       </div>
       {side.price != null ? (
-        <p className="num text-[24px] leading-none font-extrabold max-sm:text-[18px]">{formatVnd(side.price)}</p>
+        <p className="num text-price-input leading-none font-extrabold max-sm:text-title">{formatVnd(side.price)}</p>
       ) : (
-        <p className="text-[14px] font-semibold text-ink-3">Chưa có giá còn hàng</p>
+        <p className="text-body-sm font-semibold text-ink-3">Chưa có giá còn hàng</p>
       )}
       <VerdictRow score={side.score} recommendation={side.recommendation} />
       <Link
         href={change}
-        className="mt-auto inline-flex min-h-10 w-fit items-center text-[13px] font-semibold text-primary underline-offset-4 hover:text-primary-hover hover:underline"
+        className="mt-auto inline-flex min-h-10 w-fit items-center text-label font-semibold text-primary underline-offset-4 hover:text-primary-hover hover:underline"
       >
         Đổi sản phẩm {position.toUpperCase()}
       </Link>
@@ -47,7 +47,7 @@ function Cell({ row, side, numeric }: { row: CompareRow; side: "a" | "b"; numeri
   const value = row[side];
   const wins = row.winner === side;
   return (
-    <td className={`px-5 py-3.5 align-top max-sm:px-2.5 ${numeric ? "num text-[18px] max-sm:text-[16px]" : "text-[14px] max-sm:text-[14px]"}`}>
+    <td className={`px-5 py-3.5 align-top max-sm:px-2.5 ${numeric ? "num text-title max-sm:text-body" : "text-body-sm max-sm:text-body-sm"}`}>
       <span className={`inline-flex items-start gap-1.5 ${wins ? "font-bold text-ink" : value === "—" ? "text-ink-3" : "font-medium text-ink-2"}`}>
         <span className="[overflow-wrap:anywhere]">{value}</span>
         {wins && (
@@ -66,7 +66,7 @@ function Table({ caption, rows, a, b }: { caption: string; rows: CompareRow[]; a
   return (
     <div className="overflow-hidden rounded-lg border border-line bg-surface">
       <table className="w-full table-fixed border-collapse text-left">
-        <caption className="display border-b border-line px-5 py-4 text-left text-[22px] font-bold text-ink max-sm:px-3 max-sm:text-[18px]">
+        <caption className="display border-b border-line px-5 py-4 text-left text-h3 font-bold text-ink max-sm:px-3 max-sm:text-title">
           {caption}
         </caption>
         <colgroup>
@@ -84,7 +84,7 @@ function Table({ caption, rows, a, b }: { caption: string; rows: CompareRow[]; a
         <tbody className="divide-y divide-line">
           {rows.map((row) => (
             <tr key={row.key}>
-              <th scope="row" className="px-5 py-3.5 align-top text-[13px] leading-snug font-semibold text-ink-3 max-sm:px-3">
+              <th scope="row" className="px-5 py-3.5 align-top text-label leading-snug font-semibold text-ink-3 max-sm:px-3">
                 {row.label}
               </th>
               <Cell row={row} side="a" numeric={NUMERIC.has(row.key)} />
@@ -107,7 +107,7 @@ export function CompareView({ comparison }: { comparison: Comparison }) {
   return (
     <div className="space-y-6">
       {summary.length > 0 && (
-        <div className="max-w-[68ch] space-y-1 text-[18px] leading-relaxed text-ink">
+        <div className="max-w-[68ch] space-y-1 text-title leading-relaxed text-ink">
           {summary.map((s) => (
             <p key={s}>{s}</p>
           ))}
@@ -118,7 +118,7 @@ export function CompareView({ comparison }: { comparison: Comparison }) {
         <div className="hidden flex-col justify-end gap-2 pr-5 pb-1 sm:flex">
           <Link
             href={`/compare?a=${encodeURIComponent(b.slug)}&b=${encodeURIComponent(a.slug)}`}
-            className="inline-flex min-h-11 w-fit items-center rounded-md border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+            className="inline-flex min-h-11 w-fit items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
           >
             Đổi vị trí A ↔ B
           </Link>
@@ -134,7 +134,7 @@ export function CompareView({ comparison }: { comparison: Comparison }) {
       <Table caption="So sánh theo giá Kairo ghi nhận" rows={rows} a={a} b={b} />
       <Table caption="Thông số" rows={specRows} a={a} b={b} />
 
-      <p className="flex max-w-[75ch] items-start gap-2 text-[13px] leading-[1.45] text-ink-3">
+      <p className="flex max-w-[75ch] items-start gap-2 text-label leading-[1.45] text-ink-3">
         <InfoIcon className="mt-0.5 size-4 shrink-0" />
         <span>
           Mỗi bên so sánh phiên bản đang chọn. Deal Score và khuyến nghị chấm theo lịch sử giá của chính sản phẩm đó, nên

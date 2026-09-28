@@ -60,7 +60,7 @@ export default async function RadarPage({ searchParams }: PageProps) {
       {/* Light botanical panel: category pills, then one card-row per real drop. */}
       <section
         aria-label="Danh sách giảm giá thật"
-        className="space-y-5 rounded-[24px] border border-line bg-surface p-5 text-ink sm:p-8"
+        className="space-y-5 rounded-hero border border-line bg-surface p-5 text-ink sm:p-8"
       >
         <CategoryStrip tone="light" categories={categories} current={cat} hrefFor={(s) => href(s)} />
         {radarRes.status === "rejected" ? (
@@ -82,14 +82,14 @@ export default async function RadarPage({ searchParams }: PageProps) {
             <DiscoveryEmpty
               tone="light"
               title="Hôm nay chưa có đợt giảm giá thật nào"
-              body={`Chưa sản phẩm nào${cat ? " trong danh mục này" : ""} rẻ hơn ${MIN_DROP_PCT}% so với trung vị 30 ngày. Giá đang ổn định là chuyện bình thường; bạn có thể đặt Watch để được báo khi giá giảm.`}
+              body={`Chưa sản phẩm nào${cat ? " trong danh mục này" : ""} rẻ hơn ${MIN_DROP_PCT}% so với trung vị 30 ngày. Giá đang ổn định là chuyện bình thường; bạn có thể theo dõi giá để được báo khi giá giảm.`}
               action={{ href: "/search?sort=deal_score", text: "Xem sản phẩm có Deal Score cao" }}
             />
           )
         ) : (
           <div className="space-y-3">
-            <p className="text-[14px] text-ink-2">
-              <span className="num text-gradient-warm text-[18px] font-extrabold">{radarRes.value.total}</span> sản phẩm, giảm sâu nhất trước
+            <p className="text-body-sm text-ink-2">
+              <span className="num text-gradient-warm text-title font-extrabold">{radarRes.value.total}</span> sản phẩm, giảm sâu nhất trước
             </p>
             <RadarList items={radarRes.value.items} categoryNames={categoryNames} />
           </div>

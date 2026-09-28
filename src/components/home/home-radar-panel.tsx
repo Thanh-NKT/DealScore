@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { RadarItem } from "@/lib/discovery";
 import { RadarList } from "@/components/discovery/radar-list";
 import { TrendDownIcon } from "@/components/ui/icons";
+import { pillClass } from "@/components/ui/pill";
 
 type RadarFilter = "all" | "drop20" | "score75" | "buy";
 
@@ -12,7 +13,7 @@ const FILTERS: Array<{ key: RadarFilter; label: string }> = [
   { key: "all", label: "Giảm trên 10%" },
   { key: "drop20", label: "Giảm trên 20%" },
   { key: "score75", label: "Deal Score từ 75" },
-  { key: "buy", label: "Nên mua ngay" },
+  { key: "buy", label: "Nên mua" },
 ];
 
 const RADAR_PREVIEW_COUNT = 5;
@@ -36,66 +37,71 @@ export function HomeRadarPanel({
   const visibleItems = filtered.slice(0, RADAR_PREVIEW_COUNT);
 
   return (
-    <div className="flex flex-col gap-5 rounded-[20px] border border-line bg-surface p-6 text-ink sm:p-8">
+    <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6 text-ink sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary-soft/70 px-3 py-1 text-[12px] font-bold text-primary">
-            <TrendDownIcon className="size-3.5 text-buy" strokeWidth={2.4} />
-            <span>Radar theo dõi giá 30 ngày</span>
-          </div>
-          <h2 className="display text-[26px] font-bold leading-[1.2] tracking-tight text-ink sm:text-[28px]">
-            Giảm giá <span className="text-gradient-primary">thật hôm nay</span>
+          <h2 className="display flex items-center gap-2.5 text-h2-sm font-bold leading-[1.2] tracking-tight text-ink sm:text-h2">
+            <TrendDownIcon className="size-7 shrink-0 text-buy" strokeWidth={2.2} />
+            <span>
+              Giảm giá <span className="text-gradient-primary">thật hôm nay</span>
+            </span>
           </h2>
-          <p className="max-w-[60ch] text-[14px] leading-normal text-ink-2">
+          <p className="max-w-[60ch] text-body-sm leading-normal text-ink-2">
             Giá đang thấp hơn thật so với trung vị 30 ngày hệ thống ghi nhận — không tính chiêu nâng giá rồi gạch.
           </p>
         </div>
         <Link
           href="/radar"
-          className="inline-flex h-9 shrink-0 items-center rounded-[10px] border border-line-strong/50 bg-surface px-3.5 text-[13px] font-semibold text-primary shadow-2xs transition-colors hover:border-primary/40 hover:bg-primary-soft/60"
+          className="inline-flex h-10 shrink-0 items-center rounded-inner border border-line-strong/50 bg-surface px-3.5 text-label font-semibold text-primary shadow-2xs transition-colors hover:border-primary/40 hover:bg-primary-soft/60"
         >
-          Xem tất cả ({items.length}) →
+          Xem tất cả →
         </Link>
       </div>
 
-      <div role="group" aria-label="Lọc mức giảm" className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => {
-          const active = filter === f.key;
-          return (
-            <button
-              key={f.key}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setFilter(f.key)}
-              className={`h-9 rounded-full border px-4 text-[13px] transition-all cursor-pointer ${
-                active
-                  ? "border-primary bg-primary font-bold text-on-primary shadow-xs"
-                  : "border-line bg-surface/90 font-medium text-ink-2 hover:border-primary/35 hover:text-primary"
-              }`}
-            >
-              {f.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {visibleItems.length > 0 ? (
-        <RadarList items={visibleItems} categoryNames={categoryNames} />
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-2.5 rounded-[16px] border border-dashed border-line-strong/60 bg-surface/80 py-12 text-center">
-          <p className="text-[14px] text-ink-2">
-            Chưa có sản phẩm nào khớp bộ lọc này trong danh sách hôm nay.
+      {items.length === 0 ? (
+        <div className="flex flex-col items-start gap-1.5 rounded-tile border border-dashed border-line-strong/60 px-5 py-5">
+          <p className="text-control font-semibold text-ink">Hôm nay chưa có sản phẩm nào giảm giá thật.</p>
+          <p className="max-w-[60ch] text-body-sm leading-relaxed text-ink-2">
+            Kairo chỉ đưa sản phẩm vào đây khi giá thấp hơn trung vị 30 ngày ít nhất 10%. Danh sách được cập nhật mỗi
+            ngày.
           </p>
-          {filter !== "all" && (
-            <button
-              type="button"
-              onClick={() => setFilter("all")}
-              className="rounded-[8px] border border-primary/30 bg-primary-soft/60 px-3.5 py-1.5 text-[13px] font-semibold text-primary transition-colors hover:bg-primary-soft cursor-pointer"
-            >
-              Xem lại tất cả mức giảm
-            </button>
-          )}
         </div>
+      ) : (
+        <>
+          <div role="group" aria-label="Lọc mức giảm" className="flex flex-wrap gap-2">
+            {FILTERS.map((f) => {
+              const active = filter === f.key;
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setFilter(f.key)}
+                  className={pillClass(active)}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {visibleItems.length > 0 ? (
+            <RadarList items={visibleItems} categoryNames={categoryNames} />
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2.5 rounded-frame border border-dashed border-line-strong/60 bg-surface/80 py-12 text-center">
+              <p className="text-body-sm text-ink-2">Chưa có sản phẩm nào khớp bộ lọc này trong danh sách hôm nay.</p>
+              {filter !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("all")}
+                  className="rounded-sm border border-primary/30 bg-primary-soft/60 px-3.5 py-1.5 text-label font-semibold text-primary transition-colors hover:bg-primary-soft cursor-pointer"
+                >
+                  Xem lại tất cả mức giảm
+                </button>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

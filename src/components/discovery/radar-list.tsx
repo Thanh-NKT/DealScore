@@ -43,38 +43,38 @@ export function RadarList({
             <Link
               href={`/${item.categorySlug}/${item.slug}?variant=${item.variantId}`}
               title={name}
-              className="group grid grid-cols-[48px_minmax(0,1fr)] items-center gap-x-4 gap-y-3 rounded-[14px] border border-line/80 bg-surface-2/40 px-3.5 py-3 text-ink transition-all duration-150 ease-out hover:border-primary/35 hover:bg-surface-2/75 md:grid-cols-[48px_minmax(0,1fr)_140px_130px_60px]"
+              className="group grid grid-cols-[48px_minmax(0,1fr)] items-center gap-x-4 gap-y-3 rounded-tile border border-line/80 bg-surface-2/40 px-3.5 py-3 text-ink transition-all duration-150 ease-out hover:border-primary/35 hover:bg-surface-2/75 md:grid-cols-[48px_minmax(0,1fr)_140px_130px_60px]"
             >
-              <div className="size-12 overflow-hidden rounded-[10px] border border-line/60 bg-surface">
+              <div className="size-12 overflow-hidden rounded-inner border border-line/60 bg-surface">
                 <ProductImage src={item.image} className="p-1" iconClassName="size-5" />
               </div>
 
               <div className="min-w-0">
-                <p className="line-clamp-1 text-[15px] font-bold leading-[1.35] text-ink transition-colors group-hover:text-primary">{name}</p>
-                {meta && <p className="truncate text-[12px] leading-[1.45] text-ink-3">{meta}</p>}
+                <p className="line-clamp-1 text-control font-bold leading-[1.35] text-ink transition-colors group-hover:text-primary">{name}</p>
+                {meta && <p className="truncate text-micro leading-[1.45] text-ink-3">{meta}</p>}
               </div>
 
               {/* Phones: one wrapped line under the name; md+: these become grid cells. */}
               <div className="col-start-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 md:contents">
                 <div className="flex flex-col items-start gap-1">
                   {pct > 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-md border border-buy/20 bg-buy-soft px-2 py-0.5 text-[12.5px] font-bold text-buy">
+                    <span className="inline-flex items-center gap-1 rounded-md border border-buy/20 bg-buy-soft px-2 py-0.5 text-micro font-bold text-buy">
                       <ArrowDown className="size-3.5" />
                       <span className="sr-only">Thấp hơn </span>
                       <span className="num">{pct}%</span>
                     </span>
                   ) : null}
-                  <span className="whitespace-nowrap text-[11.5px] leading-[1.3] text-ink-3">vs trung vị 30d</span>
+                  <span className="whitespace-nowrap text-micro leading-[1.3] text-ink-3">so với trung vị 30 ngày</span>
                 </div>
 
                 <div className="flex flex-col items-end gap-0.5 text-right">
                   {price != null ? (
-                    <span className="num whitespace-nowrap text-[17px] font-extrabold leading-tight text-ink">{formatVnd(price)}</span>
+                    <span className="num whitespace-nowrap text-num-sm font-extrabold leading-tight text-ink">{formatVnd(price)}</span>
                   ) : (
-                    <span className="text-[14px] font-semibold text-ink-3">Chưa có giá</span>
+                    <span className="text-body-sm font-semibold text-ink-3">Chưa có giá</span>
                   )}
                   {median != null && (
-                    <span className="whitespace-nowrap text-[12px] leading-[1.3] text-ink-3">
+                    <span className="whitespace-nowrap text-micro leading-[1.3] text-ink-3">
                       TB <span className="num line-through decoration-ink-3/60">{formatVnd(median)}</span>
                     </span>
                   )}

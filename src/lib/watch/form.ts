@@ -51,7 +51,7 @@ export function parseWatchForm(
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!variantId || !uuidRegex.test(variantId)) {
-    errors.variantId = "ID phiên bản sản phẩm không hợp lệ.";
+    errors.variantId = "Chưa lưu được theo dõi. Tải lại trang sản phẩm rồi thử lại.";
   }
 
   // 2. targetPrice (positive integer, dot thousands separators accepted)
@@ -61,7 +61,7 @@ export function parseWatchForm(
     const cleaned = targetPriceRaw.replace(/\./g, "").replace(/,/g, "");
     const parsed = Number(cleaned);
     if (!Number.isInteger(parsed) || parsed <= 0) {
-      errors.targetPrice = "Giá mục tiêu phải là số tiền dương.";
+      errors.targetPrice = "Giá mong muốn phải là một số tiền lớn hơn 0đ.";
     } else {
       targetPrice = parsed;
     }
@@ -109,7 +109,7 @@ export function parseWatchForm(
     notifyBackInStock;
 
   if (!hasCondition) {
-    errors._form = "Vui lòng chọn ít nhất một điều kiện theo dõi giá.";
+    errors._form = "Chọn ít nhất một điều kiện để Kairo biết khi nào cần báo.";
   }
 
   // 7. channels
@@ -119,7 +119,7 @@ export function parseWatchForm(
   if (rawChannels.some((c) => c !== "email" && c !== "push" && c !== "account")) {
     // Don't silently turn an unknown value into "follow the account": that could
     // re-enable a channel the user wanted excluded from this Watch.
-    errors.channels = "Kênh không hợp lệ.";
+    errors.channels = "Chưa lưu được cách nhận thông báo. Tải lại trang rồi thử lại.";
   } else if (rawChannels.includes("account") || rawChannels.length === 0) {
     channels = null;
   } else {

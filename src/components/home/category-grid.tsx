@@ -28,12 +28,12 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   return (
     <section aria-labelledby="cats-title" className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="cats-title" className="display text-[28px] font-bold leading-[1.2] tracking-tight text-ink">
+        <h2 id="cats-title" className="display text-h2 font-bold leading-[1.2] tracking-tight text-ink">
           Hôm nay <span className="text-gradient-warm">bạn cần gì?</span>
         </h2>
         <Link
           href="/search"
-          className="text-[13px] font-semibold text-primary underline-offset-4 hover:underline"
+          className="text-label font-semibold text-primary underline-offset-4 hover:underline"
         >
           Tất cả danh mục →
         </Link>
@@ -43,11 +43,11 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
           <Link
             key={c.slug}
             href={`/search?cat=${c.slug}`}
-            className="group flex flex-col items-center gap-2.5 rounded-[20px] border border-line bg-surface p-4 text-ink transition-colors duration-150 ease-out hover:border-primary/40"
+            className="group flex flex-col items-center gap-2.5 rounded-lg border border-line bg-surface p-4 text-ink transition-colors duration-150 ease-out hover:border-primary/40"
           >
             <span
               style={{ backgroundColor: c.tint }}
-              className="flex size-13 items-center justify-center rounded-[12px] transition-transform duration-150 ease-out group-hover:scale-105"
+              className="flex size-13 items-center justify-center rounded-md transition-transform duration-150 ease-out group-hover:scale-105"
             >
               <svg
                 width="26"
@@ -63,7 +63,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 <path d={c.path} />
               </svg>
             </span>
-            <span className="text-center text-[14px] font-semibold text-ink transition-colors group-hover:text-primary">
+            <span className="text-center text-body-sm font-semibold text-ink transition-colors group-hover:text-primary">
               {c.name}
             </span>
           </Link>

@@ -45,7 +45,10 @@ Visual system is `DESIGN.md` ("Bàn giá sáng", normative, tokens in its frontm
 `.impeccable/design.json`). Code checklist for new screens: `.impeccable/ui-conventions.md`.
 Tokens live in `src/app/globals.css` (light + dark) — use token classes (`bg-surface`, `text-ink`,
 `border-line-strong`, `bg-primary text-on-primary`, …), never hex literals (they break dark mode).
-Reuse `VerdictTag` / `ScoreRing` (`src/components/product/verdict-tag.tsx`) and `ProductCard`.
+Reuse `VerdictTag` / `ScoreRing` (`src/components/product/verdict-tag.tsx`), `ProductCard`, and the
+primitives in `src/components/ui/` (`Button`/`buttonClass`, `SegmentedControl`/`segmentClass`, `pillClass`,
+`TextField`/`inputClass`, `Skeleton`). Font sizes and radii are `@theme` tokens (`text-label`, `rounded-tile`…);
+ESLint rejects `text-[Npx]`, `rounded-[Npx]`, `rounded-xl` and `font-[family-name:…]`.
 Numbers use the `num` utility (Plus Jakarta Sans, tabular), headings `display`; text ≥ 11px (11px only for nano labels). Page frame
 `max-w-[1440px] px-4 sm:px-6 lg:px-14`. `UI-mockup/` is the original reference; `docs/design-system/specimen.html`
 is the retired "Nhãn giá kệ hàng" world — don't copy it.

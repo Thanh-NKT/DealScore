@@ -21,7 +21,7 @@ export interface AuthErrorInfo {
 type FixedCode = Exclude<AuthErrorCode, "rate_limited">;
 
 export const AUTH_MESSAGES: Record<FixedCode, string> = {
-  invalid_email: "Email không hợp lệ.",
+  invalid_email: "Email chưa đúng định dạng, ví dụ ten@gmail.com.",
   invalid_credentials: "Email hoặc mật khẩu không đúng.",
   email_not_confirmed: "Email này chưa được xác nhận. Mở thư Kairo đã gửi, hoặc gửi lại thư xác nhận.",
   weak_password: "Mật khẩu quá yếu. Hãy dùng ít nhất 8 ký tự, có cả chữ và số.",
@@ -31,7 +31,7 @@ export const AUTH_MESSAGES: Record<FixedCode, string> = {
   send_failed: "Chưa gửi được email. Thử lại sau ít phút.",
   oauth_failed: "Chưa đăng nhập được bằng Google. Hãy thử lại, hoặc dùng email và mật khẩu.",
   oauth_cancelled: "Bạn đã hủy đăng nhập bằng Google. Có thể thử lại hoặc dùng email và mật khẩu.",
-  internal: "Có lỗi xảy ra. Vui lòng thử lại.",
+  internal: "Kairo đang gặp trục trặc nên chưa xử lý được. Thử lại sau ít phút.",
 };
 
 /** Equal to Supabase Auth's max_frequency. */
@@ -55,7 +55,7 @@ function rateLimited(message?: string): AuthErrorInfo {
   const seconds = m ? Number(m[1]) : DEFAULT_RETRY_SECONDS;
   return {
     code: "rate_limited",
-    message: `Vui lòng đợi ${seconds} giây rồi thử lại.`,
+    message: `Đợi ${seconds} giây rồi thử lại.`,
     retryAfterSeconds: seconds,
   };
 }
