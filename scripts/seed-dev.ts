@@ -5,8 +5,9 @@
  * Run: pnpm seed:dev
  *
  * What you get:
- *   - Catalog: categories → products (verified + draft) → variants → offers on Shopee, plus a few
- *     TikTok Shop / Lazada offers (cross-marketplace comparison) → 120 days of price_observations,
+ *   - Catalog: categories → products (verified + draft) → variants → offers on Shopee; every third
+ *     verified product also on TikTok Shop in a fixed scenario (tiktokScenario: TikTok cheaper /
+ *     cheaper only after vouchers / Shopee cheaper), a few on Lazada → 120 days of price_observations,
  *     sellers, listings, vouchers, affiliate_offers, match_candidates (pending / accepted / rejected),
  *     collector_runs (the last 7 days of observations point at them).
  *   - Derived: variant_current_price, variant_daily_prices, variant_deal_scores, backtest_runs
@@ -30,6 +31,7 @@ import { slugify } from "../src/lib/slug";
 import { encodeSubId } from "../src/lib/affiliate/link";
 import { recomputeDealScores } from "../src/lib/pricing/recompute-scores";
 import { runBacktest } from "../src/lib/pricing/backtest-job";
+import { refreshEffectivePrices } from "../src/lib/vouchers/refresh-effective";
 import { CURRENT_CONSENT_VERSION } from "../src/lib/account/consent";
 import { requireLocalSupabase } from "./guard-env";
 import { sampleImageFor } from "./sample-images";
@@ -80,6 +82,31 @@ const SEED_USERS: SeedUserSpec[] = [
   { key: "binh", email: `binh${SEED_EMAIL_DOMAIN}`, signedUpDaysAgo: 12, marketing: true },
   { key: "xoa", email: `xoa${SEED_EMAIL_DOMAIN}`, signedUpDaysAgo: 70, marketing: false, deletedDaysAgo: 5 },
 ];
+
+/**
+ * TikTok Shop test scenarios, fixed by product index so they are easy to find:
+ *   tiktok_cheaper — TikTok's listed price is ~10% under Shopee's → TikTok wins outright.
+ *   voucher_wins   — TikTok is listed ~12% above Shopee but has a 20% listing voucher → TikTok wins
+ *                    only after vouchers (the buy button / voucher block move to TikTok, the Deal
+ *                    Score keeps scoring Shopee's cheaper listed price).
+ *   shopee_cheaper — TikTok listed ~12% above, no listing voucher → Shopee wins.
+ */
+type TiktokScenario = "tiktok_cheaper" | "voucher_wins" | "shopee_cheaper";
+const TIKTOK_SCENARIOS: readonly TiktokScenario[] = ["tiktok_cheaper", "voucher_wins", "shopee_cheaper"];
+const TIKTOK_PRICE_FACTOR: Record<TiktokScenario, number> = {
+  tiktok_cheaper: 0.9,
+  voucher_wins: 1.12,
+  shopee_cheaper: 1.12,
+};
+/** Products 0, 3, 6, … are on TikTok; scenarios rotate every product: 0 → cheaper, 3 → voucher, 6 → Shopee. */
+function tiktokScenario(p: number): TiktokScenario {
+  return TIKTOK_SCENARIOS[Math.floor(p / 3) % TIKTOK_SCENARIOS.length];
+}
+/** A TikTok listing that gets the scenario's strong listing voucher. */
+interface TiktokDeal {
+  listingId: string;
+  sellerId: string;
+}
 
 /** PRNG with a fixed seed — every seed produces the same data, easy to compare across runs. */
 function makeRng(seed: number) {
@@ -240,12 +267,15 @@ async function seedCatalog() {
       location: pick(LOCATIONS),
     })),
   );
-  const otherSellers = await insertReturning<{ id: string; marketplace: string }>("sellers", [
+  const otherSellers = await insertReturning<{ id: string; marketplace: string; is_official: boolean }>("sellers", [
     { marketplace: "tiktok", external_seller_id: "seed-tt-0", name: "TikTok Demo Store", rating: 4.7, rating_count: 820, is_official: false, location: "TP. Hồ Chí Minh" },
+    { marketplace: "tiktok", external_seller_id: "seed-tt-1", name: "TikTok Mall Demo", rating: 4.9, rating_count: 3120, is_official: true, location: "Hà Nội" },
+    { marketplace: "tiktok", external_seller_id: "seed-tt-2", name: "Gian Hàng Live Demo", rating: 4.5, rating_count: 410, is_official: false, location: "Đà Nẵng" },
     { marketplace: "lazada", external_seller_id: "seed-lz-0", name: "LazMall Demo", rating: 4.8, rating_count: 1540, is_official: true, location: "Hà Nội" },
   ]);
-  const tiktokSeller = otherSellers.find((s) => s.marketplace === "tiktok")!;
+  const tiktokSellers = otherSellers.filter((s) => s.marketplace === "tiktok");
   const lazadaSeller = otherSellers.find((s) => s.marketplace === "lazada")!;
+  const tiktokDeals: TiktokDeal[] = [];
 
   const variants: SeedVariant[] = [];
   const candidates: Record<string, unknown>[] = [];
@@ -303,7 +333,15 @@ async function seedCatalog() {
       const radarDrop = !isDraft && v === 0 && p % 8 === 1;
       const nShopee = 1 + Math.floor(rnd() * 4);
 
-      const specs: Array<{ marketplace: SeedOffer["marketplace"]; sellerId: string; extId: string; url: string }> = [];
+      const specs: Array<{
+        marketplace: SeedOffer["marketplace"];
+        sellerId: string;
+        extId: string;
+        url: string;
+        /** Fixed price factor vs the variant base (TikTok scenarios); random when absent. */
+        priceFactor?: number;
+        scenario?: TiktokScenario;
+      }> = [];
       for (let o = 0; o < nShopee; o++) {
         const extId = `${1000 + p}_${2000 + v * 10 + o}`;
         specs.push({
@@ -313,10 +351,22 @@ async function seedCatalog() {
           url: `https://shopee.vn/product/${1000 + p}/${2000 + v * 10 + o}`,
         });
       }
-      // A few verified products are also sold on TikTok Shop / Lazada → cross-marketplace comparison.
-      if (!isDraft && v === 0 && p % 6 === 0) {
-        const id = String(1729000000 + p);
-        specs.push({ marketplace: "tiktok", sellerId: tiktokSeller.id, extId: id, url: `https://www.tiktok.com/view/product/${id}` });
+      // Every third verified product is also sold on TikTok Shop, all variants, in one of three fixed
+      // scenarios (tiktokScenario) so "Mua ở sàn nào?" and the best-buy pick can be checked by hand.
+      if (!isDraft && p % 3 === 0) {
+        const scenario = tiktokScenario(p);
+        const nTiktok = scenario === "voucher_wins" ? 1 : 1 + ((p + v) % 2);
+        for (let t = 0; t < nTiktok; t++) {
+          const id = String(1729000000 + p * 100 + v * 10 + t);
+          specs.push({
+            marketplace: "tiktok",
+            sellerId: tiktokSellers[(p + v + t) % tiktokSellers.length].id,
+            extId: id,
+            url: `https://www.tiktok.com/view/product/${id}`,
+            priceFactor: TIKTOK_PRICE_FACTOR[scenario] + t * 0.03,
+            scenario,
+          });
+        }
       }
       if (!isDraft && v === 0 && p % 9 === 0) {
         const id = String(880000 + p);
@@ -349,8 +399,9 @@ async function seedCatalog() {
           match_confidence: isDraft ? 0.4 : manual ? 0.9 : 0.98,
           match_status: isDraft ? "pending" : manual ? "manual" : "auto",
           free_shipping: rnd() < 0.5,
-          has_voucher: rnd() < 0.35,
+          has_voucher: spec.scenario === "voucher_wins" ? true : spec.scenario ? false : rnd() < 0.35,
         });
+        if (spec.scenario === "voucher_wins") tiktokDeals.push({ listingId: listing.id, sellerId: spec.sellerId });
         const offer: SeedOffer = {
           id: offerRow.id,
           listingId: listing.id,
@@ -384,8 +435,8 @@ async function seedCatalog() {
           });
         }
 
-        // This offer's price deviates -4…+8% from the variant's base price.
-        const offerBase = Math.round(basePrice * (0.96 + rnd() * 0.12));
+        // This offer's price deviates -4…+8% from the variant's base price (TikTok: fixed per scenario).
+        const offerBase = Math.round(basePrice * (spec.priceFactor ?? 0.96 + rnd() * 0.12));
 
         for (let d = DAYS - 1; d >= 0; d--) {
           // A few days with missing data — chart segment breaks and the 10-observation threshold.
@@ -529,14 +580,17 @@ async function seedCatalog() {
   if (rollupErr) throw rollupErr;
 
   console.log(`  ${PRODUCTS} products, ${variants.length} variants, ${obsCount} observations.`);
-  return { variants, sellers };
+  return { variants, sellers, tiktokSellers, tiktokDeals };
 }
 
 // ============================================================================
 // 2. Vouchers
 // ============================================================================
 
-async function seedVouchers(sellers: Array<{ id: string; is_official: boolean }>) {
+async function seedVouchers(
+  sellers: Array<{ id: string; is_official: boolean }>,
+  tiktok: { sellers: Array<{ id: string; is_official: boolean }>; deals: TiktokDeal[] },
+) {
   console.log("Creating vouchers…");
   const in30 = new Date(now.getTime() + 30 * DAY_MS).toISOString();
   const rows: Record<string, unknown>[] = [
@@ -581,6 +635,29 @@ async function seedVouchers(sellers: Array<{ id: string; is_official: boolean }>
       code: i % 4 === 0 ? null : `SP${String(i).padStart(3, "0")}`,
       discount_type: "amount",
       discount_value: 10_000 + (i % 5) * 10_000,
+      min_spend: 0,
+      expires_at: in30,
+    });
+  });
+  // TikTok Shop: a small platform voucher + freeship for every TikTok listing, a shop voucher for the
+  // official store, and the strong listing voucher that makes the "voucher_wins" scenario flip.
+  rows.push(
+    { marketplace: "tiktok", kind: "platform", code: "TIKTOK5", discount_type: "percent", discount_value: 5, max_discount: 30_000, min_spend: 1_000_000, expires_at: in30 },
+    { marketplace: "tiktok", kind: "shipping", code: null, discount_type: "amount", discount_value: 25_000, min_spend: 0, expires_at: in30 },
+  );
+  for (const s of tiktok.sellers.filter((x) => x.is_official)) {
+    rows.push({ marketplace: "tiktok", kind: "shop", seller_id: s.id, code: "TTMALL30K", discount_type: "amount", discount_value: 30_000, min_spend: 500_000, expires_at: in30 });
+  }
+  tiktok.deals.forEach((d, i) => {
+    rows.push({
+      marketplace: "tiktok",
+      kind: "shop",
+      seller_id: d.sellerId,
+      listing_id: d.listingId,
+      code: i % 3 === 0 ? null : `TTDEAL${String(i).padStart(2, "0")}`,
+      discount_type: "percent",
+      discount_value: 20,
+      max_discount: 2_000_000,
       min_spend: 0,
       expires_at: in30,
     });
@@ -1084,8 +1161,8 @@ async function main() {
   console.log(`Seeding ${url}`);
   await wipe();
 
-  const { variants, sellers } = await seedCatalog();
-  await seedVouchers(sellers);
+  const { variants, sellers, tiktokSellers, tiktokDeals } = await seedCatalog();
+  await seedVouchers(sellers, { sellers: tiktokSellers, deals: tiktokDeals });
 
   // The promoted extension prices joined the history → refresh derived tables once more below.
   const users = await seedUsers();
@@ -1099,6 +1176,12 @@ async function main() {
   const today = now.toISOString().slice(0, 10);
   const { error: rollupErr } = await db.rpc("refresh_variant_daily_prices", { p_from: today, p_to: today });
   if (rollupErr) throw rollupErr;
+
+  // Price after vouchers (offers.effective_price): search and alert emails read the stored value.
+  // After the current prices above, so the 0016 guard (computed at/after the observation) holds.
+  console.log("Computing prices after vouchers…");
+  const { updated } = await refreshEffectivePrices(typedDb);
+  console.log(`  ${updated} offers.`);
 
   console.log("Computing Deal Scores…");
   const { scored, tally } = await recomputeDealScores(typedDb);

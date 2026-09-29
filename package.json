@@ -17,7 +17,7 @@
     "db:link": "supabase link",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --local --schema public > src/lib/database.types.ts",
-    "seed:dev": "tsx --env-file=.env.local scripts/seed-dev.ts",
+    "seed:dev": "tsx --conditions=react-server --env-file=.env.local scripts/seed-dev.ts",
     "seed:images": "tsx --env-file=.env.local scripts/seed-images.ts",
     "scores:recompute": "tsx --env-file=.env.local scripts/recompute-deal-scores.ts",
     "test:db": "vitest run --config vitest.db.config.mts",
