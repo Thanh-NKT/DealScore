@@ -19,6 +19,10 @@ import { applyIntent } from "@/lib/intent/merge";
 import { searchLinkParams } from "@/lib/intent/links";
 import type { IntentChip } from "@/lib/intent/types";
 import { getCurrentUser } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+import { applyPreferences, isEmptyPreferences, type Preferences } from "@/lib/preferences";
+import { getPreferenceCategories, getPreferencesForUser } from "@/lib/preferences/queries";
+import { PrefsToggle } from "@/components/search/prefs-toggle";
 import { trackAfter } from "@/lib/analytics/track";
 
 interface SearchPageProps {
@@ -44,8 +48,33 @@ function hasFilterParams(params: SearchParams): boolean {
   );
 }
 
+/**
+ * The signed-in user's non-empty preferences plus the category id → slug map applyPreferences needs
+ * (only loaded when the toggle is on). Any failure → null: preferences never take the search down.
+ */
+async function loadPreferences(
+  userId: string | null,
+  on: boolean,
+): Promise<{ prefs: Preferences; categorySlugById: Map<string, string> } | null> {
+  if (!userId) return null;
+  try {
+    const supabase = await createClient();
+    const prefs = await getPreferencesForUser(supabase, userId);
+    if (isEmptyPreferences(prefs)) return null;
+    const categorySlugById = new Map<string, string>();
+    if (on && prefs.categoryIds.length > 0) {
+      for (const c of await getPreferenceCategories(supabase)) categorySlugById.set(c.id, c.slug);
+    }
+    return { prefs, categorySlugById };
+  } catch (err) {
+    console.error("search: loading preferences failed", err);
+    return null;
+  }
+}
+
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const raw = parseSearchParams(await searchParams);
+  const user = await getCurrentUser().catch(() => null);
 
   // Query intent (spec §3): "ssd 2tb dưới 3 triệu" → category + capacity + price chips. The URL
   // always wins over what the text says (applyIntent). getIntentVocab never throws.
@@ -61,16 +90,22 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     }
   }
 
-  // (Task 7: "Theo sở thích của tôi" preferences are merged into intentParams here.)
+  // "Theo sở thích của tôi" (spec §5, off by default): saved preferences fill what neither the URL
+  // nor the query intent set. Only the searched params change — links keep `prefs=1` (carried by
+  // raw/intentParams) instead of turning preferences into explicit URL filters.
+  const saved = await loadPreferences(user?.id ?? null, raw.prefs === true);
+  const withPrefs = (p: SearchParams): SearchParams =>
+    saved && raw.prefs ? applyPreferences(p, saved.prefs, saved.categorySlugById) : p;
+  const queryParams = withPrefs(intentParams);
 
   // A failed search must not take the whole page down: show a "retry" state instead. Facets only
   // feed the filter column, so they degrade to empty lists.
-  const [searchRes, facetsRes] = await Promise.allSettled([searchProducts(intentParams), getFilterFacets()]);
+  const [searchRes, facetsRes] = await Promise.allSettled([searchProducts(queryParams), getFilterFacets()]);
   if (searchRes.status === "rejected") console.error("search: searchProducts failed", searchRes.reason);
   if (facetsRes.status === "rejected") console.error("search: getFilterFacets failed", facetsRes.reason);
   let loadError = searchRes.status === "rejected";
   let result =
-    searchRes.status === "fulfilled" ? searchRes.value : { items: [], total: 0, page: intentParams.page ?? 1, pageSize: 24 };
+    searchRes.status === "fulfilled" ? searchRes.value : { items: [], total: 0, page: queryParams.page ?? 1, pageSize: 24 };
 
   // Intent made the search too strict → show the plain-text results instead, with a notice. Only on
   // page 1: past it, 0 rows just means "out of range".
@@ -78,7 +113,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   if (!loadError && result.total === 0 && applied.length > 0 && (raw.page ?? 1) === 1) {
     fallback = true;
     try {
-      result = await searchProducts({ ...raw, intent: false });
+      result = await searchProducts(withPrefs({ ...raw, intent: false }));
     } catch (err) {
       console.error("search: fallback searchProducts failed", err);
       loadError = true;
@@ -92,7 +127,6 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const facets = facetsRes.status === "fulfilled" ? facetsRes.value : { categories: [], brands: [], advanced: NO_ADVANCED_FILTERS, marketplaces: [] };
 
   if (!loadError) {
-    const user = await getCurrentUser().catch(() => null);
     trackAfter("search_performed", {
       userId: user?.id ?? null,
       props: {
@@ -123,7 +157,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const currentPage = result.page;
   const categoryNames = Object.fromEntries(facets.categories.map((c) => [c.slug, c.name]));
 
-  const hasFilters = hasFilterParams(params);
+  // Preference-filled fields count too: "too strict" must be offered when they emptied the results.
+  const hasFilters = hasFilterParams(saved && raw.prefs ? withPrefs(params) : params);
   const pageHref = (page: number) => `/search?${toSearchParams({ ...pagination, page }).toString()}`;
 
   return (
@@ -179,6 +214,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   "Mỗi thẻ đã gom các nơi bán cùng một mẫu sản phẩm"
                 )}
               </p>
+              {saved && (
+                <div className="pt-2">
+                  <PrefsToggle base={pagination} on={raw.prefs === true} />
+                </div>
+              )}
             </div>
 
             <SortSelect

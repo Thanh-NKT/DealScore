@@ -110,6 +110,9 @@ export function AccountMenu({ email }: { email: string | null }) {
           <Link role="menuitem" href="/account/notifications" className={item}>
             Cài đặt thông báo
           </Link>
+          <Link role="menuitem" href="/account/preferences" className={item}>
+            Sở thích mua sắm
+          </Link>
           <form action={signOut} className="border-t border-line">
             <button role="menuitem" type="submit" className={item}>
               Đăng xuất

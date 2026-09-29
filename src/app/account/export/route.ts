@@ -24,6 +24,7 @@ export async function GET() {
     clicksRes,
     lookupsRes,
     pushRes,
+    prefsRes,
   ] = await Promise.all([
     supabase.from("users").select("*").eq("id", user.id).single(),
     supabase.from("notification_settings").select("*").eq("user_id", user.id).single(),
@@ -38,11 +39,12 @@ export async function GET() {
       .select("created_at, outcome")
       .eq("user_id", user.id),
     supabase.from("push_subscriptions").select("created_at, user_agent").eq("user_id", user.id),
+    supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
   ]);
 
   // ANY failing query → throw. Ignoring errors hands the user a file that is
   // missing data yet looks complete.
-  const results = { profileRes, settingsRes, watchesRes, alertsRes, clicksRes, lookupsRes, pushRes };
+  const results = { profileRes, settingsRes, watchesRes, alertsRes, clicksRes, lookupsRes, pushRes, prefsRes };
   for (const [name, res] of Object.entries(results)) {
     if (res.error) throw new Error(`Data export: failed to read ${name}: ${res.error.message}`);
   }
@@ -79,6 +81,7 @@ export async function GET() {
     exportedAt: now,
     profile: profileRes.data!,
     settings: settingsRes.data!,
+    preferences: prefsRes.data,
     watches: watchesRes.data ?? [],
     alertEvents: alertsRes.data ?? [],
     pushDevices: pushRes.data ?? [],

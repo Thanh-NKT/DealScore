@@ -81,6 +81,16 @@ const input = {
   orders: [
     { purchase_time: "2026-09-10T00:00:00Z", status: "completed", order_value: 500000, item_id: "111", commission: 25000, raw: { x: 1 } },
   ],
+  preferences: {
+    user_id: "u1",
+    brands: ["Samsung"],
+    excluded_brands: [],
+    category_ids: ["11111111-1111-4111-8111-111111111111"],
+    min_price: 100000,
+    max_price: 3000000,
+    marketplaces: ["shopee"],
+    updated_at: "2026-09-12T00:00:00Z",
+  },
   activity: [
     { created_at: "2026-09-11T00:00:00Z", name: "product_viewed", props: { is_draft: false }, session_id: "s", id: 7 },
   ],
@@ -125,6 +135,20 @@ describe("buildAccountExport", () => {
       { purchase_time: "2026-09-10T00:00:00Z", status: "completed", order_value: 500000, product_item_id: "111" },
     ]);
     expect(JSON.stringify(out.orders)).not.toContain("25000");
+  });
+  it("shopping preferences with their updated_at, no user id", () => {
+    expect(out.preferences).toEqual({
+      brands: ["Samsung"],
+      excluded_brands: [],
+      category_ids: ["11111111-1111-4111-8111-111111111111"],
+      min_price: 100000,
+      max_price: 3000000,
+      marketplaces: ["shopee"],
+      updated_at: "2026-09-12T00:00:00Z",
+    });
+  });
+  it("no preferences row → null", () => {
+    expect(buildAccountExport({ ...input, preferences: null } as never).preferences).toBeNull();
   });
   it("settings in NotificationSettings shape", () => {
     expect(out.notification_settings).toMatchObject({ emailEnabled: true, frequency: "instant" });

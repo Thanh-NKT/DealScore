@@ -7,7 +7,8 @@ export { PURGE_AFTER_DAYS, purgeCutoff, purgeDate } from "@/lib/account/purge-da
 
 /**
  * Hard-delete accounts whose deletion was requested more than 30 days ago.
- * Deleting auth.users cascades to users → watches → alert_events, notification_settings;
+ * Deleting auth.users cascades to users → watches → alert_events, notification_settings,
+ * user_preferences (covered by tests/db/preferences.test.ts "is removed with the user");
  * click_events.user_id and lookup_requests.user_id → null.
  * One user failing does not stop the run. Safe to re-run.
  */

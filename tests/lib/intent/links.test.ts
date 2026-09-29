@@ -63,3 +63,21 @@ describe("capacityLabel", () => {
     expect(capacityLabel(1536)).toBe("1536GB");
   });
 });
+
+describe("prefs=1 survives every link kind (Task 7)", () => {
+  const cases: Array<[string, string, boolean]> = [
+    ["no intent", "q=tai nghe&prefs=1", false],
+    ["intent applied", "q=ssd 2tb dưới 3 triệu&prefs=1", false],
+    ["fallback", "q=ssd 2tb dưới 3 triệu&prefs=1", true],
+  ];
+  for (const [name, qs, fallback] of cases) {
+    it(name, () => {
+      const { raw, intentParams, applied } = setup(qs);
+      const { pagination, nav } = searchLinkParams({ raw, intentParams, applied, fallback });
+      expect(toSearchParams({ ...pagination, page: 2 }).get("prefs")).toBe("1");
+      // Sort links (SortSelect baseQuery) and filter links (filters.tsx href) both start from nav.
+      expect(toSearchParams({ ...nav, sort: undefined, page: 1 }).get("prefs")).toBe("1");
+      expect(toSearchParams({ ...nav, brands: ["Samsung"], page: 1 }).get("prefs")).toBe("1");
+    });
+  }
+});

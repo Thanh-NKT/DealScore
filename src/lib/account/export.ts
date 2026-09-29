@@ -19,6 +19,16 @@ export interface AccountExport {
     deleted_at: string | null;
   };
   notification_settings: NotificationSettings;
+  /** Shopping preferences (spec §5); null when the user never saved any. */
+  preferences: {
+    brands: string[];
+    excluded_brands: string[];
+    category_ids: string[];
+    min_price: number | null;
+    max_price: number | null;
+    marketplaces: string[];
+    updated_at: string;
+  } | null;
   watches: Array<{
     id: string;
     product_id: string | null;
@@ -72,8 +82,10 @@ export function buildAccountExport(input: {
   lookups: Array<{ created_at: string; outcome: string }>;
   orders: Array<{ purchase_time: string; status: string; order_value: number | null; item_id: string }>;
   activity?: Array<{ created_at: string; name: string; props: unknown }>;
+  preferences?: Row<"user_preferences"> | null;
 }): AccountExport {
   const p = input.profile;
+  const pref = input.preferences;
   return {
     schema_version: 1,
     exported_at: input.exportedAt.toISOString(),
@@ -86,6 +98,17 @@ export function buildAccountExport(input: {
       deleted_at: p.deleted_at,
     },
     notification_settings: fromRow(input.settings),
+    preferences: pref
+      ? {
+          brands: pref.brands,
+          excluded_brands: pref.excluded_brands,
+          category_ids: pref.category_ids,
+          min_price: num(pref.min_price),
+          max_price: num(pref.max_price),
+          marketplaces: pref.marketplaces,
+          updated_at: pref.updated_at,
+        }
+      : null,
     watches: input.watches.map((w) => ({
       id: w.id,
       product_id: w.product_id,

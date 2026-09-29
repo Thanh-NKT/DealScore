@@ -35,7 +35,8 @@ function CrossIcon() {
 export function IntentChips({ applied, params, originalQuery, fallback }: IntentChipsProps) {
   if (applied.length === 0) return null;
 
-  const exactHref = searchHref(toSearchParams({ q: originalQuery, intent: false }));
+  // Keeps the "Theo sở thích của tôi" toggle: it is a mode, not a condition read from the text.
+  const exactHref = searchHref(toSearchParams({ q: originalQuery, intent: false, prefs: params.prefs }));
 
   return (
     <div className="space-y-2">

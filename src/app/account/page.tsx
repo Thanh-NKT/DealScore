@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/actions/account";
 import { MarketingToggle } from "@/components/account/marketing-toggle";
-import { BellIcon } from "@/components/ui/icons";
+import { BellIcon, HeartIcon } from "@/components/ui/icons";
 import { buttonClass } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -113,6 +113,23 @@ export default async function AccountPage() {
           </div>
           <Link href="/account/notifications" className={`${SECONDARY} w-full`}>
             Chỉnh sửa thông báo
+          </Link>
+        </section>
+
+        <section className={`${CARD} flex flex-col justify-between gap-6 sm:col-span-2 sm:flex-row sm:items-center`}>
+          <div className="flex items-start gap-4">
+            <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink">
+              <HeartIcon className="size-5" />
+            </span>
+            <div>
+              <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Sở thích mua sắm</h2>
+              <p className="mt-1.5 text-control leading-relaxed text-ink-2">
+                Hãng, danh mục, khoảng giá và sàn bạn hay mua — dùng cho nút “Theo sở thích của tôi” khi tìm kiếm.
+              </p>
+            </div>
+          </div>
+          <Link href="/account/preferences" className={`${SECONDARY} max-sm:w-full`}>
+            Chỉnh sửa sở thích
           </Link>
         </section>
       </div>
