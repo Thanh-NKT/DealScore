@@ -9,6 +9,7 @@ import { toVnDate } from "@/lib/format";
 import { productGallery } from "@/lib/product/images";
 import { listVouchersForListing } from "@/lib/vouchers/store";
 import { activeVouchers } from "@/lib/vouchers/select";
+import { shownEffectivePrice, withEffectiveReason } from "@/lib/vouchers/effective";
 import type { Voucher } from "@/lib/vouchers/types";
 
 /** The listing behind an offer — what vouchers are scoped to. */
@@ -104,7 +105,8 @@ export async function loadProductPageData(params: {
     }
 
     // The date 90 days ago in Vietnam time
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 86400 * 1000);
+    const now = new Date();
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 86400 * 1000);
     const ninetyDaysAgoStr = toVnDate(ninetyDaysAgo);
 
     // 2-5. Run 4 queries in parallel
@@ -112,7 +114,7 @@ export async function loadProductPageData(params: {
       supabase
         .from("offers")
         .select(`
-          id, match_status,
+          id, match_status, effective_price, effective_price_at,
           listings (
             id, seller_id, images, marketplace, url, title, status, last_observed_at,
             sellers ( name, rating, rating_count, is_official )
@@ -178,6 +180,12 @@ export async function loadProductPageData(params: {
         stock: latest?.stock != null ? Number(latest.stock) : null,
         isFlashSale: Boolean(latest?.is_flash_sale),
         observedAt: latest?.observed_at || listing?.last_observed_at || null,
+        effectivePrice: shownEffectivePrice(
+          o.effective_price != null ? Number(o.effective_price) : null,
+          o.effective_price_at,
+          latest?.price != null ? Number(latest.price) : null,
+          now,
+        ),
       };
     });
 
@@ -207,12 +215,12 @@ export async function loadProductPageData(params: {
 
     const trackingSince = (trackingSinceRes.data as string | null) || (dailyPrices[0]?.day ?? null);
 
-    const pricing = buildVariantPricing({
+    const pricing = withEffectiveReason(buildVariantPricing({
       offers: offerRows,
       history: dailyPrices,
       trackingSince,
       isDraftProduct: product.status === "draft",
-    });
+    }));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cat = (Array.isArray(productAny.categories) ? productAny.categories[0] : productAny.categories) as any;

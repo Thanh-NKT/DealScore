@@ -3,6 +3,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runCollector, type CollectorDeps } from "@/lib/collector/run";
 import { ShopeeItemGoneError, ShopeeUnavailableError, type ShopeeItemDetail } from "@/lib/shopee/client";
 import type { CollectorListing } from "@/lib/collector/schedule";
+import { effectivePriceFor } from "@/lib/vouchers/effective";
+import { listVouchersForListing } from "@/lib/vouchers/store";
 import { admin } from "./helpers";
 
 const tag = randomUUID().slice(0, 8);
@@ -137,6 +139,47 @@ describe("runCollector", () => {
       .eq("collector_run_id", r.runId)
       .eq("offers.external_model_id", "m1");
     expect(data![0]).toMatchObject({ is_valid: false, invalid_reason: "no_price" });
+  });
+
+  it("refreshes the effective price of collected listings from the new price", async () => {
+    const l = await makeListing(2_000_000);
+    const { data: listing } = await admin.from("listings").select("seller_id").eq("id", l.id).single();
+    const { error } = await admin.rpc("upsert_vouchers", {
+      p_items: [
+        {
+          marketplace: "shopee",
+          kind: "shop",
+          sellerId: listing!.seller_id,
+          listingId: l.id,
+          code: "",
+          discountType: "amount",
+          discountValue: 10_000,
+          minSpend: 0,
+        },
+      ],
+      p_source: "api",
+    });
+    expect(error).toBeNull();
+    try {
+      const r = await runCollector({}, admin, deps([l], async () => detail(1_800_000)));
+      if ("skipped" in r) throw new Error("unexpected skip");
+      runIds.push(r.runId);
+      const { data: offer } = await admin
+        .from("offers")
+        .select("effective_price")
+        .eq("listing_id", l.id)
+        .eq("external_model_id", "m1")
+        .single();
+      // Marketplace-wide seed vouchers may stack on top: compare with the same pure math.
+      const scope = { marketplace: "shopee", listingId: l.id, sellerId: listing!.seller_id };
+      const now = new Date();
+      const want = effectivePriceFor(1_800_000, await listVouchersForListing(admin, { ...scope, now }), { ...scope, now });
+      expect(want).not.toBeNull();
+      expect(want!).toBeLessThanOrEqual(1_790_000);
+      expect(Number(offer!.effective_price)).toBe(want);
+    } finally {
+      await admin.from("vouchers").delete().eq("listing_id", l.id);
+    }
   });
 
   it("marks a gone item inactive; counts other errors; stops when Shopee is down", async () => {

@@ -86,7 +86,7 @@ Never mix these up; the choice encodes the security model.
   `scripts/run-{collector,backtest}.ts`, `src/app/api/health/route.ts`, `src/lib/analytics/track.ts`,
   `src/lib/extension/contribute.ts`, `src/app/api/extension/observations/route.ts`,
   `src/lib/listing-extras.ts` + `src/lib/vouchers/store.ts` (`upsertVouchers`, called with the admin client),
-  `src/app/api/vouchers/refresh/route.ts`.
+  `src/app/api/vouchers/refresh/route.ts`, `src/lib/vouchers/refresh-effective.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm

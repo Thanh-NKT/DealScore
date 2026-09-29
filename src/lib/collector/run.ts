@@ -15,6 +15,8 @@ import { evaluateWatches } from "@/lib/alerts/evaluate";
 import { toVnDate } from "@/lib/format";
 import { configuredMarketplaces } from "@/lib/marketplaces";
 import { saveListingExtras } from "@/lib/listing-extras";
+import { refreshEffectivePrices } from "@/lib/vouchers/refresh-effective";
+import { reportError } from "@/lib/observability";
 
 /**
  * One collector run (1.10): Collector → Price DB → Deal Engine → Alert Engine.
@@ -104,6 +106,7 @@ export async function runCollector(
   let aborted = false;
   const errors: string[] = [];
   const touched = new Set<string>();
+  const collected: string[] = [];
 
   for (const listing of due) {
     if (opts.deadline && Date.now() > opts.deadline) break;
@@ -135,12 +138,19 @@ export async function runCollector(
       const { data: variantIds, error } = await client.rpc("record_observations", { p: payload as never });
       if (error) throw new Error(`record_observations: ${error.message}`);
       for (const v of variantIds ?? []) touched.add(v);
+      collected.push(listing.id);
       ok++;
 
       // Images + vouchers are extras: a failure here never undoes the recorded price.
       if (detail && ((detail.images?.length ?? 0) > 0 || (detail.vouchers?.length ?? 0) > 0)) {
         try {
-          await saveListingExtras(client, listing.id, { images: detail.images, vouchers: detail.vouchers, source: detail.source });
+          // Effective prices are refreshed once for the whole batch, below.
+          await saveListingExtras(
+            client,
+            listing.id,
+            { images: detail.images, vouchers: detail.vouchers, source: detail.source },
+            { refreshEffective: false },
+          );
         } catch (err) {
           if (errors.length < MAX_ERROR_MESSAGES) {
             errors.push(`${listing.externalItemId} extras: ${err instanceof Error ? err.message : String(err)}`);
@@ -162,6 +172,16 @@ export async function runCollector(
   }
 
   const variantIds = [...touched];
+  // New prices (and vouchers) → new effective prices, before scores and alerts. Derived data:
+  // a failure is reported and never fails the run.
+  if (collected.length > 0) {
+    try {
+      await refreshEffectivePrices(client, { listingIds: collected, now });
+    } catch (err) {
+      reportError(err, { where: "runCollector.refreshEffectivePrices", runId: run.id });
+      errors.push(`effective prices: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   try {
     if (variantIds.length > 0) {
       const today = toVnDate(now);

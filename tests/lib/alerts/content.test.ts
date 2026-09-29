@@ -76,6 +76,18 @@ describe("renderAlertEmail", () => {
       expect(body).toContain("hoa hồng");
     }
   });
+
+  it("adds “≈ X sau voucher” only when the effective price is lower than the alert price", () => {
+    const line = `≈ ${formatVnd(2_400_000)} sau voucher`;
+    const withIt = renderAlertEmail(input([item({ effectivePrice: 2_400_000 })]));
+    expect(withIt.html).toContain(line);
+    expect(withIt.text).toContain(line);
+    for (const effectivePrice of [null, undefined, 2_500_000, 2_600_000]) {
+      const e = renderAlertEmail(input([item({ effectivePrice })]));
+      expect(e.html).not.toContain("sau voucher");
+      expect(e.text).not.toContain("sau voucher");
+    }
+  });
 });
 
 describe("listUnsubscribeHeaders", () => {

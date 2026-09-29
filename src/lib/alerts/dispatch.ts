@@ -11,6 +11,7 @@ import { groupDeliveries, latestPerWatch, nextRetryAt, type ClaimedDelivery } fr
 import type { TriggerType } from "@/lib/watch/types";
 import { siteUrl } from "@/lib/site-url";
 import { buildPushPayload } from "@/lib/push/payload";
+import { shownEffectivePrice } from "@/lib/vouchers/effective";
 
 export interface PushPayload {
   title: string;
@@ -38,6 +39,8 @@ interface EventDetail {
   triggerTypes: TriggerType[];
   price: number;
   offerId: string | null;
+  /** The offer's stored effective price + when it was computed (raw; filtered at render time). */
+  effective: { price: number | null; at: string | null };
   marketplace: string | null;
   baselinePrice: number | null;
   previousAlertPrice: number | null;
@@ -54,7 +57,7 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
     .from("alert_events")
     .select(
       `id, created_at, watch_id, trigger_types, price, offer_id, baseline_price, previous_alert_price, deal_score, recommendation, score_reasons,
-       offers(listings(marketplace)),
+       offers(effective_price, effective_price_at, listings(marketplace)),
        watches!inner(status, channels, target_price, variant_id,
          product_variants!inner(variant_key, products!inner(slug, canonical_name, image, categories(slug))),
          users!inner(email, deleted_at, notification_settings(*)))`,
@@ -76,6 +79,8 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
       offerId: r.offer_id,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       marketplace: (r.offers as any)?.listings?.marketplace ?? null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      effective: { price: n((r.offers as any)?.effective_price), at: (r.offers as any)?.effective_price_at ?? null },
       baselinePrice: n(r.baseline_price),
       previousAlertPrice: n(r.previous_alert_price),
       dealScore: r.deal_score,
@@ -192,6 +197,7 @@ export async function dispatchDueDeliveries(
           variantKey: e.product.variantKey,
           imageUrl: e.product.image,
           price: e.price,
+          effectivePrice: shownEffectivePrice(e.effective.price, e.effective.at, e.price, opts.now),
           baselinePrice: e.baselinePrice,
           dealScore: e.dealScore,
           recommendation: e.recommendation,

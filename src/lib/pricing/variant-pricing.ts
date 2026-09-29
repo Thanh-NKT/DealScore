@@ -29,6 +29,8 @@ export interface OfferRow {
   isFlashSale: boolean;
   /** null = no observation yet. Do NOT substitute "now": the data would look fresher than it is. */
   observedAt: string | null;
+  /** Price after the best voucher combination (fresh and lower than `price`), else null/absent. */
+  effectivePrice?: number | null;
 }
 
 export interface PricedOffer extends OfferRow {

@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
     const ext = listing.external_item_id;
     const sep = ext.indexOf("_");
     const detail = await getItemDetail(sep < 0 ? "" : ext.slice(0, sep), sep < 0 ? ext : ext.slice(sep + 1));
+    // Also refreshes this listing's effective prices (end of saveListingExtras) — no second call here.
     const saved = await saveListingExtras(admin, listing.id, {
       images: detail.images,
       vouchers: detail.vouchers,

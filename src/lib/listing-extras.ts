@@ -11,6 +11,8 @@ import { sanitizeImageUrls } from "@/lib/product/images";
 import { normalizeVouchers } from "@/lib/vouchers/normalize";
 import { upsertVouchers } from "@/lib/vouchers/store";
 import type { VoucherSource } from "@/lib/vouchers/types";
+import { refreshEffectivePrices } from "@/lib/vouchers/refresh-effective";
+import { reportError } from "@/lib/observability";
 
 type Client = SupabaseClient<Database>;
 
@@ -24,10 +26,15 @@ export interface ListingExtras {
   reporter?: string | null;
 }
 
+/**
+ * Ends by refreshing this listing's effective prices; `refreshEffective: false` skips that, for
+ * callers that refresh a whole batch themselves (the collector).
+ */
 export async function saveListingExtras(
   client: Client,
   listingId: string,
   extras: ListingExtras,
+  opts: { refreshEffective?: boolean } = {},
 ): Promise<{ images: number; vouchers: number }> {
   const { data: listing, error } = await client
     .from("listings")
@@ -57,6 +64,15 @@ export async function saveListingExtras(
     source: extras.source,
     reporter: extras.source === "extension" ? (extras.reporter ?? null) : null,
   });
+
+  // The effective price is derived data: a failure here never fails the save.
+  if (opts.refreshEffective !== false) {
+    try {
+      await refreshEffectivePrices(client, { listingIds: [listing.id] });
+    } catch (err) {
+      reportError(err, { where: "saveListingExtras.refreshEffectivePrices", listingId: listing.id });
+    }
+  }
 
   return { images, vouchers };
 }

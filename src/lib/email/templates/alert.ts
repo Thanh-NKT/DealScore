@@ -7,6 +7,8 @@ export interface AlertEmailItem {
   variantKey: string;
   imageUrl: string | null;
   price: number;
+  /** Price after the best voucher combination; shown only when lower than `price`. */
+  effectivePrice?: number | null;
   baselinePrice: number | null;
   dealScore: number | null;
   recommendation: Recommendation | null;
@@ -15,6 +17,12 @@ export interface AlertEmailItem {
   buyUrl: string;
   manageUrl: string;
   pauseUrl: string;
+}
+
+/** "≈ X sau voucher" (same copy as ProductCard), or null when there is nothing lower to show. */
+function voucherLine(it: AlertEmailItem): string | null {
+  const x = it.effectivePrice;
+  return x != null && Number.isFinite(x) && x >= 0 && x < it.price ? `≈ ${formatVnd(x)} sau voucher` : null;
 }
 
 const DISCLOSURE = "Kairo có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.";
@@ -44,10 +52,12 @@ export function renderAlertEmail(input: { items: AlertEmailItem[]; unsubscribeAl
         it.baselinePrice != null
           ? ` <span style="color:#5E6168">(lúc bắt đầu theo dõi: ${e(formatVnd(it.baselinePrice))})</span>`
           : "";
+      const eff = voucherLine(it);
+      const effHtml = eff ? `<p style="margin:0 0 4px;color:#5E6168">${e(eff)}</p>` : "";
       return `<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
 <h3 style="margin:0 0 4px">${e(it.productName)} <span style="color:#5E6168;font-weight:normal">— ${e(it.variantKey)}</span></h3>
 <p style="margin:4px 0;font-size:20px"><strong>${e(formatVnd(it.price))}</strong>${baseline}</p>
-${score}<ul style="margin:8px 0;padding-left:20px">${reasons}</ul>
+${effHtml}${score}<ul style="margin:8px 0;padding-left:20px">${reasons}</ul>
 <p style="margin:12px 0 4px"><a href="${e(it.buyUrl)}" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Mua trên Shopee</a></p>
 <p style="margin:4px 0;font-size:13px"><a href="${e(it.manageUrl)}">Xem sản phẩm đang theo dõi</a> · <a href="${e(it.pauseUrl)}">Tạm dừng thông báo sản phẩm này</a></p>
 </div>`;
@@ -65,6 +75,7 @@ ${htmlItems}
       [
         `${it.productName} — ${it.variantKey}`,
         `Giá: ${formatVnd(it.price)}${it.baselinePrice != null ? ` (lúc bắt đầu theo dõi: ${formatVnd(it.baselinePrice)})` : ""}`,
+        ...[voucherLine(it)].filter((l): l is string => l != null),
         ...(it.dealScore != null && it.recommendation
           ? [`Deal Score ${it.dealScore}/100 · ${RECOMMENDATION_LABEL[it.recommendation]}`]
           : []),

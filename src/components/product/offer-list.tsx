@@ -41,6 +41,8 @@ function OfferRow({
   primary: boolean;
 }) {
   const price = validPrice(offer.price);
+  // Price after the best voucher combination, shipping not included (page-data keeps it fresh + lower).
+  const effective = validPrice(offer.effectivePrice);
   const isBest = showBest && offer.inStock && price != null && price === cheapestPrice;
   const seller = offer.sellerName?.trim() || "Người bán chưa rõ tên";
   const rating = offer.sellerRating;
@@ -127,6 +129,11 @@ function OfferRow({
           </span>
         ) : (
           <span className="text-body-sm font-medium text-ink-3">Chưa có giá</span>
+        )}
+        {price != null && effective != null && effective < price && (
+          <span className="text-micro font-semibold text-ink-2">
+            ≈ <span className="num">{formatVnd(effective)}</span> sau voucher
+          </span>
         )}
         {diffFromBest != null && (
           <span className="num text-nano font-medium text-ink-3">
