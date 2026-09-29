@@ -119,6 +119,9 @@ Never mix these up; the choice encodes the security model.
   (TikTok Shop, Lazada: giả định, chưa có dữ liệu). So sánh giữa sàn chỉ hiện khi có ≥ 2 sàn thật.
 - **Extension (G2):** `extension/` (MV3) chỉ nói chuyện với `/api/extension/*`; các route này chỉ nhận Origin của
   extension (`EXTENSION_IDS`). Giá do extension gửi chỉ vào lịch sử khi `corroborate()` xác nhận chéo.
+- **Intent search (G3):** `src/lib/intent/` rule-based (không LLM); tham số URL luôn thắng suy luận từ ý định,
+  `intent=0` tắt hẳn. Giá sau voucher lưu ở `offers.effective_price` (`refreshEffectivePrices`), Deal Score
+  không đổi. User preferences chỉ áp vào search qua `?prefs=1`.
 - `src/lib/supabase/proxy.ts` — `updateSession()`, called from `src/proxy.ts` on every
   request to refresh the auth token. Do not insert logic between `createServerClient` and the
   `getUser()` call there.
