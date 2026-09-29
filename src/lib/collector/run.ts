@@ -179,7 +179,9 @@ export async function runCollector(
       await refreshEffectivePrices(client, { listingIds: collected, now });
     } catch (err) {
       reportError(err, { where: "runCollector.refreshEffectivePrices", runId: run.id });
-      errors.push(`effective prices: ${err instanceof Error ? err.message : String(err)}`);
+      if (errors.length < MAX_ERROR_MESSAGES) {
+        errors.push(`effective prices: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
   try {
