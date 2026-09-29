@@ -5,6 +5,7 @@ import { CheckCircleIcon, CheckIcon, ChevronDownIcon } from "@/components/ui/ico
 import { marketplaceName, type MarketplaceId } from "@/lib/marketplaces";
 import { PriceRangeForm } from "./price-range-form";
 import { pillClass } from "@/components/ui/pill";
+import type { IntentChipKind } from "@/lib/intent/types";
 
 interface FiltersProps {
   params: SearchParams;
@@ -276,20 +277,24 @@ export function Filters(props: FiltersProps) {
 export function ActiveFilterChips({
   params,
   categories = [],
+  hide = [],
 }: {
   params: SearchParams;
   categories?: Array<{ slug: string; name: string }>;
+  /** Conditions already shown as query-intent chips ("Đã hiểu:") — not repeated under "Đang lọc:". */
+  hide?: IntentChipKind[];
 }) {
   const chips: Array<{ key: string; label: string; to: string }> = [];
+  const hidden = new Set(hide);
 
-  if (params.categorySlug) {
+  if (params.categorySlug && !hidden.has("category")) {
     const name = categories.find((c) => c.slug === params.categorySlug)?.name ?? params.categorySlug;
     chips.push({ key: "cat", label: name, to: href(params, { categorySlug: undefined, categoryId: undefined }) });
   }
-  for (const b of params.brands ?? []) {
+  for (const b of hidden.has("brand") ? [] : (params.brands ?? [])) {
     chips.push({ key: `b-${b}`, label: `Hãng: ${b}`, to: href(params, { brands: params.brands?.filter((x) => x !== b) }) });
   }
-  if (params.minPrice != null || params.maxPrice != null) {
+  if ((params.minPrice != null || params.maxPrice != null) && !hidden.has("price")) {
     const label =
       params.minPrice != null && params.maxPrice != null
         ? `${formatVnd(params.minPrice)} – ${formatVnd(params.maxPrice)}`
@@ -298,15 +303,15 @@ export function ActiveFilterChips({
           : `Đến ${formatVnd(params.maxPrice)}`;
     chips.push({ key: "price", label: label, to: href(params, { minPrice: undefined, maxPrice: undefined }) });
   }
-  for (const m of params.marketplaces ?? []) {
+  for (const m of hidden.has("marketplace") ? [] : (params.marketplaces ?? [])) {
     const rest = params.marketplaces?.filter((x) => x !== m);
     chips.push({ key: `m-${m}`, label: marketplaceName(m), to: href(params, { marketplaces: rest?.length ? rest : undefined }) });
   }
   if (params.minRating != null) {
     chips.push({ key: "rating", label: `Từ ${ratingText(params.minRating)} ★`, to: href(params, { minRating: undefined }) });
   }
-  if (params.freeShipping) chips.push({ key: "freeship", label: "Freeship", to: href(params, { freeShipping: undefined }) });
-  if (params.hasVoucher) chips.push({ key: "voucher", label: "Có voucher", to: href(params, { hasVoucher: undefined }) });
+  if (params.freeShipping && !hidden.has("free_shipping")) chips.push({ key: "freeship", label: "Freeship", to: href(params, { freeShipping: undefined }) });
+  if (params.hasVoucher && !hidden.has("voucher")) chips.push({ key: "voucher", label: "Có voucher", to: href(params, { hasVoucher: undefined }) });
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">

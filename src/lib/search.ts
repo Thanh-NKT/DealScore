@@ -47,6 +47,8 @@ export interface SearchItem {
   score: number | null;
   recommendation: "insufficient_data" | "buy" | "wait" | "avoid" | null;
   lastObservedAt: string | null;
+  /** Estimated price after the best voucher combination, shipping excluded (spec §4). Null = none. */
+  effectivePrice: number | null;
 }
 
 export interface SearchResult {
@@ -210,6 +212,15 @@ export function toSearchParams(p: SearchParams): URLSearchParams {
   return sp;
 }
 
+/**
+ * Boost terms reach the SQL through LIKE: strip its wildcards (`%`, `_`) and the escape char so a
+ * term only ever matches literally. Empty terms are dropped; nothing left → undefined (no boost).
+ */
+export function sanitizeBoostTerms(terms: readonly string[] | undefined): string[] | undefined {
+  const clean = (terms ?? []).map((t) => t.replace(/[%_\\]/g, "").trim()).filter(Boolean);
+  return clean.length > 0 ? [...new Set(clean)] : undefined;
+}
+
 export async function searchProducts(params: SearchParams): Promise<SearchResult> {
   const page = params.page || 1;
   const offset = (page - 1) * PAGE_SIZE;
@@ -239,6 +250,8 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     p_free_shipping: params.freeShipping ?? undefined,
     p_has_voucher: params.hasVoucher ?? undefined,
     p_marketplaces: parseMarketplaces(params.marketplaces ?? []),
+    p_capacity_gb: params.capacityGb ?? undefined,
+    p_boost_terms: sanitizeBoostTerms(params.boostTerms),
   });
 
   // Do NOT swallow errors and do NOT return made-up data. For a price-lookup product, showing
@@ -266,6 +279,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     score: d.score != null ? Number(d.score) : null,
     recommendation: d.recommendation as SearchItem["recommendation"],
     lastObservedAt: d.last_observed_at,
+    effectivePrice: d.effective_price != null ? Number(d.effective_price) : null,
   }));
 
   return { items, total, page, pageSize: PAGE_SIZE };

@@ -59,6 +59,7 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
   const name = canonicalName?.trim() || "Sản phẩm chưa có tên";
   const price = validPrice(item.bestPrice);
   const listed = validPrice(item.originalPrice);
+  const effective = validPrice(item.effectivePrice);
   const off = discountPercent(price, listed);
   const saved = price != null && listed != null && listed > price ? listed - price : null;
   const brandName = brand?.trim() || categoryName?.trim();
@@ -133,6 +134,12 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
                 </span>
               ) : (
                 <span className="text-body-sm font-semibold leading-tight text-ink-3">Chưa có giá</span>
+              )}
+
+              {price != null && effective != null && effective < price && (
+                <span className="text-micro font-semibold text-ink-2">
+                  ≈ <span className="num">{formatVnd(effective)}</span> sau voucher
+                </span>
               )}
 
               {off != null && listed != null ? (

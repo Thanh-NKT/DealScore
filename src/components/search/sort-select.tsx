@@ -14,6 +14,7 @@ const OPTIONS: Array<{ value: Sort; label: string; needsQuery?: boolean }> = [
   { value: "price_asc", label: "Giá thấp → cao" },
   { value: "updated", label: "Mới cập nhật" },
   { value: "price_desc", label: "Giá cao → thấp" },
+  { value: "effective_asc", label: "Giá sau voucher" },
 ];
 
 export function SortSelect({ params, baseQuery }: { params: SearchParams; baseQuery: string }) {

@@ -192,7 +192,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           aria-activedescendant={showList && active >= 0 ? `${uid}-opt-${active}` : undefined}
           aria-describedby={`${uid}-status`}
           readOnly={lookup.loading}
-          placeholder={compare ? "Tên, hãng hoặc model sản phẩm…" : "Tìm tên sản phẩm, hãng, model hoặc dán link Shopee…"}
+          placeholder={compare ? "Tên, hãng hoặc model sản phẩm…" : "Ví dụ: SSD 2TB dưới 3 triệu"}
           className="h-11 w-full min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
 

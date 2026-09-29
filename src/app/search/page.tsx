@@ -12,6 +12,11 @@ import { Filters, ActiveFilterChips } from "@/components/search/filters";
 import { SortSelect } from "@/components/search/sort-select";
 import { ProductCard } from "@/components/search/product-card";
 import { EmptyState } from "@/components/search/empty-state";
+import { IntentChips } from "@/components/search/intent-chips";
+import { getIntentVocab } from "@/lib/intent/vocab";
+import { parseQueryIntent } from "@/lib/intent/parse";
+import { applyIntent } from "@/lib/intent/merge";
+import type { IntentChip } from "@/lib/intent/types";
 import { getCurrentUser } from "@/lib/auth/session";
 import { trackAfter } from "@/lib/analytics/track";
 
@@ -30,6 +35,7 @@ function hasFilterParams(params: SearchParams): boolean {
     Boolean(params.brands && params.brands.length > 0) ||
     params.minPrice != null ||
     params.maxPrice != null ||
+    params.capacityGb != null ||
     params.minRating != null ||
     Boolean(params.freeShipping) ||
     Boolean(params.hasVoucher) ||
@@ -38,16 +44,54 @@ function hasFilterParams(params: SearchParams): boolean {
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const rawParams = await searchParams;
-  const params = parseSearchParams(rawParams);
+  const raw = parseSearchParams(await searchParams);
+
+  // Query intent (spec §3): "ssd 2tb dưới 3 triệu" → category + capacity + price chips. The URL
+  // always wins over what the text says (applyIntent). getIntentVocab never throws.
+  let intentParams: SearchParams = raw;
+  let applied: IntentChip[] = [];
+  if (raw.intent !== false && raw.q) {
+    const vocab = await getIntentVocab();
+    ({ params: intentParams, applied } = applyIntent(raw, parseQueryIntent(raw.q, vocab)));
+    // Intent consumed every word: "relevance" (the default for a text query) means nothing now, so
+    // fall back to the no-query default instead of carrying sort=relevance into the links.
+    if (!intentParams.q && !raw.sortExplicit && intentParams.sort === "relevance") {
+      intentParams = { ...intentParams, sort: "updated" };
+    }
+  }
+
+  // (Task 7: "Theo sở thích của tôi" preferences are merged into intentParams here.)
+
   // A failed search must not take the whole page down: show a "retry" state instead. Facets only
   // feed the filter column, so they degrade to empty lists.
-  const [searchRes, facetsRes] = await Promise.allSettled([searchProducts(params), getFilterFacets()]);
+  const [searchRes, facetsRes] = await Promise.allSettled([searchProducts(intentParams), getFilterFacets()]);
   if (searchRes.status === "rejected") console.error("search: searchProducts failed", searchRes.reason);
   if (facetsRes.status === "rejected") console.error("search: getFilterFacets failed", facetsRes.reason);
-  const loadError = searchRes.status === "rejected";
-  const result =
-    searchRes.status === "fulfilled" ? searchRes.value : { items: [], total: 0, page: params.page ?? 1, pageSize: 24 };
+  let loadError = searchRes.status === "rejected";
+  let result =
+    searchRes.status === "fulfilled" ? searchRes.value : { items: [], total: 0, page: intentParams.page ?? 1, pageSize: 24 };
+
+  // Intent made the search too strict → show the plain-text results instead, with a notice. Only on
+  // page 1: past it, 0 rows just means "out of range".
+  let fallback = false;
+  if (!loadError && result.total === 0 && applied.length > 0 && (raw.page ?? 1) === 1) {
+    fallback = true;
+    try {
+      result = await searchProducts({ ...raw, intent: false });
+    } catch (err) {
+      console.error("search: fallback searchProducts failed", err);
+      loadError = true;
+    }
+  }
+
+  // Every link on the page (pagination, sort, filters) is built from what was actually searched,
+  // with intent=0 once intent applied — page 2 must not re-parse the leftover words differently.
+  const params: SearchParams = fallback
+    ? { ...raw, intent: false }
+    : applied.length > 0
+      ? { ...intentParams, intent: false }
+      : intentParams;
+
   const facets = facetsRes.status === "fulfilled" ? facetsRes.value : { categories: [], brands: [], advanced: NO_ADVANCED_FILTERS, marketplaces: [] };
 
   if (!loadError) {
@@ -62,6 +106,19 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         sort: params.sort,
       },
     });
+    if (applied.length > 0) {
+      // Allow-listed shape only — never the text the user typed.
+      trackAfter("search_intent_applied", {
+        userId: user?.id ?? null,
+        props: {
+          chips: applied.length,
+          has_category: applied.some((c) => c.kind === "category"),
+          has_price: applied.some((c) => c.kind === "price"),
+          has_capacity: applied.some((c) => c.kind === "capacity"),
+          fallback,
+        },
+      });
+    }
   }
 
   const totalPages = Math.ceil(result.total / result.pageSize);
@@ -77,9 +134,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <section aria-label="Tìm kiếm" className="border-b border-line bg-surface">
         <div className="mx-auto w-full max-w-[1440px] space-y-3.5 px-4 py-5 sm:px-6 lg:px-14">
           <div className="max-w-[820px]">
-            <SearchBox initialQuery={params.q} />
+            <SearchBox initialQuery={raw.q} />
           </div>
-          <ActiveFilterChips params={params} categories={facets.categories} />
+          {raw.q && (
+            // Chip links come from the intent-applied params even in fallback: dropping one condition
+            // (e.g. the price) is the natural next step when all of them together found nothing.
+            <IntentChips applied={applied} params={intentParams} originalQuery={raw.q} fallback={fallback} />
+          )}
+          <ActiveFilterChips
+            params={params}
+            categories={facets.categories}
+            hide={fallback ? [] : applied.map((c) => c.kind)}
+          />
         </div>
       </section>
 
@@ -102,14 +168,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 ) : (
                   <>
                     <span className="num text-gradient-warm font-extrabold">{result.total}</span>{" "}
-                    <span>sản phẩm{params.q || hasFilters ? " phù hợp" : ""}</span>
+                    <span>sản phẩm{raw.q || hasFilters ? " phù hợp" : ""}</span>
                   </>
                 )}
               </h1>
               <p className="text-body-sm text-ink-2">
-                {params.q ? (
+                {raw.q ? (
                   <>
-                    Kết quả cho <strong className="font-bold text-primary">&ldquo;{params.q}&rdquo;</strong> · Mỗi thẻ đã gom các nơi bán cùng một mẫu
+                    Kết quả cho <strong className="font-bold text-primary">&ldquo;{raw.q}&rdquo;</strong> · Mỗi thẻ đã gom các nơi bán cùng một mẫu
                   </>
                 ) : (
                   "Mỗi thẻ đã gom các nơi bán cùng một mẫu sản phẩm"
@@ -146,8 +212,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                       ? "too_strict"
                       : "no_results"
               }
-              query={params.q}
-              clearFiltersHref={params.q ? `/search?q=${encodeURIComponent(params.q)}` : "/search"}
+              query={raw.q}
+              clearFiltersHref={raw.q ? `/search?${toSearchParams({ q: raw.q, intent: false }).toString()}` : "/search"}
               firstPageHref={pageHref(1)}
               retryHref={`/search?${toSearchParams(params).toString()}`}
             />

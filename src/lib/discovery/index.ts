@@ -53,6 +53,8 @@ function toCard(r: CardRow): SearchItem {
     score: r.score != null ? Number(r.score) : null,
     recommendation: r.recommendation as SearchItem["recommendation"],
     lastObservedAt: r.last_observed_at,
+    // Discovery RPCs don't return effective prices (yet).
+    effectivePrice: null,
   };
 }
 

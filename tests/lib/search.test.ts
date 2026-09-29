@@ -1,5 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { parseSearchParams, toSearchParams } from "@/lib/search";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { parseSearchParams, searchProducts, toSearchParams } from "@/lib/search";
+
+// searchProducts talks to Supabase through the server client: stub it with a spy-able rpc.
+const rpc = vi.fn();
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => ({
+    rpc: (...args: unknown[]) => rpc(...args),
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
+  }),
+}));
 
 const parse = (qs: string) => parseSearchParams(new URLSearchParams(qs));
 
@@ -170,5 +179,63 @@ describe("query intent params (Phase 3 group A)", () => {
   it("toSearchParams never writes sizeInch, color or boostTerms", () => {
     const qs = toSearchParams({ sizeInch: 27, color: "black", boostTerms: ["gaming"] });
     expect(qs.toString()).toBe("");
+  });
+});
+
+describe("searchProducts — RPC arguments and row mapping", () => {
+  const row = {
+    product_id: "p1",
+    slug: "ssd-a",
+    canonical_name: "SSD A 2TB",
+    brand: "Samsung",
+    image: null,
+    category_slug: "o-cung-ssd",
+    best_price: "2500000",
+    original_price: null,
+    score: 72,
+    recommendation: "buy",
+    last_observed_at: "2026-09-28T00:00:00Z",
+    relevance: 1,
+    total_count: 1,
+    effective_price: "2300000",
+  };
+
+  beforeEach(() => {
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: [row], error: null });
+  });
+
+  const argsOfLastCall = () => rpc.mock.calls.at(-1)![1] as Record<string, unknown>;
+
+  it("passes capacityGb as p_capacity_gb", async () => {
+    await searchProducts({ q: "ssd", capacityGb: 2048 });
+    expect(rpc.mock.calls.at(-1)![0]).toBe("search_products");
+    expect(argsOfLastCall().p_capacity_gb).toBe(2048);
+  });
+
+  it("omits p_capacity_gb and p_boost_terms when unset or empty", async () => {
+    await searchProducts({ q: "ssd", boostTerms: [] });
+    expect(argsOfLastCall().p_capacity_gb).toBeUndefined();
+    expect(argsOfLastCall().p_boost_terms).toBeUndefined();
+  });
+
+  it("strips LIKE wildcards and backslashes from boost terms and drops empty ones", async () => {
+    await searchProducts({ q: "ssd", boostTerms: ["gaming", "50%_off", "%", " \\ ", "a\\b"] });
+    expect(argsOfLastCall().p_boost_terms).toEqual(["gaming", "50off", "ab"]);
+  });
+
+  it("sends undefined when every boost term is only wildcards", async () => {
+    await searchProducts({ q: "ssd", boostTerms: ["%%", "__"] });
+    expect(argsOfLastCall().p_boost_terms).toBeUndefined();
+  });
+
+  it("maps effective_price to a number, null when absent", async () => {
+    const res = await searchProducts({ q: "ssd" });
+    expect(res.items[0].effectivePrice).toBe(2_300_000);
+    expect(res.items[0].bestPrice).toBe(2_500_000);
+
+    rpc.mockResolvedValue({ data: [{ ...row, effective_price: null }], error: null });
+    const res2 = await searchProducts({ q: "ssd" });
+    expect(res2.items[0].effectivePrice).toBeNull();
   });
 });
