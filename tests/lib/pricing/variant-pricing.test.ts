@@ -96,6 +96,25 @@ describe("buildVariantPricing — sorting", () => {
     expect(out.offers.map((o) => o.offerId)).toEqual(["a", "c", "b"]);
   });
 
+  it("bestBuy follows the price after vouchers while cheapest (Deal Score basis) keeps the listed price", () => {
+    const out = buildVariantPricing({
+      ...base,
+      offers: [
+        offer({ offerId: "shopee", marketplace: "shopee", price: 1000 }),
+        offer({ offerId: "tiktok", marketplace: "tiktok", price: 1050, effectivePrice: 950 }),
+      ],
+    });
+    expect(out.cheapest?.offerId).toBe("shopee");
+    expect(out.bestBuy?.offerId).toBe("tiktok");
+  });
+
+  it("bestBuy is the cheapest offer when no voucher changes the order, null when nothing is in stock", () => {
+    const one = buildVariantPricing({ ...base, offers: [offer({ offerId: "a", price: 1000 })] });
+    expect(one.bestBuy?.offerId).toBe("a");
+    const none = buildVariantPricing({ ...base, offers: [offer({ offerId: "a", price: 1000, stock: 0 })] });
+    expect(none.bestBuy).toBeNull();
+  });
+
   it("offers without a price go last", () => {
     const out = buildVariantPricing({
       ...base,

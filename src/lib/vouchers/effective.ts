@@ -3,6 +3,7 @@
  * fee not included. Pure and DB-free; the math is select.ts — nothing is recomputed here.
  */
 import { formatVnd } from "@/lib/format";
+import { marketplaceName as getMarketplaceName } from "@/lib/marketplaces";
 import type { VariantPricing } from "@/lib/pricing/variant-pricing";
 import { activeVouchers, bestCombination, VOUCHER_FRESH_DAYS, type ActiveVoucherContext } from "@/lib/vouchers/select";
 import type { Voucher } from "@/lib/vouchers/types";
@@ -76,21 +77,26 @@ export function shownEffectivePrice(stored: StoredEffective, current: CurrentObs
   return effective;
 }
 
-export function effectiveReason(x: number): string {
-  return `Dùng voucher: ước tính còn ${formatVnd(x)} (chưa gồm phí ship).`;
+/** `marketplaceName` is given only when the voucher moves the best buy to another marketplace. */
+export function effectiveReason(x: number, marketplaceName?: string): string {
+  const where = marketplaceName ? ` trên ${marketplaceName}` : "";
+  return `Dùng voucher${where}: ước tính còn ${formatVnd(x)} (chưa gồm phí ship).`;
 }
 
 /**
- * Adds the voucher reason to the headline reasons when the best offer has a lower effective price —
- * also while the Deal Score is insufficient (spec §4; the breakdown then shows its "still collecting
- * data" note plus these reasons). The Deal Score itself is untouched (it scores the listed price).
+ * Adds the voucher reason to the headline reasons when the best buy (pickBestBuy) has a lower
+ * effective price — also while the Deal Score is insufficient (spec §4; the breakdown then shows its
+ * "still collecting data" note plus these reasons). The Deal Score itself is untouched (it scores the
+ * listed price). The reason names the marketplace when it differs from the cheapest listed one.
  */
 export function withEffectiveReason(pricing: VariantPricing): VariantPricing {
-  const best = pricing.cheapest;
+  const best = pricing.bestBuy;
   const headline = pricing.headline;
   const x = best?.effectivePrice;
   if (!best || !headline || x == null || best.price == null || !(x < best.price)) {
     return pricing;
   }
-  return { ...pricing, headline: { ...headline, reasons: [...headline.reasons, effectiveReason(x)] } };
+  const moved = pricing.cheapest != null && pricing.cheapest.marketplace !== best.marketplace;
+  const reason = effectiveReason(x, moved ? getMarketplaceName(best.marketplace) : undefined);
+  return { ...pricing, headline: { ...headline, reasons: [...headline.reasons, reason] } };
 }

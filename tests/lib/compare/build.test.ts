@@ -34,6 +34,7 @@ function page(over: {
     pricing: {
       offers: Array.from({ length: over.offers ?? 1 }, () => ({}) as never),
       cheapest,
+      bestBuy: cheapest,
       lastKnown: null,
       allOutOfStock: false,
       headline:

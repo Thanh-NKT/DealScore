@@ -1,6 +1,7 @@
 import { detectFakeSale, type DealScoreResult } from "@/lib/pricing/deal-score";
 import { scoreDeal } from "@/lib/pricing/score";
 import { discountPercent } from "@/lib/format";
+import { pickBestBuy } from "@/lib/pricing/best-buy";
 import {
   expandRollup,
   historyStats,
@@ -42,7 +43,12 @@ export interface PricedOffer extends OfferRow {
 
 export interface VariantPricing {
   offers: PricedOffer[]; // in stock by ascending price, then out of stock
-  cheapest: PricedOffer | null; // cheapest in-stock offer
+  cheapest: PricedOffer | null; // cheapest in-stock offer by listed price — the Deal Score basis
+  /**
+   * In-stock offer that costs least after vouchers (pickBestBuy) — may be another marketplace than
+   * `cheapest`. Drives the buy button, the voucher block and "Mua ở sàn nào?".
+   */
+  bestBuy: PricedOffer | null;
   /**
    * When NO offer is in stock: the offer with the most recently recorded price, to show
    * "Tạm hết hàng" + the last price (1.2.a.4). null when in stock, or no price yet.
@@ -210,6 +216,7 @@ export function buildVariantPricing(input: {
   return {
     offers: mappedOffers,
     cheapest,
+    bestBuy: pickBestBuy(mappedOffers),
     lastKnown,
     allOutOfStock: cheapest == null && lastKnown != null,
     headline,

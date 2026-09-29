@@ -63,6 +63,8 @@ export function PriceSummary({ cheapest, offerCount, discountDoubtful = false }:
   const off = cheapest.discountPercent;
   const showListed = listed != null && off != null && off > 0 && listed > price;
   const saved = showListed && listed != null ? listed - price : null;
+  const effectiveRaw = validPrice(cheapest.effectivePrice);
+  const effective = effectiveRaw != null && effectiveRaw < price ? effectiveRaw : null;
   const text = formatVnd(price);
   const fitDivisor = text.length * 0.58 + 0.2;
 
@@ -96,6 +98,13 @@ export function PriceSummary({ cheapest, offerCount, discountDoubtful = false }:
           </span>
         )}
       </div>
+
+      {effective != null && (
+        <p className="text-body-sm text-ink-2">
+          ≈ <span className="num font-bold text-buy">{formatVnd(effective)}</span> sau voucher trên {where}{" "}
+          <span className="text-ink-3">(chưa gồm phí ship)</span>
+        </p>
+      )}
 
       {(showListed || cheapest.isFlashSale) && (
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 pt-0.5 text-label text-ink-3">

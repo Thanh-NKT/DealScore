@@ -6,7 +6,8 @@ import { AFFILIATE_SENTENCE, MARKETPLACE_CHIP, NEUTRAL_CHIP, OFFER_CARD, OFFER_G
 
 /**
  * "So sánh giữa các sàn" (Phase 2, DESIGN.md "Bảng so giá nơi bán"). Only rendered when
- * compareMarketplaces() found at least two marketplaces with a real in-stock price. Neutral chips,
+ * compareMarketplaces() found at least two marketplaces with a real in-stock price. Rows are ranked by
+ * the price paid after vouchers (listed price + "≈ X sau voucher" when lower). Neutral chips,
  * same template for every marketplace; the cheapest row says so with a neutral "Rẻ nhất" chip and
  * gets the one primary button, the others show the gap in ink-3 and a secondary button.
  */
@@ -28,7 +29,7 @@ export function MarketplaceCompare({ comparison, offers }: { comparison: Marketp
         >
           <span>Sàn</span>
           <span>Người bán còn hàng</span>
-          <span className="text-right">Giá tốt nhất trên sàn</span>
+          <span className="text-right">Giá tốt nhất trên sàn (sau voucher)</span>
           <span />
         </div>
         <ul>
@@ -44,6 +45,11 @@ export function MarketplaceCompare({ comparison, offers }: { comparison: Marketp
                 </p>
                 <div className="flex flex-col items-end gap-1 text-right">
                   <p className="num text-title font-extrabold leading-tight text-ink">{formatVnd(row.price)}</p>
+                  {row.effectivePrice != null && (
+                    <span className="whitespace-nowrap text-label text-ink-2">
+                      ≈ <span className="num font-bold text-ink">{formatVnd(row.effectivePrice)}</span> sau voucher
+                    </span>
+                  )}
                   {row.gap === 0 ? (
                     <span className={NEUTRAL_CHIP}>Rẻ nhất</span>
                   ) : (

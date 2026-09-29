@@ -6,7 +6,23 @@
  * them, and neither has a data source yet — isConfigured() is false, so the collector skips them.
  */
 import { externalItemId, parseShopeeUrl, SHOPEE_HOSTS, SHORT_HOSTS, normalizeLookupInput } from "@/lib/shopee/parse-url";
-import { isShopeeConfigured } from "@/lib/shopee/client";
+import { getItemDetail, isShopeeConfigured, ShopeeItemGoneError, ShopeeUnavailableError } from "@/lib/shopee/client";
+import type { VoucherSource } from "@/lib/vouchers/types";
+
+/** Images + vouchers of one listing as the marketplace reports them (unsanitized: saveListingExtras() filters). */
+export interface ListingDetail {
+  images: unknown;
+  vouchers: unknown;
+  source: VoucherSource;
+}
+
+/** The marketplace could not give the listing's data right now (down, rate limited, item gone). */
+export class MarketplaceUnavailableError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "MarketplaceUnavailableError";
+  }
+}
 
 export type MarketplaceId = "shopee" | "tiktok" | "lazada";
 
@@ -37,6 +53,12 @@ export interface MarketplaceAdapter {
    * "down-vn.img.susercontent.com". Anything else is dropped (listings.images, spec §5).
    */
   imageHosts: readonly string[];
+  /**
+   * Reads one listing's images + vouchers ("Làm mới" on the product page, /api/vouchers/refresh).
+   * Absent = no source for it yet. Only called when isConfigured(). Throws
+   * MarketplaceUnavailableError when the marketplace cannot answer.
+   */
+  fetchListingDetail?(externalItemId: string): Promise<ListingDetail>;
 }
 
 const shopee: MarketplaceAdapter = {
@@ -62,6 +84,21 @@ const shopee: MarketplaceAdapter = {
   targetHosts: new Set([...SHOPEE_HOSTS, ...SHORT_HOSTS, "shp.ee"]),
   // down-vn.img.susercontent.com (current CDN), cf.shopee.vn / cvf.shopee.vn (older image hosts).
   imageHosts: ["susercontent.com", "cf.shopee.vn", "cvf.shopee.vn"],
+  async fetchListingDetail(externalItemId) {
+    // Shopee's external id is "{shopId}_{itemId}" (externalItemId() in parse-url).
+    const sep = externalItemId.indexOf("_");
+    const shopId = sep < 0 ? "" : externalItemId.slice(0, sep);
+    const itemId = sep < 0 ? externalItemId : externalItemId.slice(sep + 1);
+    try {
+      const detail = await getItemDetail(shopId, itemId);
+      return { images: detail.images ?? [], vouchers: detail.vouchers ?? [], source: detail.source };
+    } catch (err) {
+      if (err instanceof ShopeeUnavailableError || err instanceof ShopeeItemGoneError) {
+        throw new MarketplaceUnavailableError(err.message, { cause: err });
+      }
+      throw err;
+    }
+  },
 };
 
 const tiktok: MarketplaceAdapter = {

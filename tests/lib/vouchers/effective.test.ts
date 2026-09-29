@@ -147,11 +147,30 @@ describe("effective reason", () => {
     expect(effectiveReason(1_234_000)).toBe(`Dùng voucher: ước tính còn ${formatVnd(1_234_000)} (chưa gồm phí ship).`);
   });
 
-  const pricing = (cheapest: Record<string, unknown> | null, score: number | null = 80) =>
+  const pricing = (
+    cheapest: Record<string, unknown> | null,
+    score: number | null = 80,
+    bestBuy: Record<string, unknown> | null = cheapest,
+  ) =>
     ({
       cheapest,
+      bestBuy,
       headline: cheapest ? { score, recommendation: "buy", reasons: ["✓ a"] } : null,
     }) as unknown as VariantPricing;
+
+  it("names the marketplace when the voucher makes a different marketplace the best buy", () => {
+    const out = withEffectiveReason(
+      pricing(
+        { marketplace: "shopee", price: 1_000_000, effectivePrice: null },
+        80,
+        { marketplace: "tiktok", price: 1_050_000, effectivePrice: 950_000 },
+      ),
+    );
+    expect(out.headline!.reasons).toEqual(["✓ a", effectiveReason(950_000, "TikTok Shop")]);
+    expect(effectiveReason(950_000, "TikTok Shop")).toBe(
+      `Dùng voucher trên TikTok Shop: ước tính còn ${formatVnd(950_000)} (chưa gồm phí ship).`,
+    );
+  });
 
   it("appends to the headline reasons when the best offer has a lower effective price", () => {
     const out = withEffectiveReason(pricing({ price: 1_000_000, effectivePrice: 950_000 }));

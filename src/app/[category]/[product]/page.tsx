@@ -33,6 +33,7 @@ import { VoucherPicker } from "@/components/product/voucher-picker";
 import { DiscountVerifyBanner } from "@/components/product/discount-verify-banner";
 import { ProductStickyBar } from "@/components/product/product-sticky-bar";
 import { variantLabel } from "@/components/product/variant-label";
+import { canRefreshVouchers } from "@/lib/vouchers/refresh";
 
 interface PageProps {
   params: Promise<{ category: string; product: string }>;
@@ -83,8 +84,12 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const recommendation: Recommendation | null =
     headline && headline.score != null ? headline.recommendation : headline ? "insufficient_data" : null;
   const hasFakeSale = Boolean(pricing.fakeSaleMessage?.trim());
+  // Deal Score, Watch and the chart work on the cheapest LISTED price (history has no vouchers)…
   const cheapest = pricing.cheapest;
   const currentPrice = cheapest?.price ?? pricing.lastKnown?.price ?? null;
+  // …while "where to buy" follows the price the buyer pays after vouchers, on whichever marketplace.
+  const buy = pricing.bestBuy ?? cheapest;
+  const buyListedPrice = buy?.price ?? currentPrice;
 
   trackAfter("product_viewed", {
     userId: user?.id ?? null,
@@ -105,19 +110,20 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const marketplaceComparison = compareMarketplaces(pricing.offers);
 
   const goHref =
-    cheapest?.listingUrl
-      ? `/go/${encodeURIComponent(cheapest.marketplace)}/${encodeURIComponent(cheapest.offerId)}?src=web`
+    buy?.listingUrl
+      ? `/go/${encodeURIComponent(buy.marketplace)}/${encodeURIComponent(buy.offerId)}?src=web`
       : null;
 
-  const voucherPlatform = cheapest ? marketplaceName(cheapest.marketplace) : "Shopee";
-  const voucherListing = cheapest ? data.offerListings?.[cheapest.offerId] : undefined;
+  const voucherPlatform = buy ? marketplaceName(buy.marketplace) : "Shopee";
+  const voucherListing = buy ? data.offerListings?.[buy.offerId] : undefined;
   // Same list the offers' effective prices were computed from (page-data), so the picker's estimate,
   // the offer line and the Deal Score reason agree.
   const vouchers =
-    cheapest && voucherListing && currentPrice != null && currentPrice > 0
-      ? (data.offerVouchers?.[cheapest.offerId] ?? (await loadActiveVouchers(voucherListing)))
+    buy && voucherListing && buyListedPrice != null && buyListedPrice > 0
+      ? (data.offerVouchers?.[buy.offerId] ?? (await loadActiveVouchers(voucherListing)))
       : [];
-  const voucherGroups = currentPrice != null && currentPrice > 0 ? toGroups(vouchers, currentPrice, voucherPlatform) : [];
+  const voucherGroups =
+    buyListedPrice != null && buyListedPrice > 0 ? toGroups(vouchers, buyListedPrice, voucherPlatform) : [];
 
   return (
     <div className="flex w-full flex-col bg-canvas pb-24">
@@ -203,7 +209,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                 {/* Top: Best Price + Deal Score Ring */}
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <PriceSummary
-                    cheapest={cheapest ?? pricing.lastKnown}
+                    cheapest={buy ?? pricing.lastKnown}
                     offerCount={offerCount}
                     discountDoubtful={hasFakeSale}
                   />
@@ -238,12 +244,12 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                 {/* Bottom: Aligned Action Bar (the sticky bar appears once this scrolls away) */}
                 <div id="primary-buy" className="flex flex-col gap-2 pt-1">
                   <div className="flex flex-wrap items-center gap-2.5">
-                    {cheapest && (
+                    {buy && (
                       <BuyButton
-                        offerId={cheapest.offerId}
-                        marketplace={cheapest.marketplace}
-                        hasLink={Boolean(cheapest.listingUrl)}
-                        affiliate={cheapest.affiliateEligible}
+                        offerId={buy.offerId}
+                        marketplace={buy.marketplace}
+                        hasLink={Boolean(buy.listingUrl)}
+                        affiliate={buy.affiliateEligible}
                         variant="primary"
                         size="lg"
                         affiliateLabel={false}
@@ -323,11 +329,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           <section id="ma-giam-gia" aria-labelledby="voucher-title">
             <VoucherPicker
               platform={voucherPlatform}
-              productPrice={currentPrice}
+              productPrice={buyListedPrice}
               groups={voucherGroups}
               collectedAt={vouchersCollectedAt(vouchers)}
               goHref={goHref}
-              refreshOfferId={cheapest?.offerId ?? null}
+              refreshOfferId={buy && canRefreshVouchers(buy.marketplace) ? buy.offerId : null}
             />
           </section>
 
@@ -348,13 +354,13 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       <ProductStickyBar
         productName={product.canonicalName}
         variantTitle={currentVariant ? variantLabel(currentVariant.variantKey) : product.canonicalName}
-        price={currentPrice}
+        price={buyListedPrice}
         score={headline?.score ?? null}
         recommendation={recommendation}
         image={product.image}
         buyUrl={goHref}
-        buyLabel={cheapest ? `Đến ${marketplaceName(cheapest.marketplace)}` : "Xem nơi bán"}
-        marketplace={cheapest?.marketplace}
+        buyLabel={buy ? `Đến ${marketplaceName(buy.marketplace)}` : "Xem nơi bán"}
+        marketplace={buy?.marketplace}
         isWatching={existingWatch?.status === "active"}
         anchorId="primary-buy"
       />

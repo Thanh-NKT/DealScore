@@ -112,8 +112,10 @@ function RefreshVouchersButton({ offerId }: { offerId: string }) {
   };
 
   const working = busy || pending;
+  // A fragment: the parent row wraps, so the message takes its own full-width line under both
+  // buttons instead of widening the button's column and squeezing "Chọn tổ hợp tốt nhất".
   return (
-    <div className="flex flex-col items-end gap-1">
+    <>
       <button
         type="button"
         onClick={refresh}
@@ -125,11 +127,11 @@ function RefreshVouchersButton({ offerId }: { offerId: string }) {
         {working ? "Đang làm mới…" : "Làm mới"}
       </button>
       {error && (
-        <span role="status" className="max-w-[32ch] text-right text-micro text-ink-2">
+        <span role="status" className="order-last basis-full text-right text-micro text-ink-2">
           {error}
         </span>
       )}
-    </div>
+    </>
   );
 }
 
@@ -245,7 +247,7 @@ function VoucherGroups({
                 </p>
               </div>
 
-              <div className="flex items-start gap-2">
+              <div className="flex flex-wrap items-start justify-end gap-2">
                 {refreshOfferId && <RefreshVouchersButton offerId={refreshOfferId} />}
                 <button
                   type="button"

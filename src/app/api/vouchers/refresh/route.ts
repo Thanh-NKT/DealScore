@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { beginLookup, clientIp, finishLookup, hashIp } from "@/lib/rate-limit";
-import { getItemDetail, isShopeeConfigured, ShopeeItemGoneError, ShopeeUnavailableError } from "@/lib/shopee/client";
+import { getAdapter, MARKETPLACES, MarketplaceUnavailableError } from "@/lib/marketplaces";
 import { saveListingExtras } from "@/lib/listing-extras";
+import { canRefreshVouchers } from "@/lib/vouchers/refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,9 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 
 /**
  * POST /api/vouchers/refresh { offerId } — re-read images + vouchers for the offer's listing from
- * the marketplace API. Counts against the lookup quota (per IP / per user, src/lib/rate-limit.ts).
- * 503 { error: "not_configured" } until the Shopee API is wired.
+ * the listing's marketplace (adapter.fetchListingDetail). Counts against the lookup quota (per IP /
+ * per user, src/lib/rate-limit.ts). 503 { error: "not_configured" } when that marketplace has no
+ * data source yet (canRefreshVouchers).
  */
 export async function POST(request: NextRequest) {
   let offerId: unknown;
@@ -28,7 +30,8 @@ export async function POST(request: NextRequest) {
   }
   if (typeof offerId !== "string" || !UUID_RE.test(offerId)) return json({ error: "bad_request" }, 400);
 
-  if (!isShopeeConfigured()) return json({ error: "not_configured" }, 503);
+  // No marketplace can refresh at all: answer before spending the caller's lookup quota.
+  if (!MARKETPLACES.some((m) => canRefreshVouchers(m.id))) return json({ error: "not_configured" }, 503);
 
   let requestId: number | null = null;
   try {
@@ -53,15 +56,13 @@ export async function POST(request: NextRequest) {
       if (requestId != null) await finishLookup(requestId, "rejected");
       return json({ error: "not_found" }, 404);
     }
-    // Only Shopee has a data source today.
-    if (listing.marketplace !== "shopee") {
+    // Same rule the product page uses to decide whether to offer "Làm mới".
+    if (!canRefreshVouchers(listing.marketplace)) {
       if (requestId != null) await finishLookup(requestId, "rejected");
       return json({ error: "not_configured" }, 503);
     }
 
-    const ext = listing.external_item_id;
-    const sep = ext.indexOf("_");
-    const detail = await getItemDetail(sep < 0 ? "" : ext.slice(0, sep), sep < 0 ? ext : ext.slice(sep + 1));
+    const detail = await getAdapter(listing.marketplace)!.fetchListingDetail!(listing.external_item_id);
     // Also refreshes this listing's effective prices (end of saveListingExtras) — no second call here.
     const saved = await saveListingExtras(admin, listing.id, {
       images: detail.images,
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     return json({ status: "ok", ...saved }, 200);
   } catch (err) {
     if (requestId != null) await finishLookup(requestId, "error");
-    if (err instanceof ShopeeUnavailableError || err instanceof ShopeeItemGoneError) {
+    if (err instanceof MarketplaceUnavailableError) {
       return json({ error: "upstream_unavailable" }, 503);
     }
     console.error("api/vouchers/refresh failed:", err);
