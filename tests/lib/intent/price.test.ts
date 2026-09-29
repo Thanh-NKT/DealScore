@@ -43,6 +43,18 @@ describe("extractPriceRange", () => {
     expect(range("man hinh 27 inch")).toBeNull();
     expect(range("ssd 2tb")).toBeNull();
   });
+  it("a unitless amount after a cue must be ≥ 10.000 or use thousands grouping", () => {
+    expect(range("iphone 15 pro max 2023")).toBeNull();
+    expect(range("loa max 1500")).toBeNull();
+    expect(range("duoi 5000")).toBeNull();
+    expect(range("tu 2023 den 2024")).toBeNull();
+    expect(range("duoi 10000")).toEqual({ minPrice: undefined, maxPrice: 10_000 });
+    expect(range("duoi 500000")).toEqual({ minPrice: undefined, maxPrice: 500_000 });
+    expect(range("duoi 5.000")).toEqual({ minPrice: undefined, maxPrice: 5_000 });
+    expect(range("duoi 5000d")).toEqual({ minPrice: undefined, maxPrice: 5_000 });
+    // The unit borrowed from the second amount still counts as a unit.
+    expect(range("tu 3 den 5 trieu")).toEqual({ minPrice: 3_000_000, maxPrice: 5_000_000 });
+  });
   it("returns the span of the phrase", () => {
     const s = "ssd duoi 3tr 2tb";
     const r = extractPriceRange(s)!;

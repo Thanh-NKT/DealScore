@@ -3,11 +3,22 @@
  * Pure, DB-free. The URL always wins: a chip whose field is already set by the URL is dropped
  * from `applied` and its value is never written.
  */
+import { COLOR_LABELS } from "@/lib/intent/lexicon";
 import type { IntentChip, IntentChipKind, QueryIntent } from "@/lib/intent/types";
+import { normalizeText } from "@/lib/matching/attributes";
 import type { SearchParams } from "@/lib/search";
 
 function dedupe(values: string[]): string[] {
   return [...new Set(values)];
+}
+
+/**
+ * Boost terms for a colour: the English value and the folded Vietnamese word ("black" → "black",
+ * "den") — product search_text is unaccented, and Vietnamese titles say "đen", not "black".
+ */
+function colorTerms(color: string): string[] {
+  const vi = COLOR_LABELS[color];
+  return dedupe([color, ...(vi ? [normalizeText(vi)] : [])].filter((t) => t !== ""));
 }
 
 /** Whether `params` leaves the field(s) for this chip kind unset — the only case a chip applies. */
@@ -66,7 +77,7 @@ function applyChip(next: SearchParams, kind: IntentChipKind, intent: QueryIntent
     case "color":
       next.color = intent.color;
       if (intent.color != null) {
-        next.boostTerms = dedupe([...(next.boostTerms ?? []), intent.color]);
+        next.boostTerms = dedupe([...(next.boostTerms ?? []), ...colorTerms(intent.color)]);
       }
       break;
     case "sort":
@@ -143,9 +154,9 @@ export function removeChip(params: SearchParams, kind: IntentChipKind): SearchPa
       break;
     }
     case "color": {
-      const term = next.color;
+      const terms = next.color ? colorTerms(next.color) : [];
       next.color = undefined;
-      if (term) next.boostTerms = next.boostTerms?.filter((t) => t !== term);
+      if (terms.length > 0) next.boostTerms = next.boostTerms?.filter((t) => !terms.includes(t));
       break;
     }
     case "sort":

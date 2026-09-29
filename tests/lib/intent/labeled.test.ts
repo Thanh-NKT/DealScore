@@ -77,6 +77,14 @@ const CASES: Array<[string, Partial<QueryIntent>]> = [
   ["mua gì", { text: "mua gì", chips: [] }],
   ["cái gì tốt nhất cho mình đây", { text: "nhất đây" }],
 
+  // Final review: model words / years after a cue are not prices; no dangling price cue in `text`.
+  ["iphone 15 pro max 2023", { text: "iphone 15 pro max 2023", chips: [] }],
+  ["loa max 1500", { text: "loa max 1500", chips: [] }],
+  ["ssd trên 1tb", { categorySlug: "ssd", capacityGb: 1024, text: "" }],
+  ["ssd tren 1tb", { categorySlug: "ssd", capacityGb: 1024, text: "" }],
+  ["samsung dưới", { brands: ["Samsung"], text: "" }],
+  ["iphone pro max 256gb", { capacityGb: 256, text: "iphone pro max" }],
+
   // Ambiguous category (same-length tie between different slugs) → no category.
   ["chuột phím", { text: "chuột phím", chips: [] }],
 ];

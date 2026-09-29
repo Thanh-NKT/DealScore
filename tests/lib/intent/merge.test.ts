@@ -101,8 +101,15 @@ describe("applyIntent", () => {
     const { params: next, applied } = applyIntent(params, qi);
     expect(next.sizeInch).toBe(27);
     expect(next.color).toBe("black");
-    expect(next.boostTerms).toEqual(expect.arrayContaining(["27 inch", "black"]));
+    expect(next.boostTerms).toEqual(expect.arrayContaining(["27 inch", "black", "den"]));
     expect(applied).toHaveLength(2);
+  });
+
+  it("color boost carries the English and the folded Vietnamese form (search_text is unaccented)", () => {
+    const qi = intent({ color: "blue", chips: [{ kind: "color", label: "Màu xanh dương" }] });
+    expect(applyIntent({}, qi).params.boostTerms).toEqual(["blue", "xanh duong"]);
+    const red = intent({ color: "red", chips: [{ kind: "color", label: "Màu đỏ" }] });
+    expect(applyIntent({ boostTerms: ["do"] }, red).params.boostTerms).toEqual(["do", "red"]);
   });
 
   it("merges intent.boostTerms even when no chip is applied, deduping", () => {
@@ -176,11 +183,17 @@ describe("removeChip", () => {
     expect(next.boostTerms).toEqual(["gaming"]);
   });
 
-  it("removes the color term it added from boostTerms", () => {
-    const params: SearchParams = { color: "black", boostTerms: ["black", "gaming"] };
+  it("removes the color terms it added (both forms) from boostTerms", () => {
+    const params: SearchParams = { color: "black", boostTerms: ["black", "gaming", "den"] };
     const next = removeChip(params, "color");
     expect(next.color).toBeUndefined();
     expect(next.boostTerms).toEqual(["gaming"]);
+  });
+
+  it("applyIntent then removeChip(color) leaves no color term behind", () => {
+    const qi = intent({ color: "white", chips: [{ kind: "color", label: "Màu trắng" }] });
+    const { params } = applyIntent({ boostTerms: ["gaming"] }, qi);
+    expect(removeChip(params, "color").boostTerms).toEqual(["gaming"]);
   });
 
   it("round-trips through toSearchParams: intent=0, field dropped", () => {

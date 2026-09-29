@@ -126,6 +126,25 @@ function scanPhrases<T>(
   }
 }
 
+/**
+ * Word-form price cues (price.ts) that can be left over when what follows them is not a price.
+ * "max" / "min" are left out: they are also model names ("iphone pro max 256gb").
+ */
+const DANGLING_CUES: readonly string[] = ["duoi", "toi da", "khong qua", "nho hon", "tren", "it nhat", "lon hon", "tam", "khoang", "chung"];
+
+/** Marks as filler a free price cue followed by a capacity/size token or ending the query. */
+function stripDanglingCues(tokens: Token[]): void {
+  for (let i = 0; i < tokens.length; i++) {
+    for (const cue of DANGLING_CUES) {
+      const n = matchAt(tokens, i, cue);
+      if (n === 0) continue;
+      const next = tokens[i + n];
+      if (next === undefined || next.owner === "attr") consume(tokens, i, n, "filler");
+      break;
+    }
+  }
+}
+
 export function capacityLabel(gb: number): string {
   return gb % 1024 === 0 ? `${gb / 1024}TB` : `${gb}GB`;
 }
@@ -369,6 +388,10 @@ function parse(input: string, vocab: IntentVocab): QueryIntent {
       () => {},
     );
   }
+
+  // 10. Dangling price cues ("ssd trên 1tb": "1tb" is a capacity, not a price) — a cue left right
+  // before a consumed capacity/size, or as the last word, would be AND-ed into the text search.
+  if (extracted) stripDanglingCues(tokens);
 
   intent.chips = chips.sort((a, b) => a.index - b.index).map(({ kind, label }) => ({ kind, label }));
   intent.text = tokens

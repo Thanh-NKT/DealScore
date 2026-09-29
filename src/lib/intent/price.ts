@@ -99,9 +99,18 @@ function roundToThousand(n: number): number {
   return Math.round(n / 1000) * 1000;
 }
 
+/**
+ * A unitless amount after a cue must look like a price: at least this much, or written with
+ * thousands grouping ("5.000"). Keeps "pro max 2023" and "loa max 1500" out of the price range.
+ */
+export const MIN_UNITLESS_PRICE_VND = 10_000;
+
 /** Re-parses a raw number + optional unit captured by AMOUNT_GROUP into VND. */
 function parseGroup(rawNumber: string, unit: string | undefined): number | null {
-  return parsePriceAmount(rawNumber + (unit ?? ""));
+  const value = parsePriceAmount(rawNumber + (unit ?? ""));
+  if (value == null || unit) return value;
+  const grouped = /^\d{1,3}(?:[.,]\d{3})+$/.test(rawNumber);
+  return grouped || value >= MIN_UNITLESS_PRICE_VND ? value : null;
 }
 
 type Match = { start: number; end: number; range: Omit<PriceRange, "start" | "end"> };
