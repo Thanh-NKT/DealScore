@@ -159,13 +159,17 @@
 ---
 
 ## 🧠 Giai đoạn 3 — Intelligence (tháng 6–12)
-- [ ] Search hiểu ý định ("SSD 2TB dưới 3 triệu")
-- [ ] Natural language search
+- [x] Search hiểu ý định ("SSD 2TB dưới 3 triệu")
+  - ✏️ Rule-based (`src/lib/intent/`), không dùng LLM; chip "Đã hiểu" trên `/search` gỡ được từng điều kiện; `intent=0` tắt hoàn toàn, tìm theo từ khóa gốc.
+- [x] Natural language search
+  - Cùng bộ parser rule-based với dòng trên; tham số URL luôn thắng suy luận từ câu tự nhiên.
 - [ ] Shopping Mission (mô tả nhu cầu → shortlist 3 sản phẩm)
 - [ ] Mission tự theo dõi (Watch nhiều sản phẩm)
 - [ ] Cá nhân hóa (Deal Feed + ranking + recommendation)
-- [ ] Voucher & Effective Price
-- [ ] User preferences (brand/danh mục/giá/sàn)
+- [x] Voucher & Effective Price
+  - ✏️ Giá sau khi áp voucher tốt nhất (`src/lib/vouchers/effective.ts`, cột `offers.effective_price`); chưa gồm phí ship. Deal Score vẫn chấm theo giá niêm yết, không đổi.
+- [x] User preferences (brand/danh mục/giá/sàn)
+  - ✏️ Chỉnh ở `/account/preferences`; chỉ áp vào search khi bật "Theo sở thích của tôi" (`?prefs=1`), mặc định tắt. `excluded_brands` để dành cho nhóm C.
 
 ---
 
