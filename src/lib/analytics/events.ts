@@ -3,7 +3,7 @@
  *
  * Privacy by construction: every event has an allow-list of properties, each a number, boolean,
  * UUID or a value from a fixed enum. Anything else is dropped — no emails, search text or URLs can
- * reach the table. Keep EVENT_NAMES in sync with the check constraint (latest: migration 0011).
+ * reach the table. Keep EVENT_NAMES in sync with the check constraint (latest: migration 0015).
  */
 
 export const EVENT_NAMES = [
@@ -17,6 +17,8 @@ export const EVENT_NAMES = [
   "push_enabled",
   "deal_shared",
   "share_opened",
+  "search_intent_applied",
+  "preferences_saved",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];
@@ -35,7 +37,7 @@ const SCHEMA: Record<EventName, Record<string, PropType>> = {
     has_filters: "boolean",
     result_count: "number",
     page: "number",
-    sort: ["relevance", "deal_score", "price_asc", "price_desc", "updated"],
+    sort: ["relevance", "deal_score", "price_asc", "price_desc", "updated", "effective_asc"],
   },
   product_viewed: { product_id: "uuid", variant_id: "uuid", recommendation: RECOMMENDATIONS, is_draft: "boolean" },
   watch_created: { variant_id: "uuid", condition_count: "number" },
@@ -43,6 +45,14 @@ const SCHEMA: Record<EventName, Record<string, PropType>> = {
   push_enabled: {},
   deal_shared: { product_id: "uuid", method: ["native", "copy"] },
   share_opened: { product_id: "uuid" },
+  search_intent_applied: {
+    chips: "number",
+    has_category: "boolean",
+    has_price: "boolean",
+    has_capacity: "boolean",
+    fallback: "boolean",
+  },
+  preferences_saved: { brands: "number", categories: "number", has_price: "boolean", marketplaces: "number" },
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

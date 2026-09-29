@@ -17,6 +17,8 @@ describe("event names", () => {
         "watch_deleted",
         "deal_shared",
         "share_opened",
+        "search_intent_applied",
+        "preferences_saved",
       ].sort(),
     );
   });
@@ -44,6 +46,23 @@ describe("sanitizeProps", () => {
       sanitizeProps("product_viewed", { product_id: "not-a-uuid", recommendation: "maybe", is_draft: "no" }),
     ).toEqual({});
     expect(sanitizeProps("search_performed", { result_count: Number.NaN, page: 2 })).toEqual({ page: 2 });
+  });
+
+  it("keeps only counts/booleans for search_intent_applied and preferences_saved", () => {
+    expect(
+      sanitizeProps("search_intent_applied", {
+        chips: 3,
+        has_category: true,
+        has_price: true,
+        has_capacity: false,
+        fallback: false,
+        text: "ssd 2tb",
+      }),
+    ).toEqual({ chips: 3, has_category: true, has_price: true, has_capacity: false, fallback: false });
+    expect(
+      sanitizeProps("preferences_saved", { brands: 2, categories: 1, has_price: true, marketplaces: 0, list: ["WD"] }),
+    ).toEqual({ brands: 2, categories: 1, has_price: true, marketplaces: 0 });
+    expect(sanitizeProps("search_performed", { sort: "effective_asc" })).toEqual({ sort: "effective_asc" });
   });
 
   it("returns {} for events without properties", () => {

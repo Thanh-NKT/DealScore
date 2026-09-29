@@ -709,6 +709,8 @@ export type Database = {
       }
       offers: {
         Row: {
+          effective_price: number | null
+          effective_price_at: string | null
           external_model_id: string | null
           free_shipping: boolean | null
           has_voucher: boolean | null
@@ -719,6 +721,8 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
+          effective_price?: number | null
+          effective_price_at?: string | null
           external_model_id?: string | null
           free_shipping?: boolean | null
           has_voucher?: boolean | null
@@ -729,6 +733,8 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
+          effective_price?: number | null
+          effective_price_at?: string | null
           external_model_id?: string | null
           free_shipping?: boolean | null
           has_voucher?: boolean | null
@@ -807,18 +813,21 @@ export type Database = {
       }
       product_variants: {
         Row: {
+          capacity_gb: number | null
           id: string
           product_id: string
           specs: Json
           variant_key: string
         }
         Insert: {
+          capacity_gb?: number | null
           id?: string
           product_id: string
           specs?: Json
           variant_key: string
         }
         Update: {
+          capacity_gb?: number | null
           id?: string
           product_id?: string
           specs?: Json
@@ -966,6 +975,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          brands: string[]
+          category_ids: string[]
+          excluded_brands: string[]
+          marketplaces: string[]
+          max_price: number | null
+          min_price: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brands?: string[]
+          category_ids?: string[]
+          excluded_brands?: string[]
+          marketplaces?: string[]
+          max_price?: number | null
+          min_price?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brands?: string[]
+          category_ids?: string[]
+          excluded_brands?: string[]
+          marketplaces?: string[]
+          max_price?: number | null
+          min_price?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
@@ -1443,6 +1493,7 @@ export type Database = {
           retry_after_seconds: number
         }[]
       }
+      f_capacity_gb: { Args: { s: string }; Returns: number }
       f_unaccent: { Args: { "": string }; Returns: string }
       filter_availability: {
         Args: never
@@ -1454,6 +1505,14 @@ export type Database = {
         }[]
       }
       ingest_shopee_item: { Args: { p: Json }; Returns: Json }
+      intent_vocab: {
+        Args: never
+        Returns: {
+          kind: string
+          label: string
+          value: string
+        }[]
+      }
       latest_price_per_offer: {
         Args: { p_variant_id: string }
         Returns: {
@@ -1537,7 +1596,9 @@ export type Database = {
       }
       search_products: {
         Args: {
+          p_boost_terms?: string[]
           p_brands?: string[]
+          p_capacity_gb?: number
           p_category_id?: string
           p_free_shipping?: boolean
           p_has_voucher?: boolean
@@ -1555,6 +1616,7 @@ export type Database = {
           brand: string
           canonical_name: string
           category_slug: string
+          effective_price: number
           image: string
           last_observed_at: string
           original_price: number
