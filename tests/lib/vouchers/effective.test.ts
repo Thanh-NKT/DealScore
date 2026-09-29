@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatVnd } from "@/lib/format";
 import {
   effectivePriceFor,
+  effectiveQuoteFor,
   effectiveReason,
   shownEffectivePrice,
   withEffectiveReason,
@@ -81,14 +82,63 @@ describe("effectivePriceFor", () => {
   });
 });
 
+describe("effectiveQuoteFor", () => {
+  const inDays = (d: number) => new Date(NOW.getTime() + d * 86_400_000).toISOString();
+
+  it("until = earliest expiry among the vouchers actually picked", () => {
+    const list = [
+      v({ kind: "platform", discountValue: 20_000, expiresAt: inDays(5) }),
+      v({ kind: "shop", sellerId: "seller-1", discountValue: 15_000, expiresAt: inDays(2) }),
+      // Not picked (smaller platform discount): its earlier expiry must not count.
+      v({ kind: "platform", discountValue: 5_000, expiresAt: inDays(1) }),
+    ];
+    expect(effectiveQuoteFor(500_000, list, ctx)).toEqual({ price: 465_000, until: inDays(2) });
+  });
+
+  it("until is null when no picked voucher expires; null quote when nothing applies", () => {
+    expect(effectiveQuoteFor(500_000, [v({ discountValue: 20_000 })], ctx)).toEqual({ price: 480_000, until: null });
+    expect(effectiveQuoteFor(400_000, [v({ minSpend: 500_000, expiresAt: inDays(1) })], ctx)).toBeNull();
+  });
+
+  it("a voucher below min spend at the current price is not picked (price dropped under min spend)", () => {
+    const list = [v({ discountValue: 100_000, minSpend: 1_000_000 })];
+    expect(effectivePriceFor(1_050_000, list, ctx)).toBe(950_000);
+    expect(effectivePriceFor(980_000, list, ctx)).toBeNull();
+  });
+
+  it("effectivePriceFor is the quote's price", () => {
+    const list = [v({ discountValue: 20_000, expiresAt: inDays(3) })];
+    expect(effectivePriceFor(500_000, list, ctx)).toBe(effectiveQuoteFor(500_000, list, ctx)!.price);
+  });
+});
+
 describe("shownEffectivePrice", () => {
+  const cur = (price: number | null, observedAt: string | null = daysAgo(2)) => ({ price, observedAt });
+  const stored = (price: number | null, at: string | null = daysAgo(1), until: string | null = null) => ({ price, at, until });
+
   it("shown only when lower than the price and computed within 7 days", () => {
-    expect(shownEffectivePrice(90, daysAgo(1), 100, NOW)).toBe(90);
-    expect(shownEffectivePrice(100, daysAgo(1), 100, NOW)).toBeNull();
-    expect(shownEffectivePrice(90, daysAgo(8), 100, NOW)).toBeNull();
-    expect(shownEffectivePrice(null, daysAgo(1), 100, NOW)).toBeNull();
-    expect(shownEffectivePrice(90, null, 100, NOW)).toBeNull();
-    expect(shownEffectivePrice(90, daysAgo(1), null, NOW)).toBeNull();
+    expect(shownEffectivePrice(stored(90), cur(100), NOW)).toBe(90);
+    expect(shownEffectivePrice(stored(100), cur(100), NOW)).toBeNull();
+    expect(shownEffectivePrice(stored(90, daysAgo(8)), cur(100, daysAgo(9)), NOW)).toBeNull();
+    expect(shownEffectivePrice(stored(null), cur(100), NOW)).toBeNull();
+    expect(shownEffectivePrice(stored(90, null), cur(100), NOW)).toBeNull();
+    expect(shownEffectivePrice(stored(90), cur(null), NOW)).toBeNull();
+  });
+
+  it("hidden when the current observation is newer than the computation (price changed since)", () => {
+    expect(shownEffectivePrice(stored(90, daysAgo(1)), cur(100, daysAgo(0.5)), NOW)).toBeNull();
+    // Same instant: computed from that observation.
+    expect(shownEffectivePrice(stored(90, daysAgo(1)), cur(100, daysAgo(1)), NOW)).toBe(90);
+  });
+
+  it("hidden without the current observation time", () => {
+    expect(shownEffectivePrice(stored(90), cur(100, null), NOW)).toBeNull();
+  });
+
+  it("hidden once a voucher of the combination expired (until passed)", () => {
+    expect(shownEffectivePrice(stored(90, daysAgo(1), daysAgo(0.1)), cur(100), NOW)).toBeNull();
+    expect(shownEffectivePrice(stored(90, daysAgo(1), NOW.toISOString()), cur(100), NOW)).toBeNull();
+    expect(shownEffectivePrice(stored(90, daysAgo(1), daysAgo(-1)), cur(100), NOW)).toBe(90);
   });
 });
 
@@ -108,12 +158,16 @@ describe("effective reason", () => {
     expect(out.headline!.reasons).toEqual(["✓ a", effectiveReason(950_000)]);
   });
 
-  it("unchanged without a (lower) effective price, a headline or a score", () => {
+  it("also appends while the Deal Score is insufficient (spec §4: the voucher line shows regardless)", () => {
+    const out = withEffectiveReason(pricing({ price: 1_000_000, effectivePrice: 950_000 }, null));
+    expect(out.headline!.reasons).toEqual(["✓ a", effectiveReason(950_000)]);
+  });
+
+  it("unchanged without a (lower) effective price or a headline", () => {
     for (const p of [
       pricing({ price: 1_000_000, effectivePrice: null }),
       pricing({ price: 1_000_000, effectivePrice: 1_000_000 }),
       pricing(null),
-      pricing({ price: 1_000_000, effectivePrice: 950_000 }, null),
     ]) {
       expect(withEffectiveReason(p)).toBe(p);
     }

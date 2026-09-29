@@ -26,12 +26,12 @@ export function DealScoreBreakdown({
   const scoreVal = hasScore ? Math.min(100, Math.max(0, Math.round(score!))) : null;
 
   // Each reason carries its own tone (✓ in the buyer’s favour, ⚠ otherwise); the glyph is drawn as an icon, not text.
+  // No score yet: the "still collecting data" note first, then any reasons that don't depend on the
+  // score (e.g. the voucher estimate, spec 2026-09-28 §4).
   const shownReasons = parseReasons(
-    reasons.length > 0
-      ? reasons
-      : scoreVal == null
-        ? [`Kairo cần ít nhất ${MIN_DAYS_FOR_SCORE} ngày và ${MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá hợp lệ để chấm Deal Score.`]
-        : [],
+    scoreVal == null
+      ? [`Kairo cần ít nhất ${MIN_DAYS_FOR_SCORE} ngày và ${MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá hợp lệ để chấm Deal Score.`, ...reasons]
+      : reasons,
   );
 
   return (

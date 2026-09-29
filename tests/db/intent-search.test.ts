@@ -16,6 +16,10 @@ interface VariantFixture {
   price?: number;
   effective?: number;
   effectiveAgeDays?: number;
+  /** offers.effective_price_until (ISO); omitted = null (no voucher in the combination expires). */
+  effectiveUntil?: string;
+  /** The current observation is newer than the stored effective price (computed before it). */
+  observedAfterEffective?: boolean;
 }
 
 async function product(
@@ -65,6 +69,7 @@ async function product(
         match_status: "manual",
         effective_price: v.effective ?? null,
         effective_price_at: effectiveAt,
+        effective_price_until: v.effectiveUntil ?? null,
       })
       .select("id")
       .single();
@@ -73,7 +78,12 @@ async function product(
       variant_id: row.id,
       best_offer_id: o.id,
       price: v.price,
-      observed_at: new Date().toISOString(),
+      // A stored effective price is computed after the observation it used (1 h here), unless the
+      // test wants a newer observation than the computation.
+      observed_at:
+        effectiveAt === null
+          ? new Date().toISOString()
+          : new Date(Date.parse(effectiveAt) + (v.observedAfterEffective ? 60_000 : -3_600_000)).toISOString(),
       in_stock: true,
     });
     if (cErr) throw cErr;
@@ -98,6 +108,7 @@ const capacityOf = async (variantId: string) => {
 };
 
 let capacityVariants: string[] = [];
+let alphaVariants: string[] = [];
 
 beforeAll(async () => {
   const { data: c, error } = await admin
@@ -117,10 +128,12 @@ beforeAll(async () => {
     ])
   ).variantIds;
 
-  await product("ssd alpha", [
-    { key: "capacity=1TB", price: 1_000_000 },
-    { key: "capacity=2TB", price: 2_000_000 },
-  ]);
+  alphaVariants = (
+    await product("ssd alpha", [
+      { key: "capacity=1TB", price: 1_000_000 },
+      { key: "capacity=2TB", price: 2_000_000 },
+    ])
+  ).variantIds;
   await product("ssd beta", [{ key: "capacity=1TB", price: 900_000 }]);
 
   await product("chuot Gaming", [{ key: "default", price: 300_000 }]);
@@ -130,6 +143,18 @@ beforeAll(async () => {
   await product("effx two", [{ key: "default", price: 400_000 }]);
   await product("effx three", [{ key: "default", price: 350_000, effective: 100_000, effectiveAgeDays: 8 }]);
   await product("effx four", [{ key: "default", price: 450_000, effective: 460_000, effectiveAgeDays: 1 }]);
+
+  // Guards added in 0016: a newer observation or an expired voucher hides the stored value.
+  const hour = 3_600_000;
+  await product("effg newer", [
+    { key: "default", price: 600_000, effective: 200_000, effectiveAgeDays: 1, observedAfterEffective: true },
+  ]);
+  await product("effg expired", [
+    { key: "default", price: 700_000, effective: 250_000, effectiveAgeDays: 1, effectiveUntil: new Date(Date.now() - hour).toISOString() },
+  ]);
+  await product("effg valid", [
+    { key: "default", price: 800_000, effective: 260_000, effectiveAgeDays: 1, effectiveUntil: new Date(Date.now() + 48 * hour).toISOString() },
+  ]);
 
   await product("vocab verified", [], { brand: `Vb${tag}`, status: "verified" });
   await product("vocab draft", [], { brand: `Db${tag}`, status: "draft" });
@@ -176,6 +201,13 @@ describe("search_products v6", () => {
     expect(approx.map((r) => r.name)).toEqual(["ssd alpha"]);
   });
 
+  it("returns the representative variant_id (the capacity match when p_capacity_gb is set)", async () => {
+    const twoTb = await search({ p_q: `${tag} ssd`, p_capacity_gb: 2048 });
+    expect(twoTb.map((r) => r.variant_id)).toEqual([alphaVariants[1]]);
+    const all = await search({ p_q: `${tag} ssd` });
+    expect(all.find((r) => r.name === "ssd alpha")!.variant_id).toBe(alphaVariants[0]);
+  });
+
   it("p_boost_terms adds 0.5 × matched share to relevance", async () => {
     const plain = await search({ p_q: `${tag} chuot`, p_sort: "relevance" });
     const boosted = await search({ p_q: `${tag} chuot`, p_sort: "relevance", p_boost_terms: ["Gaming"] });
@@ -187,6 +219,27 @@ describe("search_products v6", () => {
 
     const half = await search({ p_q: `${tag} chuot`, p_boost_terms: ["gaming", "khong-co"] });
     expect(rel(half, "chuot Gaming")).toBeCloseTo(rel(plain, "chuot Gaming") + 0.25, 5);
+  });
+
+  it("boost terms match literally (no LIKE wildcards) and empty terms are ignored", async () => {
+    const plain = await search({ p_q: `${tag} chuot`, p_sort: "relevance" });
+    const rel = (rows: typeof plain, name: string) => rows.find((r) => r.name === name)!.relevance;
+
+    const wild = await search({ p_q: `${tag} chuot`, p_boost_terms: ["g_ming", "%"] });
+    expect(rel(wild, "chuot Gaming")).toBeCloseTo(rel(plain, "chuot Gaming"), 5);
+    expect(rel(wild, "chuot Office")).toBeCloseTo(rel(plain, "chuot Office"), 5);
+
+    const withEmpty = await search({ p_q: `${tag} chuot`, p_boost_terms: ["gaming", "", "  "] });
+    expect(rel(withEmpty, "chuot Gaming")).toBeCloseTo(rel(plain, "chuot Gaming") + 0.5, 5);
+
+    const onlyEmpty = await search({ p_q: `${tag} chuot`, p_boost_terms: [""] });
+    expect(rel(onlyEmpty, "chuot Gaming")).toBeCloseTo(rel(plain, "chuot Gaming"), 5);
+  });
+
+  it("effective_price is hidden after a newer observation or once a voucher of the combination expired", async () => {
+    const rows = (await search({ p_q: `${tag} effg` })).filter((r) => r.name.startsWith("effg "));
+    const eff = Object.fromEntries(rows.map((r) => [r.name, r.effective_price]));
+    expect(eff).toEqual({ "effg newer": null, "effg expired": null, "effg valid": 260_000 });
   });
 
   it("effective_price is exposed only when lower than price and fresh (≤ 7 days)", async () => {

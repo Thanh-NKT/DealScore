@@ -711,6 +711,7 @@ export type Database = {
         Row: {
           effective_price: number | null
           effective_price_at: string | null
+          effective_price_until: string | null
           external_model_id: string | null
           free_shipping: boolean | null
           has_voucher: boolean | null
@@ -723,6 +724,7 @@ export type Database = {
         Insert: {
           effective_price?: number | null
           effective_price_at?: string | null
+          effective_price_until?: string | null
           external_model_id?: string | null
           free_shipping?: boolean | null
           has_voucher?: boolean | null
@@ -735,6 +737,7 @@ export type Database = {
         Update: {
           effective_price?: number | null
           effective_price_at?: string | null
+          effective_price_until?: string | null
           external_model_id?: string | null
           free_shipping?: boolean | null
           has_voucher?: boolean | null
@@ -1626,6 +1629,7 @@ export type Database = {
           score: number
           slug: string
           total_count: number
+          variant_id: string
         }[]
       }
       show_limit: { Args: never; Returns: number }

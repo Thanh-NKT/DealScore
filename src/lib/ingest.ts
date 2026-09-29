@@ -116,22 +116,23 @@ export async function ingestShopeeItem(params: {
     return { status: "error", code: "internal" };
   }
 
-  // Images + vouchers after the price is in: a failure here must not fail the lookup.
-  if ((detail.images?.length ?? 0) > 0 || (detail.vouchers?.length ?? 0) > 0) {
-    try {
-      const { data: listing, error: lErr } = await supabase
-        .from("listings")
-        .select("id")
-        .eq("marketplace", "shopee")
-        .eq("external_item_id", externalItemId(shopId, itemId))
-        .maybeSingle();
-      if (lErr) throw new Error(lErr.message);
-      if (listing) {
-        await saveListingExtras(supabase, listing.id, { images: detail.images, vouchers: detail.vouchers, source: detail.source });
-      }
-    } catch (err) {
-      console.error("saveListingExtras after ingest failed:", err);
+  // Images + vouchers after the price is in, then the listing's effective price — always, even
+  // without vouchers in the detail: the price just changed, and marketplace/shop vouchers already
+  // stored may apply differently to it. A failure here must not fail the lookup.
+  try {
+    const { data: listing, error: lErr } = await supabase
+      .from("listings")
+      .select("id")
+      .eq("marketplace", "shopee")
+      .eq("external_item_id", externalItemId(shopId, itemId))
+      .maybeSingle();
+    if (lErr) throw new Error(lErr.message);
+    if (listing) {
+      // Ends with refreshEffectivePrices() for this listing (saveListingExtras).
+      await saveListingExtras(supabase, listing.id, { images: detail.images, vouchers: detail.vouchers, source: detail.source });
     }
+  } catch (err) {
+    console.error("saveListingExtras after ingest failed:", err);
   }
 
   const r = data as {

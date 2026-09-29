@@ -111,7 +111,12 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   const voucherPlatform = cheapest ? marketplaceName(cheapest.marketplace) : "Shopee";
   const voucherListing = cheapest ? data.offerListings?.[cheapest.offerId] : undefined;
-  const vouchers = voucherListing && currentPrice != null && currentPrice > 0 ? await loadActiveVouchers(voucherListing) : [];
+  // Same list the offers' effective prices were computed from (page-data), so the picker's estimate,
+  // the offer line and the Deal Score reason agree.
+  const vouchers =
+    cheapest && voucherListing && currentPrice != null && currentPrice > 0
+      ? (data.offerVouchers?.[cheapest.offerId] ?? (await loadActiveVouchers(voucherListing)))
+      : [];
   const voucherGroups = currentPrice != null && currentPrice > 0 ? toGroups(vouchers, currentPrice, voucherPlatform) : [];
 
   return (

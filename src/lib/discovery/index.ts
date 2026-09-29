@@ -55,6 +55,7 @@ function toCard(r: CardRow): SearchItem {
     lastObservedAt: r.last_observed_at,
     // Discovery RPCs don't return effective prices (yet).
     effectivePrice: null,
+    variantId: null,
   };
 }
 

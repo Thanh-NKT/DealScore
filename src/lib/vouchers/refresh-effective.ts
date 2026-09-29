@@ -1,14 +1,15 @@
 import "server-only";
 /**
- * Fills offers.effective_price (spec 2026-09-28 §4). Server only — pass the service-role client
- * (offers are written, RLS has no write policy for them).
+ * Fills offers.effective_price / _at / _until (spec 2026-09-28 §4). Server only — pass the
+ * service-role client (offers are written, RLS has no write policy for them). `_until` is the
+ * earliest expiry among the vouchers of the chosen combination (readers hide the value after it).
  *
  * Current price of an offer = its latest valid observation, read with the same RPC the product page
  * uses (`latest_price_per_offer`), so the stored value always matches the price shown next to it.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { effectivePriceFor } from "@/lib/vouchers/effective";
+import { effectiveQuoteFor } from "@/lib/vouchers/effective";
 import { VOUCHER_FRESH_DAYS } from "@/lib/vouchers/select";
 import { listVouchersForListing, toVoucher } from "@/lib/vouchers/store";
 import type { Voucher } from "@/lib/vouchers/types";
@@ -227,22 +228,27 @@ export async function refreshEffectivePrices(
   const lists = await pool(offerListingIds, (id) => vouchersFor(listingById.get(id)!));
   offerListingIds.forEach((id, i) => voucherLists.set(id, lists[i]));
 
-  const setTo = new Map<number, string[]>(); // value → offer ids
+  // (value, until) → offer ids, so each distinct pair is one UPDATE.
+  const setTo = new Map<string, { price: number; until: string | null; ids: string[] }>();
   const clear: string[] = [];
   for (const o of offers) {
     const l = listingById.get(o.listing_id)!;
     const price = prices.get(o.id);
-    const value =
+    const quote =
       price != null
-        ? effectivePriceFor(price, voucherLists.get(o.listing_id) ?? [], {
+        ? effectiveQuoteFor(price, voucherLists.get(o.listing_id) ?? [], {
             now,
             marketplace: l.marketplace,
             listingId: l.id,
             sellerId: l.seller_id,
           })
         : null;
-    if (value != null) setTo.set(value, [...(setTo.get(value) ?? []), o.id]);
-    else if (o.effective_price != null) clear.push(o.id);
+    if (quote != null) {
+      const key = `${quote.price}|${quote.until ?? ""}`;
+      const group = setTo.get(key) ?? { price: quote.price, until: quote.until, ids: [] };
+      group.ids.push(o.id);
+      setTo.set(key, group);
+    } else if (o.effective_price != null) clear.push(o.id);
   }
 
   let updated = 0;
@@ -253,7 +259,9 @@ export async function refreshEffectivePrices(
       updated += chunk.length;
     }
   };
-  await pool([...setTo.entries()], ([value, ids]) => write(ids, { effective_price: value, effective_price_at: nowIso }));
-  await write(clear, { effective_price: null, effective_price_at: null });
+  await pool([...setTo.values()], (g) =>
+    write(g.ids, { effective_price: g.price, effective_price_at: nowIso, effective_price_until: g.until }),
+  );
+  await write(clear, { effective_price: null, effective_price_at: null, effective_price_until: null });
   return { updated };
 }

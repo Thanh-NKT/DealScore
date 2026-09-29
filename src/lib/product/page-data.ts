@@ -9,7 +9,7 @@ import { toVnDate } from "@/lib/format";
 import { productGallery } from "@/lib/product/images";
 import { listVouchersForListing } from "@/lib/vouchers/store";
 import { activeVouchers } from "@/lib/vouchers/select";
-import { shownEffectivePrice, withEffectiveReason } from "@/lib/vouchers/effective";
+import { effectivePriceFor, withEffectiveReason } from "@/lib/vouchers/effective";
 import type { Voucher } from "@/lib/vouchers/types";
 
 /** The listing behind an offer — what vouchers are scoped to. */
@@ -46,6 +46,11 @@ export interface ProductPageData {
   galleryImages?: string[];
   /** offerId → its listing, for the selected variant's offers. */
   offerListings?: Record<string, OfferListing>;
+  /**
+   * offerId → vouchers that apply to its listing right now (activeVouchers). The offers' effective
+   * prices are computed from these, so the VoucherPicker fed the same list shows the same estimate.
+   */
+  offerVouchers?: Record<string, Voucher[]>;
 }
 
 export async function loadProductPageData(params: {
@@ -114,7 +119,7 @@ export async function loadProductPageData(params: {
       supabase
         .from("offers")
         .select(`
-          id, match_status, effective_price, effective_price_at,
+          id, match_status,
           listings (
             id, seller_id, images, marketplace, url, title, status, last_observed_at,
             sellers ( name, rating, rating_count, is_official )
@@ -155,6 +160,23 @@ export async function loadProductPageData(params: {
       }
     }
 
+    const offerListings: Record<string, OfferListing> = {};
+    const galleryListings: Array<{ marketplace: string; images: string[] }> = [];
+    for (const o of offersRes.data || []) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const listing = (Array.isArray(o.listings) ? o.listings[0] : o.listings) as any;
+      if (!listing?.id) continue;
+      offerListings[o.id] = { listingId: listing.id, sellerId: listing.seller_id ?? null, marketplace: listing.marketplace };
+      // Only photos of listings matched to this product: a pending match may be another item.
+      if (o.match_status === "auto" || o.match_status === "manual") {
+        galleryListings.push({ marketplace: listing.marketplace, images: listing.images ?? [] });
+      }
+    }
+
+    // Effective price is computed LIVE from the current price and the vouchers active now (not
+    // read from offers.effective_price, which can lag behind a price or voucher change).
+    const offerVouchers = await loadOfferVouchers(offerListings, now);
+
     const offerRows: OfferRow[] = (offersRes.data || []).map((o) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const listing = (Array.isArray(o.listings) ? o.listings[0] : o.listings) as any;
@@ -163,6 +185,8 @@ export async function loadProductPageData(params: {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const aff = (Array.isArray(o.affiliate_offers) ? o.affiliate_offers[0] : o.affiliate_offers) as any;
       const latest = latestPriceMap.get(o.id);
+      const price = latest?.price != null ? Number(latest.price) : null;
+      const offerListing = offerListings[o.id];
 
       return {
         offerId: o.id,
@@ -175,17 +199,15 @@ export async function loadProductPageData(params: {
         sellerRatingCount: seller?.rating_count != null ? Number(seller.rating_count) : null,
         sellerIsOfficial: Boolean(seller?.is_official),
         affiliateEligible: Boolean(aff?.eligible),
-        price: latest?.price != null ? Number(latest.price) : null,
+        price,
         originalPrice: latest?.original_price != null ? Number(latest.original_price) : null,
         stock: latest?.stock != null ? Number(latest.stock) : null,
         isFlashSale: Boolean(latest?.is_flash_sale),
         observedAt: latest?.observed_at || listing?.last_observed_at || null,
-        effectivePrice: shownEffectivePrice(
-          o.effective_price != null ? Number(o.effective_price) : null,
-          o.effective_price_at,
-          latest?.price != null ? Number(latest.price) : null,
-          now,
-        ),
+        effectivePrice:
+          price != null && offerListing
+            ? effectivePriceFor(price, offerVouchers[o.id] ?? [], { now, ...offerListing })
+            : null,
       };
     });
 
@@ -199,19 +221,6 @@ export async function loadProductPageData(params: {
       has_flash_sale: h.has_flash_sale,
       flash_min_price: h.flash_min_price != null ? Number(h.flash_min_price) : null,
     }));
-
-    const offerListings: Record<string, OfferListing> = {};
-    const galleryListings: Array<{ marketplace: string; images: string[] }> = [];
-    for (const o of offersRes.data || []) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listing = (Array.isArray(o.listings) ? o.listings[0] : o.listings) as any;
-      if (!listing?.id) continue;
-      offerListings[o.id] = { listingId: listing.id, sellerId: listing.seller_id ?? null, marketplace: listing.marketplace };
-      // Only photos of listings matched to this product: a pending match may be another item.
-      if (o.match_status === "auto" || o.match_status === "manual") {
-        galleryListings.push({ marketplace: listing.marketplace, images: listing.images ?? [] });
-      }
-    }
 
     const trackingSince = (trackingSinceRes.data as string | null) || (dailyPrices[0]?.day ?? null);
 
@@ -247,12 +256,29 @@ export async function loadProductPageData(params: {
       dailyPrices,
       galleryImages: productGallery(product.image, galleryListings),
       offerListings,
+      offerVouchers,
     };
   } catch (err) {
     // Infrastructure errors must surface, never disguised as "not found".
     console.error("loadProductPageData error:", err);
     throw err;
   }
+}
+
+/** offerId → loadActiveVouchers() of its listing (one read per distinct listing). */
+async function loadOfferVouchers(
+  offerListings: Record<string, OfferListing>,
+  now: Date,
+): Promise<Record<string, Voucher[]>> {
+  const byListing = new Map<string, OfferListing>();
+  for (const l of Object.values(offerListings)) byListing.set(l.listingId, l);
+  const lists = new Map<string, Voucher[]>();
+  await Promise.all(
+    [...byListing.values()].map(async (l) => lists.set(l.listingId, await loadActiveVouchers(l, now))),
+  );
+  return Object.fromEntries(
+    Object.entries(offerListings).map(([offerId, l]) => [offerId, lists.get(l.listingId) ?? []]),
+  );
 }
 
 /**

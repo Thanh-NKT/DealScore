@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { refreshEffectivePrices } from "@/lib/vouchers/refresh-effective";
-import { effectivePriceFor } from "@/lib/vouchers/effective";
+import { effectivePriceFor, effectiveQuoteFor } from "@/lib/vouchers/effective";
 import { listVouchersForListing } from "@/lib/vouchers/store";
 import { admin } from "./helpers";
 
@@ -16,9 +16,17 @@ let sellerId = "";
 let offerId = "";
 
 const offer = async () => {
-  const { data, error } = await admin.from("offers").select("effective_price, effective_price_at").eq("id", offerId).single();
+  const { data, error } = await admin
+    .from("offers")
+    .select("effective_price, effective_price_at, effective_price_until")
+    .eq("id", offerId)
+    .single();
   if (error) throw error;
-  return { price: data.effective_price != null ? Number(data.effective_price) : null, at: data.effective_price_at };
+  return {
+    price: data.effective_price != null ? Number(data.effective_price) : null,
+    at: data.effective_price_at,
+    until: data.effective_price_until,
+  };
 };
 
 const expected = async (price: number, now = new Date()) => {
@@ -26,7 +34,12 @@ const expected = async (price: number, now = new Date()) => {
   return effectivePriceFor(price, await listVouchersForListing(admin, { ...scope, now }), { ...scope, now });
 };
 
-const addVoucher = async () => {
+const expectedQuote = async (price: number, now = new Date()) => {
+  const scope = { marketplace: "shopee", listingId, sellerId };
+  return effectiveQuoteFor(price, await listVouchersForListing(admin, { ...scope, now }), { ...scope, now });
+};
+
+const addVoucher = async (over: { expiresAt?: string } = {}) => {
   const { error } = await admin.rpc("upsert_vouchers", {
     p_items: [
       {
@@ -38,6 +51,7 @@ const addVoucher = async () => {
         discountType: "amount",
         discountValue: 10_000,
         minSpend: 0,
+        ...over,
       },
     ],
     p_source: "api",
@@ -124,5 +138,27 @@ describe("refreshEffectivePrices", () => {
     const after = await expected(200_000);
     expect((await offer()).price).toBe(after);
     if (after == null) expect((await offer()).at).toBeNull();
+  });
+
+  it("writes effective_price_until = earliest expiry of the picked vouchers", async () => {
+    const expiresAt = new Date(Date.now() + 3 * 86_400_000);
+    await addVoucher({ expiresAt: expiresAt.toISOString() });
+    const now = new Date();
+    await refreshEffectivePrices(admin, { listingIds: [listingId], now });
+    const o = await offer();
+    const want = await expectedQuote(200_000, now);
+    expect(want).not.toBeNull();
+    expect(o.price).toBe(want!.price);
+    // The listing's shop voucher is always picked (one per kind), so until is at most its expiry.
+    expect(o.until).not.toBeNull();
+    expect(Date.parse(o.until!)).toBe(Date.parse(want!.until!));
+    expect(Date.parse(o.until!)).toBeLessThanOrEqual(expiresAt.getTime());
+
+    await removeVoucher();
+    await refreshEffectivePrices(admin, { listingIds: [listingId] });
+    const after = await expectedQuote(200_000);
+    const cleared = await offer();
+    expect(cleared.price).toBe(after?.price ?? null);
+    expect(cleared.until == null ? null : Date.parse(cleared.until)).toBe(after?.until == null ? null : Date.parse(after.until));
   });
 });

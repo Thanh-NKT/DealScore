@@ -49,6 +49,24 @@ export interface SearchItem {
   lastObservedAt: string | null;
   /** Estimated price after the best voucher combination, shipping excluded (spec §4). Null = none. */
   effectivePrice: number | null;
+  /**
+   * The variant whose price the card shows (search_products' representative variant). Null when
+   * unknown (discovery lists). Linked only for a capacity search — see searchItemHref().
+   */
+  variantId: string | null;
+}
+
+/**
+ * Card link for a search result. A capacity search shows one specific variant's price, so the card
+ * opens that variant; otherwise the product page picks its default variant. Canonical tags are
+ * unaffected (the product page's canonical never carries `?variant=`).
+ */
+export function searchItemHref(
+  item: Pick<SearchItem, "categorySlug" | "slug" | "variantId">,
+  params: Pick<SearchParams, "capacityGb">,
+): string {
+  const base = `/${item.categorySlug}/${item.slug}`;
+  return params.capacityGb != null && item.variantId ? `${base}?variant=${encodeURIComponent(item.variantId)}` : base;
 }
 
 export interface SearchResult {
@@ -280,6 +298,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     recommendation: d.recommendation as SearchItem["recommendation"],
     lastObservedAt: d.last_observed_at,
     effectivePrice: d.effective_price != null ? Number(d.effective_price) : null,
+    variantId: d.variant_id ?? null,
   }));
 
   return { items, total, page, pageSize: PAGE_SIZE };

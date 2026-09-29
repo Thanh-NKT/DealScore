@@ -7,6 +7,8 @@ import { normalizeText } from "@/lib/matching/attributes";
 import { recomputeDealScores } from "@/lib/pricing/recompute-scores";
 import { toVnDate } from "@/lib/format";
 import { saveListingExtras } from "@/lib/listing-extras";
+import { reportError } from "@/lib/observability";
+import { refreshEffectivePrices } from "@/lib/vouchers/refresh-effective";
 
 type Client = SupabaseClient<Database>;
 
@@ -188,8 +190,12 @@ export async function promoteExtensionObservations(client: Client, offerIds: str
     await client.from("offers").update(patch).eq("id", r.offer_id);
   }
 
-  const { data: variants } = await client.from("offers").select("variant_id").in("id", [...new Set(chosen.map((r) => r.offer_id))]);
+  const { data: variants } = await client
+    .from("offers")
+    .select("variant_id, listing_id")
+    .in("id", [...new Set(chosen.map((r) => r.offer_id))]);
   const variantIds = [...new Set((variants ?? []).map((v) => v.variant_id).filter((v): v is string => Boolean(v)))];
+  const listingIds = [...new Set((variants ?? []).map((v) => v.listing_id))];
   if (variantIds.length > 0) {
     // Promoted rows can be up to a day old: rebuild the rollup from the oldest one's day.
     const from = toVnDate(chosen.reduce((m, r) => (r.observed_at < m ? r.observed_at : m), chosen[0].observed_at));
@@ -199,6 +205,15 @@ export async function promoteExtensionObservations(client: Client, offerIds: str
     const { error: dErr } = await client.rpc("refresh_variant_daily_prices", { p_from: from, p_to: today });
     if (dErr) throw new Error(`refresh_variant_daily_prices: ${dErr.message}`);
     await recomputeDealScores(client, { now, variantIds });
+  }
+  // A new current price → recompute the effective price from it (the refresh in saveListingExtras ran
+  // before this observation existed). Derived data: a failure never fails the contribution.
+  if (listingIds.length > 0) {
+    try {
+      await refreshEffectivePrices(client, { listingIds, now });
+    } catch (err) {
+      reportError(err, { where: "promoteExtensionObservations.refreshEffectivePrices" });
+    }
   }
   return chosen.length;
 }

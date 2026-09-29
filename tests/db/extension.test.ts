@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { recordContribution } from "@/lib/extension/contribute";
+import { effectivePriceFor } from "@/lib/vouchers/effective";
+import { listVouchersForListing } from "@/lib/vouchers/store";
 import type { ObservationPayload } from "@/lib/extension/payload";
 import { admin } from "./helpers";
 
 const tag = randomUUID().slice(0, 8);
 const item = `9${Date.now() % 1_000_000}_${Math.floor(Math.random() * 1e9)}`;
 let offerId: string;
+let listingId: string;
+let sellerId: string | null;
 
 const payload = (price: number, extra: Partial<ObservationPayload> = {}): ObservationPayload => ({
   marketplace: "shopee",
@@ -33,14 +37,30 @@ beforeAll(async () => {
   if (error) throw error;
   const { data } = await admin.from("offers").select("id, listings!inner(external_item_id)").eq("listings.external_item_id", item).single();
   offerId = data!.id;
+  const { data: l } = await admin.from("listings").select("id, seller_id").eq("external_item_id", item).single();
+  listingId = l!.id;
+  sellerId = l!.seller_id;
+  // A listing voucher that only applies above 1.1M: the API price (1M) gets no effective price,
+  // the promoted extension price (~1.2M) does.
+  const { error: vErr } = await admin.rpc("upsert_vouchers", {
+    p_items: [
+      { marketplace: "shopee", kind: "shop", sellerId, listingId, code: "", discountType: "amount", discountValue: 100_000, minSpend: 1_100_000 },
+    ],
+    p_source: "api",
+  });
+  if (vErr) throw vErr;
 });
 
 afterAll(async () => {
+  await admin.from("vouchers").delete().eq("listing_id", listingId);
   await admin.from("listings").delete().eq("external_item_id", item);
   await admin.from("products").delete().like("slug", `test-ext-${tag}%`);
   await admin.from("sellers").delete().eq("external_seller_id", `seller-${tag}`);
   await admin.from("extension_contributions").delete().like("contributor", `%${tag}%`);
 });
+
+const variantOf = async () =>
+  (await admin.from("offers").select("variant_id").eq("id", offerId).single()).data?.variant_id ?? null;
 
 const extensionRows = async () =>
   (await admin.from("price_observations").select("price, source").eq("offer_id", offerId).eq("source", "extension")).data ?? [];
@@ -63,6 +83,26 @@ describe("recordContribution", () => {
     expect(rows).toHaveLength(1);
     const { data: offer } = await admin.from("offers").select("free_shipping").eq("id", offerId).single();
     expect(offer!.free_shipping).toBe(true);
+  });
+
+  it("promotion refreshes the listing's effective price from the promoted observation", async () => {
+    const { data: o } = await admin
+      .from("offers")
+      .select("effective_price, effective_price_at")
+      .eq("id", offerId)
+      .single();
+    const { data: latest } = await admin.rpc("latest_price_per_offer", { p_variant_id: (await variantOf())! });
+    const cur = (latest ?? []).find((r) => r.offer_id === offerId)!;
+    // A promoted extension price (above the voucher's 1.1M min spend), not the 1M API price.
+    const price = Number(cur.price);
+    expect(price).toBeGreaterThan(1_100_000);
+
+    const now = new Date();
+    const scope = { marketplace: "shopee", listingId, sellerId };
+    const want = effectivePriceFor(price, await listVouchersForListing(admin, { ...scope, now }), { ...scope, now });
+    expect(want).not.toBeNull();
+    expect(Number(o!.effective_price)).toBe(want);
+    expect(Date.parse(o!.effective_price_at!)).toBeGreaterThanOrEqual(Date.parse(cur.observed_at!));
   });
 
   it("the same offer is not promoted again within the hour", async () => {

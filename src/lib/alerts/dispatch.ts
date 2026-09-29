@@ -39,8 +39,10 @@ interface EventDetail {
   triggerTypes: TriggerType[];
   price: number;
   offerId: string | null;
-  /** The offer's stored effective price + when it was computed (raw; filtered at render time). */
-  effective: { price: number | null; at: string | null };
+  /** The offer's stored effective price + when it was computed / stops being valid (raw; filtered at render time). */
+  effective: { price: number | null; at: string | null; until: string | null };
+  /** The offer's latest valid observation right now (latest_price_per_offer); null when unknown. */
+  current: { price: number; observedAt: string } | null;
   marketplace: string | null;
   baselinePrice: number | null;
   previousAlertPrice: number | null;
@@ -57,7 +59,7 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
     .from("alert_events")
     .select(
       `id, created_at, watch_id, trigger_types, price, offer_id, baseline_price, previous_alert_price, deal_score, recommendation, score_reasons,
-       offers(effective_price, effective_price_at, listings(marketplace)),
+       offers(effective_price, effective_price_at, effective_price_until, listings(marketplace)),
        watches!inner(status, channels, target_price, variant_id,
          product_variants!inner(variant_key, products!inner(slug, canonical_name, image, categories(slug))),
          users!inner(email, deleted_at, notification_settings(*)))`,
@@ -79,8 +81,15 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
       offerId: r.offer_id,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       marketplace: (r.offers as any)?.listings?.marketplace ?? null,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      effective: { price: n((r.offers as any)?.effective_price), at: (r.offers as any)?.effective_price_at ?? null },
+      effective: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        price: n((r.offers as any)?.effective_price),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        at: (r.offers as any)?.effective_price_at ?? null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        until: (r.offers as any)?.effective_price_until ?? null,
+      },
+      current: null,
       baselinePrice: n(r.baseline_price),
       previousAlertPrice: n(r.previous_alert_price),
       dealScore: r.deal_score,
@@ -101,7 +110,33 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
       },
     });
   }
+
+  // Current observation of each event's offer: the stored effective price is shown only while it
+  // was computed from it (see alertEffectivePrice).
+  const variantIds = [...new Set([...map.values()].filter((e) => e.offerId).map((e) => e.watch.variantId))];
+  const current = new Map<string, { price: number; observedAt: string }>();
+  for (const variantId of variantIds) {
+    const { data: rows, error: pErr } = await client.rpc("latest_price_per_offer", { p_variant_id: variantId });
+    if (pErr) throw new Error(`latest_price_per_offer failed: ${pErr.message}`);
+    for (const r of rows ?? []) {
+      if (r.price != null && r.observed_at) current.set(r.offer_id, { price: Number(r.price), observedAt: r.observed_at });
+    }
+  }
+  for (const e of map.values()) e.current = e.offerId ? (current.get(e.offerId) ?? null) : null;
   return map;
+}
+
+/**
+ * The "≈ X sau voucher" figure for an alert email: the offer's stored effective price, only when the
+ * alert price is still the offer's current price and the stored value passes shownEffectivePrice()
+ * (computed from that observation or later, fresh, no voucher of the combination expired).
+ */
+export function alertEffectivePrice(
+  e: Pick<EventDetail, "price" | "effective" | "current">,
+  now: Date,
+): number | null {
+  if (!e.current || e.current.price !== e.price) return null;
+  return shownEffectivePrice(e.effective, { price: e.price, observedAt: e.current.observedAt }, now);
 }
 
 function productUrl(site: string, e: EventDetail) {
@@ -197,7 +232,7 @@ export async function dispatchDueDeliveries(
           variantKey: e.product.variantKey,
           imageUrl: e.product.image,
           price: e.price,
-          effectivePrice: shownEffectivePrice(e.effective.price, e.effective.at, e.price, opts.now),
+          effectivePrice: alertEffectivePrice(e, opts.now),
           baselinePrice: e.baselinePrice,
           dealScore: e.dealScore,
           recommendation: e.recommendation,

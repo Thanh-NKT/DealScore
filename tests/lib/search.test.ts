@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { parseSearchParams, searchProducts, toSearchParams } from "@/lib/search";
+import { parseSearchParams, searchItemHref, searchProducts, toSearchParams } from "@/lib/search";
 
 // searchProducts talks to Supabase through the server client: stub it with a spy-able rpc.
 const rpc = vi.fn();
@@ -237,5 +237,50 @@ describe("searchProducts — RPC arguments and row mapping", () => {
     rpc.mockResolvedValue({ data: [{ ...row, effective_price: null }], error: null });
     const res2 = await searchProducts({ q: "ssd" });
     expect(res2.items[0].effectivePrice).toBeNull();
+  });
+});
+
+describe("searchProducts — representative variant", () => {
+  const row = {
+    product_id: "p1",
+    slug: "ssd-a",
+    canonical_name: "SSD A",
+    brand: null,
+    image: null,
+    category_slug: "o-cung-ssd",
+    best_price: "2500000",
+    original_price: null,
+    score: null,
+    recommendation: null,
+    last_observed_at: null,
+    relevance: 1,
+    total_count: 1,
+    effective_price: null,
+    variant_id: "var-2tb",
+  };
+
+  it("maps variant_id to variantId (null when absent)", async () => {
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: [row], error: null });
+    expect((await searchProducts({ q: "ssd", capacityGb: 2048 })).items[0].variantId).toBe("var-2tb");
+    rpc.mockResolvedValue({ data: [{ ...row, variant_id: null }], error: null });
+    expect((await searchProducts({ q: "ssd" })).items[0].variantId).toBeNull();
+  });
+});
+
+describe("searchItemHref", () => {
+  const item = { categorySlug: "o-cung-ssd", slug: "ssd-a", variantId: "var-2tb" };
+
+  it("links to the matched variant when the search filtered by capacity", () => {
+    expect(searchItemHref(item, { capacityGb: 2048 })).toBe("/o-cung-ssd/ssd-a?variant=var-2tb");
+  });
+
+  it("plain product link otherwise, or when the variant is unknown", () => {
+    expect(searchItemHref(item, {})).toBe("/o-cung-ssd/ssd-a");
+    expect(searchItemHref({ ...item, variantId: null }, { capacityGb: 2048 })).toBe("/o-cung-ssd/ssd-a");
+  });
+
+  it("encodes the variant id", () => {
+    expect(searchItemHref({ ...item, variantId: "a b&c" }, { capacityGb: 1024 })).toBe("/o-cung-ssd/ssd-a?variant=a%20b%26c");
   });
 });

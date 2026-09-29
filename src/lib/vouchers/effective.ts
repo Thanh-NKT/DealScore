@@ -7,32 +7,72 @@ import type { VariantPricing } from "@/lib/pricing/variant-pricing";
 import { activeVouchers, bestCombination, VOUCHER_FRESH_DAYS, type ActiveVoucherContext } from "@/lib/vouchers/select";
 import type { Voucher } from "@/lib/vouchers/types";
 
-/** A stored effective price older than this is not shown (same window as search_products v6). */
+/** A stored effective price older than this is not shown (same window as search_products). */
 export const EFFECTIVE_FRESH_DAYS = VOUCHER_FRESH_DAYS;
 
+export interface EffectiveQuote {
+  /** Price after the best voucher combination (shipping excluded). */
+  price: number;
+  /** Earliest expiry among the vouchers of that combination; null when none of them expires. */
+  until: string | null;
+}
+
 /**
- * Price after the best combination of the vouchers that apply right now. Shipping vouchers give 0
- * (fee unknown). null when no voucher applies or nothing is taken off.
+ * Price after the best combination of the vouchers that apply right now, plus when that combination
+ * stops being valid. Shipping vouchers give 0 (fee unknown). null when no voucher applies or nothing
+ * is taken off.
  */
-export function effectivePriceFor(price: number, vouchers: readonly Voucher[], ctx: ActiveVoucherContext): number | null {
+export function effectiveQuoteFor(price: number, vouchers: readonly Voucher[], ctx: ActiveVoucherContext): EffectiveQuote | null {
   if (!Number.isFinite(price) || price <= 0) return null;
   const active = activeVouchers(vouchers, ctx);
   if (active.length === 0) return null;
-  const { estimatedTotal } = bestCombination(active, price, 0);
-  return estimatedTotal < price ? estimatedTotal : null;
+  const { picks, estimatedTotal } = bestCombination(active, price, 0);
+  if (!(estimatedTotal < price)) return null;
+  let until: string | null = null;
+  for (const { voucher, amount } of picks) {
+    if (amount <= 0 || !voucher.expiresAt) continue;
+    if (until == null || Date.parse(voucher.expiresAt) < Date.parse(until)) until = voucher.expiresAt;
+  }
+  return { price: estimatedTotal, until };
 }
 
-/** The stored value, when it is fresh and lower than `price`; otherwise null (nothing to show). */
-export function shownEffectivePrice(
-  effective: number | null | undefined,
-  computedAt: string | null | undefined,
-  price: number | null | undefined,
-  now: Date,
-): number | null {
+/** effectiveQuoteFor()'s price only. */
+export function effectivePriceFor(price: number, vouchers: readonly Voucher[], ctx: ActiveVoucherContext): number | null {
+  return effectiveQuoteFor(price, vouchers, ctx)?.price ?? null;
+}
+
+/** offers.effective_price / _at / _until as read from the DB. */
+export interface StoredEffective {
+  price: number | null | undefined;
+  at: string | null | undefined;
+  until: string | null | undefined;
+}
+
+/** The offer's current (latest valid) observation. */
+export interface CurrentObservation {
+  price: number | null | undefined;
+  observedAt: string | null | undefined;
+}
+
+/**
+ * The stored value, or null (nothing to show). Same guards as search_products (0016): lower than the
+ * current price, computed from the current observation or a later one (`at >= observedAt`; a newer
+ * observation means the price changed since), computed within EFFECTIVE_FRESH_DAYS, and no voucher
+ * of the combination expired (`until` null or in the future).
+ */
+export function shownEffectivePrice(stored: StoredEffective, current: CurrentObservation, now: Date): number | null {
+  const effective = stored.price;
+  const price = current.price;
   if (effective == null || !Number.isFinite(effective) || effective < 0) return null;
   if (price == null || !Number.isFinite(price) || !(effective < price)) return null;
-  const at = computedAt ? Date.parse(computedAt) : Number.NaN;
+  const at = stored.at ? Date.parse(stored.at) : Number.NaN;
   if (!Number.isFinite(at) || now.getTime() - at > EFFECTIVE_FRESH_DAYS * 86_400_000) return null;
+  const observedAt = current.observedAt ? Date.parse(current.observedAt) : Number.NaN;
+  if (!Number.isFinite(observedAt) || at < observedAt) return null;
+  if (stored.until != null) {
+    const until = Date.parse(stored.until);
+    if (!Number.isFinite(until) || until <= now.getTime()) return null;
+  }
   return effective;
 }
 
@@ -41,15 +81,15 @@ export function effectiveReason(x: number): string {
 }
 
 /**
- * Adds the voucher reason to the headline reasons when the best offer has a lower effective price.
- * The Deal Score itself is untouched (it scores the listed price). Skipped while the score is
- * insufficient: the breakdown then shows its "still collecting data" note instead of reasons.
+ * Adds the voucher reason to the headline reasons when the best offer has a lower effective price —
+ * also while the Deal Score is insufficient (spec §4; the breakdown then shows its "still collecting
+ * data" note plus these reasons). The Deal Score itself is untouched (it scores the listed price).
  */
 export function withEffectiveReason(pricing: VariantPricing): VariantPricing {
   const best = pricing.cheapest;
   const headline = pricing.headline;
   const x = best?.effectivePrice;
-  if (!best || !headline || headline.score == null || x == null || best.price == null || !(x < best.price)) {
+  if (!best || !headline || x == null || best.price == null || !(x < best.price)) {
     return pricing;
   }
   return { ...pricing, headline: { ...headline, reasons: [...headline.reasons, effectiveReason(x)] } };

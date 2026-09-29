@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   getFilterFacets,
   parseSearchParams,
+  searchItemHref,
   searchProducts,
   toSearchParams,
   type SearchParams,
@@ -104,6 +105,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   if (searchRes.status === "rejected") console.error("search: searchProducts failed", searchRes.reason);
   if (facetsRes.status === "rejected") console.error("search: getFilterFacets failed", facetsRes.reason);
   let loadError = searchRes.status === "rejected";
+  // The params the shown results were searched with (cards link to the capacity-matched variant).
+  let resultParams = queryParams;
   let result =
     searchRes.status === "fulfilled" ? searchRes.value : { items: [], total: 0, page: queryParams.page ?? 1, pageSize: 24 };
 
@@ -113,7 +116,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   if (!loadError && result.total === 0 && applied.length > 0 && (raw.page ?? 1) === 1) {
     fallback = true;
     try {
-      result = await searchProducts(withPrefs({ ...raw, intent: false }));
+      resultParams = withPrefs({ ...raw, intent: false });
+      result = await searchProducts(resultParams);
     } catch (err) {
       console.error("search: fallback searchProducts failed", err);
       loadError = true;
@@ -234,6 +238,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <ProductCard
                   key={item.productId}
                   item={item}
+                  href={searchItemHref(item, resultParams)}
                   categoryName={categoryNames[item.categorySlug]}
                 />
               ))}
