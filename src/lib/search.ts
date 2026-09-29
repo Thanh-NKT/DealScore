@@ -8,7 +8,7 @@ export interface SearchParams {
   brands?: string[];
   minPrice?: number;
   maxPrice?: number;
-  sort?: "relevance" | "deal_score" | "price_asc" | "price_desc" | "updated";
+  sort?: "relevance" | "deal_score" | "price_asc" | "price_desc" | "updated" | "effective_asc";
   page?: number;
   /** Seller rating of the best offer (Phase 2 advanced filters). */
   minRating?: MinRating;
@@ -16,6 +16,20 @@ export interface SearchParams {
   hasVoucher?: boolean;
   /** Keep products sold on at least one of these marketplaces (`?market=shopee,lazada`). */
   marketplaces?: MarketplaceId[];
+  /** From query intent (Phase 3 group A) — GB, not yet filtered in SQL (Task 4). `?cap=2048`. */
+  capacityGb?: number;
+  /** From query intent — chip + boostTerms only, no URL param. */
+  sizeInch?: number;
+  /** From query intent — chip + boostTerms only, no URL param, English value (e.g. "black"). */
+  color?: string;
+  /** From query intent — relevance boost only, never a filter. No URL param (derived from `q`). */
+  boostTerms?: string[];
+  /** Whether query-intent parsing runs on `q`. Default true; `?intent=0` turns it off. */
+  intent?: boolean;
+  /** "Theo sở thích của tôi" toggle (§5). Default false; `?prefs=1` turns it on. */
+  prefs?: boolean;
+  /** True only when the URL's `sort` param was itself a valid sort value (set by parseSearchParams). */
+  sortExplicit?: boolean;
 }
 
 export const MIN_RATINGS = [4.5, 4.8] as const;
@@ -115,8 +129,16 @@ export function parseSearchParams(
   const marketplaces = parseMarketplaces(getAllParams("market"));
 
   const rawSort = getParam("sort");
-  const validSorts = ["relevance", "deal_score", "price_asc", "price_desc", "updated"] as const;
+  const validSorts = [
+    "relevance",
+    "deal_score",
+    "price_asc",
+    "price_desc",
+    "updated",
+    "effective_asc",
+  ] as const;
   let sort: SearchParams["sort"] = validSorts.find((s) => s === rawSort);
+  const sortExplicit = sort !== undefined;
 
   if (!sort) {
     sort = q ? "relevance" : "updated";
@@ -126,6 +148,19 @@ export function parseSearchParams(
   let page = rawPage ? parseInt(rawPage, 10) : 1;
   if (isNaN(page) || page < 1) page = 1;
 
+  // Capacity from query intent (Task 3): integer GB, sane bounds. Not written by URL sharing
+  // outside intent chips, but still a first-class URL param (`?cap=2048`).
+  const rawCap = getParam("cap");
+  let capacityGb = rawCap ? Number(rawCap) : undefined;
+  if (capacityGb != null && (!Number.isInteger(capacityGb) || capacityGb < 1 || capacityGb > 65536)) {
+    capacityGb = undefined;
+  }
+
+  // `intent=0` turns off query-intent parsing; absent means "on" (undefined, not true — callers
+  // check `!== false`).
+  const intent = getParam("intent") === "0" ? false : undefined;
+  const prefs = getParam("prefs") === "1" ? true : undefined;
+
   return {
     q,
     categoryId,
@@ -134,11 +169,15 @@ export function parseSearchParams(
     minPrice,
     maxPrice,
     sort,
+    sortExplicit,
     page,
     minRating,
     freeShipping,
     hasVoucher,
     marketplaces,
+    capacityGb,
+    intent,
+    prefs,
   };
 }
 
@@ -159,11 +198,14 @@ export function toSearchParams(p: SearchParams): URLSearchParams {
   if (p.hasVoucher) sp.set("voucher", "1");
   const markets = parseMarketplaces(p.marketplaces ?? []);
   if (markets) sp.set("market", markets.join(","));
+  if (p.capacityGb != null) sp.set("cap", p.capacityGb.toString());
   // Don't write default values into the URL: doing so produces two different paths
   // for the same page — duplicate content, harmful to SEO (section 1.7).
   const defaultSort = p.q ? "relevance" : "updated";
   if (p.sort && p.sort !== defaultSort) sp.set("sort", p.sort);
   if (p.page && p.page > 1) sp.set("page", p.page.toString());
+  if (p.intent === false) sp.set("intent", "0");
+  if (p.prefs) sp.set("prefs", "1");
 
   return sp;
 }

@@ -118,3 +118,57 @@ describe("marketplace filter (?market=)", () => {
     expect(toSearchParams({ q: "ssd", marketplaces: [] }).has("market")).toBe(false);
   });
 });
+
+describe("query intent params (Phase 3 group A)", () => {
+  it("parses cap as an integer GB within bounds", () => {
+    expect(parse("cap=2048").capacityGb).toBe(2048);
+    expect(parse("cap=1").capacityGb).toBe(1);
+    expect(parse("cap=65536").capacityGb).toBe(65536);
+  });
+
+  it("ignores a non-numeric or out-of-range cap", () => {
+    expect(parse("cap=abc").capacityGb).toBeUndefined();
+    expect(parse("cap=0").capacityGb).toBeUndefined();
+    expect(parse("cap=65537").capacityGb).toBeUndefined();
+    expect(parse("cap=2.5").capacityGb).toBeUndefined();
+  });
+
+  it("intent=0 turns intent off; absent means on (undefined)", () => {
+    expect(parse("intent=0").intent).toBe(false);
+    expect(parse("").intent).toBeUndefined();
+    expect(parse("intent=1").intent).toBeUndefined();
+  });
+
+  it("prefs=1 turns prefs on; absent means off (undefined)", () => {
+    expect(parse("prefs=1").prefs).toBe(true);
+    expect(parse("").prefs).toBeUndefined();
+  });
+
+  it("accepts effective_asc as a valid sort", () => {
+    expect(parse("sort=effective_asc").sort).toBe("effective_asc");
+    expect(parse("sort=effective_asc").sortExplicit).toBe(true);
+  });
+
+  it("sortExplicit is false when sort was defaulted", () => {
+    expect(parse("q=ssd").sortExplicit).toBe(false);
+    expect(parse("").sortExplicit).toBe(false);
+    expect(parse("sort=hacker").sortExplicit).toBe(false);
+  });
+
+  it("toSearchParams writes cap, intent=0 and prefs=1", () => {
+    const qs = toSearchParams({ capacityGb: 2048, intent: false, prefs: true });
+    expect(qs.get("cap")).toBe("2048");
+    expect(qs.get("intent")).toBe("0");
+    expect(qs.get("prefs")).toBe("1");
+  });
+
+  it("toSearchParams writes nothing for intent when on (undefined or true)", () => {
+    expect(toSearchParams({}).has("intent")).toBe(false);
+    expect(toSearchParams({ intent: true }).has("intent")).toBe(false);
+  });
+
+  it("toSearchParams never writes sizeInch, color or boostTerms", () => {
+    const qs = toSearchParams({ sizeInch: 27, color: "black", boostTerms: ["gaming"] });
+    expect(qs.toString()).toBe("");
+  });
+});
