@@ -6,6 +6,7 @@ import { marketplaceName, type MarketplaceId } from "@/lib/marketplaces";
 import { PriceRangeForm } from "./price-range-form";
 import { pillClass } from "@/components/ui/pill";
 import type { IntentChipKind } from "@/lib/intent/types";
+import { capacityLabel } from "@/lib/intent/parse";
 
 interface FiltersProps {
   params: SearchParams;
@@ -33,6 +34,7 @@ export function activeFilterCount(p: SearchParams): number {
     (p.categorySlug ? 1 : 0) +
     (p.brands?.length ?? 0) +
     (p.minPrice != null || p.maxPrice != null ? 1 : 0) +
+    (p.capacityGb != null ? 1 : 0) +
     (p.minRating != null ? 1 : 0) +
     (p.freeShipping ? 1 : 0) +
     (p.hasVoucher ? 1 : 0) +
@@ -302,6 +304,10 @@ export function ActiveFilterChips({
           ? `Từ ${formatVnd(params.minPrice)}`
           : `Đến ${formatVnd(params.maxPrice)}`;
     chips.push({ key: "price", label: label, to: href(params, { minPrice: undefined, maxPrice: undefined }) });
+  }
+  // cap has no sidebar control: without this chip it would be an invisible filter.
+  if (params.capacityGb != null && !hidden.has("capacity")) {
+    chips.push({ key: "cap", label: capacityLabel(params.capacityGb), to: href(params, { capacityGb: undefined }) });
   }
   for (const m of hidden.has("marketplace") ? [] : (params.marketplaces ?? [])) {
     const rest = params.marketplaces?.filter((x) => x !== m);

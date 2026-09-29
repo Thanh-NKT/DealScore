@@ -29,8 +29,8 @@ function CrossIcon() {
 
 /**
  * "Đã hiểu:" row — what query intent read from the search text (spec §3). Server component, no JS:
- * every chip's × is a plain link to the same search without that condition (and `intent=0`, so the
- * remaining words aren't re-parsed).
+ * every chip is a plain link to the same search without that condition (and `intent=0`, so the
+ * remaining words aren't re-parsed). The link is a 40px-tall hit area around a 32px visual chip.
  */
 export function IntentChips({ applied, params, originalQuery, fallback }: IntentChipsProps) {
   if (applied.length === 0) return null;
@@ -44,26 +44,24 @@ export function IntentChips({ applied, params, originalQuery, fallback }: Intent
           Không có sản phẩm khớp đủ các điều kiện — đây là kết quả gần đúng cho &ldquo;{originalQuery}&rdquo;.
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-x-1.5">
         <span className="text-micro font-semibold text-ink-2">Đã hiểu:</span>
         {applied.map((chip, i) => (
-          <span
+          <Link
             key={`${chip.kind}-${i}`}
-            className="inline-flex min-h-8 max-w-full items-center gap-1 rounded-sm border border-line bg-surface-2 pl-2.5 pr-1 text-micro font-semibold text-ink"
+            href={searchHref(toSearchParams({ ...removeChip(params, chip.kind), page: 1 }))}
+            scroll={false}
+            aria-label={`Bỏ điều kiện ${chip.label}`}
+            className="group/chip inline-flex min-h-10 max-w-full items-center rounded-sm"
           >
-            <span className="num min-w-0 truncate">{chip.label}</span>
-            <Link
-              href={searchHref(toSearchParams(removeChip(params, chip.kind)))}
-              scroll={false}
-              aria-label={`Bỏ điều kiện ${chip.label}`}
-              className="inline-flex size-6 shrink-0 items-center justify-center rounded-xs text-ink-2 transition-colors duration-150 ease-out hover:bg-surface hover:text-ink"
-            >
+            <span className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-sm bg-primary-soft pl-2.5 pr-2 text-micro font-semibold text-primary transition-colors duration-150 ease-out group-hover/chip:bg-primary group-hover/chip:text-on-primary">
+              <span className="num min-w-0 truncate">{chip.label}</span>
               <CrossIcon />
-            </Link>
-          </span>
+            </span>
+          </Link>
         ))}
         {!fallback && (
-          <Link href={exactHref} className="ml-1 inline-flex min-h-8 items-center text-micro font-semibold text-primary hover:underline">
+          <Link href={exactHref} className="ml-1 inline-flex min-h-10 items-center text-micro font-semibold text-primary hover:underline">
             Tìm đúng chữ &ldquo;{originalQuery}&rdquo;
           </Link>
         )}

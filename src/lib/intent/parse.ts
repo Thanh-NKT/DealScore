@@ -126,7 +126,7 @@ function scanPhrases<T>(
   }
 }
 
-function capacityLabel(gb: number): string {
+export function capacityLabel(gb: number): string {
   return gb % 1024 === 0 ? `${gb / 1024}TB` : `${gb}GB`;
 }
 

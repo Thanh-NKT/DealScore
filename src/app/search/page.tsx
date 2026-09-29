@@ -16,6 +16,7 @@ import { IntentChips } from "@/components/search/intent-chips";
 import { getIntentVocab } from "@/lib/intent/vocab";
 import { parseQueryIntent } from "@/lib/intent/parse";
 import { applyIntent } from "@/lib/intent/merge";
+import { searchLinkParams } from "@/lib/intent/links";
 import type { IntentChip } from "@/lib/intent/types";
 import { getCurrentUser } from "@/lib/auth/session";
 import { trackAfter } from "@/lib/analytics/track";
@@ -84,13 +85,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     }
   }
 
-  // Every link on the page (pagination, sort, filters) is built from what was actually searched,
-  // with intent=0 once intent applied — page 2 must not re-parse the leftover words differently.
-  const params: SearchParams = fallback
-    ? { ...raw, intent: false }
-    : applied.length > 0
-      ? { ...intentParams, intent: false }
-      : intentParams;
+  // Sort/filter links: the applied params + intent=0. Pagination: the raw URL, re-parsed identically
+  // on every page (see searchLinkParams).
+  const { nav: params, pagination } = searchLinkParams({ raw, intentParams, applied, fallback });
 
   const facets = facetsRes.status === "fulfilled" ? facetsRes.value : { categories: [], brands: [], advanced: NO_ADVANCED_FILTERS, marketplaces: [] };
 
@@ -99,7 +96,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     trackAfter("search_performed", {
       userId: user?.id ?? null,
       props: {
-        has_query: Boolean(params.q),
+        // What the user typed, not what's left after intent extraction.
+        has_query: Boolean(raw.q),
         has_filters: hasFilterParams(params),
         result_count: result.total,
         page: result.page,
@@ -126,7 +124,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const categoryNames = Object.fromEntries(facets.categories.map((c) => [c.slug, c.name]));
 
   const hasFilters = hasFilterParams(params);
-  const pageHref = (page: number) => `/search?${toSearchParams({ ...params, page }).toString()}`;
+  const pageHref = (page: number) => `/search?${toSearchParams({ ...pagination, page }).toString()}`;
 
   return (
     <main className="flex-1">
@@ -215,7 +213,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               query={raw.q}
               clearFiltersHref={raw.q ? `/search?${toSearchParams({ q: raw.q, intent: false }).toString()}` : "/search"}
               firstPageHref={pageHref(1)}
-              retryHref={`/search?${toSearchParams(params).toString()}`}
+              retryHref={pageHref(raw.page ?? 1)}
             />
           )}
 
