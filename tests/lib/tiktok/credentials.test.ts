@@ -83,11 +83,40 @@ describe("getTikTokAccessToken", () => {
   });
 
   it("refresh failure → MarketplaceUnavailableError, lock released", async () => {
-    const store = memoryStore(tokens(3_600_000));
+    // Access token already expired, refresh token still valid.
+    const store = memoryStore(tokens(-1));
     const refresh = vi.fn(async () => {
       throw new Error("boom");
     });
     await expect(getTikTokAccessToken(store, { now, refresh })).rejects.toBeInstanceOf(MarketplaceUnavailableError);
     expect(await store.tryLock("x")).toBe(true);
+  });
+
+  it("refresh fails but token still valid → returns current token", async () => {
+    const store = memoryStore(tokens(3_600_000));
+    const refresh = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    expect(await getTikTokAccessToken(store, { now, refresh })).toBe("A0");
+    expect(await store.tryLock("x")).toBe(true);
+  });
+
+  it("save fails after a successful refresh → still returns the new token, logs no token", async () => {
+    const store = memoryStore(tokens(3_600_000));
+    store.save = async () => {
+      throw new Error("db down");
+    };
+    const refresh = vi.fn(async () => tokens(7 * 86_400_000, 60 * 86_400_000, "A1"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await getTikTokAccessToken(store, { now, refresh })).toBe("A1");
+      expect(log).toHaveBeenCalled();
+      const logged = JSON.stringify(log.mock.calls.map((c) => c.map(String)));
+      expect(logged).toContain("db down");
+      for (const secret of ["A0", "A1", "R0"]) expect(logged).not.toContain(secret);
+      expect(await store.tryLock("x")).toBe(true);
+    } finally {
+      log.mockRestore();
+    }
   });
 });

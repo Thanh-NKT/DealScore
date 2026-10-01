@@ -86,13 +86,21 @@ export async function getTikTokAccessToken(
   try {
     const again = await store.load();
     if (again && fresh(again)) return again.accessToken;
+    const latest = again ?? current;
     let next: TikTokTokens;
     try {
-      next = await opts.refresh((again ?? current).refreshToken);
+      next = await opts.refresh(latest.refreshToken);
     } catch (err) {
+      // The current token still works: use it and retry the refresh on a later call.
+      if (usable(latest)) return latest.accessToken;
       throw unavailable("TikTok token refresh failed", err);
     }
-    await store.save(next);
+    try {
+      await store.save(next);
+    } catch (err) {
+      // The new token is valid for this call; the next call retries the refresh. Never log token values.
+      console.error("Failed to save refreshed TikTok token:", err instanceof Error ? err.message : "unknown error");
+    }
     return next.accessToken;
   } finally {
     await store.unlock(owner);
