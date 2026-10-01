@@ -344,6 +344,7 @@ export type Database = {
           id: string
           items_failed: number
           items_ok: number
+          per_marketplace: Json | null
           source: string
           started_at: string
         }
@@ -353,6 +354,7 @@ export type Database = {
           id?: string
           items_failed?: number
           items_ok?: number
+          per_marketplace?: Json | null
           source: string
           started_at?: string
         }
@@ -362,6 +364,7 @@ export type Database = {
           id?: string
           items_failed?: number
           items_ok?: number
+          per_marketplace?: Json | null
           source?: string
           started_at?: string
         }
@@ -614,6 +617,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      marketplace_credentials: {
+        Row: {
+          access_expires_at: string
+          access_token: string
+          marketplace: string
+          refresh_expires_at: string
+          refresh_token: string
+          updated_at: string
+        }
+        Insert: {
+          access_expires_at: string
+          access_token: string
+          marketplace: string
+          refresh_expires_at: string
+          refresh_token: string
+          updated_at?: string
+        }
+        Update: {
+          access_expires_at?: string
+          access_token?: string
+          marketplace?: string
+          refresh_expires_at?: string
+          refresh_token?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       match_candidates: {
         Row: {
@@ -976,6 +1006,78 @@ export type Database = {
           rating?: number | null
           rating_count?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sourcing_queries: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          kind: string
+          last_run_at: string | null
+          marketplace: string
+          next_page: string | null
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind: string
+          last_run_at?: string | null
+          marketplace: string
+          next_page?: string | null
+          value: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          kind?: string
+          last_run_at?: string | null
+          marketplace?: string
+          next_page?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
+      sourcing_runs: {
+        Row: {
+          error_summary: string | null
+          failed: number
+          finished_at: string | null
+          id: string
+          ingested: number
+          marketplace: string
+          queries: number
+          seen: number
+          skipped_existing: number
+          started_at: string
+        }
+        Insert: {
+          error_summary?: string | null
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          ingested?: number
+          marketplace: string
+          queries?: number
+          seen?: number
+          skipped_existing?: number
+          started_at?: string
+        }
+        Update: {
+          error_summary?: string | null
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          ingested?: number
+          marketplace?: string
+          queries?: number
+          seen?: number
+          skipped_existing?: number
+          started_at?: string
         }
         Relationships: []
       }
@@ -1507,6 +1609,7 @@ export type Database = {
           voucher: boolean
         }[]
       }
+      ingest_listing: { Args: { p: Json }; Returns: Json }
       ingest_shopee_item: { Args: { p: Json }; Returns: Json }
       intent_vocab: {
         Args: never
