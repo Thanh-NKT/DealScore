@@ -16,15 +16,15 @@ export const KNOWN_BRANDS: readonly string[] = [
   "TCL", "Panasonic", "Sharp", "Toshiba", "Canon", "Nikon", "Fujifilm", "GoPro", "DJI", "Insta360",
   // Home appliances
   "Philips", "Electrolux", "Tefal", "Lock&Lock", "Sunhouse", "Kangaroo", "Midea", "Daikin",
-  "Coway", "Hitachi", "Bluestone", "Locknlock", "Cuckoo", "Bear", "Deerma", "Dreame", "Ecovacs",
+  "Coway", "Hitachi", "Bluestone", "Locknlock", "Cuckoo", "Deerma", "Dreame", "Ecovacs",
   "Roborock", "Dyson", "Karcher",
   // Beauty & personal care
   "La Roche-Posay", "Bioderma", "Cerave", "Cetaphil", "Vichy", "Eucerin", "Avène", "Anessa", "Skin1004",
-  "Cocoon", "Innisfree", "Some By Mi", "Klairs", "Paula's Choice", "The Ordinary", "L'Oréal", "Maybelline",
-  "Senka", "Hada Labo", "Simple", "Nivea", "Garnier", "Neutrogena", "Laneige", "Sulwhasoo", "Oral-B",
+  "Innisfree", "Some By Mi", "Klairs", "Paula's Choice", "The Ordinary", "L'Oréal", "Maybelline",
+  "Senka", "Hada Labo", "Nivea", "Garnier", "Neutrogena", "Laneige", "Sulwhasoo", "Oral-B",
   // Mother & baby, food
   "Pigeon", "Moony", "Merries", "Huggies", "Bobby", "Comotomo", "Philips Avent", "Similac", "Enfa", "Aptamil",
   "Nestlé", "Vinamilk", "TH True Milk",
   // Sports & fashion
-  "Nike", "Adidas", "Puma", "Asics", "Mizuno", "Yonex", "Lining", "Garmin", "Coros", "Amazfit",
+  "Nike", "Adidas", "Puma", "Asics", "Mizuno", "Yonex", "Garmin", "Coros", "Amazfit",
 ];
