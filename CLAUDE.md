@@ -86,7 +86,8 @@ Never mix these up; the choice encodes the security model.
   `scripts/run-{collector,backtest}.ts`, `src/app/api/health/route.ts`, `src/lib/analytics/track.ts`,
   `src/lib/extension/contribute.ts`, `src/app/api/extension/observations/route.ts`,
   `src/lib/listing-extras.ts` + `src/lib/vouchers/store.ts` (`upsertVouchers`, called with the admin client),
-  `src/app/api/vouchers/refresh/route.ts`, `src/lib/vouchers/refresh-effective.ts`.
+  `src/app/api/vouchers/refresh/route.ts`, `src/lib/vouchers/refresh-effective.ts`,
+  `src/lib/tiktok/source.ts`, `src/app/api/tiktok/oauth/callback/route.ts`, `src/lib/sourcing/run.ts` (qua client truyền vào), `src/app/api/cron/sourcing/route.ts`, `scripts/run-sourcing.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
@@ -108,7 +109,7 @@ Never mix these up; the choice encodes the security model.
   ≥ 0.95 → `ingest_shopee_item` gắn `auto`; thấp hơn → product draft + `match_candidates` (duyệt ở Admin — xem
   `docs/admin-checklist.md`). Giá hiện tại của variant luôn tính lại bằng RPC `refresh_variant_current_price`.
 - **Collector (1.10):** `runCollector()` (`src/lib/collector/run.ts`) → `record_observations` → rollup →
-  `recomputeDealScores()` → `evaluateWatches()`. Bỏ qua khi `isShopeeConfigured()` sai (chưa có Shopee API).
+  `recomputeDealScores()` → `evaluateWatches()`. Chạy mọi sàn có nguồn (`configuredMarketplaces()` trong `src/lib/marketplaces/sources.ts`); một sàn sập chỉ dừng sàn đó.
   Backtest hằng tuần: `src/lib/pricing/backtest.ts` (thuần) → `backtest_runs`. `/api/health` cho uptime; Sentry chỉ
   bật khi có `SENTRY_DSN`; lỗi đã bắt trong cron gửi qua `reportError()`.
 - **SEO (1.7):** `src/lib/seo/` (metadata, JSON-LD, sitemap — thuần). Canonical sản phẩm là `/{category}/{slug}`
@@ -117,6 +118,13 @@ Never mix these up; the choice encodes the security model.
   thuộc tính theo allow-list trong `src/lib/analytics/events.ts` (thêm sự kiện = sửa cả check constraint).
 - **Đa sàn (G2):** mọi hiểu biết về URL / nguồn dữ liệu / đích `/go` của từng sàn nằm trong `src/lib/marketplaces/`
   (TikTok Shop, Lazada: giả định, chưa có dữ liệu). So sánh giữa sàn chỉ hiện khi có ≥ 2 sàn thật.
+- **Nguồn dữ liệu thật:** `src/lib/marketplaces/index.ts` chỉ nhận diện URL (dùng được ở client); đọc dữ liệu qua
+  `getSource(id)` (`sources.ts`, server-only): Shopee Affiliate `productOfferV2` (`src/lib/shopee/affiliate-source.ts`),
+  TikTok Shop Affiliate Creator API (`src/lib/tiktok/`, token OAuth trong `marketplace_credentials`, `pnpm tiktok:authorize`).
+  Mọi hiểu biết về hai API là **giả định S1–S3 / T1–T4** — xem `docs/superpowers/specs/2026-10-01-nguon-du-lieu-that-logic.md` §0;
+  kiểm bằng `pnpm marketplace:probe`. "Không tìm thấy" từ API **không** bao giờ đánh dấu listing `gone`.
+  Tự tìm sản phẩm: `src/lib/sourcing/` + bảng `sourcing_queries` / `sourcing_runs`, trần `SOURCING_DAILY_CAP`.
+  Ingest dùng RPC `ingest_listing` (`ingest_shopee_item` chỉ còn là wrapper).
 - **Extension (G2):** `extension/` (MV3) chỉ nói chuyện với `/api/extension/*`; các route này chỉ nhận Origin của
   extension (`EXTENSION_IDS`). Giá do extension gửi chỉ vào lịch sử khi `corroborate()` xác nhận chéo.
 - **Intent search (G3):** `src/lib/intent/` rule-based (không LLM); tham số URL luôn thắng suy luận từ ý định,
