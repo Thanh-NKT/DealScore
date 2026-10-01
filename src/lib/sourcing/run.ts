@@ -64,44 +64,57 @@ export async function runSourcing(
   let aborted = false;
   const errors: string[] = [];
 
-  for (const q of plan) {
-    if (ingested >= budget || (opts.deadline && Date.now() > opts.deadline)) break;
-    let page;
-    try {
-      page = await source.searchItems({ kind: q.kind, value: q.value, cursor: q.nextPage, limit: PAGE_LIMIT });
-    } catch (err) {
-      if (err instanceof MarketplaceUnavailableError) {
-        aborted = true;
-        errors.push(`${opts.marketplace} unavailable: ${err.message}`);
-        break;
-      }
-      failed++;
-      if (errors.length < MAX_ERROR_MESSAGES) errors.push(`${q.kind}:${q.value}: ${err instanceof Error ? err.message : String(err)}`);
-      continue;
-    }
-    queries++;
-    seen += page.items.length;
-
-    const existing = await deps.existingIds(opts.marketplace, page.items.map((i) => i.externalItemId));
-    for (const item of page.items) {
+  let thrown: unknown;
+  let didThrow = false;
+  try {
+    for (const q of plan) {
       if (ingested >= budget || (opts.deadline && Date.now() > opts.deadline)) break;
-      if (existing.has(item.externalItemId)) {
-        skippedExisting++;
+      let page;
+      try {
+        page = await source.searchItems({ kind: q.kind, value: q.value, cursor: q.nextPage, limit: PAGE_LIMIT });
+      } catch (err) {
+        if (err instanceof MarketplaceUnavailableError) {
+          aborted = true;
+          errors.push(`${opts.marketplace} unavailable: ${err.message}`);
+          break;
+        }
+        failed++;
+        if (errors.length < MAX_ERROR_MESSAGES) errors.push(`${q.kind}:${q.value}: ${err instanceof Error ? err.message : String(err)}`);
         continue;
       }
-      if (item.models.every((m) => m.price == null)) continue;
-      const r = await deps.ingest(item);
-      if (r.status === "error") {
-        failed++;
-        if (errors.length < MAX_ERROR_MESSAGES) errors.push(`${item.externalItemId}: ingest ${r.code}`);
-      } else if (r.status === "ingested") {
-        ingested++;
-      } else {
-        skippedExisting++;
+      queries++;
+      seen += page.items.length;
+
+      const existing = await deps.existingIds(opts.marketplace, page.items.map((i) => i.externalItemId));
+      let pageDone = true;
+      for (const item of page.items) {
+        if (ingested >= budget || (opts.deadline && Date.now() > opts.deadline)) {
+          pageDone = false;
+          break;
+        }
+        if (existing.has(item.externalItemId)) {
+          skippedExisting++;
+          continue;
+        }
+        if (item.models.every((m) => m.price == null)) continue;
+        const r = await deps.ingest(item);
+        if (r.status === "error") {
+          failed++;
+          if (errors.length < MAX_ERROR_MESSAGES) errors.push(`${item.externalItemId}: ingest ${r.code}`);
+        } else if (r.status === "ingested") {
+          ingested++;
+        } else {
+          skippedExisting++;
+        }
       }
+      // Stopped mid-page: keep the cursor so the unprocessed items are revisited. A finished query
+      // starts again from page 1 next time.
+      await deps.saveQuery(q.id, { nextPage: pageDone ? page.nextCursor : q.nextPage, lastRunAt: now.toISOString() });
     }
-    // A finished query starts again from page 1 next time.
-    await deps.saveQuery(q.id, { nextPage: page.nextCursor, lastRunAt: now.toISOString() });
+  } catch (err) {
+    didThrow = true;
+    thrown = err;
+    errors.push(`sourcing aborted: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   await deps.recordRun({
@@ -114,6 +127,7 @@ export async function runSourcing(
     failed,
     errorSummary: errors.length > 0 ? errors.join("\n") : null,
   });
+  if (didThrow) throw thrown;
   return { queries, seen, ingested, skippedExisting, failed, aborted };
 }
 

@@ -30,7 +30,8 @@ describe("sourcing on the fake Shopee source", () => {
       const r = await runSourcing({ marketplace: "shopee", cap: 3 }, supabaseSourcingDeps(admin, "shopee"));
       expect(r).toMatchObject({ ingested: 3, queries: 1 });
       const { data: row } = await admin.from("sourcing_queries").select("next_page, last_run_at").eq("id", q!.id).single();
-      expect(row!.next_page).toBe("2");
+      // The cap stopped the run mid-page (fake returns 50 items), so the cursor must not advance.
+      expect(row!.next_page).toBeNull();
       expect(row!.last_run_at).not.toBeNull();
       const { data: seller } = await admin.from("sellers").select("id").eq("external_seller_id", "900000").single();
       const { data: listings } = await admin.from("listings").select("refresh_priority").eq("seller_id", seller!.id);

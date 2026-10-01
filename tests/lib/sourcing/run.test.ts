@@ -85,4 +85,31 @@ describe("runSourcing", () => {
     const { d } = deps({}, { source: null });
     expect(await runSourcing({ marketplace: "shopee", cap: 10 }, d)).toEqual({ skipped: "not_configured" });
   });
+  it("cap hit mid-page keeps the query's cursor so the rest is revisited", async () => {
+    const { d, saved } = deps(
+      { "a@null": { items: [item("1"), item("2"), item("3")], nextCursor: "2" } },
+      { loadQueries: async () => [query("a")], ingestedToday: async () => 8 },
+    );
+    await runSourcing({ marketplace: "shopee", cap: 10 }, d);
+    expect(saved).toEqual([["a", expect.objectContaining({ nextPage: null })]]);
+  });
+
+  it("unexpected throw after ingesting still records the run, then rethrows", async () => {
+    let calls = 0;
+    const { d, runs } = deps(
+      {
+        "a@null": { items: [item("1")], nextCursor: null },
+        "b@3": { items: [item("3")], nextCursor: null },
+      },
+      {
+        existingIds: async () => {
+          if (++calls === 2) throw new Error("db down");
+          return new Set();
+        },
+      },
+    );
+    await expect(runSourcing({ marketplace: "shopee", cap: 10 }, d)).rejects.toThrow("db down");
+    expect(runs).toEqual([expect.objectContaining({ ingested: 1, errorSummary: expect.stringContaining("db down") })]);
+  });
+
 });
