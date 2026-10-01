@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/database.types";
+import type { Database, Json } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { errorRate, selectDueListings, type CollectorListing } from "@/lib/collector/schedule";
 import { recomputeDealScores } from "@/lib/pricing/recompute-scores";
@@ -8,6 +8,7 @@ import { toVnDate } from "@/lib/format";
 import { configuredMarketplaces, getSource } from "@/lib/marketplaces/sources";
 import {
   MarketplaceItemGoneError,
+  MarketplaceItemNotFoundError,
   MarketplaceUnavailableError,
   type MarketplaceId,
   type MarketplaceItem,
@@ -19,7 +20,7 @@ import { reportError } from "@/lib/observability";
 /**
  * One collector run (1.10): Collector → Price DB → Deal Engine → Alert Engine.
  *
- *   pick due listings → fetch each from Shopee → record_observations (one transaction per listing)
+ *   pick due listings → fetch each from its marketplace source (one marketplace down never stops the others) → record_observations (one transaction per listing)
  *   → refresh today's rollup → recompute Deal Scores → evaluate Watches of the touched variants.
  *
  * Follows the §6 contract of the Watch & Alert spec. Per-item failures are counted, never thrown;
@@ -34,7 +35,7 @@ export interface CollectorDeps {
 }
 
 async function loadCandidates(client: SupabaseClient<Database>, poolSize: number): Promise<CollectorListing[]> {
-  // Only marketplaces with a data source; today that is Shopee (API or the dev fake).
+  // Every marketplace with a configured data source (API or dev fake).
   const { data, error } = await client.rpc("collector_candidates", {
     p_limit: poolSize,
     p_marketplaces: configuredMarketplaces(),
@@ -63,6 +64,12 @@ const defaultDeps: CollectorDeps = {
   loadCandidates,
 };
 
+export interface MarketplaceRunStats {
+  ok: number;
+  failed: number;
+  aborted: boolean;
+}
+
 export type CollectorResult =
   | { skipped: "not_configured" | "nothing_due" }
   | {
@@ -73,6 +80,7 @@ export type CollectorResult =
       aborted: boolean;
       variants: number;
       errorRate: number;
+      perMarketplace: Record<string, MarketplaceRunStats>;
     };
 
 const MAX_ERROR_MESSAGES = 5;
@@ -92,7 +100,8 @@ export async function runCollector(
   const due = selectDueListings(await load(client, limit * CANDIDATE_POOL_FACTOR), now, limit);
   if (due.length === 0) return { skipped: "nothing_due" };
 
-  const source = configuredMarketplaces().every((m) => getSource(m)!.isFake()) ? "seed" : "api";
+  const marketplaces = configuredMarketplaces();
+  const source = marketplaces.length > 0 && marketplaces.every((m) => getSource(m)!.isFake()) ? "seed" : "api";
   const { data: run, error: runError } = await client
     .from("collector_runs")
     .insert({ source, started_at: now.toISOString() })
@@ -102,13 +111,17 @@ export async function runCollector(
 
   let ok = 0;
   let failed = 0;
-  let aborted = false;
   const errors: string[] = [];
   const touched = new Set<string>();
   const collected: string[] = [];
+  const perMarketplace: Record<string, MarketplaceRunStats> = {};
+  const stats = (m: string) => (perMarketplace[m] ??= { ok: 0, failed: 0, aborted: false });
 
   for (const listing of due) {
     if (opts.deadline && Date.now() > opts.deadline) break;
+    const s = stats(listing.marketplace);
+    // A marketplace that is down is not called again this run; the others continue.
+    if (s.aborted) continue;
     try {
       let payload: Record<string, unknown>;
       let detail: MarketplaceItem | null = null;
@@ -138,6 +151,7 @@ export async function runCollector(
       for (const v of variantIds ?? []) touched.add(v);
       collected.push(listing.id);
       ok++;
+      s.ok++;
 
       // Images + vouchers are extras: a failure here never undoes the recorded price.
       if (detail && ((detail.images?.length ?? 0) > 0 || (detail.vouchers?.length ?? 0) > 0)) {
@@ -157,17 +171,22 @@ export async function runCollector(
       }
     } catch (err) {
       if (err instanceof MarketplaceUnavailableError) {
-        // Upstream is down: stop instead of hammering it with the rest of the batch.
-        aborted = true;
+        // Upstream is down: stop calling this marketplace instead of hammering it with the rest of the batch.
+        s.aborted = true;
+        s.failed++;
+        failed++;
         errors.push(`${listing.marketplace} unavailable: ${err.message}`);
-        break;
+        continue;
       }
       failed++;
+      s.failed++;
       if (errors.length < MAX_ERROR_MESSAGES) {
-        errors.push(`${listing.externalItemId}: ${err instanceof Error ? err.message : String(err)}`);
+        const what = err instanceof MarketplaceItemNotFoundError ? "not found" : err instanceof Error ? err.message : String(err);
+        errors.push(`${listing.externalItemId}: ${what}`);
       }
     }
   }
+  const aborted = Object.values(perMarketplace).some((s) => s.aborted);
 
   const variantIds = [...touched];
   // New prices (and vouchers) → new effective prices, before scores and alerts. Derived data:
@@ -200,10 +219,20 @@ export async function runCollector(
         items_ok: ok,
         items_failed: failed,
         error_summary: errors.length > 0 ? errors.join("\n") : null,
+        per_marketplace: perMarketplace as unknown as Json,
       })
       .eq("id", run.id);
     if (error) console.error("Failed to close collector run:", error.message);
   }
 
-  return { runId: run.id, selected: due.length, ok, failed, aborted, variants: variantIds.length, errorRate: errorRate(ok, failed) };
+  return {
+    runId: run.id,
+    selected: due.length,
+    ok,
+    failed,
+    aborted,
+    variants: variantIds.length,
+    errorRate: errorRate(ok, failed),
+    perMarketplace,
+  };
 }

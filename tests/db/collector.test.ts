@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runCollector, type CollectorDeps } from "@/lib/collector/run";
-import { MarketplaceItemGoneError, MarketplaceUnavailableError, type MarketplaceItem } from "@/lib/marketplaces/types";
+import {
+  MarketplaceItemGoneError,
+  MarketplaceItemNotFoundError,
+  MarketplaceUnavailableError,
+  type MarketplaceItem,
+} from "@/lib/marketplaces/types";
 import type { CollectorListing } from "@/lib/collector/schedule";
 import { effectivePriceFor } from "@/lib/vouchers/effective";
 import { listVouchersForListing } from "@/lib/vouchers/store";
@@ -196,7 +201,7 @@ describe("runCollector", () => {
     const r = await runCollector({}, admin, deps([gone, broken, down, never], fetchItem));
     if ("skipped" in r) throw new Error("unexpected skip");
     runIds.push(r.runId);
-    expect(r).toMatchObject({ ok: 1, failed: 1, aborted: true });
+    expect(r).toMatchObject({ ok: 1, failed: 2, aborted: true });
     expect(fetchItem).toHaveBeenCalledTimes(3);
 
     const { data: l } = await admin.from("listings").select("status").eq("id", gone.id).single();
@@ -204,5 +209,34 @@ describe("runCollector", () => {
     const { data: run } = await admin.from("collector_runs").select("error_summary").eq("id", r.runId).single();
     expect(run!.error_summary).toContain("parse error");
     expect(run!.error_summary).toContain("shopee unavailable");
+  });
+
+  it("one marketplace down does not stop the other; not-found never marks gone", async () => {
+    // Created oldest-first: the collector processes the most overdue first, i.e. in creation order.
+    const missing = await makeListing(2_000_000);
+    const shopeeDown = await makeListing(2_000_000);
+    const tiktok = { ...(await makeListing(2_000_000)), marketplace: "tiktok" as const };
+    const shopeeSkipped = await makeListing(2_000_000);
+    // The listing row itself is shopee; the collector only uses CollectorListing.marketplace to route calls.
+    const fetchItem = vi.fn(async (_m: string, ext: string) => {
+      if (ext === shopeeDown.externalItemId) throw new MarketplaceUnavailableError("503", { marketplace: "shopee" });
+      if (ext === missing.externalItemId) throw new MarketplaceItemNotFoundError("nope");
+      return detail(1_500_000);
+    });
+    const r = await runCollector({}, admin, deps([missing, shopeeDown, tiktok, shopeeSkipped], fetchItem));
+    if ("skipped" in r) throw new Error("unexpected skip");
+    runIds.push(r.runId);
+    expect(fetchItem).toHaveBeenCalledTimes(3); // shopeeSkipped never called
+    expect(fetchItem).toHaveBeenCalledWith("tiktok", tiktok.externalItemId);
+    // shopee: "missing" (not found) + "shopeeDown" (unavailable) = 2 failed, then aborted.
+    expect(r.perMarketplace).toEqual({
+      shopee: { ok: 0, failed: 2, aborted: true },
+      tiktok: { ok: 1, failed: 0, aborted: false },
+    });
+    expect(r.aborted).toBe(true);
+    const { data: l } = await admin.from("listings").select("status").eq("id", missing.id).single();
+    expect(l!.status).toBe("active");
+    const { data: run } = await admin.from("collector_runs").select("per_marketplace").eq("id", r.runId).single();
+    expect(run!.per_marketplace).toEqual(r.perMarketplace);
   });
 });
