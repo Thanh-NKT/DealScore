@@ -80,6 +80,8 @@ export async function runSourcing(
         }
         failed++;
         if (errors.length < MAX_ERROR_MESSAGES) errors.push(`${q.kind}:${q.value}: ${err instanceof Error ? err.message : String(err)}`);
+        // A stale page token would fail forever: restart this query from page 1 next run.
+        if (q.nextPage != null) await deps.saveQuery(q.id, { nextPage: null, lastRunAt: now.toISOString() });
         continue;
       }
       queries++;

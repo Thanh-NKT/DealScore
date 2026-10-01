@@ -81,6 +81,13 @@ describe("runSourcing", () => {
     expect(runs).toHaveLength(1);
   });
 
+  it("a failing search on a saved page resets the cursor so the query restarts from page 1", async () => {
+    const { d, saved } = deps({ "b@3": new Error("invalid page_token") });
+    const r = await runSourcing({ marketplace: "shopee", cap: 10 }, d);
+    expect(r).toMatchObject({ failed: 1, aborted: false });
+    expect(saved).toContainEqual(["b", expect.objectContaining({ nextPage: null })]);
+  });
+
   it("not configured → skipped", async () => {
     const { d } = deps({}, { source: null });
     expect(await runSourcing({ marketplace: "shopee", cap: 10 }, d)).toEqual({ skipped: "not_configured" });
