@@ -47,6 +47,7 @@ async function loadCandidates(client: SupabaseClient<Database>, poolSize: number
     externalItemId: r.external_item_id,
     refreshPriority: r.refresh_priority,
     lastObservedAt: r.last_observed_at,
+    lastAttemptAt: r.last_attempt_at,
     watched: r.watched,
   }));
 }
@@ -183,6 +184,15 @@ export async function runCollector(
       if (errors.length < MAX_ERROR_MESSAGES) {
         const what = err instanceof MarketplaceItemNotFoundError ? "not found" : err instanceof Error ? err.message : String(err);
         errors.push(`${listing.externalItemId}: ${what}`);
+      }
+      // Remember the failed attempt (the listing stays active) so it does not stay the most overdue
+      // and block healthy listings every run. Best effort: never throws.
+      const { error: attemptError } = await client
+        .from("listings")
+        .update({ last_attempt_at: new Date().toISOString() })
+        .eq("id", listing.id);
+      if (attemptError && errors.length < MAX_ERROR_MESSAGES) {
+        errors.push(`${listing.externalItemId} last_attempt_at: ${attemptError.message}`);
       }
     }
   }

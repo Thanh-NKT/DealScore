@@ -5,7 +5,7 @@ const now = new Date("2026-09-25T12:00:00Z");
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 3_600_000).toISOString();
 
 function listing(over: Partial<CollectorListing> = {}): CollectorListing {
-  return { id: "l", marketplace: "shopee", externalItemId: "1_2", refreshPriority: 3, lastObservedAt: hoursAgo(1), watched: false, ...over };
+  return { id: "l", marketplace: "shopee", externalItemId: "1_2", refreshPriority: 3, lastObservedAt: hoursAgo(1), lastAttemptAt: null, watched: false, ...over };
 }
 
 describe("overdueRatio", () => {
@@ -21,6 +21,12 @@ describe("overdueRatio", () => {
 
   it("is Infinity for a listing never observed", () => {
     expect(overdueRatio(listing({ lastObservedAt: null }), now)).toBe(Infinity);
+  });
+
+  it("counts age from the later of the last observation and the last failed attempt", () => {
+    const l = listing({ refreshPriority: 3, lastObservedAt: hoursAgo(48), lastAttemptAt: hoursAgo(1) });
+    expect(overdueRatio(l, now)).toBeLessThan(1);
+    expect(selectDueListings([l], now, 10)).toEqual([]);
   });
 
   it("treats unknown priorities as the slowest interval", () => {

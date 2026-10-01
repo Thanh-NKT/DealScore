@@ -40,7 +40,7 @@ async function makeListing(price: number): Promise<CollectorListing> {
     .eq("external_item_id", ext)
     .select("id")
     .single();
-  return { id: data!.id, marketplace: "shopee", externalItemId: ext, refreshPriority: 3, lastObservedAt: old, watched: false };
+  return { id: data!.id, marketplace: "shopee", externalItemId: ext, refreshPriority: 3, lastObservedAt: old, lastAttemptAt: null, watched: false };
 }
 
 function detail(price: number | null): MarketplaceItem {
@@ -238,5 +238,19 @@ describe("runCollector", () => {
     expect(l!.status).toBe("active");
     const { data: run } = await admin.from("collector_runs").select("per_marketplace").eq("id", r.runId).single();
     expect(run!.per_marketplace).toEqual(r.perMarketplace);
+  });
+
+  it("records last_attempt_at on a failed fetch so it does not block the queue; the listing stays active", async () => {
+    const missing = await makeListing(2_000_000);
+    const before = Date.now();
+    const r = await runCollector({}, admin, deps([missing], async () => {
+      throw new MarketplaceItemNotFoundError("nope");
+    }));
+    if ("skipped" in r) throw new Error("unexpected skip");
+    runIds.push(r.runId);
+    const { data: l } = await admin.from("listings").select("status, last_attempt_at").eq("id", missing.id).single();
+    expect(l!.status).toBe("active");
+    expect(l!.last_attempt_at).not.toBeNull();
+    expect(new Date(l!.last_attempt_at!).getTime()).toBeGreaterThanOrEqual(before - 5_000);
   });
 });

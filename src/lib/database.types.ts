@@ -539,6 +539,7 @@ export type Database = {
           first_seen_at: string
           id: string
           images: string[]
+          last_attempt_at: string | null
           last_observed_at: string | null
           marketplace: string
           refresh_priority: number
@@ -552,6 +553,7 @@ export type Database = {
           first_seen_at?: string
           id?: string
           images?: string[]
+          last_attempt_at?: string | null
           last_observed_at?: string | null
           marketplace: string
           refresh_priority?: number
@@ -565,6 +567,7 @@ export type Database = {
           first_seen_at?: string
           id?: string
           images?: string[]
+          last_attempt_at?: string | null
           last_observed_at?: string | null
           marketplace?: string
           refresh_priority?: number
@@ -1585,6 +1588,7 @@ export type Database = {
         Returns: {
           external_item_id: string
           id: string
+          last_attempt_at: string
           last_observed_at: string
           marketplace: string
           refresh_priority: number

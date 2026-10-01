@@ -17,6 +17,8 @@ export interface CollectorListing {
   externalItemId: string;
   refreshPriority: number;
   lastObservedAt: string | null;
+  /** Last failed fetch (not found / error), so listings that keep failing do not block the queue. */
+  lastAttemptAt: string | null;
   watched: boolean;
 }
 
@@ -25,10 +27,14 @@ function intervalHours(l: CollectorListing): number {
   return REFRESH_INTERVAL_HOURS[l.refreshPriority as 1 | 2 | 3] ?? SLOWEST_INTERVAL_HOURS;
 }
 
-/** Age / refresh interval. ≥ 1 means due. Never observed → Infinity. */
+/**
+ * Age / refresh interval. ≥ 1 means due. Age counts from the later of the last observation and
+ * the last failed attempt. Neither → Infinity.
+ */
 export function overdueRatio(l: CollectorListing, now: Date): number {
-  if (!l.lastObservedAt) return Infinity;
-  const ageHours = (now.getTime() - new Date(l.lastObservedAt).getTime()) / MS_PER_HOUR;
+  const times = [l.lastObservedAt, l.lastAttemptAt].filter((t): t is string => !!t).map((t) => new Date(t).getTime());
+  if (times.length === 0) return Infinity;
+  const ageHours = (now.getTime() - Math.max(...times)) / MS_PER_HOUR;
   return ageHours / intervalHours(l);
 }
 
