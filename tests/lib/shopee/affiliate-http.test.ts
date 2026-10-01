@@ -41,7 +41,7 @@ describe("callShopeeAffiliate", () => {
 
   it("network failure is retryable", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("fetch failed"); }));
-    const err = await callShopeeAffiliate(creds, "{ ok }", {}).catch((e: unknown) => e as ShopeeAffiliateError);
+    const err = await callShopeeAffiliate<never>(creds, "{ ok }", {}).catch((e: unknown) => e as ShopeeAffiliateError);
     expect(err).toBeInstanceOf(ShopeeAffiliateError);
     expect(err.retryable).toBe(true);
   });
