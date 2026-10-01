@@ -27,6 +27,7 @@
     "backtest:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-backtest.ts",
     "tiktok:authorize": "tsx --conditions=react-server --env-file=.env.local scripts/tiktok-authorize.ts",
     "sourcing:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-sourcing.ts",
+    "marketplace:probe": "tsx --conditions=react-server --env-file=.env.local scripts/marketplace-probe.ts",
     "db:backup": "tsx --env-file=.env.local scripts/db-backup.ts"
   },
   "dependencies": {
