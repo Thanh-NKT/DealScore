@@ -50,6 +50,8 @@ export async function fetchShopeeItem(ext: string, env: Env = process.env): Prom
 }
 
 export async function searchShopeeItems(q: SearchQuery, env: Env = process.env): Promise<SearchPage> {
+  // A non-numeric id would serialize as null and run an unfiltered best-seller search.
+  if (q.kind === "category" && !/^\d+$/.test(q.value)) throw new Error(`Invalid Shopee category id: ${q.value}`);
   const page = Math.max(1, Number(q.cursor ?? "1") || 1);
   const filter = q.kind === "keyword" ? { keyword: q.value } : { productCatId: Number(q.value) };
   const result = await query(

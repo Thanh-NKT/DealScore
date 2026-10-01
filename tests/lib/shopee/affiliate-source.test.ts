@@ -59,6 +59,14 @@ describe("searchShopeeItems", () => {
     expect(sentVariables(f)).toEqual({ productCatId: 100013, sortType: 2, page: 1, limit: 20 });
     expect(page.nextCursor).toBeNull();
   });
+
+  it("non-numeric category id → plain error before any HTTP call", async () => {
+    const f = graphql({ data: { productOfferV2: { nodes: [node], pageInfo: { hasNextPage: false } } } });
+    await expect(searchShopeeItems({ kind: "category", value: "abc", cursor: null, limit: 20 }, env)).rejects.toThrow(
+      "Invalid Shopee category id: abc",
+    );
+    expect(f).not.toHaveBeenCalled();
+  });
 });
 
 describe("shopeeSource with real env", () => {
