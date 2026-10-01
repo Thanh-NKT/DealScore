@@ -1,23 +1,23 @@
 /**
- * Follow redirects for Shopee short URLs with strict SSRF checks.
+ * Follow redirects for marketplace short URLs with strict SSRF checks.
  *
  * The user supplies a URL and the server fetches it. Every hop must pass:
- * https, default port, host EXACTLY in the allowlist shared with
- * parse-url.ts. Never return the response body to the client.
+ * https, default port, host EXACTLY in some adapter's hosts ∪ shortHosts
+ * (src/lib/marketplaces). Never return the response body to the client.
  */
-import { parseShopeeUrl, SHOPEE_HOSTS, SHORT_HOSTS } from "@/lib/shopee/parse-url";
+import { MARKETPLACES, parseProductUrl } from "@/lib/marketplaces";
 
 const MAX_HOPS = 3;
 const HOP_TIMEOUT_MS = 3000;
+const ALLOWED_HOSTS: ReadonlySet<string> = new Set(MARKETPLACES.flatMap((m) => [...m.hosts, ...m.shortHosts]));
 
 function isHostAllowed(url: URL): boolean {
-  const h = url.hostname.toLowerCase();
   // An empty url.port = the scheme's default port (443). Any other port suggests
   // we're being steered toward an internal service.
-  return url.port === "" && (SHOPEE_HOSTS.has(h) || SHORT_HOSTS.has(h));
+  return url.port === "" && ALLOWED_HOSTS.has(url.hostname.toLowerCase());
 }
 
-export async function resolveShopeeRedirect(
+export async function resolveProductRedirect(
   initialUrl: string,
 ): Promise<
   | { ok: true; finalUrl: string }
@@ -51,7 +51,7 @@ export async function resolveShopeeRedirect(
     }
 
     // Reached a readable product URL — stop, no extra requests.
-    if (parseShopeeUrl(currentUrl).ok) {
+    if (parseProductUrl(currentUrl).ok) {
       return { ok: true, finalUrl: currentUrl };
     }
 

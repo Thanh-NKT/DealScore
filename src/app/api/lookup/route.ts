@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { clientIp, hashIp } from "@/lib/rate-limit";
-import { lookupErrorMessage, lookupShopeeUrl, type LookupErrorCode } from "@/lib/lookup";
+import { lookupErrorMessage, lookupProductUrl, type LookupErrorCode } from "@/lib/lookup";
 import { createClient } from "@/lib/supabase/server";
 import { trackAfter } from "@/lib/analytics/track";
 
@@ -17,9 +17,9 @@ const STATUS_BY_CODE: Record<LookupErrorCode, number> = {
   internal: 500,
 };
 
-function errorResponse(code: LookupErrorCode, retryAfter?: number) {
+function errorResponse(code: LookupErrorCode, retryAfter?: number, market?: string) {
   return NextResponse.json(
-    { status: "error", code, message: lookupErrorMessage(code, retryAfter), retryAfter },
+    { status: "error", code, message: lookupErrorMessage(code, retryAfter), retryAfter, market },
     {
       status: STATUS_BY_CODE[code],
       headers: retryAfter ? { ...NO_STORE, "Retry-After": String(retryAfter) } : NO_STORE,
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: auth } = await supabase.auth.getUser();
 
-    const result = await lookupShopeeUrl({
+    const result = await lookupProductUrl({
       raw: rawUrl,
       ipHash: hashIp(clientIp(request.headers)),
       userId: auth.user?.id ?? null,
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (result.status === "error") {
-      return errorResponse(result.code, result.retryAfter);
+      return errorResponse(result.code, result.retryAfter, result.market);
     }
     return NextResponse.json(
       { status: result.status, productUrl: result.productUrl },

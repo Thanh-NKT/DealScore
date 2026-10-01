@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { extractFirstUrl } from "@/lib/shopee/parse-url";
-import { lookupShopeeUrl } from "@/lib/lookup";
+import { lookupProductUrl } from "@/lib/lookup";
 import { clientIp, hashIp } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,7 +28,7 @@ export default async function ShareTargetPage({
     try {
       const supabase = await createClient();
       const { data: auth } = await supabase.auth.getUser();
-      const result = await lookupShopeeUrl({
+      const result = await lookupProductUrl({
         raw: extractedUrl,
         ipHash: hashIp(clientIp(await headers())),
         userId: auth.user?.id ?? null,
@@ -41,7 +41,7 @@ export default async function ShareTargetPage({
     if (productUrl) redirect(productUrl);
   }
 
-  // No valid Shopee link could be extracted (or the lookup failed): fall back to
+  // No valid product link could be extracted (or the lookup failed): fall back to
   // the search page with the shared text.
   const fallbackQuery = text || title || candidateText;
   redirect(

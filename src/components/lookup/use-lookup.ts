@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { lookupErrorMessage, type LookupErrorCode } from "@/lib/lookup/messages";
-import { normalizeLookupInput, parseShopeeUrl } from "@/lib/shopee/parse-url";
+import { normalizeLookupInput } from "@/lib/shopee/parse-url";
+import { parseProductUrl } from "@/lib/marketplaces";
 
 export type LookupProblem = {
   code: LookupErrorCode | "timeout" | "offline";
@@ -37,10 +38,10 @@ export function looksLikeLink(input: string): boolean {
   return /https?:\/\//i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+\//i.test(t);
 }
 
-/** true when the input is a Shopee product link or short link we can look up. */
+/** true when the input is a product link or short link of a marketplace Kairo recognises (the server decides if it can read it). */
 export function isLookupable(input: string): boolean {
   if (!input.trim()) return false;
-  const parsed = parseShopeeUrl(normalizeLookupInput(input));
+  const parsed = parseProductUrl(normalizeLookupInput(input));
   return parsed.ok || parsed.reason === "needs_redirect";
 }
 
@@ -119,9 +120,10 @@ export function useLookup() {
     const raw = input.trim();
     if (!raw || abortRef.current) return;
 
-    const parsed = parseShopeeUrl(normalizeLookupInput(raw));
+    const parsed = parseProductUrl(normalizeLookupInput(raw));
     if (!parsed.ok && parsed.reason !== "needs_redirect") {
-      setProblem({ code: parsed.reason, market: parsed.reason === "not_shopee" ? marketOf(raw) : undefined });
+      const code: LookupErrorCode = parsed.reason === "not_supported" ? (looksLikeLink(raw) ? "not_shopee" : "not_a_url") : parsed.reason;
+      setProblem({ code, market: code === "not_shopee" ? marketOf(raw) : undefined });
       return;
     }
     if (isOffline()) {
@@ -158,6 +160,7 @@ export function useLookup() {
       finish({
         code: (data?.code as LookupErrorCode) ?? (res.status === 429 ? "rate_limited" : "internal"),
         retryAfter: data?.retryAfter ?? (retryHeader > 0 ? retryHeader : undefined),
+        market: typeof data?.market === "string" ? data.market : undefined,
       });
     } catch {
       if (controller.signal.aborted) {

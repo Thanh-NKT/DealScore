@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// ingestShopeeItem must refresh the listing's effective price after every ingest — also when the
+// ingestProduct must refresh the listing's effective price after every ingest — also when the
 // detail carries no images or vouchers: the price changed, stored vouchers may apply differently
 // (final review finding 1e). saveListingExtras ends with that refresh.
+const rpcCalls: unknown[][] = [];
 const saveListingExtras = vi.fn(async () => ({ images: 0, vouchers: 0 }));
 const detail = {
   marketplace: "shopee",
@@ -21,10 +22,10 @@ vi.mock("@/lib/matching/candidates", () => ({ loadMatchCandidates: async () => [
 vi.mock("@/lib/listing-extras", () => ({ saveListingExtras: (...a: unknown[]) => saveListingExtras(...(a as [])) }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
-    rpc: async () => ({
-      data: { status: "ingested", product_slug: "ssd-x", category_slug: "ssd", variant_id: "v1" },
-      error: null,
-    }),
+    rpc: async (...args: unknown[]) => {
+      rpcCalls.push(args);
+      return { data: { status: "ingested", product_slug: "ssd-x", category_slug: "ssd", variant_id: "v1" }, error: null };
+    },
     from: () => {
       const c: Record<string, unknown> = {};
       c.select = () => c;
@@ -35,15 +36,24 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }));
 
-const { ingestShopeeItem } = await import("@/lib/ingest");
+const { ingestProduct, ingestItem } = await import("@/lib/ingest");
 
 beforeEach(() => saveListingExtras.mockClear());
 
-describe("ingestShopeeItem", () => {
+describe("ingestProduct", () => {
   it("runs saveListingExtras (→ effective price refresh) even without images or vouchers", async () => {
-    const res = await ingestShopeeItem({ shopId: "1", itemId: "2" });
+    const res = await ingestProduct("shopee", "1_2");
     expect(res).toEqual({ status: "ingested", productUrl: "/ssd/ssd-x?variant=v1" });
+    expect(rpcCalls.at(-1)![0]).toBe("ingest_listing");
+    expect(rpcCalls.at(-1)![1]).toMatchObject({ p: { marketplace: "shopee", ext_item_id: "1_2", refresh_priority: 1 } });
     expect(saveListingExtras).toHaveBeenCalledTimes(1);
     expect(saveListingExtras.mock.calls[0]).toEqual([expect.anything(), "listing-1", { images: [], vouchers: [], source: "api" }]);
+  });
+});
+
+describe("ingestItem", () => {
+  it("refuses an item without any priced model", async () => {
+    const res = await ingestItem({ ...detail, models: [{ ...detail.models[0], price: null }] } as never);
+    expect(res).toEqual({ status: "error", code: "upstream_unavailable" });
   });
 });
