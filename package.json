@@ -25,6 +25,7 @@
     "conversions:import": "tsx --conditions=react-server --env-file=.env.local scripts/import-conversions.ts",
     "collector:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-collector.ts",
     "backtest:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-backtest.ts",
+    "tiktok:authorize": "tsx --conditions=react-server --env-file=.env.local scripts/tiktok-authorize.ts",
     "db:backup": "tsx --env-file=.env.local scripts/db-backup.ts"
   },
   "dependencies": {
