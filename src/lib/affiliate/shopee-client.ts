@@ -1,5 +1,12 @@
-import { createHash } from "node:crypto";
 import type { ApiItem, ApiOrder } from "@/lib/affiliate/normalize";
+import {
+  callShopeeAffiliate,
+  shopeeAffiliateCredentials,
+  ShopeeAffiliateError,
+  signRequest,
+} from "@/lib/shopee/affiliate-http";
+
+export { ShopeeAffiliateError, signRequest };
 
 export type ApiOrderWithItems = ApiOrder & { items: ApiItem[] };
 
@@ -10,27 +17,6 @@ export interface ShopeeAffiliateClient {
   }>;
   /** Only for short_link mode (if G1 turns out wrong). */
   generateShortLink(input: { originUrl: string; subIds: string[] }): Promise<string>;
-}
-
-export class ShopeeAffiliateError extends Error {
-  constructor(
-    message: string,
-    readonly retryable: boolean,
-  ) {
-    super(message);
-    this.name = "ShopeeAffiliateError";
-  }
-}
-
-const DEFAULT_API_URL = "https://open-api.affiliate.shopee.vn/graphql"; // G3
-const TIMEOUT_MS = 15_000;
-
-/** G4 — Authorization header value. */
-export function signRequest(input: { appId: string; secret: string; timestamp: number; payload: string }): string {
-  const signature = createHash("sha256")
-    .update(`${input.appId}${input.timestamp}${input.payload}${input.secret}`)
-    .digest("hex");
-  return `SHA256 Credential=${input.appId}, Timestamp=${input.timestamp}, Signature=${signature}`;
 }
 
 // G3 — GraphQL query. Revise after the spike.
@@ -51,40 +37,9 @@ const SHORT_LINK_MUTATION = `mutation ($originUrl: String!, $subIds: [String]) {
 export function createShopeeAffiliateClient(
   env: Record<string, string | undefined> = process.env,
 ): ShopeeAffiliateClient | null {
-  const appId = env.SHOPEE_AFFILIATE_APP_ID;
-  const secret = env.SHOPEE_AFFILIATE_SECRET;
-  if (!appId || !secret) return null;
-  const url = env.SHOPEE_AFFILIATE_API_URL || DEFAULT_API_URL;
-
-  async function call<T>(query: string, variables: Record<string, unknown>): Promise<T> {
-    const payload = JSON.stringify({ query, variables });
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Never log this header.
-          Authorization: signRequest({ appId: appId!, secret: secret!, timestamp: Math.floor(Date.now() / 1000), payload }),
-        },
-        body: payload,
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-    } catch (err) {
-      throw new ShopeeAffiliateError(`Could not reach Shopee Affiliate API: ${(err as Error).name}`, true);
-    }
-    if (res.status === 429 || res.status >= 500) {
-      throw new ShopeeAffiliateError(`Shopee Affiliate API returned ${res.status}`, true);
-    }
-    if (!res.ok) throw new ShopeeAffiliateError(`Shopee Affiliate API returned ${res.status}`, false);
-
-    const body = (await res.json()) as { data?: T; errors?: Array<{ message?: string }> };
-    if (body.errors?.length) {
-      throw new ShopeeAffiliateError(`GraphQL error: ${body.errors.map((e) => e.message).join("; ")}`, false);
-    }
-    if (!body.data) throw new ShopeeAffiliateError("Response has no data", false);
-    return body.data;
-  }
+  const creds = shopeeAffiliateCredentials(env);
+  if (!creds) return null;
+  const call = <T>(query: string, variables: Record<string, unknown>) => callShopeeAffiliate<T>(creds, query, variables);
 
   return {
     async conversionReport({ start, end, scrollId, limit }) {
