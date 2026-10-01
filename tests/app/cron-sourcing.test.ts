@@ -30,6 +30,16 @@ describe("POST /api/cron/sourcing", () => {
     expect(runSourcing).toHaveBeenCalledTimes(2);
     expect(rpc).toHaveBeenLastCalledWith("release_job_lock", expect.objectContaining({ p_name: "sourcing" }));
   });
+  it("splits the remaining time between marketplaces (the first does not starve the second)", async () => {
+    const start = Date.now();
+    await POST(req() as never);
+    const calls = runSourcing.mock.calls as unknown as [{ deadline: number }][];
+    const first = calls[0][0].deadline;
+    const second = calls[1][0].deadline;
+    expect(first).toBeLessThan(start + 50_000 - 10_000); // ≈ half of the remaining time
+    expect(first).toBeLessThan(second);
+    expect(second).toBeGreaterThanOrEqual(start + 50_000 - 1_000);
+  });
   it("lock held → skipped", async () => {
     rpc.mockResolvedValueOnce({ data: false, error: null });
     expect(await (await POST(req() as never)).json()).toEqual({ skipped: "locked" });

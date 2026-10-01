@@ -25,10 +25,12 @@ export async function POST(request: NextRequest) {
   if (error) throw new Error(`Failed to acquire lock: ${error.message}`);
   if (!acquired) return NextResponse.json({ skipped: "locked" }, { headers: NO_STORE });
 
-  const deadline = Date.now() + 50_000;
+  const overallDeadline = Date.now() + 50_000;
   const results: Record<string, SourcingResult | { error: string }> = {};
   try {
-    for (const m of marketplaces) {
+    for (const [i, m] of marketplaces.entries()) {
+      // Each marketplace gets an equal share of the time still left, so the first cannot starve the rest.
+      const deadline = Date.now() + (overallDeadline - Date.now()) / (marketplaces.length - i);
       try {
         results[m] = await runSourcing({ marketplace: m, deadline }, supabaseSourcingDeps(admin, m));
       } catch (err) {
