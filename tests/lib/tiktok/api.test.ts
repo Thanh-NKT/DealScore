@@ -36,6 +36,30 @@ describe("callTikTok", () => {
     }
   });
 
+  it("HTTP 401 / 403 (broken token) → MarketplaceUnavailableError", async () => {
+    for (const status of [401, 403]) {
+      await expect(
+        callTikTok(cfg, "/p", {}, { accessToken: "T", fetchImpl: reply({}, status) as never, now }),
+      ).rejects.toBeInstanceOf(MarketplaceUnavailableError);
+    }
+  });
+
+  it("other 4xx: token error code in the body → unavailable, otherwise plain Error with the status", async () => {
+    await expect(
+      callTikTok(cfg, "/p", {}, { accessToken: "T", fetchImpl: reply({ code: 105001, message: "x" }, 400) as never, now }),
+    ).rejects.toBeInstanceOf(MarketplaceUnavailableError);
+    const err = await callTikTok(cfg, "/p", {}, { accessToken: "T", fetchImpl: reply({ code: 1 }, 400) as never, now }).catch((e) => e);
+    expect(err).not.toBeInstanceOf(MarketplaceUnavailableError);
+    expect(err.message).toContain("400");
+  });
+
+  it("200 with a non-JSON body → MarketplaceUnavailableError", async () => {
+    const f = vi.fn(async () => new Response("<html>maintenance</html>", { status: 200 }));
+    const err = await callTikTok(cfg, "/p", {}, { accessToken: "T", fetchImpl: f as never, now }).catch((e) => e);
+    expect(err).toBeInstanceOf(MarketplaceUnavailableError);
+    expect(err.message).toBe("TikTok Shop API returned a non-JSON body");
+  });
+
   it("other API error codes → plain Error with the code", async () => {
     await expect(
       callTikTok(cfg, "/p", {}, { accessToken: "T", fetchImpl: reply({ code: 12345, message: "bad param" }) as never, now }),

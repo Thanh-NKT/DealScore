@@ -42,9 +42,25 @@ export async function callTikTok<T>(
     throw unavailable(`Could not reach TikTok Shop API: ${(err as Error).name}`, err);
   }
   if (res.status === 429 || res.status >= 500) throw unavailable(`TikTok Shop API returned ${res.status}`);
-  if (!res.ok) throw new Error(`TikTok Shop API returned ${res.status}`);
+  // 401/403: the token is broken — treat like a token error code, not a per-item failure.
+  if (res.status === 401 || res.status === 403) throw unavailable(`TikTok Shop API returned ${res.status}`);
+  if (!res.ok) {
+    let code: number | undefined;
+    try {
+      code = Number(((await res.json()) as { code?: number }).code);
+    } catch {
+      // Body is not JSON: fall through to the plain status error.
+    }
+    if (code !== undefined && TOKEN_ERROR_CODES.has(code)) throw unavailable(`TikTok Shop API returned ${res.status} (code ${code})`);
+    throw new Error(`TikTok Shop API returned ${res.status}`);
+  }
 
-  const json = (await res.json()) as { code?: number; message?: string; data?: T };
+  let json: { code?: number; message?: string; data?: T };
+  try {
+    json = (await res.json()) as typeof json;
+  } catch (err) {
+    throw unavailable("TikTok Shop API returned a non-JSON body", err);
+  }
   if (json.code !== 0) {
     const msg = `TikTok Shop API error ${json.code}: ${json.message ?? ""}`;
     if (TOKEN_ERROR_CODES.has(Number(json.code))) throw unavailable(msg);
