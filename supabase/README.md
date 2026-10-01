@@ -101,11 +101,15 @@ Chưa đặt `SHOPEE_AFFILIATE_APP_ID` / `SHOPEE_AFFILIATE_SECRET` thì route tr
 
 Migration 0009 thêm hai job, cùng hai secret Vault ở trên:
 
-- `kairo-collector` (phút 17 mỗi giờ) → `/api/cron/collector`. Chưa có Shopee API (`isShopeeConfigured()` sai) thì
-  route trả `{ skipped: "not_configured" }` và **không** ghi `collector_runs`. Ở local: `SHOPEE_CLIENT=fake` rồi
-  `pnpm collector:run`.
+- `kairo-collector` (phút 17 mỗi giờ) → `/api/cron/collector`. Mỗi sàn chỉ được làm mới khi có nguồn dữ liệu
+  (`configuredMarketplaces()` — Shopee Affiliate API / TikTok Shop API / fake ở dev); chưa sàn nào có thì route trả
+  `{ skipped: "not_configured" }` và **không** ghi `collector_runs`. Một sàn sập không chặn sàn khác. Ở local:
+  `SHOPEE_CLIENT=fake` rồi `pnpm collector:run`.
 - `kairo-backtest` (03:00 thứ Hai giờ VN) → `/api/cron/backtest`, ghi `backtest_runs`. Chạy tay: `pnpm backtest:run`.
   Xem kết quả: `select ran_at, samples, accuracy, buy_correct, buy_n, wait_correct, wait_n from backtest_runs order by ran_at desc;`
+
+Migration 0017 thêm job `kairo-sourcing` (02:41 giờ VN mỗi ngày) → `/api/cron/sourcing`, cùng hai secret Vault ở trên:
+tự lấy sản phẩm mới cho từng sàn đã cấu hình, có trần mỗi ngày, ghi `sourcing_runs`. Chạy tay: `pnpm sourcing:run`.
 
 ## Giám sát (1.10)
 

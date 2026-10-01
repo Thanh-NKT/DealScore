@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   if (!isAuthorizedCronRequest(request.headers, secret)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: NO_STORE });
   }
-  // Checked before taking the lock: until the Shopee API exists every hourly call ends here.
+  // Checked before taking the lock: until a marketplace source is configured every hourly call ends here.
   if (configuredMarketplaces().length === 0) return NextResponse.json({ skipped: "not_configured" }, { headers: NO_STORE });
 
   const admin = createAdminClient();

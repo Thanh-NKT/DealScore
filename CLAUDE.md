@@ -87,7 +87,8 @@ Never mix these up; the choice encodes the security model.
   `src/lib/extension/contribute.ts`, `src/app/api/extension/observations/route.ts`,
   `src/lib/listing-extras.ts` + `src/lib/vouchers/store.ts` (`upsertVouchers`, called with the admin client),
   `src/app/api/vouchers/refresh/route.ts`, `src/lib/vouchers/refresh-effective.ts`,
-  `src/lib/tiktok/source.ts`, `src/app/api/tiktok/oauth/callback/route.ts`, `src/lib/sourcing/run.ts` (qua client truyền vào), `src/app/api/cron/sourcing/route.ts`, `scripts/run-sourcing.ts`.
+  `src/lib/tiktok/source.ts`, `src/app/api/tiktok/oauth/callback/route.ts`, `src/lib/sourcing/run.ts` (qua client truyền vào), `src/app/api/cron/sourcing/route.ts`, `scripts/run-sourcing.ts`,
+  `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
