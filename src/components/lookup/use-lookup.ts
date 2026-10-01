@@ -45,6 +45,21 @@ export function isLookupable(input: string): boolean {
   return parsed.ok || parsed.reason === "needs_redirect";
 }
 
+/** Client-side syntax check before calling the server; null when the link may be sent. */
+export function precheckLookup(raw: string): LookupProblem | null {
+  const parsed = parseProductUrl(normalizeLookupInput(raw));
+  if (parsed.ok || parsed.reason === "needs_redirect") return null;
+  const market = marketOf(raw);
+  // A non-product link on a marketplace we don't read (TikTok video, Lazada category…) is "not Shopee", not a bad Shopee link.
+  const code: LookupErrorCode =
+    parsed.reason === "not_supported"
+      ? looksLikeLink(raw) ? "not_shopee" : "not_a_url"
+      : parsed.reason === "unrecognized_format" && market
+        ? "not_shopee"
+        : parsed.reason;
+  return { code, market: code === "not_shopee" ? market : undefined };
+}
+
 /** What went wrong, then what to do next — one calm sentence each. */
 export function explainLookup(p: LookupProblem): { what: string; next: string | null } {
   switch (p.code) {
@@ -120,10 +135,9 @@ export function useLookup() {
     const raw = input.trim();
     if (!raw || abortRef.current) return;
 
-    const parsed = parseProductUrl(normalizeLookupInput(raw));
-    if (!parsed.ok && parsed.reason !== "needs_redirect") {
-      const code: LookupErrorCode = parsed.reason === "not_supported" ? (looksLikeLink(raw) ? "not_shopee" : "not_a_url") : parsed.reason;
-      setProblem({ code, market: code === "not_shopee" ? marketOf(raw) : undefined });
+    const pre = precheckLookup(raw);
+    if (pre) {
+      setProblem(pre);
       return;
     }
     if (isOffline()) {
