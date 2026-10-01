@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { externalItemId } from "@/lib/shopee/parse-url";
-import { getItemDetail, ShopeeUnavailableError } from "@/lib/shopee/client";
+import { getSource } from "@/lib/marketplaces/sources";
+import { MarketplaceUnavailableError } from "@/lib/marketplaces/types";
 import { slugify } from "@/lib/slug";
 import { bestMatch, type MatchCandidate, type MatchResult } from "@/lib/matching/match";
 import { loadMatchCandidates } from "@/lib/matching/candidates";
@@ -65,9 +66,9 @@ export async function ingestShopeeItem(params: {
 
   let detail;
   try {
-    detail = await getItemDetail(shopId, itemId);
+    detail = await getSource("shopee")!.fetchItem(externalItemId(shopId, itemId));
   } catch (err) {
-    if (!(err instanceof ShopeeUnavailableError)) console.error("Shopee call failed:", err);
+    if (!(err instanceof MarketplaceUnavailableError)) console.error("Shopee call failed:", err);
     return { status: "error", code: "upstream_unavailable" };
   }
   if (!detail.title || detail.models.length === 0) {
@@ -94,10 +95,10 @@ export async function ingestShopeeItem(params: {
       source: detail.source,
       seller: {
         external_id: shopId,
-        name: detail.sellerName,
-        rating: detail.sellerRating,
-        rating_count: detail.sellerRatingCount,
-        is_official: detail.sellerIsOfficial,
+        name: detail.seller.name,
+        rating: detail.seller.rating,
+        rating_count: detail.seller.ratingCount,
+        is_official: detail.seller.isOfficial,
       },
       models: detail.models.map((m) => ({
         model_id: m.modelId,

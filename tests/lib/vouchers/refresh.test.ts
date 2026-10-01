@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { canRefreshVouchers } from "@/lib/vouchers/refresh";
-import { getAdapter } from "@/lib/marketplaces";
+import { getSource } from "@/lib/marketplaces/sources";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -21,7 +21,7 @@ describe("canRefreshVouchers", () => {
   it("the Shopee adapter reads a listing's images and vouchers (dev fake source)", async () => {
     vi.stubEnv("SHOPEE_CLIENT", "fake");
     vi.stubEnv("NODE_ENV", "development");
-    const detail = await getAdapter("shopee")!.fetchListingDetail!("123_456");
+    const detail = await getSource("shopee")!.fetchItem("123_456");
     expect(detail.source).toBe("seed");
     expect(Array.isArray(detail.images)).toBe(true);
     expect(Array.isArray(detail.vouchers)).toBe(true);
@@ -30,6 +30,7 @@ describe("canRefreshVouchers", () => {
   it("is false for marketplaces without a data source yet (TikTok Shop, Lazada)", () => {
     vi.stubEnv("SHOPEE_CLIENT", "fake");
     vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("TIKTOK_CLIENT", "");
     expect(canRefreshVouchers("lazada")).toBe(false);
     expect(canRefreshVouchers("tiktok")).toBe(false);
     expect(canRefreshVouchers("unknown")).toBe(false);

@@ -69,9 +69,7 @@ describe("registry", () => {
     ]);
   });
 
-  it("TikTok Shop and Lazada have no data source yet", () => {
-    expect(getAdapter("tiktok")?.isConfigured()).toBe(false);
-    expect(getAdapter("lazada")?.isConfigured()).toBe(false);
+  it("unknown ids return null", () => {
     expect(getAdapter("nope")).toBeNull();
   });
 

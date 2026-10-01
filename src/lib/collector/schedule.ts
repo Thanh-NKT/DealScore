@@ -5,12 +5,15 @@
  * priority-1 rate whatever their stored priority — alerts are only as fresh as their prices.
  */
 
+import type { MarketplaceId } from "@/lib/marketplaces/types";
+
 export const REFRESH_INTERVAL_HOURS: Record<1 | 2 | 3, number> = { 1: 2, 2: 6, 3: 24 };
 const SLOWEST_INTERVAL_HOURS = REFRESH_INTERVAL_HOURS[3];
 const MS_PER_HOUR = 3_600_000;
 
 export interface CollectorListing {
   id: string;
+  marketplace: MarketplaceId;
   externalItemId: string;
   refreshPriority: number;
   lastObservedAt: string | null;

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isAuthorizedCronRequest } from "@/lib/cron";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runCollector } from "@/lib/collector/run";
-import { isShopeeConfigured } from "@/lib/shopee/client";
+import { configuredMarketplaces } from "@/lib/marketplaces/sources";
 import { reportError } from "@/lib/observability";
 
 export const maxDuration = 60;
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: NO_STORE });
   }
   // Checked before taking the lock: until the Shopee API exists every hourly call ends here.
-  if (!isShopeeConfigured()) return NextResponse.json({ skipped: "not_configured" }, { headers: NO_STORE });
+  if (configuredMarketplaces().length === 0) return NextResponse.json({ skipped: "not_configured" }, { headers: NO_STORE });
 
   const admin = createAdminClient();
   const owner = randomUUID();

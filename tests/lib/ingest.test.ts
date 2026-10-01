@@ -5,21 +5,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // (final review finding 1e). saveListingExtras ends with that refresh.
 const saveListingExtras = vi.fn(async () => ({ images: 0, vouchers: 0 }));
 const detail = {
+  marketplace: "shopee",
+  externalItemId: "1_2",
+  url: "https://shopee.vn/product/1/2",
   title: "SSD X 1TB",
   source: "api",
-  sellerName: "Shop",
-  sellerRating: 4.9,
-  sellerRatingCount: 10,
-  sellerIsOfficial: false,
+  seller: { externalId: "1", name: "Shop", rating: 4.9, ratingCount: 10, isOfficial: false },
   images: [] as string[],
   vouchers: [] as unknown[],
   models: [{ modelId: "m1", name: "1TB", price: 980_000, originalPrice: null, stock: 3, isFlashSale: false }],
 };
 
-vi.mock("@/lib/shopee/client", () => ({
-  getItemDetail: async () => detail,
-  ShopeeUnavailableError: class extends Error {},
-}));
+vi.mock("@/lib/marketplaces/sources", () => ({ getSource: () => ({ fetchItem: async () => detail }) }));
 vi.mock("@/lib/matching/candidates", () => ({ loadMatchCandidates: async () => [] }));
 vi.mock("@/lib/listing-extras", () => ({ saveListingExtras: (...a: unknown[]) => saveListingExtras(...(a as [])) }));
 vi.mock("@/lib/supabase/admin", () => ({

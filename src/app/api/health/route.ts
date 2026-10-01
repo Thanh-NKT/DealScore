@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assessHealth } from "@/lib/health";
-import { isShopeeConfigured } from "@/lib/shopee/client";
+import { configuredMarketplaces } from "@/lib/marketplaces/sources";
 
 /**
  * Uptime check (1.10). Public, never says why something failed. 503 only when the DB is
@@ -25,7 +25,7 @@ export async function GET() {
     dbOk = false;
   }
 
-  const health = assessHealth({ dbOk, collectorConfigured: isShopeeConfigured(), lastRunFinishedAt, now: new Date() });
+  const health = assessHealth({ dbOk, collectorConfigured: configuredMarketplaces().length > 0, lastRunFinishedAt, now: new Date() });
   return NextResponse.json(health, {
     status: health.status === "down" ? 503 : 200,
     headers: { "Cache-Control": "no-store" },

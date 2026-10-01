@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { beginLookup, clientIp, finishLookup, hashIp } from "@/lib/rate-limit";
-import { getAdapter, MARKETPLACES, MarketplaceUnavailableError } from "@/lib/marketplaces";
+import { MARKETPLACES } from "@/lib/marketplaces";
+import { getSource } from "@/lib/marketplaces/sources";
+import { MarketplaceItemGoneError, MarketplaceItemNotFoundError, MarketplaceUnavailableError } from "@/lib/marketplaces/types";
 import { saveListingExtras } from "@/lib/listing-extras";
 import { canRefreshVouchers } from "@/lib/vouchers/refresh";
 
@@ -17,7 +19,7 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 
 /**
  * POST /api/vouchers/refresh { offerId } — re-read images + vouchers for the offer's listing from
- * the listing's marketplace (adapter.fetchListingDetail). Counts against the lookup quota (per IP /
+ * the listing's marketplace (getSource(…).fetchItem). Counts against the lookup quota (per IP /
  * per user, src/lib/rate-limit.ts). 503 { error: "not_configured" } when that marketplace has no
  * data source yet (canRefreshVouchers).
  */
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
       return json({ error: "not_configured" }, 503);
     }
 
-    const detail = await getAdapter(listing.marketplace)!.fetchListingDetail!(listing.external_item_id);
+    const detail = await getSource(listing.marketplace)!.fetchItem(listing.external_item_id);
     // Also refreshes this listing's effective prices (end of saveListingExtras) — no second call here.
     const saved = await saveListingExtras(admin, listing.id, {
       images: detail.images,
@@ -74,7 +76,11 @@ export async function POST(request: NextRequest) {
     return json({ status: "ok", ...saved }, 200);
   } catch (err) {
     if (requestId != null) await finishLookup(requestId, "error");
-    if (err instanceof MarketplaceUnavailableError) {
+    if (
+      err instanceof MarketplaceUnavailableError ||
+      err instanceof MarketplaceItemNotFoundError ||
+      err instanceof MarketplaceItemGoneError
+    ) {
       return json({ error: "upstream_unavailable" }, 503);
     }
     console.error("api/vouchers/refresh failed:", err);

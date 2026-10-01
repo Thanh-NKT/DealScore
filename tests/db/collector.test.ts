@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runCollector, type CollectorDeps } from "@/lib/collector/run";
-import { ShopeeItemGoneError, ShopeeUnavailableError, type ShopeeItemDetail } from "@/lib/shopee/client";
+import { MarketplaceItemGoneError, MarketplaceUnavailableError, type MarketplaceItem } from "@/lib/marketplaces/types";
 import type { CollectorListing } from "@/lib/collector/schedule";
 import { effectivePriceFor } from "@/lib/vouchers/effective";
 import { listVouchersForListing } from "@/lib/vouchers/store";
@@ -35,31 +35,31 @@ async function makeListing(price: number): Promise<CollectorListing> {
     .eq("external_item_id", ext)
     .select("id")
     .single();
-  return { id: data!.id, externalItemId: ext, refreshPriority: 3, lastObservedAt: old, watched: false };
+  return { id: data!.id, marketplace: "shopee", externalItemId: ext, refreshPriority: 3, lastObservedAt: old, watched: false };
 }
 
-function detail(price: number | null): ShopeeItemDetail {
+function detail(price: number | null): MarketplaceItem {
   return {
-    shopId: "",
-    itemId: "",
+    marketplace: "shopee",
+    externalItemId: "",
+    url: "https://shopee.vn/product/1/2",
     title: "Collector test",
-    sellerName: null,
-    sellerRating: null,
-    sellerRatingCount: null,
-    sellerIsOfficial: false,
+    seller: { externalId: `seller-${tag}`, name: null, rating: null, ratingCount: null, isOfficial: false },
     models: [
       { modelId: "m1", name: "2TB", price, originalPrice: null, stock: 5, isFlashSale: false },
       { modelId: "m-new", name: "4TB", price: 5_000_000, originalPrice: null, stock: 1, isFlashSale: false },
     ],
+    images: [],
+    vouchers: [],
     source: "seed",
   };
 }
 
-function deps(listings: CollectorListing[], fetchDetail: CollectorDeps["fetchDetail"]): Partial<CollectorDeps> {
+function deps(listings: CollectorListing[], fetchItem: CollectorDeps["fetchItem"]): Partial<CollectorDeps> {
   return {
     configured: () => true,
     loadCandidates: async () => listings,
-    fetchDetail,
+    fetchItem,
     evaluate: vi.fn(async () => ({ evaluated: 0, alerts: 0, suppressed: 0, skippedStale: 0, errors: 0 })),
   };
 }
@@ -187,22 +187,22 @@ describe("runCollector", () => {
     const broken = await makeListing(2_000_000);
     const down = await makeListing(2_000_000);
     const never = await makeListing(2_000_000);
-    const fetchDetail = vi.fn(async (_s: string, itemId: string) => {
-      if (gone.externalItemId.endsWith(itemId)) throw new ShopeeItemGoneError("gone");
-      if (broken.externalItemId.endsWith(itemId)) throw new Error("parse error");
-      if (down.externalItemId.endsWith(itemId)) throw new ShopeeUnavailableError("503");
+    const fetchItem = vi.fn(async (_m: string, ext: string) => {
+      if (ext === gone.externalItemId) throw new MarketplaceItemGoneError("gone");
+      if (ext === broken.externalItemId) throw new Error("parse error");
+      if (ext === down.externalItemId) throw new MarketplaceUnavailableError("503");
       return detail(1_000_000);
     });
-    const r = await runCollector({}, admin, deps([gone, broken, down, never], fetchDetail));
+    const r = await runCollector({}, admin, deps([gone, broken, down, never], fetchItem));
     if ("skipped" in r) throw new Error("unexpected skip");
     runIds.push(r.runId);
     expect(r).toMatchObject({ ok: 1, failed: 1, aborted: true });
-    expect(fetchDetail).toHaveBeenCalledTimes(3);
+    expect(fetchItem).toHaveBeenCalledTimes(3);
 
     const { data: l } = await admin.from("listings").select("status").eq("id", gone.id).single();
     expect(l!.status).toBe("inactive");
     const { data: run } = await admin.from("collector_runs").select("error_summary").eq("id", r.runId).single();
     expect(run!.error_summary).toContain("parse error");
-    expect(run!.error_summary).toContain("Shopee unavailable");
+    expect(run!.error_summary).toContain("shopee unavailable");
   });
 });

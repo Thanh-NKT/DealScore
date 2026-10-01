@@ -1,19 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  getItemDetail,
-  isFakeClientEnabled,
-  isShopeeConfigured,
-  ShopeeItemGoneError,
-  ShopeeUnavailableError,
-  type ShopeeItemDetail,
-} from "@/lib/shopee/client";
 import { errorRate, selectDueListings, type CollectorListing } from "@/lib/collector/schedule";
 import { recomputeDealScores } from "@/lib/pricing/recompute-scores";
 import { evaluateWatches } from "@/lib/alerts/evaluate";
 import { toVnDate } from "@/lib/format";
-import { configuredMarketplaces } from "@/lib/marketplaces";
+import { configuredMarketplaces, getSource } from "@/lib/marketplaces/sources";
+import {
+  MarketplaceItemGoneError,
+  MarketplaceUnavailableError,
+  type MarketplaceId,
+  type MarketplaceItem,
+} from "@/lib/marketplaces/types";
 import { saveListingExtras } from "@/lib/listing-extras";
 import { refreshEffectivePrices } from "@/lib/vouchers/refresh-effective";
 import { reportError } from "@/lib/observability";
@@ -29,7 +27,7 @@ import { reportError } from "@/lib/observability";
  */
 
 export interface CollectorDeps {
-  fetchDetail: (shopId: string, itemId: string) => Promise<ShopeeItemDetail>;
+  fetchItem: (marketplace: MarketplaceId, externalItemId: string) => Promise<MarketplaceItem>;
   configured: () => boolean;
   evaluate: typeof evaluateWatches;
   loadCandidates: (client: SupabaseClient<Database>, poolSize: number) => Promise<CollectorListing[]>;
@@ -44,6 +42,7 @@ async function loadCandidates(client: SupabaseClient<Database>, poolSize: number
   if (error) throw new Error(`collector_candidates failed: ${error.message}`);
   return (data ?? []).map((r) => ({
     id: r.id,
+    marketplace: r.marketplace as MarketplaceId,
     externalItemId: r.external_item_id,
     refreshPriority: r.refresh_priority,
     lastObservedAt: r.last_observed_at,
@@ -51,9 +50,15 @@ async function loadCandidates(client: SupabaseClient<Database>, poolSize: number
   }));
 }
 
+async function fetchItem(marketplace: MarketplaceId, externalItemId: string): Promise<MarketplaceItem> {
+  const source = getSource(marketplace);
+  if (!source) throw new Error(`No data source for marketplace ${marketplace}`);
+  return source.fetchItem(externalItemId);
+}
+
 const defaultDeps: CollectorDeps = {
-  fetchDetail: getItemDetail,
-  configured: isShopeeConfigured,
+  fetchItem,
+  configured: () => configuredMarketplaces().length > 0,
   evaluate: evaluateWatches,
   loadCandidates,
 };
@@ -73,18 +78,12 @@ export type CollectorResult =
 const MAX_ERROR_MESSAGES = 5;
 const CANDIDATE_POOL_FACTOR = 5;
 
-/** "shopId_itemId" (externalItemId() in parse-url.ts) → the two ids. */
-function splitExternalId(ext: string): { shopId: string; itemId: string } {
-  const i = ext.indexOf("_");
-  return i < 0 ? { shopId: "", itemId: ext } : { shopId: ext.slice(0, i), itemId: ext.slice(i + 1) };
-}
-
 export async function runCollector(
   opts: { now?: Date; limit?: number; deadline?: number } = {},
   client: SupabaseClient<Database> = createAdminClient(),
   deps: Partial<CollectorDeps> = {},
 ): Promise<CollectorResult> {
-  const { fetchDetail, configured, evaluate, loadCandidates: load } = { ...defaultDeps, ...deps };
+  const { fetchItem, configured, evaluate, loadCandidates: load } = { ...defaultDeps, ...deps };
   if (!configured()) return { skipped: "not_configured" };
 
   const now = opts.now ?? new Date();
@@ -93,7 +92,7 @@ export async function runCollector(
   const due = selectDueListings(await load(client, limit * CANDIDATE_POOL_FACTOR), now, limit);
   if (due.length === 0) return { skipped: "nothing_due" };
 
-  const source = isFakeClientEnabled() ? "seed" : "api";
+  const source = configuredMarketplaces().every((m) => getSource(m)!.isFake()) ? "seed" : "api";
   const { data: run, error: runError } = await client
     .from("collector_runs")
     .insert({ source, started_at: now.toISOString() })
@@ -110,12 +109,11 @@ export async function runCollector(
 
   for (const listing of due) {
     if (opts.deadline && Date.now() > opts.deadline) break;
-    const { shopId, itemId } = splitExternalId(listing.externalItemId);
     try {
       let payload: Record<string, unknown>;
-      let detail: ShopeeItemDetail | null = null;
+      let detail: MarketplaceItem | null = null;
       try {
-        detail = await fetchDetail(shopId, itemId);
+        detail = await fetchItem(listing.marketplace, listing.externalItemId);
         payload = {
           listing_id: listing.id,
           run_id: run.id,
@@ -131,7 +129,7 @@ export async function runCollector(
           })),
         };
       } catch (err) {
-        if (!(err instanceof ShopeeItemGoneError)) throw err;
+        if (!(err instanceof MarketplaceItemGoneError)) throw err;
         payload = { listing_id: listing.id, run_id: run.id, observed_at: new Date().toISOString(), status: "gone" };
       }
 
@@ -158,10 +156,10 @@ export async function runCollector(
         }
       }
     } catch (err) {
-      if (err instanceof ShopeeUnavailableError) {
+      if (err instanceof MarketplaceUnavailableError) {
         // Upstream is down: stop instead of hammering it with the rest of the batch.
         aborted = true;
-        errors.push(`Shopee unavailable: ${err.message}`);
+        errors.push(`${listing.marketplace} unavailable: ${err.message}`);
         break;
       }
       failed++;

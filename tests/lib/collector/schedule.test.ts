@@ -5,7 +5,7 @@ const now = new Date("2026-09-25T12:00:00Z");
 const hoursAgo = (h: number) => new Date(now.getTime() - h * 3_600_000).toISOString();
 
 function listing(over: Partial<CollectorListing> = {}): CollectorListing {
-  return { id: "l", externalItemId: "1_2", refreshPriority: 3, lastObservedAt: hoursAgo(1), watched: false, ...over };
+  return { id: "l", marketplace: "shopee", externalItemId: "1_2", refreshPriority: 3, lastObservedAt: hoursAgo(1), watched: false, ...over };
 }
 
 describe("overdueRatio", () => {
