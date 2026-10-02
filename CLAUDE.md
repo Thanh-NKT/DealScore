@@ -87,7 +87,7 @@ Never mix these up; the choice encodes the security model.
   `src/lib/extension/contribute.ts`, `src/app/api/extension/observations/route.ts`,
   `src/lib/listing-extras.ts` + `src/lib/vouchers/store.ts` (`upsertVouchers`, called with the admin client),
   `src/app/api/vouchers/refresh/route.ts`, `src/lib/vouchers/refresh-effective.ts`,
-  `src/lib/tiktok/source.ts`, `src/app/api/tiktok/oauth/callback/route.ts`, `src/lib/sourcing/run.ts` (qua client truyền vào), `src/app/api/cron/sourcing/route.ts`, `scripts/run-sourcing.ts`,
+  `src/lib/tiktok/source.ts`, `src/app/api/tiktok/oauth/callback/route.ts`, `src/lib/sourcing/run.ts` (qua client truyền vào), `src/lib/sourcing/record-demand.ts`, `src/app/api/cron/sourcing/route.ts`, `scripts/run-sourcing.ts`,
   `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`.
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
@@ -125,6 +125,10 @@ Never mix these up; the choice encodes the security model.
   Mọi hiểu biết về hai API là **giả định S1–S3 / T1–T4** — xem `docs/superpowers/specs/2026-10-01-nguon-du-lieu-that-logic.md` §0;
   kiểm bằng `pnpm marketplace:probe`. "Không tìm thấy" từ API **không** bao giờ đánh dấu listing `gone`.
   Tự tìm sản phẩm: `src/lib/sourcing/` + bảng `sourcing_queries` / `sourcing_runs`, trần `SOURCING_DAILY_CAP`.
+  Gom bản nháp: `draftKey()` (`src/lib/matching/draft-key.ts`, hãng + mã model + thuộc tính) → `ingest_listing` gắn tin bán
+  vào bản nháp cùng khóa và giá trong ×2; search ẩn bản nháp chỉ có 1 listing, ưu tiên verified. Tự tìm theo nhu cầu: tìm theo
+  tên ra < 3 kết quả → `recordSearchDemand()` (trong `after()`) → `request_sourcing_query` (`origin = 'demand'`, trần
+  `SOURCING_DEMAND_DAILY_CAP`); job `kairo-sourcing-demand` 3 giờ/lần chỉ chạy từ khóa nhu cầu đang chờ.
   Ingest dùng RPC `ingest_listing` (`ingest_shopee_item` chỉ còn là wrapper).
 - **Extension (G2):** `extension/` (MV3) chỉ nói chuyện với `/api/extension/*`; các route này chỉ nhận Origin của
   extension (`EXTENSION_IDS`). Giá do extension gửi chỉ vào lịch sử khi `corroborate()` xác nhận chéo.

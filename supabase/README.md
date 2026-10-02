@@ -110,6 +110,8 @@ Migration 0009 thêm hai job, cùng hai secret Vault ở trên:
 
 Migration 0017 thêm job `kairo-sourcing` (02:41 giờ VN mỗi ngày) → `/api/cron/sourcing`, cùng hai secret Vault ở trên:
 tự lấy sản phẩm mới cho từng sàn đã cấu hình, có trần mỗi ngày, ghi `sourcing_runs`. Chạy tay: `pnpm sourcing:run`.
+Migration 0019 thêm job `kairo-sourcing-demand` (`11 */3 * * *`) → `/api/cron/sourcing?mode=demand`: chỉ chạy các từ khóa nhu cầu
+(`origin = 'demand'`) đang chờ. Chạy tay: `pnpm sourcing:run all demand`.
 
 ## Giám sát (1.10)
 
