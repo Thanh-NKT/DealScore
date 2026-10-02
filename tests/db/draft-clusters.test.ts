@@ -5,9 +5,20 @@ import { admin } from "./helpers";
 const tag = `zq${randomUUID().replace(/-/g, "").slice(0, 8)}`;
 const extIds: string[] = [];
 
-async function ingest(opts: { ext: string; price: number; key: string | null; models?: number }) {
+async function ingest(opts: {
+  ext: string;
+  price: number;
+  key: string | null;
+  models?: number;
+  match?: { variant_id: string; confidence: number; reason: string };
+}) {
   extIds.push(opts.ext);
-  const models = Array.from({ length: opts.models ?? 1 }, (_, i) => ({ model_id: `m${i}`, name: i ? `v${i}` : "", price: opts.price }));
+  const models = Array.from({ length: opts.models ?? 1 }, (_, i) => ({
+    model_id: `m${i}`,
+    name: i ? `v${i}` : "",
+    price: opts.price,
+    ...(i === 0 && opts.match ? { match: opts.match } : {}),
+  }));
   const { data, error } = await admin.rpc("ingest_listing", {
     p: {
       marketplace: "shopee",
@@ -65,6 +76,55 @@ describe("ingest_listing draft clustering", () => {
     await ingest({ ext: `3${tag}c`, price: 1_000_000, key: null });
     const ids = new Set([await productIdOf(`3${tag}a`), await productIdOf(`3${tag}b`), await productIdOf(`3${tag}c`)]);
     expect(ids.size).toBe(3);
+  });
+});
+
+describe("ingest_listing draft clustering guards (0020)", () => {
+  it("price band is anchored on the whole cluster (min and max), not on its drifting minimum", async () => {
+    const k = `sony|${tag}band`;
+    await ingest({ ext: `5${tag}a`, price: 1_000_000, key: k });
+    await ingest({ ext: `5${tag}b`, price: 1_900_000, key: k });
+    const cluster = await productIdOf(`5${tag}a`);
+    expect(await productIdOf(`5${tag}b`)).toBe(cluster);
+    // 0.6M is within ×2 of the minimum 1.0M but not of the maximum 1.9M (1.9M × 0.5 = 0.95M).
+    await ingest({ ext: `5${tag}c`, price: 600_000, key: k });
+    expect(await productIdOf(`5${tag}c`)).not.toBe(cluster);
+    await ingest({ ext: `5${tag}d`, price: 1_200_000, key: k });
+    expect(await productIdOf(`5${tag}d`)).toBe(cluster);
+  });
+
+  it("a verified auto-match beats an existing draft with the same key", async () => {
+    const k = `sony|${tag}ver`;
+    await ingest({ ext: `6${tag}a`, price: 1_000_000, key: k });
+    const draft = await productIdOf(`6${tag}a`);
+
+    const { data: product, error: pe } = await admin
+      .from("products")
+      .insert({ canonical_name: `Verified ${tag}`, status: "verified", slug: `test-${tag}-verified`, specs: {} })
+      .select("id")
+      .single();
+    if (pe) throw pe;
+    const { data: variant, error: ve } = await admin
+      .from("product_variants")
+      .insert({ product_id: product.id, variant_key: "Tiêu chuẩn", specs: {} })
+      .select("id")
+      .single();
+    if (ve) throw ve;
+
+    await ingest({ ext: `6${tag}b`, price: 1_000_000, key: k, match: { variant_id: variant.id, confidence: 0.97, reason: "t" } });
+
+    const { data: offer } = await admin
+      .from("offers")
+      .select("variant_id, match_status, listings!inner(external_item_id)")
+      .eq("listings.external_item_id", `6${tag}b`)
+      .single();
+    expect(offer).toMatchObject({ variant_id: variant.id, match_status: "auto" });
+
+    const { data: draftOffers } = await admin
+      .from("offers")
+      .select("listing_id, product_variants!inner(product_id)")
+      .eq("product_variants.product_id", draft);
+    expect(new Set((draftOffers ?? []).map((o) => o.listing_id)).size).toBe(1);
   });
 });
 
