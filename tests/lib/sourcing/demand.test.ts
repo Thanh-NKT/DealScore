@@ -32,6 +32,38 @@ describe("demandKeyword", () => {
     expect(demandKeyword("12345")).toBeNull();
     expect(demandKeyword("https://shopee.vn/product/1/2")).toBeNull();
   });
+
+  it("rejects phone numbers with separators", () => {
+    expect(demandKeyword("lien he 0912 345 678")).toBeNull();
+    expect(demandKeyword("0912.345.678")).toBeNull();
+    expect(demandKeyword("0912-345-678")).toBeNull();
+    expect(demandKeyword("+84 912 345 678")).toBeNull();
+    // Keep legitimate queries with separate short numbers
+    expect(demandKeyword("ssd 1tb 2280")).toBe("ssd 1tb 2280");
+    expect(demandKeyword("tai nghe sony wh1000xm5")).toBe("tai nghe sony wh1000xm5");
+  });
+
+  it("rejects bare domains", () => {
+    expect(demandKeyword("abc.vn")).toBeNull();
+    expect(demandKeyword("shop abc.com")).toBeNull();
+    expect(demandKeyword("visit abc.info")).toBeNull();
+    expect(demandKeyword("mypage abc.io")).toBeNull();
+  });
+
+  it("rejects obfuscated emails", () => {
+    expect(demandKeyword("abc at gmail dot com")).toBeNull();
+    expect(demandKeyword("abc[at]gmail")).toBeNull();
+    expect(demandKeyword("abc(at)gmail.com")).toBeNull();
+    expect(demandKeyword("user(a)example.com")).toBeNull();
+    expect(demandKeyword("contact[at]store[dot]vn")).toBeNull();
+    // Keep legitimate queries
+    expect(demandKeyword("kem chống nắng at home")).toBe("kem chống nắng at home");
+  });
+
+  it("rejects scheme-less marketplace links", () => {
+    expect(demandKeyword("shp.ee/xyz")).toBeNull();
+    expect(demandKeyword("vt.tiktok.com/abc")).toBeNull();
+  });
 });
 
 describe("demandDailyCap", () => {

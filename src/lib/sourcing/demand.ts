@@ -30,9 +30,22 @@ export function demandKeyword(
 
   if (keyword.length < MIN_LENGTH || keyword.length > MAX_LENGTH) return null;
   if (keyword.split(" ").length > MAX_WORDS) return null;
-  if (/@|https?:|www\./.test(keyword)) return null;
-  if (/\d{6,}/.test(keyword)) return null;
+  if (/@|https?:|www\/|\//.test(keyword)) return null;
+
+  // Phone numbers: strip separators and check for 6+ consecutive digits
+  const noSeparators = keyword.replace(/[\s.\-()+]/g, "");
+  if (/\d{6,}/.test(noSeparators)) return null;
+
+  // Bare domains (includes common TLDs and marketplace short URLs)
+  if (/\b[\p{L}\d-]+\.(com|vn|net|org|info|io|me|shop|store|ee|co)\b/u.test(keyword)) return null;
+
+  // Obfuscated emails: "at" marker + "dot" word, or [at]/(at)
+  if (/\[at\]|\(at\)/.test(keyword)) return null;
+  if (/\bat\b/.test(keyword) && /\bdot\b|\bchấm\b|\bdiem\b/.test(keyword)) return null;
+
   if (!/\p{L}/u.test(keyword)) return null;
   if (detectMarketplace(q) != null) return null;
+  // Also check cleaned keyword for marketplace patterns
+  if (detectMarketplace(keyword) != null) return null;
   return keyword;
 }
