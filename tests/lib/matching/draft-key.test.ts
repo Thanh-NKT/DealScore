@@ -3,6 +3,8 @@ import { draftKey, KNOWN_BRANDS } from "@/lib/matching/draft-key";
 
 const brands = ["Sony", "Samsung", "Anker"];
 const key = (title: string) => draftKey({ title, brands });
+// Full list: needed whenever the brand under test (Logitech, Anessa, Bobby, Moony, Nike…) is not in `brands`.
+const fullKey = (title: string) => draftKey({ title, brands: [...KNOWN_BRANDS] });
 
 describe("draftKey", () => {
   it("same product written differently by two shops → same key", () => {
@@ -45,18 +47,30 @@ describe("draftKey", () => {
   });
 
   it("spec tokens are not models", () => {
-    expect(key("Chuột Logitech không dây 2.4GHz")).toBeNull();
-    expect(key("Kem chống nắng Anessa SPF50 PA++++")).toBeNull();
+    expect(fullKey("Chuột Logitech không dây 2.4GHz")).toBeNull();
+    expect(fullKey("Kem chống nắng Anessa SPF50 PA++++")).toBeNull();
     expect(key("Tai nghe Sony Bluetooth5.3 WH1000XM5")).toBe("sony|wh1000xm5");
   });
 
   it("pack counts are not models; size letters are kept", () => {
-    expect(key("Tã quần Bobby 168 miếng size L")).toBeNull();
-    expect(key("Bỉm Moony M58 size L")).toBeNull();
-    const m = draftKey({ title: "Bỉm Moony M58 size M", brands: ["Moony"] });
-    const l = draftKey({ title: "Bỉm Moony M58 size L", brands: ["Moony"] });
-    expect(m).toBe("moony|m58|sz=m");
-    expect(l).toBe("moony|m58|sz=l");
+    expect(fullKey("Tã quần Bobby 168 miếng size L")).toBeNull();
+    expect(fullKey("Bỉm Moony M58 size M")).toBe("moony|m58|sz=m");
+    expect(fullKey("Bỉm Moony M58 size L")).toBe("moony|m58|sz=l");
+  });
+
+  it("numeric sizes are keyed as sz and are not models", () => {
+    const a = fullKey("Giày Nike Air Max 270 size 40");
+    const b = fullKey("Giày Nike Air Max 270 size 41");
+    expect(a).toMatch(/\|sz=40$/);
+    expect(b).toMatch(/\|sz=41$/);
+    expect(a).not.toBe(b);
+    expect(fullKey("Giày Nike Air Max size 270")).toBeNull();
+  });
+
+  it("'bao gồm' is not an accessory; excluded bundles hide their inner phrases", () => {
+    expect(key("Samsung S24 bao gồm sạc")).toBe("samsung|s24");
+    expect(key("Ốp lưng Samsung S24 kèm kính cường lực")?.startsWith("acc(op-lung):")).toBe(true);
+    expect(key("Samsung S24 kèm kính cường lực")).toBe("samsung|s24");
   });
 
   it("horsepower is not the HP brand", () => {

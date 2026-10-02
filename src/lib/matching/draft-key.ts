@@ -12,7 +12,7 @@ export { KNOWN_BRANDS } from "@/lib/matching/known-brands";
 
 /** normalizeText() forms; the longest one found picks the accessory type in the key. */
 export const ACCESSORY_WORDS: readonly string[] = [
-  "op lung", "op", "bao da", "bao", "cap", "cu sac", "sac", "sac du phong", "kinh cuong luc", "cuong luc",
+  "op lung", "op", "bao da", "cap", "cu sac", "sac", "sac du phong", "kinh cuong luc", "cuong luc",
   "mieng dan", "dan man hinh", "film", "case", "cover", "day deo", "tui dung", "de sac", "gia do",
 ];
 
@@ -47,24 +47,44 @@ function isModelToken(tok: string, next: string | undefined): boolean {
   return /^\d{3,}$/.test(tok) && !(next && (UNIT_WORDS.has(next) || COUNT_WORDS.has(next)));
 }
 
-/** Longest accessory phrase in the title, ignoring bundled ("kem sac", "tang op") and "sac net" (sharp). */
+const SIZE_MARKERS: readonly string[] = ["size", "sz", "sai"];
+/** Words that mark an accessory as bundled/included ("kem sac", "tang op", "bao gom sac"). */
+const BUNDLE_MARKERS: ReadonlySet<string> = new Set(["kem", "tang", "gom"]);
+
+/**
+ * Longest accessory phrase in the title, ignoring bundled ones ("kem sac", "tang op", "bao gom sac") and
+ * "sac net" (sharp). A phrase excluded as bundled also excludes the shorter phrases inside the same
+ * occurrence ("kem kinh cuong luc" must not leave "cuong luc" behind).
+ */
 function accessoryType(tokens: string[]): string | null {
-  let best: string | null = null;
+  const occurrences: { phrase: string; start: number; end: number }[] = [];
   for (const phrase of ACCESSORY_WORDS) {
     const words = phrase.split(" ");
     for (let i = 0; i + words.length <= tokens.length; i++) {
-      if (!words.every((w, k) => tokens[i + k] === w)) continue;
-      if (tokens[i - 1] === "kem" || tokens[i - 1] === "tang") continue;
-      if (phrase === "sac" && tokens[i + 1] === "net") continue;
-      if (!best || phrase.length > best.length) best = phrase;
+      if (words.every((w, k) => tokens[i + k] === w)) occurrences.push({ phrase, start: i, end: i + words.length });
     }
+  }
+  const bundled = new Set<number>();
+  for (const o of occurrences) {
+    if (BUNDLE_MARKERS.has(tokens[o.start - 1] ?? "")) for (let k = o.start; k < o.end; k++) bundled.add(k);
+  }
+  let best: string | null = null;
+  for (const o of occurrences) {
+    if (o.phrase === "sac" && tokens[o.start + 1] === "net") continue;
+    let skip = false;
+    for (let k = o.start; k < o.end; k++) if (bundled.has(k)) skip = true;
+    if (skip) continue;
+    if (!best || o.phrase.length > best.length) best = o.phrase;
   }
   return best;
 }
 
-function sizeLetter(tokens: string[]): string | null {
+/** Size after "size"/"sz"/"sai": a letter size or a 1-2 digit number (shoes, clothes); else a bare XL/XXL/XXXL. */
+function sizeValue(tokens: string[]): string | null {
   for (let i = 0; i < tokens.length; i++) {
-    if (["size", "sz", "sai"].includes(tokens[i]) && SIZE_LETTERS.has(tokens[i + 1] ?? "")) return tokens[i + 1];
+    if (!SIZE_MARKERS.includes(tokens[i])) continue;
+    const next = tokens[i + 1] ?? "";
+    if (SIZE_LETTERS.has(next) || /^\d{1,2}$/.test(next)) return next;
   }
   return tokens.find((t) => BIG_SIZES.has(t)) ?? null;
 }
@@ -85,6 +105,7 @@ export function draftKey(input: { title: string; brands: readonly string[] }): s
   const models = new Set<string>();
   for (let i = 0; i < tokens.length; i++) {
     const tok = tokens[i];
+    if (SIZE_MARKERS.includes(tokens[i - 1] ?? "")) continue; // "size 40" is a size, not a model
     if (!isModelToken(tok, tokens[i + 1])) continue;
     let model = tok;
     const prev = tokens[i - 1];
@@ -100,7 +121,7 @@ export function draftKey(input: { title: string; brands: readonly string[] }): s
   if (attrs.color != null) parts.push(`color=${attrs.color}`);
   if (attrs.sizeInch != null) parts.push(`size=${attrs.sizeInch}`);
 
-  const sz = sizeLetter(tokens);
+  const sz = sizeValue(tokens);
   if (sz) parts.push(`sz=${sz}`);
 
   const acc = accessoryType(normalized.split(" "));
