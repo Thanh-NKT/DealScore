@@ -73,4 +73,15 @@ describe("demandDailyCap", () => {
     expect(demandDailyCap({ SOURCING_DEMAND_DAILY_CAP: "20" })).toBe(20);
     expect(demandDailyCap({ SOURCING_DEMAND_DAILY_CAP: "x" })).toBe(100);
   });
+
+});
+
+describe("demandKeyword — hostnames", () => {
+  it("rejects www. and any dotted hostname, keeps decimal numbers", () => {
+    expect(demandKeyword("www.abc.xyz")).toBeNull();
+    expect(demandKeyword("abc.xyz")).toBeNull();
+    expect(demandKeyword("ổ cứng 2.5 inch")).toBe("ổ cứng 2.5 inch");
+    expect(demandKeyword("tai nghe sony wh1000xm5")).toBe("tai nghe sony wh1000xm5");
+    expect(demandKeyword("ssd 1tb 2280")).toBe("ssd 1tb 2280");
+  });
 });

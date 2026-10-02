@@ -30,7 +30,9 @@ export function demandKeyword(
 
   if (keyword.length < MIN_LENGTH || keyword.length > MAX_LENGTH) return null;
   if (keyword.split(" ").length > MAX_WORDS) return null;
-  if (/@|https?:|www\/|\//.test(keyword)) return null;
+  if (/@|https?:|www\.|\//.test(keyword)) return null;
+  // Any dotted hostname ("abc.xyz"); "2.5 inch" stays allowed (digit-dot-digit).
+  if (/[\p{L}\d-]\.\p{L}{2,}\b/u.test(keyword)) return null;
 
   // Phone numbers: strip separators and check for 6+ consecutive digits
   const noSeparators = keyword.replace(/[\s.\-()+]/g, "");
