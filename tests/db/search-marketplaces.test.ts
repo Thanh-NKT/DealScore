@@ -41,6 +41,9 @@ beforeAll(async () => {
   await item("laz", "lazada");
   await item("gone", "lazada", "inactive");
   await item("unmatched", "lazada", "active", "pending");
+  // Single-listing drafts are hidden from search (0019); these fixtures stand for verified products.
+  const { error } = await admin.from("products").update({ status: "verified" }).like("slug", `test-markets-${tag}%`);
+  if (error) throw error;
 });
 
 afterAll(async () => {

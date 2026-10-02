@@ -34,6 +34,9 @@ beforeAll(async () => {
   await item("good", 4.9, { free_shipping: true, has_voucher: false });
   await item("ok", 4.6, { free_shipping: false });
   await item("low", 4.1, { has_voucher: true });
+  // Single-listing drafts are hidden from search (0019); these fixtures stand for verified products.
+  const { error } = await admin.from("products").update({ status: "verified" }).like("slug", `test-filters-${tag}%`);
+  if (error) throw error;
 });
 
 afterAll(async () => {

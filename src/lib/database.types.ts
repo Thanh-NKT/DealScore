@@ -885,6 +885,7 @@ export type Database = {
           canonical_name: string
           category_id: string | null
           created_at: string
+          draft_key: string | null
           gtin: string | null
           id: string
           image: string | null
@@ -899,6 +900,7 @@ export type Database = {
           canonical_name: string
           category_id?: string | null
           created_at?: string
+          draft_key?: string | null
           gtin?: string | null
           id?: string
           image?: string | null
@@ -913,6 +915,7 @@ export type Database = {
           canonical_name?: string
           category_id?: string | null
           created_at?: string
+          draft_key?: string | null
           gtin?: string | null
           id?: string
           image?: string | null
@@ -1018,9 +1021,12 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          last_requested_at: string | null
           last_run_at: string | null
           marketplace: string
           next_page: string | null
+          origin: string
+          request_count: number
           value: string
         }
         Insert: {
@@ -1028,9 +1034,12 @@ export type Database = {
           created_at?: string
           id?: string
           kind: string
+          last_requested_at?: string | null
           last_run_at?: string | null
           marketplace: string
           next_page?: string | null
+          origin?: string
+          request_count?: number
           value: string
         }
         Update: {
@@ -1038,9 +1047,12 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          last_requested_at?: string | null
           last_run_at?: string | null
           marketplace?: string
           next_page?: string | null
+          origin?: string
+          request_count?: number
           value?: string
         }
         Relationships: []
@@ -1703,6 +1715,10 @@ export type Database = {
       release_job_lock: {
         Args: { p_name: string; p_owner: string }
         Returns: undefined
+      }
+      request_sourcing_query: {
+        Args: { p_daily_cap: number; p_marketplaces: string[]; p_value: string }
+        Returns: number
       }
       search_products: {
         Args: {
