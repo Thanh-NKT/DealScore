@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const rpc = vi.fn(async (..._args: unknown[]) => ({ data: 1, error: null }));
+const rpc = vi.fn<(...args: unknown[]) => Promise<{ data: number; error: null }>>(async () => ({ data: 1, error: null }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc }) }));
 const configured = vi.fn((): string[] => ["shopee", "tiktok"]);
 vi.mock("@/lib/marketplaces/sources", () => ({ configuredMarketplaces: () => configured() }));
