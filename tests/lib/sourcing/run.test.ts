@@ -88,6 +88,13 @@ describe("runSourcing", () => {
     expect(saved).toContainEqual(["b", expect.objectContaining({ nextPage: null })]);
   });
 
+  it("a failing search on a never-run query still records the attempt (stops being pending)", async () => {
+    const { d, saved } = deps({ "a@null": new Error("boom") });
+    const now = new Date("2026-10-02T01:00:00Z");
+    await runSourcing({ marketplace: "shopee", cap: 10, now }, d);
+    expect(saved).toContainEqual(["a", { nextPage: null, lastRunAt: now.toISOString() }]);
+  });
+
   it("not configured → skipped", async () => {
     const { d } = deps({}, { source: null });
     expect(await runSourcing({ marketplace: "shopee", cap: 10 }, d)).toEqual({ skipped: "not_configured" });

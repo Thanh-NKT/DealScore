@@ -33,7 +33,6 @@ export function sourcingCap(env: Env = process.env): number {
   return Number.isFinite(n) && n >= 0 ? n : DEFAULT_DAILY_CAP;
 }
 
-
 /**
  * Active queries to run, in order. Pure.
  * 'all': pending demand first (most requested first), then never-run, then least recently run.

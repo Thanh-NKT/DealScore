@@ -8,8 +8,8 @@ import { toVnDate } from "@/lib/format";
 
 /**
  * Automatic sourcing: walk the active sourcing_queries of one marketplace (pending demand keywords from
- * searches with few results first) page by page and ingest
- * listings Kairo does not have yet (priority 3 = refreshed daily), up to SOURCING_DAILY_CAP per day.
+ * searches with few results first) page by page and ingest listings Kairo does not have yet
+ * (priority 3 = refreshed daily), up to SOURCING_DAILY_CAP per day.
  * New items go through the same ingest_listing + matcher as pasted links (draft + match_candidates
  * when unsure). Per-item failures are counted, never thrown.
  */
@@ -81,8 +81,8 @@ export async function runSourcing(
         }
         failed++;
         if (errors.length < MAX_ERROR_MESSAGES) errors.push(`${q.kind}:${q.value}: ${err instanceof Error ? err.message : String(err)}`);
-        // A stale page token would fail forever: restart this query from page 1 next run.
-        if (q.nextPage != null) await deps.saveQuery(q.id, { nextPage: null, lastRunAt: now.toISOString() });
+        // Always record the attempt: a stale page token restarts from page 1, and a never-run demand query stops being pending until requested again.
+        await deps.saveQuery(q.id, { nextPage: null, lastRunAt: now.toISOString() });
         continue;
       }
       queries++;
