@@ -98,3 +98,54 @@ describe("draftKey", () => {
     for (const b of ["Simple", "Bear", "Lining", "Cocoon"]) expect(KNOWN_BRANDS).not.toContain(b);
   });
 });
+
+describe("draftKey — capacities and network generation", () => {
+  it("every capacity is part of the key", () => {
+    const a = key("Samsung Galaxy A15 8GB 128GB");
+    const b = key("Samsung Galaxy A15 8GB 256GB");
+    expect(a).toBe("samsung|a15|cap=8+128");
+    expect(a).not.toBe(b);
+    expect(key("Samsung Galaxy A15 8GB/128GB")).toBe(a);
+  });
+
+  it("network generation is part of the key and never a unit or model", () => {
+    const g4 = key("Samsung Galaxy A15 4G");
+    const g5 = key("Samsung Galaxy A15 5G");
+    expect(g5).toBe("samsung|a15|net=5g");
+    expect(g4).toBe("samsung|a15|net=4g");
+    expect(key("Samsung Galaxy A15 LTE")).toBe("samsung|a15|net=lte");
+  });
+});
+
+describe("draftKey — condition, combos and replacement parts", () => {
+  it("used / refurbished / display items are never clustered", () => {
+    expect(key("Tai nghe Sony WH-1000XM5 like new 99%")).toBeNull();
+    expect(key("Tai nghe Sony WH-1000XM5 cũ")).toBeNull();
+    expect(key("Samsung Galaxy S24 refurbished")).toBeNull();
+    expect(key("Samsung Galaxy S24 đã qua sử dụng")).toBeNull();
+    expect(key("Samsung Galaxy S24 hàng trưng bày")).toBeNull();
+    expect(key("Samsung Galaxy S24 98%")).toBeNull();
+    expect(key("Samsung Galaxy S24 second hand")).toBeNull();
+  });
+
+  it("'cu' only counts as a whole word and not in 'cu sac'", () => {
+    // Unchanged from before the condition words existed.
+    expect(key("Kính cường lực Samsung S24")).toBe("acc(kinh-cuong-luc):samsung|lucs24");
+    expect(key("Củ sạc Anker 737")).toBe("acc(cu-sac):anker|737");
+  });
+
+  it("combos and multi-packs are never clustered", () => {
+    expect(fullKey("Combo 2 chuột Logitech G304")).toBeNull();
+    expect(fullKey("Bộ 2 chuột Logitech G304")).toBeNull();
+    expect(fullKey("Chuột Logitech G304 set 3")).toBeNull();
+    expect(fullKey("2 cái chuột Logitech G304")).toBeNull();
+    expect(fullKey("Chuột Logitech G304 x2")).toBeNull();
+  });
+
+  it("replacement parts get an accessory key", () => {
+    expect(key("Đệm tai thay thế Sony WH-1000XM5")).not.toBe(key("Tai nghe Sony WH-1000XM5"));
+    expect(key("Đệm tai thay thế Sony WH-1000XM5")?.startsWith("acc(")).toBe(true);
+    expect(key("Pin thay thế Samsung S24 Ultra")?.startsWith("acc(")).toBe(true);
+    expect(fullKey("Keycap Logitech G915")?.startsWith("acc(keycap):")).toBe(true);
+  });
+});

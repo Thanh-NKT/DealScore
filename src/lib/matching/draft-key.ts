@@ -6,7 +6,7 @@
  */
 import { detectBrand } from "@/lib/matching/match";
 import { brandForms } from "@/lib/matching/aliases";
-import { extractAttributes, normalizeText } from "@/lib/matching/attributes";
+import { capacityEqual, extractAttributes, normalizeText } from "@/lib/matching/attributes";
 
 export { KNOWN_BRANDS } from "@/lib/matching/known-brands";
 
@@ -14,7 +14,18 @@ export { KNOWN_BRANDS } from "@/lib/matching/known-brands";
 export const ACCESSORY_WORDS: readonly string[] = [
   "op lung", "op", "bao da", "cap", "cu sac", "sac", "sac du phong", "kinh cuong luc", "cuong luc",
   "mieng dan", "dan man hinh", "film", "case", "cover", "day deo", "tui dung", "de sac", "gia do",
+  // Replacement parts: "Đệm tai thay thế Sony WH-1000XM5" is not the headphones.
+  "dem tai", "mut tai", "pin thay the", "thay the", "linh kien", "keycap", "nut phim",
 ];
+
+/** normalizeText() phrases marking a used / refurbished / display item ("cu" and "2nd" are checked in context). */
+const CONDITION_PHRASES: readonly string[] = [
+  "like new", "likenew", "refurbished", "refurb", "da qua su dung", "qua su dung", "second hand",
+  "hang trung bay", "trung bay",
+];
+
+/** Network generation tokens: "A15 4G" and "A15 5G" are different products. */
+const NETWORK_TOKENS: ReadonlySet<string> = new Set(["3g", "4g", "5g", "lte"]);
 
 /** Words that change the model when they follow it ("S24 Ultra" ≠ "S24"). */
 export const MODEL_SUFFIXES: ReadonlySet<string> = new Set([
@@ -42,6 +53,7 @@ function isYear(tok: string): boolean {
 }
 
 function isModelToken(tok: string, next: string | undefined): boolean {
+  if (NETWORK_TOKENS.has(tok)) return false;
   if (UNIT_TOKEN.test(tok) || SPEC_TOKEN.test(tok) || isYear(tok)) return false;
   if (/[a-z]/.test(tok) && /\d/.test(tok)) return true;
   return /^\d{3,}$/.test(tok) && !(next && (UNIT_WORDS.has(next) || COUNT_WORDS.has(next)));
@@ -89,6 +101,44 @@ function sizeValue(tokens: string[]): string | null {
   return tokens.find((t) => BIG_SIZES.has(t)) ?? null;
 }
 
+function hasPhrase(tokens: string[], phrase: string): boolean {
+  const words = phrase.split(" ");
+  for (let i = 0; i + words.length <= tokens.length; i++) {
+    if (words.every((w, k) => tokens[i + k] === w)) return true;
+  }
+  return false;
+}
+
+/**
+ * Used, refurbished or display items ("cũ", "like new", "99%") and combos / multi-packs ("combo", "bộ 2",
+ * "2 cái", "x2"). "cu sac" is a charger and "2nd gen" a generation (kept as a model token), not a condition.
+ */
+function isUsedOrCombo(original: string, tokens: string[]): boolean {
+  if (/(?:^|[^\d])(?:99|98)\s?%/.test(original)) return true;
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i];
+    const next = tokens[i + 1] ?? "";
+    if (tok === "cu" && next !== "sac") return true;
+    if (tok === "2nd" && next !== "gen" && next !== "generation") return true;
+    if (tok === "combo" || /^x\d+$/.test(tok)) return true;
+    if ((tok === "bo" || tok === "set") && /^\d+$/.test(next)) return true;
+    if (/^\d+$/.test(tok) && next === "cai") return true;
+  }
+  return CONDITION_PHRASES.some((p) => hasPhrase(tokens, p));
+}
+
+/** Every capacity in the title, in GB, distinct (2TB ≈ 2048GB) and sorted: "8GB/128GB" → [8, 128]. */
+function capacities(title: string): number[] {
+  const values: number[] = [];
+  for (const m of title.toLowerCase().matchAll(/(\d+(?:[.,]\d+)?)\s?(gb|tb)(?![a-z])/g)) {
+    const n = Number(m[1].replace(",", "."));
+    if (!Number.isFinite(n) || n <= 0) continue;
+    const gb = Math.round(m[2] === "tb" ? n * 1024 : n);
+    if (!values.some((v) => capacityEqual(v, gb))) values.push(gb);
+  }
+  return values.sort((a, b) => a - b);
+}
+
 export function draftKey(input: { title: string; brands: readonly string[] }): string | null {
   // "S24+" is a different model from "S24": spell the plus out before normalizeText drops it.
   const title = input.title.replace(/([a-z0-9])\+/gi, "$1 plus");
@@ -96,6 +146,7 @@ export function draftKey(input: { title: string; brands: readonly string[] }): s
   if (!brand) return null;
 
   const normalized = normalizeText(title);
+  if (isUsedOrCombo(title, normalized.split(" "))) return null;
   // "1.5 HP" is horsepower (air conditioners), not the HP brand.
   if (normalizeText(brand) === "hp" && /(?:^| )\d+ hp(?: |$)/.test(normalized)) return null;
   let rest = ` ${normalized} `;
@@ -117,7 +168,10 @@ export function draftKey(input: { title: string; brands: readonly string[] }): s
 
   const attrs = extractAttributes(title, { bareVietnameseColors: false });
   const parts = [`${normalizeText(brand)}`, [...models].sort().join("+")];
-  if (attrs.capacityGb != null) parts.push(`cap=${attrs.capacityGb}`);
+  const caps = capacities(title);
+  if (caps.length > 0) parts.push(`cap=${caps.join("+")}`);
+  const nets = [...new Set(tokens.filter((t) => NETWORK_TOKENS.has(t)))].sort();
+  if (nets.length > 0) parts.push(`net=${nets.join("+")}`);
   if (attrs.color != null) parts.push(`color=${attrs.color}`);
   if (attrs.sizeInch != null) parts.push(`size=${attrs.sizeInch}`);
 
