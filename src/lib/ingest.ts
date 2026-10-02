@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { slugify } from "@/lib/slug";
 import { bestMatch, type MatchCandidate, type MatchResult } from "@/lib/matching/match";
-import { loadMatchCandidates } from "@/lib/matching/candidates";
+import { loadBrandVocabulary, loadMatchCandidates } from "@/lib/matching/candidates";
+import { draftKey, KNOWN_BRANDS } from "@/lib/matching/draft-key";
 import { saveListingExtras } from "@/lib/listing-extras";
 import { getSource } from "@/lib/marketplaces/sources";
 import {
@@ -73,11 +74,14 @@ export async function ingestItem(
     return { status: "error", code: "upstream_unavailable" };
   }
 
-  // Matcher v0 (1.9). Ingest must not break because of it: on failure the item is ingested
-  // unmatched, as a draft product.
+  // Matcher v0 (1.9) + draft clustering key. Ingest must not break because of either: on failure the item is ingested
+  // unmatched, as its own draft.
   let candidates: MatchCandidate[] = [];
+  let key: string | null = null;
   try {
-    candidates = await loadMatchCandidates(supabase, item.title);
+    const brands = await loadBrandVocabulary(supabase);
+    candidates = await loadMatchCandidates(supabase, item.title, brands);
+    key = draftKey({ title: item.title, brands: [...brands, ...KNOWN_BRANDS] });
   } catch (err) {
     console.error("Matcher candidates failed, ingesting unmatched:", err);
   }
@@ -91,6 +95,7 @@ export async function ingestItem(
       slug_base: slugify(item.title, 80),
       source: item.source,
       refresh_priority: opts.refreshPriority ?? 1,
+      draft_key: key,
       seller: {
         external_id: item.seller.externalId,
         name: item.seller.name,
