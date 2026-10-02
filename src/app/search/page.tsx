@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { after } from "next/server";
 import {
   getFilterFacets,
   parseSearchParams,
@@ -25,6 +26,7 @@ import { applyPreferences, isEmptyPreferences, type Preferences } from "@/lib/pr
 import { getPreferenceCategories, getPreferencesForUser } from "@/lib/preferences/queries";
 import { PrefsToggle } from "@/components/search/prefs-toggle";
 import { trackAfter } from "@/lib/analytics/track";
+import { recordSearchDemand } from "@/lib/sourcing/record-demand";
 
 interface SearchPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -81,9 +83,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   // always wins over what the text says (applyIntent). getIntentVocab never throws.
   let intentParams: SearchParams = raw;
   let applied: IntentChip[] = [];
+  let demandIntent: { text: string; brands?: string[]; categoryName?: string } | undefined;
   if (raw.intent !== false && raw.q) {
     const vocab = await getIntentVocab();
-    ({ params: intentParams, applied } = applyIntent(raw, parseQueryIntent(raw.q, vocab)));
+    const intent = parseQueryIntent(raw.q, vocab);
+    demandIntent = {
+      text: intent.text,
+      brands: intent.brands,
+      categoryName: vocab.categories.find((c) => c.slug === intent.categorySlug)?.name,
+    };
+    ({ params: intentParams, applied } = applyIntent(raw, intent));
     // Intent consumed every word: "relevance" (the default for a text query) means nothing now, so
     // fall back to the no-query default instead of carrying sort=relevance into the links.
     if (!intentParams.q && !raw.sortExplicit && intentParams.sort === "relevance") {
@@ -142,6 +151,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         sort: params.sort,
       },
     });
+    // Few or no results: ask sourcing to look for this on the marketplaces (spec §6).
+    after(() => recordSearchDemand({ q: raw.q, total: result.total, page: result.page, intent: demandIntent }));
     if (applied.length > 0) {
       // Allow-listed shape only — never the text the user typed.
       trackAfter("search_intent_applied", {
