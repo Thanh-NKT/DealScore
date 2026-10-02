@@ -3,11 +3,12 @@ import type { Database } from "@/lib/database.types";
 import { getSource } from "@/lib/marketplaces/sources";
 import { MarketplaceUnavailableError, type MarketplaceId, type MarketplaceItem, type MarketplaceSource } from "@/lib/marketplaces/types";
 import { ingestItem, type IngestResult } from "@/lib/ingest";
-import { planSourcing, sourcingCap, type SourcingQuery } from "@/lib/sourcing/plan";
+import { planSourcing, sourcingCap, type SourcingMode, type SourcingQuery } from "@/lib/sourcing/plan";
 import { toVnDate } from "@/lib/format";
 
 /**
- * Automatic sourcing: walk the active sourcing_queries of one marketplace page by page and ingest
+ * Automatic sourcing: walk the active sourcing_queries of one marketplace (pending demand keywords from
+ * searches with few results first) page by page and ingest
  * listings Kairo does not have yet (priority 3 = refreshed daily), up to SOURCING_DAILY_CAP per day.
  * New items go through the same ingest_listing + matcher as pasted links (draft + match_candidates
  * when unsure). Per-item failures are counted, never thrown.
@@ -42,7 +43,7 @@ export type SourcingResult =
   | { queries: number; seen: number; ingested: number; skippedExisting: number; failed: number; aborted: boolean };
 
 export async function runSourcing(
-  opts: { marketplace: MarketplaceId; now?: Date; deadline?: number; cap?: number },
+  opts: { marketplace: MarketplaceId; now?: Date; deadline?: number; cap?: number; mode?: SourcingMode },
   deps: SourcingDeps,
 ): Promise<SourcingResult> {
   const now = opts.now ?? new Date();
@@ -53,7 +54,7 @@ export async function runSourcing(
   const budget = cap - (await deps.ingestedToday(opts.marketplace, now));
   if (budget <= 0) return { skipped: "cap_reached" };
 
-  const plan = planSourcing(await deps.loadQueries(opts.marketplace));
+  const plan = planSourcing(await deps.loadQueries(opts.marketplace), { mode: opts.mode ?? "all" });
   if (plan.length === 0) return { skipped: "no_queries" };
 
   let queries = 0;
@@ -144,7 +145,7 @@ export function supabaseSourcingDeps(client: SupabaseClient<Database>, marketpla
     async loadQueries(m) {
       const { data, error } = await client
         .from("sourcing_queries")
-        .select("id, marketplace, kind, value, active, next_page, last_run_at")
+        .select("id, marketplace, kind, value, active, next_page, last_run_at, origin, request_count, last_requested_at")
         .eq("marketplace", m)
         .eq("active", true);
       if (error) throw new Error(`sourcing_queries: ${error.message}`);
@@ -156,6 +157,9 @@ export function supabaseSourcingDeps(client: SupabaseClient<Database>, marketpla
         active: r.active,
         nextPage: r.next_page,
         lastRunAt: r.last_run_at,
+        origin: r.origin as "seed" | "demand",
+        requestCount: r.request_count,
+        lastRequestedAt: r.last_requested_at,
       }));
     },
     async saveQuery(id, patch) {

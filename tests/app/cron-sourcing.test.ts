@@ -44,4 +44,12 @@ describe("POST /api/cron/sourcing", () => {
     rpc.mockResolvedValueOnce({ data: false, error: null });
     expect(await (await POST(req() as never)).json()).toEqual({ skipped: "locked" });
   });
+  it("?mode=demand runs demand mode; default is all", async () => {
+    const demandReq = new Request("https://kairo.vn/api/cron/sourcing?mode=demand", { method: "POST", headers: { authorization: "Bearer s" } });
+    await POST(demandReq as never);
+    expect(runSourcing).toHaveBeenCalledWith(expect.objectContaining({ mode: "demand" }), expect.anything());
+    runSourcing.mockClear();
+    await POST(req() as never);
+    expect(runSourcing).toHaveBeenCalledWith(expect.objectContaining({ mode: "all" }), expect.anything());
+  });
 });

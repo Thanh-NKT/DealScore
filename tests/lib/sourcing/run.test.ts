@@ -15,7 +15,7 @@ const item = (id: string, price: number | null = 100_000): MarketplaceItem => ({
   source: "api",
 });
 const query = (id: string, nextPage: string | null = null): SourcingQuery => ({
-  id, marketplace: "shopee", kind: "keyword", value: id, active: true, nextPage, lastRunAt: null,
+  id, marketplace: "shopee", kind: "keyword", value: id, active: true, nextPage, lastRunAt: null, origin: "seed", requestCount: 0, lastRequestedAt: null,
 });
 
 function deps(pages: Record<string, SearchPage | Error>, over: Partial<SourcingDeps> = {}) {
@@ -91,6 +91,11 @@ describe("runSourcing", () => {
   it("not configured → skipped", async () => {
     const { d } = deps({}, { source: null });
     expect(await runSourcing({ marketplace: "shopee", cap: 10 }, d)).toEqual({ skipped: "not_configured" });
+  });
+  it("mode 'demand' with no pending demand → no_queries, no API call", async () => {
+    const { d } = deps({});
+    expect(await runSourcing({ marketplace: "shopee", cap: 10, mode: "demand" }, d)).toEqual({ skipped: "no_queries" });
+    expect(d.source!.searchItems).not.toHaveBeenCalled();
   });
   it("cap hit mid-page keeps the query's cursor so the rest is revisited", async () => {
     const { d, saved } = deps(
