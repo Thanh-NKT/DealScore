@@ -16,6 +16,8 @@ import { toVnDate } from "@/lib/format";
 
 const PAGE_LIMIT = 50;
 const MAX_ERROR_MESSAGES = 5;
+const DEMAND_LOAD_LIMIT = 200;
+const PG_MAX_ROWS = 1000;
 
 export interface SourcingRunRow {
   marketplace: MarketplaceId;
@@ -30,7 +32,8 @@ export interface SourcingRunRow {
 
 export interface SourcingDeps {
   source: MarketplaceSource | null;
-  loadQueries(marketplace: MarketplaceId): Promise<SourcingQuery[]>;
+  /** "demand" reads only the top demand rows; "all" pages through every active row. */
+  loadQueries(marketplace: MarketplaceId, mode: SourcingMode): Promise<SourcingQuery[]>;
   saveQuery(id: string, patch: { nextPage: string | null; lastRunAt: string }): Promise<void>;
   existingIds(marketplace: MarketplaceId, ids: string[]): Promise<Set<string>>;
   ingest(item: MarketplaceItem): Promise<IngestResult>;
@@ -54,7 +57,8 @@ export async function runSourcing(
   const budget = cap - (await deps.ingestedToday(opts.marketplace, now));
   if (budget <= 0) return { skipped: "cap_reached" };
 
-  const plan = planSourcing(await deps.loadQueries(opts.marketplace), { mode: opts.mode ?? "all" });
+  const mode = opts.mode ?? "all";
+  const plan = planSourcing(await deps.loadQueries(opts.marketplace, mode), { mode });
   if (plan.length === 0) return { skipped: "no_queries" };
 
   let queries = 0;
@@ -142,14 +146,31 @@ function vnDayStart(now: Date): string {
 export function supabaseSourcingDeps(client: SupabaseClient<Database>, marketplace: MarketplaceId): SourcingDeps {
   return {
     source: getSource(marketplace),
-    async loadQueries(m) {
-      const { data, error } = await client
-        .from("sourcing_queries")
-        .select("id, marketplace, kind, value, active, next_page, last_run_at, origin, request_count, last_requested_at")
-        .eq("marketplace", m)
-        .eq("active", true);
-      if (error) throw new Error(`sourcing_queries: ${error.message}`);
-      return (data ?? []).map((r) => ({
+    async loadQueries(m, mode) {
+      const columns =
+        "id, marketplace, kind, value, active, next_page, last_run_at, origin, request_count, last_requested_at";
+      const base = () => client.from("sourcing_queries").select(columns).eq("marketplace", m).eq("active", true);
+      type Row = NonNullable<Awaited<ReturnType<typeof base>>["data"]>[number];
+      const rows: Row[] = [];
+      if (mode === "demand") {
+        // planSourcing only takes the 5 most-requested pending ones: the top 200 by demand is plenty.
+        const { data, error } = await base()
+          .eq("origin", "demand")
+          .order("request_count", { ascending: false })
+          .order("last_requested_at", { ascending: false, nullsFirst: false })
+          .limit(DEMAND_LOAD_LIMIT);
+        if (error) throw new Error(`sourcing_queries: ${error.message}`);
+        rows.push(...(data ?? []));
+      } else {
+        // PostgREST silently truncates at 1,000 rows: page until a short page.
+        for (let from = 0; ; from += PG_MAX_ROWS) {
+          const { data, error } = await base().order("id").range(from, from + PG_MAX_ROWS - 1);
+          if (error) throw new Error(`sourcing_queries: ${error.message}`);
+          rows.push(...(data ?? []));
+          if ((data ?? []).length < PG_MAX_ROWS) break;
+        }
+      }
+      return rows.map((r) => ({
         id: r.id,
         marketplace: r.marketplace as MarketplaceId,
         kind: r.kind as "keyword" | "category",

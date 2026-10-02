@@ -131,4 +131,12 @@ describe("runSourcing", () => {
     expect(runs).toEqual([expect.objectContaining({ ingested: 1, errorSummary: expect.stringContaining("db down") })]);
   });
 
+  it("passes the mode to loadQueries so demand runs read only demand rows server-side", async () => {
+    const loadQueries = vi.fn(async () => [query("a")]);
+    const { d } = deps({}, { loadQueries });
+    await runSourcing({ marketplace: "shopee", cap: 10, mode: "demand" }, d);
+    expect(loadQueries).toHaveBeenCalledWith("shopee", "demand");
+    await runSourcing({ marketplace: "shopee", cap: 10 }, d);
+    expect(loadQueries).toHaveBeenLastCalledWith("shopee", "all");
+  });
 });
