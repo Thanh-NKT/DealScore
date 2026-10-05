@@ -17,9 +17,15 @@ export async function POST(request: NextRequest) {
   const now = new Date();
   const url = buildAuthorizeUrl(cfg, signState(secret, now));
   // Never log the URL or the state.
-  await createAdminClient().rpc("admin_log", {
-    p_action: "tiktok.authorize_link", p_entity: "marketplace", p_entity_id: "tiktok", p_before: null, p_after: null, p_note: "",
-  });
+  // An audit failure must not block the link.
+  try {
+    const { error } = await createAdminClient().rpc("admin_log", {
+      p_action: "tiktok.authorize_link", p_entity: "marketplace", p_entity_id: "tiktok", p_before: null, p_after: null, p_note: "",
+    });
+    if (error) console.error("admin_log failed:", error.message);
+  } catch (err) {
+    console.error("admin_log failed:", err instanceof Error ? err.message : "unknown");
+  }
   return NextResponse.json(
     { url, redirectUri: `${siteUrl().replace(/\/+$/, "")}/api/tiktok/oauth/callback`, expiresAt: new Date(now.getTime() + STATE_TTL_MS).toISOString() },
     { headers: NO_STORE },
