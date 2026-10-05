@@ -22,7 +22,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "bad_request" }, { status: 400, headers: NO_STORE });
   }
   try {
-    const { scored } = await recomputeDealScores(createAdminClient(), { now: new Date(), variantIds: ids as string[] });
+    const variantIds = ids as string[];
+    const db = createAdminClient();
+    const { scored } = await recomputeDealScores(db, { now: new Date(), variantIds });
+    // A variant that lost its last visible offer has no current price: recompute skips it, so drop its old score.
+    const { data: priced, error: pricedErr } = await db.from("variant_current_price").select("variant_id").in("variant_id", variantIds);
+    if (pricedErr) throw pricedErr;
+    const keep = new Set((priced ?? []).map((r) => r.variant_id));
+    const stale = variantIds.filter((id) => !keep.has(id));
+    if (stale.length) {
+      const { error: delErr } = await db.from("variant_deal_scores").delete().in("variant_id", stale);
+      if (delErr) throw delErr;
+    }
     return NextResponse.json({ recomputed: scored }, { headers: NO_STORE });
   } catch (err) {
     reportError(err, { route: "admin.recompute" });

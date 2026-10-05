@@ -1,7 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.fn(async () => ({ data: null, error: null }));
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc }) }));
+// variant_current_price rows that still exist after a recompute; variant_deal_scores deletions are recorded.
+let priced: string[] = [];
+const deletedScores: string[][] = [];
+const from = vi.fn((table: string) => ({
+  select: () => ({
+    in: async (_col: string, ids: string[]) => ({
+      data: table === "variant_current_price" ? ids.filter((i) => priced.includes(i)).map((variant_id) => ({ variant_id })) : [],
+      error: null,
+    }),
+  }),
+  delete: () => ({
+    in: async (_col: string, ids: string[]) => {
+      if (table === "variant_deal_scores") deletedScores.push(ids);
+      return { error: null };
+    },
+  }),
+}));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc, from }) }));
 const recomputeDealScores = vi.fn(async () => ({ scored: 3, tally: {} }));
 vi.mock("@/lib/pricing/recompute-scores", () => ({ recomputeDealScores }));
 
@@ -67,6 +84,19 @@ describe("POST /api/admin/deal-scores/recompute", () => {
     const res = await recompute.POST(req("/api/admin/deal-scores/recompute", { method: "POST", body: JSON.stringify({ variantIds: [A, B] }) }) as never);
     expect(await res.json()).toEqual({ recomputed: 3 });
     expect(recomputeDealScores).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ variantIds: [A, B] }));
+  });
+  it("deletes stale scores of variants that lost their current price", async () => {
+    priced = [A];
+    deletedScores.length = 0;
+    const res = await recompute.POST(req("/api/admin/deal-scores/recompute", { method: "POST", body: JSON.stringify({ variantIds: [A, B] }) }) as never);
+    expect(res.status).toBe(200);
+    expect(deletedScores).toEqual([[B]]);
+  });
+  it("deletes nothing when every variant still has a price", async () => {
+    priced = [A, B];
+    deletedScores.length = 0;
+    await recompute.POST(req("/api/admin/deal-scores/recompute", { method: "POST", body: JSON.stringify({ variantIds: [A, B] }) }) as never);
+    expect(deletedScores).toEqual([]);
   });
   it("400 for a bad body or > 500 ids", async () => {
     expect((await recompute.POST(req("/api/admin/deal-scores/recompute", { method: "POST", body: "{}" }) as never)).status).toBe(400);
