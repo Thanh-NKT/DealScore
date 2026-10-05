@@ -88,7 +88,8 @@ Never mix these up; the choice encodes the security model.
   `src/lib/listing-extras.ts` + `src/lib/vouchers/store.ts` (`upsertVouchers`, called with the admin client),
   `src/app/api/vouchers/refresh/route.ts`, `src/lib/vouchers/refresh-effective.ts`,
   `src/lib/tiktok/source.ts`, `src/app/api/tiktok/oauth/callback/route.ts`, `src/lib/sourcing/run.ts` (qua client truyền vào), `src/lib/sourcing/record-demand.ts`, `src/app/api/cron/sourcing/route.ts`, `scripts/run-sourcing.ts`,
-  `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`.
+  `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`, `src/app/api/admin/*/route.ts`.
+  **Admin:** app riêng `Admin-DealScore` (một người dùng) gọi RPC `admin_*` (migration 0021, ghi `admin_audit`) và `/api/admin/*` (bảo vệ bằng `ADMIN_API_SECRET`).
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
