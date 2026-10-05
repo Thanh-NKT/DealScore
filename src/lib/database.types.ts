@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_audit: {
+        Row: {
+          action: string
+          after: Json | null
+          at: string
+          before: Json | null
+          entity: string
+          entity_id: string | null
+          id: number
+          note: string | null
+        }
+        Insert: {
+          action: string
+          after?: Json | null
+          at?: string
+          before?: Json | null
+          entity: string
+          entity_id?: string | null
+          id?: never
+          note?: string | null
+        }
+        Update: {
+          action?: string
+          after?: Json | null
+          at?: string
+          before?: Json | null
+          entity?: string
+          entity_id?: string | null
+          id?: never
+          note?: string | null
+        }
+        Relationships: []
+      }
       affiliate_offers: {
         Row: {
           affiliate_url: string | null
@@ -874,6 +907,13 @@ export type Database = {
             foreignKeyName: "product_variants_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "admin_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1486,6 +1526,13 @@ export type Database = {
             foreignKeyName: "watches_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "admin_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "watches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -1507,6 +1554,20 @@ export type Database = {
       }
     }
     Views: {
+      admin_drafts: {
+        Row: {
+          canonical_name: string | null
+          created_at: string | null
+          draft_key: string | null
+          id: string | null
+          listing_count: number | null
+          marketplaces: string[] | null
+          max_price: number | null
+          min_price: number | null
+          slug: string | null
+        }
+        Relationships: []
+      }
       affiliate_by_alert: {
         Row: {
           alert_event_id: string | null
@@ -1584,6 +1645,55 @@ export type Database = {
       }
     }
     Functions: {
+      admin_cron_status: {
+        Args: never
+        Returns: {
+          active: boolean
+          failures_24h: number
+          jobname: string
+          last_end: string
+          last_message: string
+          last_start: string
+          last_status: string
+          schedule: string
+        }[]
+      }
+      admin_log: {
+        Args: {
+          p_action: string
+          p_after: Json
+          p_before: Json
+          p_entity: string
+          p_entity_id: string
+          p_note: string
+        }
+        Returns: undefined
+      }
+      admin_move_offer: {
+        Args: { p_offer_id: string; p_target_variant_id?: string }
+        Returns: Json
+      }
+      admin_overview_counts: { Args: never; Returns: Json }
+      admin_promote_draft: {
+        Args: { p: Json; p_product_id: string }
+        Returns: Json
+      }
+      admin_rebuild_variant_rollup: {
+        Args: { p_variant_ids: string[] }
+        Returns: undefined
+      }
+      admin_review_match: {
+        Args: {
+          p_candidate_id: string
+          p_decision: string
+          p_variant_id?: string
+        }
+        Returns: Json
+      }
+      admin_set_listings_inactive: {
+        Args: { p_listing_ids: string[]; p_note: string }
+        Returns: number
+      }
       claim_due_deliveries: {
         Args: { p_limit: number; p_now: string }
         Returns: {
