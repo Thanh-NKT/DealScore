@@ -138,6 +138,117 @@ describe("admin_review_match", () => {
   });
 });
 
+describe("review fixes", () => {
+  async function pendingCandidate(ext: string) {
+    const offer = await offerOf(ext);
+    const { data } = await admin.from("match_candidates")
+      .insert({ offer_id: offer.id, suggested_variant_id: verifiedVariantId, confidence: 0.8, reason: "t", decision: "pending" })
+      .select("id").single();
+    return data!.id;
+  }
+  async function decisionOf(id: string) {
+    const { data } = await admin.from("match_candidates").select("decision").eq("id", id).single();
+    return data!.decision;
+  }
+  async function watchesOf(userId: string) {
+    const { data } = await admin.from("watches").select("id, variant_id, product_id").eq("user_id", userId);
+    return data ?? [];
+  }
+
+  it("moving the only offer of a watched draft re-points the watch", async () => {
+    const d = await ingestDraft(`w1${tag}`, 900_000);
+    const draftProduct = await productOfVariant(d.variant_id);
+    const { data: w, error: wErr } = await admin.from("watches")
+      .insert({ user_id: user.id, variant_id: d.variant_id, target_price: 800_000 }).select("id").single();
+    expect(wErr).toBeNull();
+    const offer = await offerOf(`w1${tag}`);
+    const { data, error } = await admin.rpc("admin_move_offer", { p_offer_id: offer.id, p_target_variant_id: verifiedVariantId });
+    expect(error).toBeNull();
+    expect(data).toMatchObject({ deleted_product_id: draftProduct });
+    expect(await watchesOf(user.id)).toEqual([{ id: w!.id, variant_id: verifiedVariantId, product_id: verifiedProductId }]);
+    const { data: log } = await admin.from("admin_audit").select("after").eq("entity_id", offer.id).single();
+    expect(log!.after).toMatchObject({ moved_watches: 1, dropped_watches: 0 });
+  });
+
+  it("a draft watch duplicating the user's target watch is dropped, the target watch stays", async () => {
+    const d = await ingestDraft(`w2${tag}`, 900_000);
+    await admin.from("watches").insert({ user_id: user.id, variant_id: d.variant_id, target_price: 700_000 });
+    expect(await watchesOf(user.id)).toHaveLength(2);
+    const id = await pendingCandidate(`w2${tag}`);
+    const { error } = await admin.rpc("admin_review_match", { p_candidate_id: id, p_decision: "accept" });
+    expect(error).toBeNull();
+    const after = await watchesOf(user.id);
+    expect(after).toHaveLength(1);
+    expect(after[0]).toMatchObject({ variant_id: verifiedVariantId });
+    const { data: log } = await admin.from("admin_audit").select("after").eq("entity_id", id).single();
+    expect(log!.after).toMatchObject({ moved_watches: 0, dropped_watches: 1 });
+  });
+
+  it("promote rejects the draft's pending candidates", async () => {
+    const d = await ingestDraft(`p1${tag}`, 900_000);
+    const id = await pendingCandidate(`p1${tag}`);
+    const { error } = await admin.rpc("admin_promote_draft", {
+      p_product_id: (await productOfVariant(d.variant_id))!,
+      p: { canonical_name: `Sony P ${tag}`, brand: "Sony", category_id: categoryId, variants: [] },
+    });
+    expect(error).toBeNull();
+    expect(await decisionOf(id)).toBe("rejected");
+  });
+
+  it("move closes the moved offer's pending candidates", async () => {
+    await ingestDraft(`m1${tag}`, 900_000);
+    const id = await pendingCandidate(`m1${tag}`);
+    const offer = await offerOf(`m1${tag}`);
+    const { error } = await admin.rpc("admin_move_offer", { p_offer_id: offer.id });
+    expect(error).toBeNull();
+    expect(await decisionOf(id)).toBe("rejected");
+  });
+
+  it("moving one offer out of a draft that still has others keeps the draft", async () => {
+    const a = await ingestDraft(`k1${tag}`, 900_000);
+    await ingestDraft(`k2${tag}`, 900_000);
+    const draftA = await productOfVariant(a.variant_id);
+    // Put k2 into draft A, so A has two offers.
+    const k2 = await offerOf(`k2${tag}`);
+    expect((await admin.rpc("admin_move_offer", { p_offer_id: k2.id, p_target_variant_id: a.variant_id })).error).toBeNull();
+    const k1 = await offerOf(`k1${tag}`);
+    const { data, error } = await admin.rpc("admin_move_offer", { p_offer_id: k1.id, p_target_variant_id: verifiedVariantId });
+    expect(error).toBeNull();
+    expect((data as { deleted_product_id: string | null }).deleted_product_id).toBeNull();
+    expect(await productOfVariant(a.variant_id)).toBe(draftA);
+  });
+
+  it("reviewing an already-decided candidate errors", async () => {
+    await ingestDraft(`r1${tag}`, 900_000);
+    const id = await pendingCandidate(`r1${tag}`);
+    expect((await admin.rpc("admin_review_match", { p_candidate_id: id, p_decision: "reject" })).error).toBeNull();
+    const again = await admin.rpc("admin_review_match", { p_candidate_id: id, p_decision: "accept" });
+    expect(again.error?.message).toContain("đã được xử lý");
+  });
+
+  it("promote: capacity_gb is derived from variant_key when absent, an explicit value overrides it", async () => {
+    const d1 = await ingestDraft(`c1${tag}`, 900_000);
+    const r1 = await admin.rpc("admin_promote_draft", {
+      p_product_id: (await productOfVariant(d1.variant_id))!,
+      p: { canonical_name: `Sony C1 ${tag}`, brand: "Sony", category_id: categoryId,
+           variants: [{ id: d1.variant_id, variant_key: "256GB" }] },
+    });
+    expect(r1.error).toBeNull();
+    const { data: v1 } = await admin.from("product_variants").select("capacity_gb").eq("id", d1.variant_id).single();
+    expect(v1!.capacity_gb).toBe(256);
+
+    const d2 = await ingestDraft(`c2${tag}`, 900_000);
+    const r2 = await admin.rpc("admin_promote_draft", {
+      p_product_id: (await productOfVariant(d2.variant_id))!,
+      p: { canonical_name: `Sony C2 ${tag}`, brand: "Sony", category_id: categoryId,
+           variants: [{ id: d2.variant_id, variant_key: "Xanh", capacity_gb: 512 }] },
+    });
+    expect(r2.error).toBeNull();
+    const { data: v2 } = await admin.from("product_variants").select("capacity_gb, variant_key").eq("id", d2.variant_id).single();
+    expect(v2).toEqual({ capacity_gb: 512, variant_key: "Xanh" });
+  });
+});
+
 describe("other admin RPCs", () => {
   it("set_listings_inactive, cron_status, overview_counts", async () => {
     await ingestDraft(`8${tag}`, 900_000);

@@ -1682,6 +1682,10 @@ export type Database = {
         Args: { p_variant_ids: string[] }
         Returns: undefined
       }
+      admin_repoint_watches: {
+        Args: { p_from_product_id: string; p_to_variant_id: string }
+        Returns: Json
+      }
       admin_review_match: {
         Args: {
           p_candidate_id: string

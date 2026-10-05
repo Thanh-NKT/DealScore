@@ -49,6 +49,36 @@ begin
   perform refresh_variant_current_price(p_variant_ids);
 end $$;
 
+-- Before an emptied draft is deleted (watches cascade on delete), re-point its watches to the variant the
+-- offer moved to. watches_user_variant_unique allows one watch per (user, variant): a draft watch whose user
+-- already watches the target, or a second draft watch of the same user, is dropped (the user keeps one watch
+-- on the target). Returns {moved, dropped}.
+create or replace function public.admin_repoint_watches(p_from_product_id uuid, p_to_variant_id uuid)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_to_pid  uuid;
+  v_dropped integer;
+  v_moved   integer;
+begin
+  select product_id into v_to_pid from product_variants where id = p_to_variant_id;
+  if v_to_pid is null then
+    raise exception 'admin_repoint_watches: variant đích không tồn tại';
+  end if;
+  with ranked as (
+    select w.id, w.user_id,
+           row_number() over (partition by w.user_id order by w.created_at, w.id) as rn
+    from watches w where w.product_id = p_from_product_id
+  )
+  delete from watches w using ranked r
+   where w.id = r.id
+     and (r.rn > 1 or exists (select 1 from watches t
+                               where t.user_id = r.user_id and t.variant_id = p_to_variant_id));
+  get diagnostics v_dropped = row_count;
+  update watches set variant_id = p_to_variant_id, product_id = v_to_pid where product_id = p_from_product_id;
+  get diagnostics v_moved = row_count;
+  return jsonb_build_object('moved', v_moved, 'dropped', v_dropped);
+end $$;
+
 -- 3 ---------------------------------------------------------------------------
 create or replace function public.admin_promote_draft(p_product_id uuid, p jsonb)
 returns jsonb language plpgsql security definer set search_path = public as $$
@@ -78,9 +108,13 @@ begin
     end if;
     update product_variants
        set variant_key = coalesce(nullif(btrim(v->>'variant_key'), ''), variant_key),
-           capacity_gb = nullif(v->>'capacity_gb', '')::integer,
            specs       = coalesce(v->'specs', specs)
      where id = (v->>'id')::uuid;
+    -- trg_variant_capacity (0015) re-derives capacity_gb from variant_key/specs on the update above; an explicit
+    -- capacity_gb from the admin overrides it (an update of capacity_gb alone does not fire that trigger).
+    if v ? 'capacity_gb' then
+      update product_variants set capacity_gb = nullif(v->>'capacity_gb', '')::integer where id = (v->>'id')::uuid;
+    end if;
   end loop;
 
   update products
@@ -123,6 +157,7 @@ declare
   v_base     text;
   v_slug     text;
   v_n        integer := 1;
+  v_watches  jsonb;
 begin
   select o.*, l.title as listing_title into v_offer
   from offers o join listings l on l.id = o.listing_id where o.id = p_offer_id for update of o;
@@ -162,9 +197,13 @@ begin
     returning id into v_to_vid;
     update offers set variant_id = v_to_vid, match_status = 'pending', match_confidence = null where id = p_offer_id;
   end if;
+  -- The admin placed the offer by hand: its open suggestions are moot.
+  update match_candidates set decision = 'rejected', reviewed_at = now()
+   where offer_id = p_offer_id and (decision = 'pending' or decision is null);
 
   if v_from_st = 'draft' and not exists (
        select 1 from offers o join product_variants pv on pv.id = o.variant_id where pv.product_id = v_from_pid) then
+    v_watches := admin_repoint_watches(v_from_pid, v_to_vid);
     delete from products where id = v_from_pid;
     v_deleted := v_from_pid;
   end if;
@@ -172,7 +211,9 @@ begin
   perform admin_rebuild_variant_rollup(array_remove(array[v_offer.variant_id, v_to_vid], null));
   perform admin_log('offer.move', 'offer', p_offer_id::text,
                     jsonb_build_object('variant_id', v_offer.variant_id, 'product_id', v_from_pid),
-                    jsonb_build_object('variant_id', v_to_vid, 'product_id', v_to_pid, 'deleted_product_id', v_deleted), null);
+                    jsonb_build_object('variant_id', v_to_vid, 'product_id', v_to_pid, 'deleted_product_id', v_deleted,
+                                       'moved_watches', coalesce((v_watches->>'moved')::integer, 0),
+                                       'dropped_watches', coalesce((v_watches->>'dropped')::integer, 0)), null);
   return jsonb_build_object('from_variant_id', v_offer.variant_id, 'to_variant_id', v_to_vid,
                             'to_product_id', v_to_pid, 'deleted_product_id', v_deleted);
 end $$;
@@ -187,14 +228,18 @@ declare
   v_from_st text;
   v_target  uuid;
   v_deleted uuid;
+  v_watches jsonb;
 begin
   if p_decision not in ('accept', 'reject', 'reassign') then
     raise exception 'admin_review_match: quyết định không hợp lệ';
   end if;
   select mc.*, o.variant_id as offer_variant into c
-  from match_candidates mc join offers o on o.id = mc.offer_id where mc.id = p_candidate_id for update of mc;
+  from match_candidates mc join offers o on o.id = mc.offer_id where mc.id = p_candidate_id for update of mc, o;
   if not found then
     raise exception 'admin_review_match: không tìm thấy gợi ý';
+  end if;
+  if c.decision is not null and c.decision <> 'pending' then
+    raise exception 'admin_review_match: gợi ý đã được xử lý';
   end if;
   v_from := c.offer_variant;
 
@@ -219,13 +264,16 @@ begin
 
   if v_from_st = 'draft' and not exists (
        select 1 from offers o join product_variants pv on pv.id = o.variant_id where pv.product_id = v_from_p) then
+    v_watches := admin_repoint_watches(v_from_p, v_target);
     delete from products where id = v_from_p;
     v_deleted := v_from_p;
   end if;
   perform admin_rebuild_variant_rollup(array_remove(array[v_from, v_target], null));
   perform admin_log('match.review', 'match_candidate', p_candidate_id::text,
                     jsonb_build_object('variant_id', v_from),
-                    jsonb_build_object('decision', p_decision, 'variant_id', v_target, 'deleted_product_id', v_deleted), null);
+                    jsonb_build_object('decision', p_decision, 'variant_id', v_target, 'deleted_product_id', v_deleted,
+                                       'moved_watches', coalesce((v_watches->>'moved')::integer, 0),
+                                       'dropped_watches', coalesce((v_watches->>'dropped')::integer, 0)), null);
   return jsonb_build_object('offer_id', c.offer_id, 'variant_id', v_target,
                             'touched_variant_ids', to_jsonb(array_remove(array[v_from, v_target], null)));
 end $$;
@@ -308,6 +356,7 @@ revoke all on public.admin_drafts from anon, authenticated;
 -- 9 ---------------------------------------------------------------------------
 revoke execute on function public.admin_log(text, text, text, jsonb, jsonb, text),
                            public.admin_rebuild_variant_rollup(uuid[]),
+                           public.admin_repoint_watches(uuid, uuid),
                            public.admin_promote_draft(uuid, jsonb),
                            public.admin_move_offer(uuid, uuid),
                            public.admin_review_match(uuid, text, uuid),
@@ -317,6 +366,7 @@ revoke execute on function public.admin_log(text, text, text, jsonb, jsonb, text
   from public, anon, authenticated;
 grant execute on function public.admin_log(text, text, text, jsonb, jsonb, text),
                           public.admin_rebuild_variant_rollup(uuid[]),
+                          public.admin_repoint_watches(uuid, uuid),
                           public.admin_promote_draft(uuid, jsonb),
                           public.admin_move_offer(uuid, uuid),
                           public.admin_review_match(uuid, text, uuid),
