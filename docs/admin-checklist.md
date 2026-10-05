@@ -49,19 +49,19 @@
   `pnpm marketplace:probe`)
 - [ ] **P1** [API] `POST /api/admin/sourcing/run` `{ marketplace?, mode }` → chạy một lượt sourcing (dùng chung khóa `sourcing`)
 - [x] **P0** [RPC] `admin_promote_draft(product_id, fields, variants)` — duyệt bản nháp → verified (một transaction)
-- [x] **P0** [RPC] `admin_move_offer(offer_id, target_variant_id | null, block_reclustering)` — tách offer khỏi bản nháp gom
-  nhầm (null = tạo bản nháp mới); `block_reclustering` ghi dấu để `ingest_listing` không gom offer này lại
+- [x] **P0** [RPC] `admin_move_offer(offer_id, target_variant_id | null)` — tách offer khỏi bản nháp gom
+  nhầm (null = tạo bản nháp mới); tham số `block_reclustering`: không cần: `ingest_listing` không bao giờ gom lại listing đã có
 - [x] **P0** [RPC] `admin_review_match(candidate_id, decision, variant_id?)` — duyệt / từ chối / gán lại gợi ý trong `match_candidates`, cập nhật `offers.match_status` + giá hiện tại
 - [ ] **P1** [API] `POST /api/admin/conversions/import` (CSV, logic của `pnpm conversions:import`)
 - [ ] **P1** [RPC] `admin_merge_products(source_id, target_id, variant_map)` — chuyển variant / offer / Watch / lịch sử giá,
   rồi `refresh_variant_current_price` + tính lại Deal Score
-- [ ] **P1** [RPC] `admin_set_listings_inactive(listing_ids[])`, `admin_cron_status()` (đọc `cron.job_run_details`, vốn không
+- [x] **P1** [RPC] `admin_set_listings_inactive(listing_ids[])`, `admin_cron_status()` (đọc `cron.job_run_details`, vốn không
   lộ qua PostgREST)
-- [ ] **P1** Ghi `admin_audit` bên trong các RPC trên (nếu chốt có nhật ký)
+- [x] **P1** Ghi `admin_audit` bên trong các RPC trên (nếu chốt có nhật ký)
 
 ## Nền tảng (app admin)
 - [x] **P0** Đăng nhập một tài khoản + kiểm `ADMIN_EMAIL` ở server trước mọi thao tác
-- [ ] **P1** Trang tổng quan (đếm nhanh: nháp chờ duyệt, gợi ý match chờ, listing lỗi, lượt cron lỗi 24 giờ, hạn token TikTok)
+- [x] **P1** Trang tổng quan (đếm nhanh: nháp chờ duyệt, gợi ý match chờ, listing lỗi, lượt cron lỗi 24 giờ, hạn token TikTok)
 
 ## Kết nối sàn & nguồn dữ liệu
 - [x] **P0** [API] Trạng thái kết nối từng sàn: đã cấu hình chưa (env của Kairo — app admin không đọc được, cần `GET /api/admin/status`), thật hay giả lập, lần lấy giá thành công gần nhất
@@ -105,6 +105,8 @@
   bí danh (hiện phải sửa `src/lib/matching/known-brands.ts` và `aliases.ts`)
 - [ ] **P2** [DB] Dashboard chất lượng dữ liệu (G2): `metrics_matching_quality` (offer theo trạng thái match và theo sàn, tỷ lệ
   gợi ý được duyệt), tỷ lệ bản nháp được gom, số bản nháp bị tách sau duyệt (đo độ đúng của `draftKey`)
+
+> Ghi chú: Watch được chuyển sang sản phẩm đích giữ nguyên baseline/trạng thái báo.
 
 ## Affiliate & doanh thu
 - [ ] **P1** [DB] Báo cáo affiliate: doanh thu, tỷ lệ khớp đơn ↔ click (`affiliate_daily`, `affiliate_by_alert`), theo sàn
