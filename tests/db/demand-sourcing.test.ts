@@ -36,6 +36,14 @@ describe("request_sourcing_query", () => {
     expect(data).toEqual({ active: false, request_count: 1 });
   });
 
+  it("does not reactivate a demand keyword an admin turned off", async () => {
+    await admin.rpc("request_sourcing_query", { p_value: `${tag} off`, p_marketplaces: ["shopee"], p_daily_cap: 100 });
+    await admin.from("sourcing_queries").update({ active: false }).eq("value", `${tag} off`);
+    await admin.rpc("request_sourcing_query", { p_value: `${tag} off`, p_marketplaces: ["shopee"], p_daily_cap: 100 });
+    const { data } = await admin.from("sourcing_queries").select("active, request_count, origin").eq("value", `${tag} off`).single();
+    expect(data).toEqual({ active: false, request_count: 2, origin: "demand" });
+  });
+
   it("anon/authenticated cannot call it", async () => {
     const user = await createTestUser();
     try {

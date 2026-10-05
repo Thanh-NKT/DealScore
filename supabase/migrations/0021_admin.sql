@@ -158,6 +158,7 @@ declare
   v_slug     text;
   v_n        integer := 1;
   v_watches  jsonb;
+  v_snapshot jsonb;
 begin
   select o.*, l.title as listing_title into v_offer
   from offers o join listings l on l.id = o.listing_id where o.id = p_offer_id for update of o;
@@ -204,13 +205,16 @@ begin
   if v_from_st = 'draft' and not exists (
        select 1 from offers o join product_variants pv on pv.id = o.variant_id where pv.product_id = v_from_pid) then
     v_watches := admin_repoint_watches(v_from_pid, v_to_vid);
+    select to_jsonb(pr) - 'search_text' into v_snapshot from products pr where pr.id = v_from_pid;
     delete from products where id = v_from_pid;
     v_deleted := v_from_pid;
   end if;
 
   perform admin_rebuild_variant_rollup(array_remove(array[v_offer.variant_id, v_to_vid], null));
   perform admin_log('offer.move', 'offer', p_offer_id::text,
-                    jsonb_build_object('variant_id', v_offer.variant_id, 'product_id', v_from_pid),
+                    jsonb_build_object('variant_id', v_offer.variant_id, 'product_id', v_from_pid)
+                      || case when v_snapshot is null then '{}'::jsonb
+                              else jsonb_build_object('deleted_product', v_snapshot) end,
                     jsonb_build_object('variant_id', v_to_vid, 'product_id', v_to_pid, 'deleted_product_id', v_deleted,
                                        'moved_watches', coalesce((v_watches->>'moved')::integer, 0),
                                        'dropped_watches', coalesce((v_watches->>'dropped')::integer, 0)), null);
@@ -229,6 +233,7 @@ declare
   v_target  uuid;
   v_deleted uuid;
   v_watches jsonb;
+  v_snapshot jsonb;
 begin
   if p_decision not in ('accept', 'reject', 'reassign') then
     raise exception 'admin_review_match: quyết định không hợp lệ';
@@ -261,16 +266,22 @@ begin
   from product_variants pv join products pr on pr.id = pv.product_id where pv.id = v_from;
   update offers set variant_id = v_target, match_status = 'manual', match_confidence = null where id = c.offer_id;
   update match_candidates set decision = 'accepted', reviewed_at = now(), suggested_variant_id = v_target where id = p_candidate_id;
+  -- The offer is placed: its other open suggestions are moot.
+  update match_candidates set decision = 'rejected', reviewed_at = now()
+   where offer_id = c.offer_id and id <> p_candidate_id and (decision = 'pending' or decision is null);
 
   if v_from_st = 'draft' and not exists (
        select 1 from offers o join product_variants pv on pv.id = o.variant_id where pv.product_id = v_from_p) then
     v_watches := admin_repoint_watches(v_from_p, v_target);
+    select to_jsonb(pr) - 'search_text' into v_snapshot from products pr where pr.id = v_from_p;
     delete from products where id = v_from_p;
     v_deleted := v_from_p;
   end if;
   perform admin_rebuild_variant_rollup(array_remove(array[v_from, v_target], null));
   perform admin_log('match.review', 'match_candidate', p_candidate_id::text,
-                    jsonb_build_object('variant_id', v_from),
+                    jsonb_build_object('variant_id', v_from)
+                      || case when v_snapshot is null then '{}'::jsonb
+                              else jsonb_build_object('deleted_product', v_snapshot) end,
                     jsonb_build_object('decision', p_decision, 'variant_id', v_target, 'deleted_product_id', v_deleted,
                                        'moved_watches', coalesce((v_watches->>'moved')::integer, 0),
                                        'dropped_watches', coalesce((v_watches->>'dropped')::integer, 0)), null);
@@ -352,6 +363,45 @@ left join variant_current_price vcp on vcp.variant_id = pv.id
 where pr.status = 'draft'
 group by pr.id;
 revoke all on public.admin_drafts from anon, authenticated;
+
+-- 8c --------------------------------------------------------------------------
+-- request_sourcing_query (0019) with one change: a repeat request no longer re-enables a demand keyword
+-- (0019 set `active = active or origin = 'demand'`), so the admin's "turn off junk keyword" sticks.
+create or replace function public.request_sourcing_query(p_value text, p_marketplaces text[], p_daily_cap integer)
+returns integer
+language plpgsql security definer set search_path = public as $$
+declare
+  v_m        text;
+  v_inserted integer := 0;
+  v_count    integer;
+  v_day      timestamptz := (date_trunc('day', now() at time zone 'Asia/Ho_Chi_Minh')) at time zone 'Asia/Ho_Chi_Minh';
+begin
+  if coalesce(btrim(p_value), '') = '' then
+    return 0;
+  end if;
+  perform pg_advisory_xact_lock(hashtext('sourcing-demand'));
+  foreach v_m in array coalesce(p_marketplaces, '{}'::text[]) loop
+    continue when v_m not in ('shopee', 'tiktok');
+    update sourcing_queries
+       set request_count = request_count + 1,
+           last_requested_at = now()
+     where marketplace = v_m and kind = 'keyword' and value = p_value;
+    continue when found;
+    select count(*) into v_count
+      from sourcing_queries
+     where marketplace = v_m and origin = 'demand' and created_at >= v_day;
+    continue when v_count >= greatest(coalesce(p_daily_cap, 0), 0);
+    insert into sourcing_queries (marketplace, kind, value, origin, request_count, last_requested_at)
+    values (v_m, 'keyword', p_value, 'demand', 1, now())
+    on conflict (marketplace, kind, value) do nothing;
+    if found then
+      v_inserted := v_inserted + 1;
+    end if;
+  end loop;
+  return v_inserted;
+end $$;
+revoke execute on function public.request_sourcing_query(text, text[], integer) from public, anon, authenticated;
+grant execute on function public.request_sourcing_query(text, text[], integer) to service_role;
 
 -- 9 ---------------------------------------------------------------------------
 revoke execute on function public.admin_log(text, text, text, jsonb, jsonb, text),
