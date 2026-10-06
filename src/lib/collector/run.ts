@@ -25,6 +25,12 @@ import { reportError } from "@/lib/observability";
  *
  * Follows the §6 contract of the Watch & Alert spec. Per-item failures are counted, never thrown;
  * only a whole-run failure (DB down) throws.
+ *
+ * Time budget: `deadline` is the end of the whole run. Fetching stops POST_PROCESSING_RESERVE_MS before
+ * it, so the rollup, Deal Scores and alerts get their own share (evaluateWatches runs until `deadline`).
+ * The variants a run touched are stored in collector_runs.pending_variant_ids until they are re-scored:
+ * when a run is killed (maxDuration) or its post-processing fails, the next run re-scores them and
+ * closes the abandoned run row.
  */
 
 export interface CollectorDeps {
@@ -86,6 +92,53 @@ export type CollectorResult =
 
 const MAX_ERROR_MESSAGES = 5;
 const CANDIDATE_POOL_FACTOR = 5;
+/** Part of the run's budget kept for post-processing (effective prices, rollup, scores, alerts). */
+export const POST_PROCESSING_RESERVE_MS = 20_000;
+/** A run still open after this long was killed: the collector lock lives 600 s. */
+export const STALE_RUN_MS = 15 * 60_000;
+const MAX_ADOPTED_RUNS = 50;
+
+/**
+ * Variants left un-scored by earlier runs (killed, or post-processing failed), and the earliest day
+ * they were observed. Closes runs that never finished. Best effort: a failure only costs a retry later.
+ */
+async function adoptPendingRuns(
+  client: SupabaseClient<Database>,
+  ownRunId: string,
+  now: Date,
+  errors: string[],
+): Promise<{ variantIds: string[]; since: string | null }> {
+  const staleBefore = new Date(now.getTime() - STALE_RUN_MS).toISOString();
+  const { data, error } = await client
+    .from("collector_runs")
+    .select("id, started_at, finished_at, pending_variant_ids")
+    .neq("id", ownRunId)
+    .or(`pending_variant_ids.not.is.null,and(finished_at.is.null,started_at.lt.${staleBefore})`)
+    .order("started_at", { ascending: true })
+    .limit(MAX_ADOPTED_RUNS);
+  if (error) {
+    errors.push(`pending runs: ${error.message}`);
+    return { variantIds: [], since: null };
+  }
+  const rows = data ?? [];
+  if (rows.length === 0) return { variantIds: [], since: null };
+
+  const variantIds = [...new Set(rows.flatMap((r) => r.pending_variant_ids ?? []))];
+  const abandoned = rows.filter((r) => r.finished_at == null && r.started_at < staleBefore).map((r) => r.id);
+  const adopted = rows.map((r) => r.id);
+  const nowIso = new Date().toISOString();
+  if (abandoned.length > 0) {
+    const { error: closeError } = await client
+      .from("collector_runs")
+      .update({ finished_at: nowIso, error_summary: `abandoned: closed by run ${ownRunId} (stopped before it finished)` })
+      .in("id", abandoned);
+    if (closeError) errors.push(`close abandoned runs: ${closeError.message}`);
+  }
+  // The ids now belong to this run (written to its own row below until they are re-scored).
+  const { error: clearError } = await client.from("collector_runs").update({ pending_variant_ids: null }).in("id", adopted);
+  if (clearError) errors.push(`adopt pending variants: ${clearError.message}`);
+  return { variantIds, since: rows[0].started_at };
+}
 
 export async function runCollector(
   opts: { now?: Date; limit?: number; deadline?: number } = {},
@@ -114,12 +167,16 @@ export async function runCollector(
   let failed = 0;
   const errors: string[] = [];
   const touched = new Set<string>();
+  const carried = await adoptPendingRuns(client, run.id, now, errors);
+  for (const v of carried.variantIds) touched.add(v);
+  // Fetching stops early so post-processing keeps its share of the budget.
+  const fetchDeadline = opts.deadline ? opts.deadline - POST_PROCESSING_RESERVE_MS : undefined;
   const collected: string[] = [];
   const perMarketplace: Record<string, MarketplaceRunStats> = {};
   const stats = (m: string) => (perMarketplace[m] ??= { ok: 0, failed: 0, aborted: false });
 
   for (const listing of due) {
-    if (opts.deadline && Date.now() > opts.deadline) break;
+    if (fetchDeadline && Date.now() > fetchDeadline) break;
     const s = stats(listing.marketplace);
     // A marketplace that is down is not called again this run; the others continue.
     if (s.aborted) continue;
@@ -199,6 +256,12 @@ export async function runCollector(
   const aborted = Object.values(perMarketplace).some((s) => s.aborted);
 
   const variantIds = [...touched];
+  // Remember what still needs scoring, in case this run is killed during post-processing.
+  if (variantIds.length > 0) {
+    const { error } = await client.from("collector_runs").update({ pending_variant_ids: variantIds }).eq("id", run.id);
+    if (error && errors.length < MAX_ERROR_MESSAGES) errors.push(`pending variants: ${error.message}`);
+  }
+  let scored = variantIds.length === 0;
   // New prices (and vouchers) → new effective prices, before scores and alerts. Derived data:
   // a failure is reported and never fails the run.
   if (collected.length > 0) {
@@ -214,13 +277,18 @@ export async function runCollector(
   try {
     if (variantIds.length > 0) {
       const today = toVnDate(now);
+      // Variants carried over from an earlier run may have observations from an earlier day.
+      const from = carried.since ? toVnDate(new Date(Math.min(Date.parse(carried.since), now.getTime()))) : today;
       const { error } = await client.rpc("refresh_variant_daily_prices", {
-        p_from: today,
+        p_from: from,
         p_to: today,
         p_variant_ids: variantIds,
       });
       if (error) throw new Error(`refresh_variant_daily_prices: ${error.message}`);
       await recomputeDealScores(client, { now, variantIds });
+      scored = true;
+      // Its own deadline: the end of the run budget (fetching already stopped earlier). Watches it does
+      // not reach are picked up by the 15-minute alerts cron.
       await evaluate({ now, variantIds, deadline: opts.deadline }, client);
     }
   } catch (err) {
@@ -234,9 +302,10 @@ export async function runCollector(
         items_failed: failed,
         error_summary: errors.length > 0 ? errors.join("\n") : null,
         per_marketplace: perMarketplace as unknown as Json,
+        ...(scored ? { pending_variant_ids: null } : {}),
       })
       .eq("id", run.id);
-    if (error) console.error("Failed to close collector run:", error.message);
+    if (error) reportError(new Error(`Failed to close collector run: ${error.message}`), { where: "runCollector.close", runId: run.id });
   }
 
   return {

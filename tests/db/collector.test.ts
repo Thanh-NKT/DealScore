@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { runCollector, type CollectorDeps } from "@/lib/collector/run";
+import { POST_PROCESSING_RESERVE_MS, runCollector, type CollectorDeps } from "@/lib/collector/run";
 import {
   MarketplaceItemGoneError,
   MarketplaceItemNotFoundError,
@@ -238,6 +238,44 @@ describe("runCollector", () => {
     expect(l!.status).toBe("active");
     const { data: run } = await admin.from("collector_runs").select("per_marketplace").eq("id", r.runId).single();
     expect(run!.per_marketplace).toEqual(r.perMarketplace);
+  });
+
+  it("stops fetching before the deadline, keeping the post-processing reserve; evaluate gets the run deadline", async () => {
+    const l = await makeListing(2_000_000);
+    const fetchItem = vi.fn(async () => detail(1_900_000));
+    const d = deps([l], fetchItem);
+    const deadline = Date.now() + POST_PROCESSING_RESERVE_MS - 1_000;
+    const r = await runCollector({ deadline }, admin, d);
+    if ("skipped" in r) throw new Error("unexpected skip");
+    runIds.push(r.runId);
+    expect(fetchItem).not.toHaveBeenCalled();
+    const { data: run } = await admin.from("collector_runs").select("finished_at, pending_variant_ids").eq("id", r.runId).single();
+    expect(run!.finished_at).not.toBeNull();
+    expect(run!.pending_variant_ids).toBeNull();
+  });
+
+  it("re-scores the variants of a killed run and closes its row", async () => {
+    const { data: killed } = await admin
+      .from("collector_runs")
+      .insert({ source: "seed", started_at: new Date(Date.now() - 3_600_000).toISOString(), pending_variant_ids: [variantId] })
+      .select("id")
+      .single();
+    runIds.push(killed!.id);
+    const l = await makeListing(2_000_000);
+    const d = deps([l], async () => {
+      throw new MarketplaceItemNotFoundError("nope"); // this run itself touches no variant
+    });
+    const r = await runCollector({ deadline: Date.now() + 50_000 }, admin, d);
+    if ("skipped" in r) throw new Error("unexpected skip");
+    runIds.push(r.runId);
+    expect(r.variants).toBe(1);
+    expect(d.evaluate).toHaveBeenCalledWith(expect.objectContaining({ variantIds: [variantId] }), admin);
+    const { data: old } = await admin.from("collector_runs").select("finished_at, error_summary, pending_variant_ids").eq("id", killed!.id).single();
+    expect(old!.finished_at).not.toBeNull();
+    expect(old!.error_summary).toContain("abandoned");
+    expect(old!.pending_variant_ids).toBeNull();
+    const { data: mine } = await admin.from("collector_runs").select("pending_variant_ids").eq("id", r.runId).single();
+    expect(mine!.pending_variant_ids).toBeNull();
   });
 
   it("records last_attempt_at on a failed fetch so it does not block the queue; the listing stays active", async () => {
