@@ -100,7 +100,7 @@
   - `sitemap.xml` (sản phẩm verified, danh mục, brand), `robots.txt`, JSON-LD `Product` + `AggregateOffer` (không bịa rating), ảnh OG 1200×630 theo sản phẩm (`src/lib/seo/`).
 
 ### 1.8 Admin tối thiểu
-> Tách sang [`admin-checklist.md`](admin-checklist.md) — làm sau.
+> Tách sang `docs/admin-checklist.md` của repo Admin-DealScore (spec, plan, style UI của admin cũng ở đó) — làm sau.
 
 ### 1.9 Product matching v0
 - [x] Gợi ý tự động từ brand + model + dung lượng/màu/size
@@ -146,7 +146,7 @@
 - [x] Deal Score v1 (thêm trend, volatility, stock, seller quality)
   - ✏️ v1 = v0 + tối đa ±15 điểm, mỗi điều chỉnh có lý do; mặc định qua `scoreDeal()`. Điểm headline chỉ dùng trend/volatility (khớp điểm ở danh sách); tồn kho và người bán áp cho từng offer. Backtest hằng tuần chạy cả v0 và v1.
 - [ ] Product matching v1 + dashboard chất lượng dữ liệu
-  - ✏️ Matching v1 xong: GTIN, bí danh brand, bộ nhãn (0 match sai, recall 17/17). View `metrics_matching_quality`. ⚠️ Dashboard thuộc Admin (`docs/admin-checklist.md`).
+  - ✏️ Matching v1 xong: GTIN, bí danh brand, bộ nhãn (0 match sai, recall 17/17). View `metrics_matching_quality`. ⚠️ Dashboard thuộc Admin (`docs/admin-checklist.md` của repo Admin-DealScore).
 - [x] Google login
   - `signInWithGoogle` → `/auth/callback` → AuthGate. ⚠️ Nút ẩn cho tới khi cấu hình OAuth client + `NEXT_PUBLIC_GOOGLE_AUTH=1` (`supabase/README.md`).
 - [x] Filter nâng cao (rating, freeship, voucher)

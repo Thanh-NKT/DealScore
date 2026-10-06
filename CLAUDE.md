@@ -115,7 +115,7 @@ Never mix these up; the choice encodes the security model.
   chạy bằng `tsx` bị biên dịch sang CJS — **không** dùng `await` ở cấp cao nhất, bọc trong `main()`.
 - **Matching v0 (1.9):** `src/lib/matching/` chấm offer ↔ variant **verified** (brand + model + dung lượng/màu/size).
   ≥ 0.95 → `ingest_shopee_item` gắn `auto`; thấp hơn → product draft + `match_candidates` (duyệt ở Admin — xem
-  `docs/admin-checklist.md`). Giá hiện tại của variant luôn tính lại bằng RPC `refresh_variant_current_price`.
+  `docs/admin-checklist.md` trong repo Admin-DealScore). Giá hiện tại của variant luôn tính lại bằng RPC `refresh_variant_current_price`.
 - **Offer hiển thị ≠ offer trong lịch sử (migration 0022):** *giá hiện tại* tính offer khi listing `active` **và**
   (`match_status` ∈ `auto`/`manual`, hoặc `pending` trên product **draft**). SQL: `offer_is_visible()`; TS:
   `isOfferVisible()` (`src/lib/pricing/variant-pricing.ts`). Dùng cho `refresh_variant_current_price`, cụm draft trong
