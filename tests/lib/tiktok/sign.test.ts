@@ -25,4 +25,15 @@ describe("signTikTokRequest", () => {
     const want = createHmac("sha256", "S").update("S/pa1{}S").digest("hex");
     expect(signTikTokRequest(input)).toBe(want);
   });
+
+  it("fixed vector (computed independently with `openssl dgst -sha256 -hmac S`; not a vendor-published one)", () => {
+    expect(
+      signTikTokRequest({
+        path: "/x/202405/y",
+        query: { timestamp: "1700000000", app_key: "k", sign: "zzz", access_token: "t", page_size: "20" },
+        body: '{"a":1}',
+        secret: "S",
+      }),
+    ).toBe("8c50ee6f0636f068f2bcdbb6aef958af99e3c2a4b5dc154498033e36a8dbfa3c");
+  });
 });
