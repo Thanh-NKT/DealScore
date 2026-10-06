@@ -77,3 +77,6 @@ export function sanitizeProps(name: EventName, props: Record<string, unknown> = 
   }
   return out;
 }
+
+/** recordShare is callable by anyone: per signed-in user, or per hashed IP, per hour. Above it events are dropped. */
+export const SHARE_EVENTS_PER_HOUR = 30;

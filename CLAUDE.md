@@ -79,7 +79,7 @@ Never mix these up; the choice encodes the security model.
   `server-only`).
   Chỗ được dùng: collector / cron / scripts, `src/lib/ingest.ts`, `src/lib/rate-limit.ts`,
   `src/app/go/…/route.ts`, `src/actions/account.ts`, `src/app/account/export/route.ts`,
-  `src/lib/account/purge.ts`, `src/lib/alerts/*`, `src/lib/push/index.ts`, `src/actions/push.ts`,
+  `src/lib/account/purge.ts`, `src/lib/alerts/*`, `src/lib/push/index.ts`, `src/actions/push.ts`, `src/actions/share.ts` + `src/lib/auth/throttle.ts` (`rate_hit`),
   `src/app/api/unsubscribe/route.ts`, `src/app/api/cron/alerts/route.ts`, `scripts/run-alerts.ts`,
   `src/lib/affiliate/import.ts`, `src/app/api/cron/conversions/route.ts`, `scripts/import-conversions.ts`,
   `src/lib/collector/run.ts`, `src/lib/pricing/backtest-job.ts`, `src/app/api/cron/{collector,backtest}/route.ts`,
