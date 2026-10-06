@@ -245,14 +245,18 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
 
   const supabase = await createClient();
 
+  // Same rule as discovery: an unknown slug is an empty result, a failed lookup is an error. Dropping
+  // the filter instead would show the whole catalog under a category chip.
   let catId = params.categoryId;
   if (!catId && params.categorySlug) {
-    const { data: cat } = await supabase
+    const { data: cat, error: catError } = await supabase
       .from("categories")
       .select("id")
       .eq("slug", params.categorySlug)
       .maybeSingle();
-    if (cat) catId = cat.id;
+    if (catError) throw new Error(`Failed to read category: ${catError.message}`);
+    if (!cat) return { items: [], total: 0, page, pageSize: PAGE_SIZE };
+    catId = cat.id;
   }
 
   const { data, error } = await supabase.rpc("search_products", {

@@ -3,10 +3,14 @@ import { parseSearchParams, searchItemHref, searchProducts, toSearchParams } fro
 
 // searchProducts talks to Supabase through the server client: stub it with a spy-able rpc.
 const rpc = vi.fn();
+/** Result of the categories lookup by slug (searchProducts resolves ?cat= to an id first). */
+const category: { result: { data: { id: string } | null; error: { message: string } | null } } = {
+  result: { data: null, error: null },
+};
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     rpc: (...args: unknown[]) => rpc(...args),
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => category.result }) }) }),
   }),
 }));
 
@@ -282,5 +286,31 @@ describe("searchItemHref", () => {
 
   it("encodes the variant id", () => {
     expect(searchItemHref({ ...item, variantId: "a b&c" }, { capacityGb: 1024 })).toBe("/o-cung-ssd/ssd-a?variant=a%20b%26c");
+  });
+});
+
+describe("searchProducts — category slug (?cat=)", () => {
+  beforeEach(() => {
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: [], error: null });
+    category.result = { data: null, error: null };
+  });
+
+  it("an unknown slug returns an empty result and never runs the unfiltered search", async () => {
+    const res = await searchProducts({ categorySlug: "typo", page: 2 });
+    expect(res).toMatchObject({ items: [], total: 0, page: 2 });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("a failed category lookup throws instead of searching the whole catalog", async () => {
+    category.result = { data: null, error: { message: "boom" } };
+    await expect(searchProducts({ categorySlug: "o-cung-ssd" })).rejects.toThrow(/category/i);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("a known slug filters by its id", async () => {
+    category.result = { data: { id: "cat-1" }, error: null };
+    await searchProducts({ categorySlug: "o-cung-ssd" });
+    expect((rpc.mock.calls.at(-1)![1] as Record<string, unknown>).p_category_id).toBe("cat-1");
   });
 });
