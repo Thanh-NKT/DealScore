@@ -115,4 +115,11 @@ describe("parseQueryIntent — robustness", () => {
     expect(r.capacityGb).toBeUndefined();
     expect(r.text).toBe("1tb 2tb");
   });
+
+  it("two different capacities in GB and TB: neither is applied and none vanishes from the text", () => {
+    const r = parseQueryIntent("ssd 512gb 1tb", vocab);
+    expect(r.capacityGb).toBeUndefined();
+    expect(r.text).toContain("512gb");
+    expect(r.text).toContain("1tb");
+  });
 });
