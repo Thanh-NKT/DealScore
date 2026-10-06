@@ -85,7 +85,11 @@ export interface VariantPricing {
   isStale: boolean; // updatedAt older than 48 hours
 }
 
-/** Same rule as SQL `offer_is_visible()` (migration 0022) — keep the two in sync. */
+/**
+ * CURRENT-price visibility — same rule as SQL `offer_is_visible()` (migration 0022); keep the two in sync.
+ * Not the history rule: the daily rollup uses `offer_in_history()`, which ignores the listing's current
+ * status (a listing gone today keeps its past days).
+ */
 export function isOfferVisible(offer: OfferRow, isDraftProduct: boolean): boolean {
   if (offer.listingStatus !== "active") return false;
   if (offer.matchStatus === "auto" || offer.matchStatus === "manual") return true;

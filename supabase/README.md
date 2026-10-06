@@ -77,6 +77,38 @@ mỗi khi nó đổi.
 - `price_observations` nên **partition theo tháng** hoặc dùng **TimescaleDB**
   khi dữ liệu lớn (xem chú thích trong migration).
 
+## Triển khai 0022–0028 lên môi trường có dữ liệu thật
+
+Thứ tự chạy (một lần, lúc ít truy cập):
+
+1. **Index không khóa bảng (0027).** `CREATE INDEX CONCURRENTLY` không chạy được trong transaction, nên
+   0027 chỉ có đúng một lệnh. Supabase CLI v2.117 không bọc file migration trong transaction — đã kiểm bằng
+   `supabase migration up --db-url …` trên một DB nháp. Nếu áp migration bằng cách khác (SQL Editor, công cụ
+   bọc `BEGIN/COMMIT`) hoặc `db push` báo *cannot run inside a transaction block*, chạy tay **trước** bước 2,
+   trên một kết nối riêng:
+
+       create index concurrently if not exists idx_price_obs_observed_at on public.price_observations (observed_at);
+
+   Build hỏng để lại index `INVALID` mà `if not exists` sẽ bỏ qua — kiểm
+   `select indisvalid from pg_index where indexrelid = 'idx_price_obs_observed_at'::regclass;`, nếu `false` thì
+   `drop index concurrently idx_price_obs_observed_at;` rồi chạy lại.
+2. `corepack pnpm db:push` — áp 0022–0028. Không migration nào xóa hay dựng lại `variant_daily_prices`.
+3. **Dựng lại lịch sử theo quy tắc mới** (`offer_in_history()`): `pnpm rollup:rebuild` (cần `.env.local` trỏ vào
+   môi trường đó). Mỗi lô 500 variant (`--batch N`) là một transaction riêng: trang / search / alert luôn đọc
+   được dòng cũ hoặc dòng mới, không bao giờ rỗng. Dừng giữa chừng thì chạy tiếp bằng `--after <uuid>` in ở
+   dòng cuối. Chạy được khi collector đang chạy (khóa dòng theo cùng thứ tự `variant_id, day`); nếu một lô
+   báo deadlock / timeout, chạy lại từ `--after` đó.
+4. `pnpm scores:recompute` — verdict tính lại trên lịch sử mới.
+
+## Checklist triển khai (ngoài migration)
+
+- `LOOKUP_IP_SALT` **bắt buộc** ở production: thiếu thì throttle đăng nhập vẫn đếm nhưng mỗi lượt gửi
+  `reportError` ("Missing LOOKUP_IP_SALT"), còn `/api/extension/observations` trả 500.
+- Đăng nhập Google: thử trọn luồng trên một host **https** giống production (không chỉ `next start` http) —
+  CSP `form-action` được Chrome áp cho cả chuỗi redirect của form POST.
+- HSTS có `includeSubDomains`: xác nhận **mọi** subdomain của domain đã chạy https trước khi bật domain thật.
+- Bật lại listing do admin tắt: RPC `admin_set_listings_active(listing_ids, note)` (service role, ghi `admin_audit`).
+
 ## Auth production (Dashboard — không nằm trong repo)
 
 - **SMTP:** host `smtp.resend.com`, port `465`, user `resend`, pass = `RESEND_API_KEY`, sender = `EMAIL_FROM`.

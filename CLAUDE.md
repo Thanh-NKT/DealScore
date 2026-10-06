@@ -116,11 +116,14 @@ Never mix these up; the choice encodes the security model.
 - **Matching v0 (1.9):** `src/lib/matching/` chấm offer ↔ variant **verified** (brand + model + dung lượng/màu/size).
   ≥ 0.95 → `ingest_shopee_item` gắn `auto`; thấp hơn → product draft + `match_candidates` (duyệt ở Admin — xem
   `docs/admin-checklist.md`). Giá hiện tại của variant luôn tính lại bằng RPC `refresh_variant_current_price`.
-- **Offer hiển thị — MỘT quy tắc (migration 0022):** offer được tính khi listing `active` **và**
+- **Offer hiển thị ≠ offer trong lịch sử (migration 0022):** *giá hiện tại* tính offer khi listing `active` **và**
   (`match_status` ∈ `auto`/`manual`, hoặc `pending` trên product **draft**). SQL: `offer_is_visible()`; TS:
-  `isOfferVisible()` (`src/lib/pricing/variant-pricing.ts`). Dùng cho rollup (`refresh_variant_daily_prices`,
-  `admin_rebuild_variant_rollup`), `refresh_variant_current_price`, cụm draft trong `ingest_listing`, `search_products`
-  (cổng draft + lọc sàn), `filter_availability`. Không có offer `pending` trên product verified (promote chuyển sang `manual`).
+  `isOfferVisible()` (`src/lib/pricing/variant-pricing.ts`). Dùng cho `refresh_variant_current_price`, cụm draft trong
+  `ingest_listing`, `search_products` (cổng draft + lọc sàn), `filter_availability`. *Lịch sử* (`refresh_variant_daily_prices`,
+  `admin_rebuild_variant_rollup`) dùng `offer_in_history()`: cùng quy tắc match nhưng **không** xét trạng thái listing hiện tại —
+  listing `gone` / được kích hoạt lại giữ nguyên các ngày cũ; chỉ listing admin tắt (`deactivated_by = 'admin'`) bị bỏ khỏi lịch sử
+  (bật lại: RPC `admin_set_listings_active`). Rebuild toàn bộ: `pnpm rollup:rebuild` (theo lô, chạy tiếp được — `supabase/README.md`).
+  Giá do extension gửi chỉ thành giá hiện tại (→ verdict, alert) khi có quan sát API/collector cách ≤ 24h và ≤ 2%. Không có offer `pending` trên product verified (promote chuyển sang `manual`).
   Deal Score cache: `recomputeDealScores()` không lưu verdict cho variant hết hàng mọi nơi; `search_products` /
   `trending_products` / `price_drop_radar` chỉ hiện score khi `price_at_compute` = giá trên thẻ. Rollup gọi kèm
   `p_variant_ids` khi biết variant nào bị chạm (lọc theo khoảng `observed_at`, có index). Thứ tự khóa vòng đời draft:
