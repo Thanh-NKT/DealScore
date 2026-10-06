@@ -51,9 +51,7 @@ primitives in `src/components/ui/` (`Button`/`buttonClass`, `SegmentedControl`/`
 ESLint rejects `text-[Npx]`, `rounded-[Npx]`, `rounded-xl` and `font-[family-name:…]`.
 Numbers use the `num` utility (Plus Jakarta Sans, tabular), headings `display`; text ≥ 11px (11px only for nano labels). Page frame
 `max-w-[1440px] px-4 sm:px-6 lg:px-14`. `UI-mockup/` is the original reference; `docs/design-system/specimen.html`
-is the retired "Nhãn giá kệ hàng" world — don't copy it. The product is **DealScore** (renamed from Kairo), but the
-logo wordmarks (header, footer, auth tile, extension popup/panel, OG image mark) still read "Kairo" until the owner's new
-logo lands — leave them alone.
+is the retired "Nhãn giá kệ hàng" world — don't copy it. The product is **DealScore** (renamed from Kairo).
 
 ## Next.js 16 gotchas
 

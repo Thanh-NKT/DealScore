@@ -79,7 +79,7 @@ export default async function Image({ params }: { params: Promise<{ category: st
           color: C.ink,
         }}
       >
-        <div style={{ display: "flex", fontSize: 32, fontWeight: 700, color: C.primary }}>Kairo</div>
+        <div style={{ display: "flex", fontSize: 32, fontWeight: 700, color: C.primary }}>DealScore</div>
 
         <div
           style={{

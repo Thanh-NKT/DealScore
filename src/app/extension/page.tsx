@@ -95,7 +95,7 @@ export default function ExtensionPage() {
                     </svg>
                   </span>
                   <span className="flex-1 display text-title font-extrabold tracking-[-0.02em]">
-                    Kairo
+                    DealScore
                   </span>
                   <span className="rounded-full border border-night-line bg-night-2 px-2.5 py-1 text-micro font-semibold text-night-ink-2">
                     Trên Shopee
@@ -242,7 +242,7 @@ export default function ExtensionPage() {
                     </svg>
                   </span>
                   <span className="flex-1 display text-title font-extrabold tracking-[-0.02em]">
-                    Kairo
+                    DealScore
                   </span>
                   <span className="rounded-full border border-night-line bg-night-2 px-2.5 py-1 text-micro font-semibold text-night-ink-2">
                     Trên Shopee

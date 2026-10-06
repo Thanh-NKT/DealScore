@@ -667,7 +667,7 @@ Mỗi thành phần là một ô trên bàn giá: rõ ràng, sáng, không có g
 
 ### Header và điều hướng
 - **Khung:** nền `surface`, cao 72px, viền dưới 1px `line`, dính trên cùng, nội dung trong khung 1440px.
-- **Logo:** ô 36px nền `primary` bo 12px bóng sợi, biểu tượng xu hướng trắng nét 2.4, cạnh chữ "DealScore" 22px/700. *Ghi chú:* chữ logo (wordmark) trong code vẫn hiện "Kairo" cho tới khi có logo mới; chủ sản phẩm sẽ làm lại logo, đừng tự đổi.
+- **Logo:** ô 36px nền `primary` bo 12px bóng sợi, biểu tượng xu hướng trắng nét 2.4, cạnh chữ "DealScore" 22px/700 (18px, khoảng cách hẹp hơn, trên màn hình ≤ 440px để chữ vừa cạnh các nút).
 - **Mục điều hướng:** Tìm kiếm · Giảm giá thật · Xu hướng · Đang theo dõi; cao 44px (40px trên điện thoại), đệm ngang 14px, bo 12px, 14px/500 `ink-2`, hover nền `surface-2`. Đang chọn: nền `surface-2`, chữ `ink` 600.
 - **Bên phải:** "Cài tiện ích" và chuông (không có chấm "chưa đọc" cho tới khi có dữ liệu thông báo chưa đọc thật) 44px nền `surface-2` 60% viền `line` bo 12px, biểu tượng `primary`, hover viền `primary` 40%; nút đổi giao diện; "Đăng nhập" dạng chữ 14px/600; hoặc viên thuốc tài khoản 44px viền `line` với ô chữ cái đầu lime, mở menu `surface` bo 12px bóng `--lift`.
 

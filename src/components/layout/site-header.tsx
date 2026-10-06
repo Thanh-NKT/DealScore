@@ -21,21 +21,22 @@ export async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 w-full shrink-0 border-b border-line bg-surface">
-      {/* Phones: logo + actions on the first row, the nav on its own scrollable row, so nothing overlaps at 375px. */}
-      <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-14 max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-1 max-[760px]:pt-3">
+      {/* Phones: logo + actions on the first row, the nav on its own scrollable row, so nothing overlaps at 375px.
+          At ≤ 440px the wordmark drops to text-title and the gaps tighten so "DealScore" still fits beside the actions. */}
+      <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-14 max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-1 max-[760px]:pt-3 max-[440px]:gap-x-3">
         <div className="flex min-w-0 items-center gap-3 sm:gap-7 max-[760px]:contents">
-          <Link href="/" aria-label="DealScore — Trang chủ" className="flex shrink-0 items-center gap-2.5 text-ink">
+          <Link href="/" aria-label="DealScore — Trang chủ" className="flex shrink-0 items-center gap-2.5 text-ink max-[440px]:gap-2">
             <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-on-primary shadow-2xs">
               <TrendUpIcon className="size-5" strokeWidth={2.4} />
             </span>
-            <span className="display text-h3 font-bold tracking-tight">Kairo</span>
+            <span className="display text-h3 font-bold tracking-tight max-[440px]:text-title">DealScore</span>
           </Link>
           <div className="min-w-0 max-[760px]:order-last max-[760px]:-mx-4 max-[760px]:w-[calc(100%+2rem)] max-[760px]:overflow-x-auto max-[760px]:px-2.5 max-[760px]:pb-1.5 max-[760px]:[scrollbar-width:none]">
           <HeaderNav signedIn={Boolean(user)} />
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2.5 max-[440px]:gap-2">
           <Link
             href="/extension"
             className="flex h-11 items-center gap-2 rounded-md border border-line bg-surface-2/60 px-3.5 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary/40 hover:bg-surface-2 max-[680px]:hidden"
@@ -60,7 +61,7 @@ export async function SiteHeader() {
           ) : (
             <Link
               href="/login"
-              className="flex h-11 items-center justify-center rounded-md px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+              className="flex h-11 items-center justify-center rounded-md px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 max-[440px]:px-2.5"
             >
               Đăng nhập
             </Link>

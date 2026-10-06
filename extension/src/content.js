@@ -110,7 +110,7 @@
     shadow.innerHTML =
       "<style>" + STYLE + "</style>" +
       '<section class="k" role="complementary" aria-label="DealScore">' +
-      '<div class="top"><span class="brand"><span class="mark" aria-hidden="true">K</span>Kairo</span>' +
+      '<div class="top"><span class="brand"><span class="mark" aria-hidden="true">D</span>DealScore</span>' +
       '<button class="x" type="button" aria-label="Ẩn khung DealScore cho sản phẩm này">×</button></div>' +
       inner +
       "</section>";
