@@ -138,6 +138,19 @@ describe("refresh_variant_daily_prices", () => {
     expect((await rollup(two.variantId)).map((r) => r.day)).toEqual([today()]);
   });
 
+  it("parallel refreshes over overlapping variants finish without lock errors", async () => {
+    const { data } = await admin.from("variant_current_price").select("variant_id").limit(40);
+    const ids = (data ?? []).map((r) => r.variant_id);
+    const calls = Array.from({ length: 8 }, (_, i) =>
+      admin.rpc("refresh_variant_daily_prices", {
+        p_from: today(), p_to: today(),
+        ...(i % 2 ? { p_variant_ids: i % 4 === 1 ? ids : [...ids].reverse() } : {}),
+      }),
+    );
+    const results = await Promise.all(calls);
+    expect(results.map((r) => r.error)).toEqual(Array(8).fill(null));
+  });
+
   it("the unscoped call still works for every variant", async () => {
     const { error } = await admin.rpc("refresh_variant_daily_prices", { p_from: today(), p_to: today() });
     expect(error).toBeNull();
