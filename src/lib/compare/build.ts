@@ -83,7 +83,7 @@ function signedPct(x: number | null): string {
 
 /** "2026-06-01" → "01/06/2026", the way dates read in Vietnamese. */
 function vnDate(day: string | null): string {
-  const m = day?.match(/^(d{4})-(d{2})-(d{2})$/);
+  const m = day?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : DASH;
 }
 

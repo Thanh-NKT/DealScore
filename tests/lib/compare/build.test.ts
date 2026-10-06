@@ -92,6 +92,7 @@ describe("buildComparison", () => {
   it("tracking and fake-sale rows are informational (never a winner)", () => {
     const c = buildComparison(page({ slug: "a", fake: "Giảm ảo" }), page({ slug: "b" }));
     expect(row(c, "tracking").winner).toBeNull();
+    expect(row(c, "tracking").a).toBe("01/06/2026");
     expect(row(c, "fake_sale")).toMatchObject({ a: "Có", b: "Không", winner: null });
   });
 
