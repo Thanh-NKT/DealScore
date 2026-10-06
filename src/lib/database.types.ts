@@ -485,18 +485,29 @@ export type Database = {
           contributor: string
           created_at: string
           id: number
+          user_id: string | null
         }
         Insert: {
           contributor: string
           created_at?: string
           id?: never
+          user_id?: string | null
         }
         Update: {
           contributor?: string
           created_at?: string
           id?: never
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "extension_contributions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       extension_observations: {
         Row: {
@@ -511,6 +522,7 @@ export type Database = {
           price: number
           promoted_at: string | null
           stock: number | null
+          user_id: string | null
         }
         Insert: {
           contributor: string
@@ -524,6 +536,7 @@ export type Database = {
           price: number
           promoted_at?: string | null
           stock?: number | null
+          user_id?: string | null
         }
         Update: {
           contributor?: string
@@ -537,6 +550,7 @@ export type Database = {
           price?: number
           promoted_at?: string | null
           stock?: number | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -544,6 +558,13 @@ export type Database = {
             columns: ["offer_id"]
             isOneToOne: false
             referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extension_observations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1753,6 +1774,16 @@ export type Database = {
           value: string
         }[]
       }
+      latest_alerts_for_watches: {
+        Args: { p_watch_ids: string[] }
+        Returns: {
+          created_at: string
+          deliver_after: string
+          deliveries: Json
+          id: string
+          watch_id: string
+        }[]
+      }
       latest_price_per_offer: {
         Args: { p_variant_id: string }
         Returns: {
@@ -1813,12 +1844,21 @@ export type Database = {
           variant_key: string
         }[]
       }
+      privilege_report: {
+        Args: never
+        Returns: {
+          grantee: string
+          kind: string
+          object: string
+        }[]
+      }
       product_brands: {
         Args: never
         Returns: {
           brand: string
         }[]
       }
+      prune_operational_data: { Args: never; Returns: Json }
       record_observations: { Args: { p: Json }; Returns: string[] }
       record_watch_evaluation: {
         Args: {

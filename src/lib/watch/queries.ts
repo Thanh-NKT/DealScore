@@ -96,30 +96,23 @@ export async function listMyWatches(
   const variantIds = Array.from(new Set(watchRows.map((w) => w.variant_id)));
   const snapshotMap = await loadVariantSnapshots(supabase, variantIds, now);
 
-  // 4. Load the latest alert per watch (with deliveries)
+  // 4. Load the latest alert per watch (with deliveries). One row per watch from the RPC: reading every
+  // alert would hit PostgREST's silent 1,000-row cap after a few weeks of alerts.
   const watchIds = watchRows.map((w) => w.id);
-  const { data: alertRows, error: alertError } = await supabase
-    .from("alert_events")
-    .select(
-      `
-      id, watch_id, created_at, deliver_after,
-      alert_deliveries (
-        channel, status, sent_at
-      )
-    `,
-    )
-    .in("watch_id", watchIds)
-    .order("created_at", { ascending: false });
+  const { data: alertRows, error: alertError } = await supabase.rpc("latest_alerts_for_watches", {
+    p_watch_ids: watchIds,
+  });
   if (alertError) throw new Error(`Failed to load alerts: ${alertError.message}`);
 
   const latestAlertByWatch = new Map<string, LatestAlert>();
   for (const a of alertRows ?? []) {
     if (!latestAlertByWatch.has(a.watch_id)) {
+      const deliveries = (a.deliveries ?? []) as Array<{ channel: string; status: string; sent_at: string | null }>;
       latestAlertByWatch.set(a.watch_id, {
         id: a.id,
         createdAt: a.created_at,
         deliverAfter: a.deliver_after,
-        deliveries: (a.alert_deliveries ?? []).map((d) => ({
+        deliveries: deliveries.map((d) => ({
           channel: d.channel as Channel,
           status: d.status,
           sentAt: d.sent_at,
