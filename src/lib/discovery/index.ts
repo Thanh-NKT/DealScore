@@ -38,6 +38,8 @@ interface CardRow {
   score: number | null;
   recommendation: string | null;
   last_observed_at: string | null;
+  marketplace: string | null;
+  is_flash_sale: boolean | null;
 }
 
 function toCard(r: CardRow): SearchItem {
@@ -56,6 +58,8 @@ function toCard(r: CardRow): SearchItem {
     // Discovery RPCs don't return effective prices (yet).
     effectivePrice: null,
     variantId: null,
+    marketplace: r.marketplace ?? null,
+    isFlashSale: r.is_flash_sale === true,
   };
 }
 

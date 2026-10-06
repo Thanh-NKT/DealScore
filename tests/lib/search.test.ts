@@ -314,3 +314,20 @@ describe("searchProducts — category slug (?cat=)", () => {
     expect((rpc.mock.calls.at(-1)![1] as Record<string, unknown>).p_category_id).toBe("cat-1");
   });
 });
+
+describe("searchProducts — card marketplace and flash flag (0026)", () => {
+  it("maps marketplace and is_flash_sale", async () => {
+    category.result = { data: null, error: null };
+    rpc.mockReset();
+    rpc.mockResolvedValue({
+      data: [{ product_id: "p1", slug: "a", canonical_name: "A", category_slug: "x", total_count: 1, marketplace: "lazada", is_flash_sale: true }],
+      error: null,
+    });
+    const [item] = (await searchProducts({ q: "a" })).items;
+    expect(item).toMatchObject({ marketplace: "lazada", isFlashSale: true });
+
+    rpc.mockResolvedValue({ data: [{ product_id: "p1", slug: "a", canonical_name: "A", total_count: 1 }], error: null });
+    const [old] = (await searchProducts({ q: "a" })).items;
+    expect(old).toMatchObject({ marketplace: null, isFlashSale: false });
+  });
+});

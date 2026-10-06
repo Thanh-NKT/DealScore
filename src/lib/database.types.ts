@@ -1859,7 +1859,9 @@ export type Database = {
           category_slug: string
           drop_pct: number
           image: string
+          is_flash_sale: boolean
           last_observed_at: string
+          marketplace: string
           median_30d: number
           original_price: number
           product_id: string
@@ -1941,7 +1943,9 @@ export type Database = {
           category_slug: string
           effective_price: number
           image: string
+          is_flash_sale: boolean
           last_observed_at: string
+          marketplace: string
           original_price: number
           product_id: string
           recommendation: string
@@ -1962,7 +1966,9 @@ export type Database = {
           canonical_name: string
           category_slug: string
           image: string
+          is_flash_sale: boolean
           last_observed_at: string
+          marketplace: string
           original_price: number
           product_id: string
           recommendation: string

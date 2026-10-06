@@ -6,7 +6,8 @@ import { discountPercent, formatVnd } from "@/lib/format";
 import { ScoreRing, VerdictTag } from "@/components/product/verdict-tag";
 import { ProductImage } from "@/components/ui/product-image";
 import { UpdatedAt } from "@/components/product/updated-at";
-import { ClockIcon, TrendDownIcon } from "@/components/ui/icons";
+import { ClockIcon } from "@/components/ui/icons";
+import { marketplaceName } from "@/components/product/marketplace";
 
 interface ProductCardProps {
   item: SearchItem;
@@ -48,8 +49,9 @@ export function VerdictRow({
 
 /**
  * Product showcase card:
- * - Top stage: clean image frame with subtle hover zoom, floating brand/offer pill (top-left) and
- *   discount badge (top-right).
+ * - Top stage: clean image frame with subtle hover zoom, floating brand pill (top-left) and the
+ *   seller's list-price discount (top-right) — NEUTRAL: a card has no price history to verify it, and
+ *   the solid buy chip is reserved for discounts the product page has checked (DESIGN.md).
  * - Middle: 2-line product title + optional discovery insight chip.
  * - Bottom hero capsule: Best Price + Savings on the left, SVG Deal Score Progress Ring + corner
  *   verdict badge on the right, followed by a compact freshness & CTA footer.
@@ -61,9 +63,8 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
   const listed = validPrice(item.originalPrice);
   const effective = validPrice(item.effectivePrice);
   const off = discountPercent(price, listed);
-  const saved = price != null && listed != null && listed > price ? listed - price : null;
   const brandName = brand?.trim() || categoryName?.trim();
-  const offersCount = (item as unknown as { offerCount?: number }).offerCount;
+  const where = item.marketplace ? marketplaceName(item.marketplace) : null;
 
   return (
     <Link
@@ -80,21 +81,19 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
           iconClassName="size-14 text-ink-3/60"
         />
 
-        {/* Top-left Brand / Multi-offer Pill */}
-        {offersCount && offersCount > 1 ? (
-          <span className="absolute left-2.5 top-2.5 rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-nano font-bold text-ink-2 backdrop-blur-md shadow-2xs">
-            Đã gom {offersCount} nơi bán
-          </span>
-        ) : brandName ? (
+        {/* Top-left Brand Pill */}
+        {brandName ? (
           <span className="absolute left-2.5 top-2.5 max-w-[65%] truncate rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-nano font-bold text-ink-2 backdrop-blur-md shadow-2xs">
             {brandName}
           </span>
         ) : null}
 
-        {/* Top-right Discount Badge */}
+        {/* Top-right: the seller's list-price discount, neutral (not verified on a card) */}
         {off != null && off > 0 && (
-          <span className="num absolute right-2.5 top-2.5 inline-flex items-center gap-0.5 rounded-full bg-buy px-2.5 py-1 text-micro font-extrabold text-canvas shadow-xs">
-            <TrendDownIcon className="size-3" strokeWidth={2.6} />
+          <span
+            className="num absolute right-2.5 top-2.5 rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-micro font-bold text-ink-2 backdrop-blur-md shadow-2xs"
+            title="Mức giảm so với giá niêm yết do người bán ghi"
+          >
             −{off}%
           </span>
         )}
@@ -117,16 +116,18 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
 
         {/* 3. Signature Kairo Price + Deal Score Capsule: the verdict words sit on top so the ring never stands alone */}
         <div className="mt-auto flex flex-col gap-2 pt-0.5">
-          <VerdictTag recommendation={score == null ? null : recommendation} className="self-start" />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <VerdictTag recommendation={score == null ? null : recommendation} />
+            {item.isFlashSale && price != null && (
+              <span className="inline-flex items-center gap-1 rounded-sm border border-wait/30 bg-wait-soft px-2 py-0.5 text-micro font-semibold text-wait">
+                <ClockIcon className="size-3.5" />
+                Giá flash sale
+              </span>
+            )}
+          </div>
           <div className="flex items-center justify-between gap-3 rounded-md border border-line/80 bg-surface-2/45 p-3 transition-colors group-hover:border-primary/25 group-hover:bg-surface-2/75">
             <div className="flex min-w-0 flex-col gap-0.5">
-              {saved != null && saved > 0 ? (
-                <span className="inline-flex items-center gap-1 text-micro font-bold text-buy">
-                  Tiết kiệm <span className="num">{formatVnd(saved)}</span>
-                </span>
-              ) : (
-                <span className="text-micro font-medium text-ink-3">Giá tốt nhất hiện tại</span>
-              )}
+              <span className="text-micro font-medium text-ink-3">Giá tốt nhất hiện tại</span>
 
               {price != null ? (
                 <span className="num truncate text-h3 font-extrabold leading-tight tracking-tight text-ink">
@@ -137,19 +138,24 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
               )}
 
               {price != null && effective != null && effective < price && (
-                <span className="text-micro font-semibold text-ink-2">
-                  ≈ <span className="num">{formatVnd(effective)}</span> sau voucher
+                <span className="flex flex-wrap items-center gap-1 text-micro font-semibold text-ink-2">
+                  <span>
+                    ~<span className="num">{formatVnd(effective)}</span> sau voucher
+                  </span>
+                  <span className="rounded-sm border border-dashed border-line-strong px-1.5 text-nano font-bold text-ink-3">
+                    Ước tính
+                  </span>
                 </span>
               )}
 
               {off != null && listed != null ? (
                 <span className="flex items-center gap-1.5 text-micro text-ink-3">
-                  <span>Giá gốc</span>
+                  <span>Giá niêm yết</span>
                   <s className="num decoration-[1.5px]">{formatVnd(listed)}</s>
                 </span>
-              ) : (
-                <span className="text-micro text-ink-3">Ghi nhận trên Shopee</span>
-              )}
+              ) : where ? (
+                <span className="text-micro text-ink-3">Ghi nhận trên {where}</span>
+              ) : null}
             </div>
 
             <div className="flex shrink-0 flex-col items-center gap-0.5">

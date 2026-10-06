@@ -54,6 +54,10 @@ export interface SearchItem {
    * unknown (discovery lists). Linked only for a capacity search — see searchItemHref().
    */
   variantId: string | null;
+  /** Marketplace of the offer behind the card price (its best offer). Null when unknown. */
+  marketplace: string | null;
+  /** The card price is a flash-sale price (variant_current_price.is_flash_sale). */
+  isFlashSale: boolean;
 }
 
 /**
@@ -303,6 +307,8 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     lastObservedAt: d.last_observed_at,
     effectivePrice: d.effective_price != null ? Number(d.effective_price) : null,
     variantId: d.variant_id ?? null,
+    marketplace: d.marketplace ?? null,
+    isFlashSale: d.is_flash_sale === true,
   }));
 
   return { items, total, page, pageSize: PAGE_SIZE };
