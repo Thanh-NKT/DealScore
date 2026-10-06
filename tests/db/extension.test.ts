@@ -161,6 +161,55 @@ describe("recordContribution — forged prices", () => {
   });
 });
 
+describe("peer-only prices and the current price", () => {
+  const item3 = `7${Date.now() % 1_000_000}_${Math.floor(Math.random() * 1e9)}`;
+  let offer3: string;
+  let variant3: string;
+
+  beforeAll(async () => {
+    const { error } = await admin.rpc("ingest_shopee_item", {
+      p: {
+        ext_item_id: item3,
+        url: "https://shopee.vn/product/1/4",
+        title: `Ext gate ${tag}`,
+        slug_base: `test-ext-${tag}-gate`,
+        source: "seed",
+        seller: { external_id: `seller-${tag}` },
+        models: [{ model_id: "m1", name: "Tiêu chuẩn", price: 1_000_000, stock: 5 }],
+      },
+    });
+    if (error) throw error;
+    const { data } = await admin.from("offers").select("id, variant_id, listings!inner(external_item_id)").eq("listings.external_item_id", item3).single();
+    offer3 = data!.id;
+    variant3 = data!.variant_id!;
+  });
+
+  afterAll(async () => {
+    await admin.from("listings").delete().eq("external_item_id", item3);
+  });
+
+  const current = async () =>
+    Number((await admin.from("variant_current_price").select("price").eq("variant_id", variant3).single()).data!.price);
+
+  it("a peer-promoted price enters the history but not the current price until a trusted price confirms it", async () => {
+    const p = { ...payload(1_210_000), item: item3 };
+    await recordContribution(admin, who(`u:g1-${tag}`, `netG1-${tag}`), p);
+    const r = await recordContribution(admin, who(`u:g2-${tag}`, `netG2-${tag}`), p);
+    expect(r).toEqual({ status: "recorded", recorded: 1, promoted: 1 });
+    // Promoted (peer, inside the band), but the current price — verdict and alerts — stays the API one.
+    const { data: promoted } = await admin.from("price_observations").select("price").eq("offer_id", offer3).eq("source", "extension");
+    expect(promoted).toHaveLength(1);
+    expect(await current()).toBe(1_000_000);
+
+    // A trusted observation within 2% and 24h of it, older than it: now the extension price counts.
+    await admin.from("price_observations").insert({
+      offer_id: offer3, observed_at: new Date(Date.now() - 30 * 60_000).toISOString(), price: 1_200_000, is_valid: true, source: "seed",
+    });
+    await admin.rpc("refresh_variant_current_price", { p_variant_ids: [variant3] });
+    expect(await current()).toBe(1_210_000);
+  });
+});
+
 describe("extension_contribution_begin", () => {
   it("allows up to the limit per contributor per hour, then asks to retry later", async () => {
     const who = `quota-${tag}`;

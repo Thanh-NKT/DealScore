@@ -33,3 +33,20 @@ describe("TikTok OAuth state nonce (job_locks)", () => {
     expect(results.filter(Boolean)).toHaveLength(1);
   });
 });
+
+describe("prune_operational_data and OAuth nonces", () => {
+  it("deletes used / long-expired nonces and keeps a live one", async () => {
+    const used = `tiktok-oauth:prune-used-${Date.now()}`;
+    const live = `tiktok-oauth:prune-live-${Date.now()}`;
+    names.push(used, live);
+    await admin.from("job_locks").insert([
+      { name: used, owner: "oauth-state", locked_until: "-infinity" },
+      { name: live, owner: "oauth-state", locked_until: new Date(Date.now() + 30 * 60_000).toISOString() },
+    ]);
+    const { data, error } = await admin.rpc("prune_operational_data");
+    expect(error).toBeNull();
+    expect((data as { oauth_nonces: number }).oauth_nonces).toBeGreaterThanOrEqual(1);
+    const { data: left } = await admin.from("job_locks").select("name").in("name", [used, live]);
+    expect(left).toEqual([{ name: live }]);
+  });
+});

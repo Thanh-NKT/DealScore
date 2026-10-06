@@ -20,6 +20,7 @@
     "seed:dev": "tsx --conditions=react-server --env-file=.env.local scripts/seed-dev.ts",
     "seed:images": "tsx --env-file=.env.local scripts/seed-images.ts",
     "scores:recompute": "tsx --env-file=.env.local scripts/recompute-deal-scores.ts",
+    "rollup:rebuild": "tsx --conditions=react-server --env-file=.env.local scripts/rebuild-rollups.ts",
     "test:db": "vitest run --config vitest.db.config.mts",
     "alerts:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-alerts.ts",
     "conversions:import": "tsx --conditions=react-server --env-file=.env.local scripts/import-conversions.ts",

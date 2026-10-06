@@ -106,6 +106,73 @@ describe("offer visibility rule", () => {
     expect(await currentPrice(variantId)).toBeNull();
   });
 
+  it("a gone listing keeps its past days through a rebuild; reactivated, it keeps them too", async () => {
+    const { variantId } = await verifiedVariant("Gone");
+    await ingest(`ga${tag}`, 900_000, { match: variantId });
+    const o = await offerOf(`ga${tag}`);
+    const yesterday = toVnDate(new Date(Date.now() - 86_400_000));
+    await admin.from("price_observations").insert({ offer_id: o.id, observed_at: `${yesterday}T12:00:00+07:00`, price: 880_000, is_valid: true, source: "seed" });
+    await admin.rpc("admin_rebuild_variant_rollup", { p_variant_ids: [variantId] });
+    const before = await rollup(variantId);
+    expect(before.map((r) => r.day)).toEqual([yesterday, today()]);
+
+    // The marketplace says gone: no current price, but the history is the past, not today's status.
+    await admin.rpc("record_observations", { p: { listing_id: o.listing_id, source: "seed", status: "gone" } });
+    expect(await currentPrice(variantId)).toBeNull();
+    await admin.rpc("admin_rebuild_variant_rollup", { p_variant_ids: [variantId] });
+    expect(await rollup(variantId)).toEqual(before);
+    await admin.rpc("refresh_variant_daily_prices", { p_from: yesterday, p_to: today(), p_variant_ids: [variantId] });
+    expect(await rollup(variantId)).toEqual(before);
+
+    // Seen again: reactivated, the past days are still there.
+    await admin.rpc("record_observations", { p: { listing_id: o.listing_id, source: "seed", models: [{ model_id: "default", price: 890_000 }] } });
+    await admin.rpc("refresh_variant_daily_prices", { p_from: today(), p_to: today(), p_variant_ids: [variantId] });
+    expect((await rollup(variantId)).map((r) => r.day)).toEqual([yesterday, today()]);
+    expect((await rollup(variantId))[0]).toEqual(before[0]);
+    expect(await currentPrice(variantId)).toBe(890_000);
+  });
+
+  it("admin_set_listings_active undoes an admin deactivation and brings its history back", async () => {
+    const { variantId } = await verifiedVariant("React");
+    await ingest(`re${tag}`, 700_000, { match: variantId });
+    const o = await offerOf(`re${tag}`);
+    await admin.rpc("admin_set_listings_inactive", { p_listing_ids: [o.listing_id], p_note: `${tag} off` });
+    expect(await rollup(variantId)).toEqual([]);
+
+    const { data: n, error } = await admin.rpc("admin_set_listings_active", { p_listing_ids: [o.listing_id], p_note: `${tag} on` });
+    expect(error).toBeNull();
+    expect(n).toBe(1);
+    expect((await admin.from("listings").select("status, deactivated_by").eq("id", o.listing_id).single()).data)
+      .toEqual({ status: "active", deactivated_by: null });
+    expect(await rollup(variantId)).toMatchObject([{ day: today(), min_price: 700_000 }]);
+    expect(await currentPrice(variantId)).toBe(700_000);
+    const { data: audit } = await admin.from("admin_audit").select("action").eq("note", `${tag} on`);
+    expect(audit).toEqual([{ action: "listing.reactivate" }]);
+
+    // Only admin deactivations: a collector 'gone' is left to the collector; a second call is a no-op.
+    await admin.rpc("record_observations", { p: { listing_id: o.listing_id, source: "seed", status: "gone" } });
+    expect((await admin.rpc("admin_set_listings_active", { p_listing_ids: [o.listing_id], p_note: `${tag} on2` })).data).toBe(0);
+    expect((await admin.from("listings").select("status").eq("id", o.listing_id).single()).data!.status).toBe("inactive");
+  });
+
+  it("rebuild_variant_rollups walks every variant in batches with a resumable cursor", async () => {
+    const { count } = await admin.from("product_variants").select("id", { count: "exact", head: true });
+    let after: string | undefined;
+    let total = 0;
+    for (let i = 0; i < 1000; i++) {
+      const { data, error } = await admin.rpc("rebuild_variant_rollups", { p_limit: 100, ...(after ? { p_after: after } : {}) });
+      expect(error).toBeNull();
+      const r = data as { processed: number; last_id: string | null; done: boolean };
+      total += r.processed;
+      if (r.last_id) {
+        if (after) expect(r.last_id > after).toBe(true);
+        after = r.last_id;
+      }
+      if (r.done) break;
+    }
+    expect(total).toBeGreaterThanOrEqual(count!);
+  });
+
   it("pending offers of a draft stay visible", async () => {
     const d = await ingest(`d${tag}`, 700_000);
     expect(await currentPrice(d.variant_id)).toBe(700_000);

@@ -1,12 +1,18 @@
 -- 0022 — DB review fixes, catalog side (review-db I1/I2/I3/I5 + minors, review-pricing-ui I1).
 --
---   1. ONE offer-visibility rule, offer_is_visible(): the listing is active, and the offer is matched
---      ('auto' / 'manual') or is 'pending' on a draft product. Used by the daily rollup, the admin rollup
---      rebuild, refresh_variant_current_price, the draft-cluster band, search_products, filter_availability.
---      Same rule as isOfferVisible() in src/lib/pricing/variant-pricing.ts.
+--   1. Two offer rules.
+--      * CURRENT visibility, offer_is_visible(): the listing is active, and the offer is matched
+--        ('auto' / 'manual') or is 'pending' on a draft product. Used by refresh_variant_current_price, the
+--        draft-cluster band, search_products, filter_availability. Same rule as isOfferVisible() in
+--        src/lib/pricing/variant-pricing.ts.
+--      * HISTORY, offer_in_history(): the same match rule, but the listing's CURRENT status is ignored — a
+--        listing that is gone today was a real price yesterday, and a reactivated listing keeps its past.
+--        Only an admin deactivation ("this listing is wrong") takes a listing out of history. Used by the
+--        daily rollup and the admin rollup rebuild.
 --   2. refresh_variant_daily_prices(p_from, p_to, p_variant_ids default null): sargable observed_at range
---      (+ index), optional variant scope (stale rows of the scoped variants/days are deleted), upsert in
---      (variant_id, day) order so concurrent refreshes lock rows in the same order.
+--      (index idx_price_obs_observed_at, built CONCURRENTLY by migration 0027), optional variant scope
+--      (stale rows of the scoped variants/days are deleted), rows locked in (variant_id, day) order so
+--      concurrent refreshes cannot deadlock.
 --   3. refresh_variant_current_price: visibility rule; latest observation per offer through a LIMIT 1
 --      lateral (idx_price_obs_offer_time) instead of reading every observation of the variant.
 --   4. Draft lifecycle lock order: `draft:<key>` advisory lock, then the product row, then offers.
@@ -19,6 +25,11 @@
 --   7. trending_products / price_drop_radar: same score gate; strict UUID check; radar input clamps.
 --   8. record_observations: an admin deactivation sticks (listings.deactivated_by).
 --   9. Missing FK indexes.
+--
+--   This migration does NOT rebuild the existing rollups: a full rebuild inside the migration transaction
+--   would hold an empty / locked rollup for every reader on a large table. The one-time rebuild under the
+--   history rule is batched and resumable — rebuild_variant_rollups() (0028) via `pnpm rollup:rebuild`,
+--   see supabase/README.md.
 
 -- 1 ---------------------------------------------------------------------------
 -- No SET search_path on purpose: it references no objects (only built-in operators) and must stay
@@ -30,8 +41,19 @@ returns boolean language sql immutable parallel safe as $$
           or (p_match_status = 'pending' and p_product_status = 'draft'))
 $$;
 
+-- History rule: offer_is_visible() without the listing's current status. A wrong match (rejected,
+-- pending on a verified product) never counts; an admin-deactivated listing does not either.
+create or replace function public.offer_in_history(p_match_status text, p_product_status text, p_deactivated_by text)
+returns boolean language sql immutable parallel safe as $$
+  select p_deactivated_by is distinct from 'admin'
+     and (p_match_status in ('auto', 'manual')
+          or (p_match_status = 'pending' and p_product_status = 'draft'))
+$$;
+
 -- 2 ---------------------------------------------------------------------------
-create index if not exists idx_price_obs_observed_at on public.price_observations (observed_at);
+-- listings.deactivated_by (section 8) is read by the history rule below.
+alter table public.listings add column if not exists deactivated_by text
+  check (deactivated_by in ('collector', 'admin'));
 
 drop function if exists public.refresh_variant_daily_prices(date, date);
 create function public.refresh_variant_daily_prices(p_from date, p_to date, p_variant_ids uuid[] default null)
@@ -45,6 +67,15 @@ declare
 begin
   if p_variant_ids is not null and cardinality(p_variant_ids) = 0 then
     return 0;
+  end if;
+
+  -- Scoped call: lock the existing rows of the range in (variant_id, day) order first, so the upsert and
+  -- the stale-row delete below never take row locks out of order (two overlapping refreshes cannot deadlock).
+  if p_variant_ids is not null then
+    perform 1 from variant_daily_prices t
+    where t.variant_id = any(p_variant_ids) and t.day between p_from and p_to
+    order by t.variant_id, t.day
+    for update;
   end if;
 
   insert into variant_daily_prices as t (
@@ -71,7 +102,7 @@ begin
     and po.is_valid
     and po.price is not null and po.price > 0
     and (p_variant_ids is null or o.variant_id = any(p_variant_ids))
-    and offer_is_visible(o.match_status, l.status, pr.status)
+    and offer_in_history(o.match_status, pr.status, l.deactivated_by)
   group by 1, 2
   -- Deterministic row-lock order: two concurrent refreshes cannot deadlock on variant_daily_prices.
   order by 1, 2
@@ -85,8 +116,8 @@ begin
     flash_min_price = excluded.flash_min_price;
   get diagnostics v_rows = row_count;
 
-  -- Scoped call: a day whose visible offers are all gone (rejected, moved, deactivated) loses its row.
-  -- Unscoped calls only upsert (rows inserted outside this function are never touched).
+  -- Scoped call: a day whose history offers are all gone (rejected, moved away, admin-deactivated) loses
+  -- its row. Unscoped calls only upsert (rows inserted outside this function are never touched).
   if p_variant_ids is not null then
     delete from variant_daily_prices t
     where t.variant_id = any(p_variant_ids)
@@ -99,7 +130,7 @@ begin
         join products pr           on pr.id = pv.product_id
         join price_observations po on po.offer_id = o.id
         where o.variant_id = t.variant_id
-          and offer_is_visible(o.match_status, l.status, pr.status)
+          and offer_in_history(o.match_status, pr.status, l.deactivated_by)
           and po.is_valid and po.price is not null and po.price > 0
           and po.observed_at >= t.day::timestamp at time zone 'Asia/Ho_Chi_Minh'
           and po.observed_at <  (t.day + 1)::timestamp at time zone 'Asia/Ho_Chi_Minh');
@@ -109,13 +140,16 @@ end $$;
 revoke execute on function public.refresh_variant_daily_prices(date, date, uuid[]) from public, anon, authenticated;
 grant execute on function public.refresh_variant_daily_prices(date, date, uuid[]) to service_role;
 
--- Full rebuild of some variants' history (admin moves / deactivations).
+-- Full rebuild of some variants' history (admin moves / deactivations, the batched one-time rebuild).
+-- One transaction per call: readers see the old rows or the new ones, never an empty history.
 create or replace function public.admin_rebuild_variant_rollup(p_variant_ids uuid[])
 returns void language plpgsql security definer set search_path = public as $$
 begin
   if p_variant_ids is null or cardinality(p_variant_ids) = 0 then
     return;
   end if;
+  -- Same row-lock order as refresh_variant_daily_prices.
+  perform 1 from variant_daily_prices where variant_id = any(p_variant_ids) order by variant_id, day for update;
   delete from variant_daily_prices where variant_id = any(p_variant_ids);
   insert into variant_daily_prices (variant_id, day, min_price, median_price, max_price,
                                     obs_count, offer_count, has_flash_sale, flash_min_price)
@@ -134,7 +168,7 @@ begin
   join product_variants pv on pv.id = o.variant_id
   join products pr         on pr.id = pv.product_id
   where o.variant_id = any(p_variant_ids)
-    and offer_is_visible(o.match_status, l.status, pr.status)
+    and offer_in_history(o.match_status, pr.status, l.deactivated_by)
     and po.is_valid and po.price is not null and po.price > 0
   group by 1, 2
   order by 1, 2;
@@ -750,12 +784,10 @@ end $$;
 
 -- 8 ---------------------------------------------------------------------------
 -- Who deactivated a listing: 'collector' (marketplace said gone; a later observation reactivates it) or
--- 'admin' (sticks — record_observations no longer undoes it).
-alter table public.listings add column if not exists deactivated_by text
-  check (deactivated_by in ('collector', 'admin'));
+-- 'admin' (sticks — record_observations no longer undoes it). The column is added in section 2.
 
--- Same as 0021, plus: marks the deactivation as the admin's, rebuilds the variants' history under the
--- visibility rule (the listing's prices leave the rollup), logs only when something changed.
+-- Same as 0021, plus: marks the deactivation as the admin's, rebuilds the variants' history (offer_in_history():
+-- an admin-deactivated listing's prices leave the rollup), logs only when something changed.
 create or replace function public.admin_set_listings_inactive(p_listing_ids uuid[], p_note text)
 returns integer language plpgsql security definer set search_path = public as $$
 declare v_n integer; v_vids uuid[];
@@ -1177,11 +1209,4 @@ grant execute on function public.price_drop_radar(numeric, uuid, integer, intege
 revoke execute on function public.trending_products(text, integer, uuid) from public;
 grant execute on function public.trending_products(text, integer, uuid) to anon, authenticated;
 
--- Rebuild every rollup and current price under the visibility rule (rejected / deactivated / pending-on-
--- verified offers used to count in history).
-do $$
-declare v_ids uuid[];
-begin
-  select coalesce(array_agg(id), '{}') into v_ids from product_variants;
-  perform public.admin_rebuild_variant_rollup(v_ids);
-end $$;
+-- No rollup rebuild here: see the header (rebuild_variant_rollups(), 0028).

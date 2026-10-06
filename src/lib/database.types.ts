@@ -1746,6 +1746,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_set_listings_active: {
+        Args: { p_listing_ids: string[]; p_note: string }
+        Returns: number
+      }
       admin_set_listings_inactive: {
         Args: { p_listing_ids: string[]; p_note: string }
         Returns: number
@@ -1837,6 +1841,14 @@ export type Database = {
           reason: string
         }[]
       }
+      offer_in_history: {
+        Args: {
+          p_deactivated_by: string
+          p_match_status: string
+          p_product_status: string
+        }
+        Returns: boolean
+      }
       offer_is_visible: {
         Args: {
           p_listing_status: string
@@ -1891,6 +1903,10 @@ export type Database = {
       rate_hit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
+      }
+      rebuild_variant_rollups: {
+        Args: { p_after?: string; p_limit?: number }
+        Returns: Json
       }
       record_observations: { Args: { p: Json }; Returns: string[] }
       record_watch_evaluation: {
