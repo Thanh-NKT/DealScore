@@ -337,7 +337,7 @@ describe("other admin RPCs", () => {
     expect(n).toBe(1);
     const { data: cron, error: cronErr } = await admin.rpc("admin_cron_status");
     expect(cronErr).toBeNull();
-    for (const j of cron ?? []) expect(j.jobname.startsWith("kairo-")).toBe(true);
+    for (const j of cron ?? []) expect(j.jobname.startsWith("dealscore-")).toBe(true);
     const { data: counts, error: cErr } = await admin.rpc("admin_overview_counts");
     expect(cErr).toBeNull();
     expect(counts).toHaveProperty("drafts_multi_shop");

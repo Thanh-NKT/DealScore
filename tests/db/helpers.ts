@@ -31,7 +31,7 @@ export interface TestUser {
  * Random password that satisfies the letters_digits rule in config.toml.
  */
 export async function createTestUser(): Promise<TestUser> {
-  const email = `test-${randomUUID()}@kairo.test`;
+  const email = `test-${randomUUID()}@dealscore.test`;
   const password = `Pw-${randomUUID()}`;
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (error || !data.user) throw error ?? new Error("createUser failed");
