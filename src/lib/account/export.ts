@@ -60,6 +60,21 @@ export interface AccountExport {
   orders: Array<{ purchase_time: string; status: ConversionStatus; order_value: number | null; product_item_id: string }>;
   /** First-party analytics events (1.11) — allow-listed properties only. */
   activity: Array<{ created_at: string; event: string; props: unknown }>;
+  /** Prices the user's browser extension sent (signed-in contributions only). */
+  extension_observations: Array<{
+    offer_id: string;
+    observed_at: string;
+    price: number | null;
+    original_price: number | null;
+    stock: number | null;
+    free_shipping: boolean | null;
+    has_voucher: boolean | null;
+    /** true once the price was corroborated into the public price history. */
+    promoted: boolean;
+    created_at: string;
+  }>;
+  /** When each extension contribution was received (the hourly quota log). */
+  extension_contributions: Array<{ created_at: string }>;
 }
 
 /**
@@ -83,6 +98,13 @@ export function buildAccountExport(input: {
   orders: Array<{ purchase_time: string; status: string; order_value: number | null; item_id: string }>;
   activity?: Array<{ created_at: string; name: string; props: unknown }>;
   preferences?: Row<"user_preferences"> | null;
+  extensionObservations?: Array<
+    Pick<
+      Row<"extension_observations">,
+      "offer_id" | "observed_at" | "price" | "original_price" | "stock" | "free_shipping" | "has_voucher" | "promoted_at" | "created_at"
+    >
+  >;
+  extensionContributions?: Array<{ created_at: string }>;
 }): AccountExport {
   const p = input.profile;
   const pref = input.preferences;
@@ -147,6 +169,19 @@ export function buildAccountExport(input: {
       product_item_id: o.item_id,
     })),
     activity: (input.activity ?? []).map((a) => ({ created_at: a.created_at, event: a.name, props: a.props })),
+    // No contributor key: it is the user id (or an IP hash), not the user's data.
+    extension_observations: (input.extensionObservations ?? []).map((o) => ({
+      offer_id: o.offer_id,
+      observed_at: o.observed_at,
+      price: num(o.price),
+      original_price: num(o.original_price),
+      stock: o.stock,
+      free_shipping: o.free_shipping,
+      has_voucher: o.has_voucher,
+      promoted: o.promoted_at != null,
+      created_at: o.created_at,
+    })),
+    extension_contributions: (input.extensionContributions ?? []).map((c) => ({ created_at: c.created_at })),
   };
 }
 

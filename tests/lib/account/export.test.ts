@@ -94,6 +94,14 @@ const input = {
   activity: [
     { created_at: "2026-09-11T00:00:00Z", name: "product_viewed", props: { is_draft: false }, session_id: "s", id: 7 },
   ],
+  extensionObservations: [
+    {
+      id: 9, offer_id: "o1", contributor: "u:u1", user_id: "u1", observed_at: "2026-09-13T00:00:00Z", price: 990000,
+      original_price: 1200000, stock: 4, free_shipping: true, has_voucher: null, promoted_at: "2026-09-13T01:00:00Z",
+      created_at: "2026-09-13T00:00:05Z",
+    },
+  ],
+  extensionContributions: [{ id: 3, contributor: "u:u1", user_id: "u1", created_at: "2026-09-13T00:00:05Z" }],
 };
 
 describe("buildAccountExport", () => {
@@ -149,6 +157,21 @@ describe("buildAccountExport", () => {
   });
   it("no preferences row → null", () => {
     expect(buildAccountExport({ ...input, preferences: null } as never).preferences).toBeNull();
+  });
+  it("extension contributions: the prices the user sent, without internal ids or the contributor key", () => {
+    expect(out.extension_observations).toEqual([
+      {
+        offer_id: "o1", observed_at: "2026-09-13T00:00:00Z", price: 990000, original_price: 1200000, stock: 4,
+        free_shipping: true, has_voucher: null, promoted: true, created_at: "2026-09-13T00:00:05Z",
+      },
+    ]);
+    expect(out.extension_contributions).toEqual([{ created_at: "2026-09-13T00:00:05Z" }]);
+    expect(JSON.stringify(out)).not.toContain("u:u1");
+  });
+  it("no extension data → empty lists", () => {
+    const bare = buildAccountExport({ ...input, extensionObservations: undefined, extensionContributions: undefined } as never);
+    expect(bare.extension_observations).toEqual([]);
+    expect(bare.extension_contributions).toEqual([]);
   });
   it("settings in NotificationSettings shape", () => {
     expect(out.notification_settings).toMatchObject({ emailEnabled: true, frequency: "instant" });

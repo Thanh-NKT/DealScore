@@ -8,8 +8,10 @@ export { PURGE_AFTER_DAYS, purgeCutoff, purgeDate } from "@/lib/account/purge-da
 /**
  * Hard-delete accounts whose deletion was requested more than 30 days ago.
  * Deleting auth.users cascades to users → watches → alert_events, notification_settings,
- * user_preferences (covered by tests/db/preferences.test.ts "is removed with the user");
+ * user_preferences (covered by tests/db/preferences.test.ts "is removed with the user"), and the user's
+ * extension_observations / extension_contributions (user_id FK, migration 0023; tests/db/user-data.test.ts);
  * click_events.user_id and lookup_requests.user_id → null.
+ * A new table holding user data must reference users(id) the same way — erasure relies on the cascade.
  * One user failing does not stop the run. Safe to re-run.
  */
 export async function purgeDeletedAccounts(

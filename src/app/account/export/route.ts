@@ -75,6 +75,35 @@ export async function GET() {
     if (!data || data.length < 1000) break;
   }
 
+  // Extension contributions are service-only tables, linked to the account by user_id (migration 0023).
+  const extensionObservations: Array<{
+    offer_id: string; observed_at: string; price: number; original_price: number | null; stock: number | null;
+    free_shipping: boolean | null; has_voucher: boolean | null; promoted_at: string | null; created_at: string;
+  }> = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin
+      .from("extension_observations")
+      .select("offer_id, observed_at, price, original_price, stock, free_shipping, has_voucher, promoted_at, created_at")
+      .eq("user_id", user.id)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw new Error(`Data export: failed to read extension observations: ${error.message}`);
+    extensionObservations.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  const extensionContributions: Array<{ created_at: string }> = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin
+      .from("extension_contributions")
+      .select("created_at")
+      .eq("user_id", user.id)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw new Error(`Data export: failed to read extension contributions: ${error.message}`);
+    extensionContributions.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+
   const now = new Date();
   const exportData = buildAccountExport({
     activity,
@@ -88,6 +117,8 @@ export async function GET() {
     orders,
     clicks: clicksRes.data ?? [],
     lookups: lookupsRes.data ?? [],
+    extensionObservations,
+    extensionContributions,
   });
 
   const filename = exportFileName(now);
