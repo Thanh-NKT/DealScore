@@ -1,9 +1,11 @@
+import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_NOTIFICATION_SETTINGS, fromRow, resolveChannels, type Channel } from "@/lib/account/notification-settings";
 import type { Recommendation } from "@/lib/pricing/deal-score";
-import { sendEmail } from "@/lib/email";
+import { EmailSendError, sendEmail } from "@/lib/email";
+import { reportError } from "@/lib/observability";
 import { listUnsubscribeHeaders, renderAlertEmail, type AlertEmailItem } from "@/lib/email/templates/alert";
 import { describeTriggers } from "@/lib/alerts/triggers-text";
 import { signUnsubscribeToken } from "@/lib/alerts/unsubscribe-token";
@@ -139,6 +141,12 @@ export function alertEffectivePrice(
   return shownEffectivePrice(e.effective, { price: e.price, observedAt: e.current.observedAt }, now);
 }
 
+/** Stable for a set of deliveries (order-free), ≤ 256 chars as Resend requires. */
+export function deliveryIdempotencyKey(deliveryIds: string[]): string {
+  const digest = crypto.createHash("sha256").update([...deliveryIds].sort().join(",")).digest("hex");
+  return `alert-delivery/${digest}`;
+}
+
 function productUrl(site: string, e: EventDetail) {
   return `${site}/${e.product.categorySlug}/${e.product.slug}?variant=${e.watch.variantId}`;
 }
@@ -216,8 +224,8 @@ export async function dispatchDueDeliveries(
     const ids = group.deliveries.map((d) => d.deliveryId);
     const items = group.deliveries.map((d) => events.get(d.alertEventId)!);
 
+    let providerId: string | null = null;
     try {
-      let providerId: string | null = null;
       if (group.channel === "email") {
         if (!secret) throw new Error("Missing UNSUBSCRIBE_SECRET");
         const to = items[0].user.email;
@@ -257,13 +265,22 @@ export async function dispatchDueDeliveries(
           unsubscribeAllUrl: `${site}/unsubscribe?t=${allToken}`,
           siteUrl: site,
         });
-        const res = await sendEmail({
-          to,
-          ...mail,
-          headers: listUnsubscribeHeaders(`${site}/api/unsubscribe?t=${allToken}`, `${site}/unsubscribe?t=${allToken}`),
-          tags: [{ name: "type", value: "alert" }],
-        });
-        providerId = res.id;
+        try {
+          const res = await sendEmail({
+            to,
+            ...mail,
+            headers: listUnsubscribeHeaders(`${site}/api/unsubscribe?t=${allToken}`, `${site}/unsubscribe?t=${allToken}`),
+            tags: [{ name: "type", value: "alert" }],
+            // Delivery is at-least-once: a send whose bookkeeping was lost is claimed again later.
+            // Same delivery set → same key, so Resend (24h window) does not send that email twice.
+            idempotencyKey: deliveryIdempotencyKey(ids),
+          });
+          providerId = res.id;
+        } catch (err) {
+          // The key was already used with another body (prices re-rendered on a later run): this
+          // delivery set was already sent. Anything else is a real failure.
+          if (!(err instanceof EmailSendError && err.code === "invalid_idempotent_request")) throw err;
+        }
       } else {
         const payload = buildPushPayload(
           items.map((e) => ({ productName: e.product.name, price: e.price, url: productUrl(site, e) })),
@@ -277,9 +294,6 @@ export async function dispatchDueDeliveries(
         }
         if (r.delivered === 0) throw new Error(`Push failed on ${r.failed} device(s)`);
       }
-
-      await update(ids, { status: "sent", sent_at: nowIso, provider_message_id: providerId, attempts: group.deliveries[0].attempts + 1 });
-      stats.sent += ids.length;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       for (const d of group.deliveries) {
@@ -291,7 +305,19 @@ export async function dispatchDueDeliveries(
         if (retry) stats.retried++;
         else stats.failed++;
       }
+      continue;
     }
+
+    // Sent. The bookkeeping stays OUT of the retry path above: putting a sent delivery back to
+    // pending would send it again. One retry; if the row is still 'sending', the claim RPC
+    // reclaims it after 15 min, counting an attempt (0025), and the email key dedupes the resend.
+    const sentPatch = { status: "sent", sent_at: nowIso, provider_message_id: providerId, attempts: group.deliveries[0].attempts + 1 };
+    try {
+      await update(ids, sentPatch).catch(() => update(ids, sentPatch));
+    } catch (err) {
+      reportError(err, { where: "alert_dispatch_mark_sent", channel: group.channel, deliveries: ids.length });
+    }
+    stats.sent += ids.length;
   }
   return stats;
 }

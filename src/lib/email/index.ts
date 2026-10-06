@@ -8,9 +8,22 @@ export interface EmailMessage {
   text: string;
   headers?: Record<string, string>;
   tags?: Array<{ name: string; value: string }>;
+  /**
+   * Sent as Resend's Idempotency-Key (kept 24h): a retry with the same key and payload is not sent
+   * again; the same key with a different payload fails with code "invalid_idempotent_request".
+   */
+  idempotencyKey?: string;
 }
 
-export class EmailSendError extends Error {}
+export class EmailSendError extends Error {
+  constructor(
+    message: string,
+    /** Resend error name, when Resend answered with one. */
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
 
 export async function sendEmail(
   msg: EmailMessage,
@@ -40,7 +53,7 @@ export async function sendEmail(
   const resend = new Resend(apiKey);
 
   try {
-    const res = await resend.emails.send({
+    const payload = {
       from,
       to: msg.to,
       subject: msg.subject,
@@ -48,11 +61,15 @@ export async function sendEmail(
       text: msg.text,
       headers: msg.headers,
       tags: msg.tags,
-    });
+    };
+    const res = msg.idempotencyKey
+      ? await resend.emails.send(payload, { idempotencyKey: msg.idempotencyKey })
+      : await resend.emails.send(payload);
 
     if (res.error) {
       throw new EmailSendError(
         `Resend email error: ${res.error.message}`,
+        res.error.name,
       );
     }
 

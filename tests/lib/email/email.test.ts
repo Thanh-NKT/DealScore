@@ -31,6 +31,19 @@ describe("sendEmail", () => {
     await expect(sendEmail(msg)).rejects.toBeInstanceOf(EmailSendError);
   });
 
+  it("passes the idempotency key to Resend; an error keeps Resend's code", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_x");
+    vi.stubEnv("EMAIL_FROM", "Kairo <a@kairo.vn>");
+    send.mockResolvedValue({ data: { id: "m1" }, error: null });
+    await sendEmail({ ...msg, idempotencyKey: "alert/abc" });
+    expect(send).toHaveBeenLastCalledWith(expect.objectContaining({ to: "an@kairo.vn" }), { idempotencyKey: "alert/abc" });
+    await sendEmail(msg);
+    expect(send.mock.lastCall).toHaveLength(1);
+
+    send.mockResolvedValue({ data: null, error: { message: "same key, other body", name: "invalid_idempotent_request" } });
+    await expect(sendEmail({ ...msg, idempotencyKey: "alert/abc" })).rejects.toMatchObject({ code: "invalid_idempotent_request" });
+  });
+
   it("no key in dev → prints to console, id null", async () => {
     vi.stubEnv("RESEND_API_KEY", "");
     vi.stubEnv("NODE_ENV", "development");
