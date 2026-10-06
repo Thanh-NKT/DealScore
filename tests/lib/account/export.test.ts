@@ -36,6 +36,7 @@ const input = {
       notify_back_in_stock: false,
       channels: null,
       folder: null,
+      folder_id: "f1",
       note: "birthday gift",
       status: "active",
       created_at: "2026-09-02T00:00:00Z",
@@ -50,6 +51,7 @@ const input = {
       future_column: "must not leak",
     },
   ],
+  folders: [{ id: "f1", user_id: "u1", name: "Quà tặng", sort_order: 0, created_at: "2026-09-02T00:00:00Z" }],
   alertEvents: [
     {
       watch_id: "w1",
@@ -106,6 +108,12 @@ const input = {
 
 describe("buildAccountExport", () => {
   const out = buildAccountExport(input as never);
+
+  it("exports the user's named folders and each watch's folder_id, no user id", () => {
+    expect(out.folders).toEqual([{ id: "f1", name: "Quà tặng", sort_order: 0, created_at: "2026-09-02T00:00:00Z" }]);
+    expect(out.watches[0].folder_id).toBe("f1");
+    expect(JSON.stringify(out.folders)).not.toContain("u1");
+  });
 
   it("exports analytics activity without internal ids or session ids", () => {
     expect(out.activity).toEqual([

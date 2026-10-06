@@ -39,13 +39,18 @@ export interface AccountExport {
     min_deal_score: number | null;
     notify_back_in_stock: boolean;
     channels: string[] | null;
+    /** Legacy free-text folder. */
     folder: string | null;
+    /** The folder in `folders` this watch is filed in. */
+    folder_id: string | null;
     note: string | null;
     baseline_price: number | null;
     last_alerted_at: string | null;
     status: string;
     created_at: string;
   }>;
+  /** The user's named watch folders. */
+  folders: Array<{ id: string; name: string; sort_order: number; created_at: string }>;
   alert_events: Array<{
     watch_id: string;
     trigger_types: string[];
@@ -87,6 +92,7 @@ export function buildAccountExport(input: {
   profile: Row<"users">;
   settings: Row<"notification_settings">;
   watches: Row<"watches">[];
+  folders?: Array<Pick<Row<"watch_folders">, "id" | "name" | "sort_order" | "created_at">>;
   alertEvents: Array<
     Pick<Row<"alert_events">, "watch_id" | "trigger_types" | "price" | "deal_score" | "created_at"> & {
       alert_deliveries: Array<{ channel: string; status: string; sent_at: string | null }>;
@@ -142,12 +148,14 @@ export function buildAccountExport(input: {
       notify_back_in_stock: w.notify_back_in_stock,
       channels: w.channels,
       folder: w.folder,
+      folder_id: w.folder_id ?? null,
       note: w.note,
       baseline_price: num(w.baseline_price),
       last_alerted_at: w.last_alerted_at,
       status: w.status,
       created_at: w.created_at,
     })),
+    folders: (input.folders ?? []).map((f) => ({ id: f.id, name: f.name, sort_order: f.sort_order, created_at: f.created_at })),
     alert_events: input.alertEvents.map((e) => ({
       watch_id: e.watch_id,
       trigger_types: e.trigger_types,
