@@ -11,7 +11,7 @@ const reportError = vi.fn();
 vi.mock("@/lib/observability", () => ({ reportError: (...a: unknown[]) => reportError(...a) }));
 
 const { GET } = await import("@/app/api/cron/purge-accounts/route");
-const req = () => new Request("https://kairo.vn/api/cron/purge-accounts", { headers: { authorization: "Bearer s" } });
+const req = () => new Request("https://dealscore.vn/api/cron/purge-accounts", { headers: { authorization: "Bearer s" } });
 
 beforeEach(() => {
   vi.clearAllMocks();

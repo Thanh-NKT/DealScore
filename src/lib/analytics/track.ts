@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sanitizeProps, type EventName } from "@/lib/analytics/events";
 
 /** Same anonymous session cookie that /go writes on buy clicks. */
-export const SESSION_COOKIE = "kairo_sid";
+export const SESSION_COOKIE = "dealscore_sid";
 
 /**
  * Record one analytics event (1.11). Never throws: losing an event must not break the request.

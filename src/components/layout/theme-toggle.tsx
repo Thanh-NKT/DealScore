@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { MoonIcon, SunIcon } from "@/components/ui/icons";
 
-const STORAGE_KEY = "kairo-theme";
+const STORAGE_KEY = "dealscore-theme";
 
 type Theme = "light" | "dark";
 

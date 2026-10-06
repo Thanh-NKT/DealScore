@@ -27,8 +27,8 @@ export function safeNextPath(
   }
 
   try {
-    const url = new URL(trimmed, "http://kairo.invalid");
-    if (url.origin !== "http://kairo.invalid") {
+    const url = new URL(trimmed, "http://dealscore.invalid");
+    if (url.origin !== "http://dealscore.invalid") {
       return fallback;
     }
 

@@ -42,7 +42,7 @@ describe("rateKeyHash", () => {
     try {
       delete env.LOOKUP_IP_SALT;
       env.NODE_ENV = "production";
-      expect(rateKeyHash("email:an@kairo.vn")).toMatch(/^[0-9a-f]{64}$/);
+      expect(rateKeyHash("email:an@dealscore.vn")).toMatch(/^[0-9a-f]{64}$/);
     } finally {
       env.LOOKUP_IP_SALT = saved.salt;
       env.NODE_ENV = saved.node;

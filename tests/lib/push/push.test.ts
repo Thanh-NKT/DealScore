@@ -29,7 +29,7 @@ beforeEach(() => {
   sendNotification.mockReset();
   vi.stubEnv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "pub");
   vi.stubEnv("VAPID_PRIVATE_KEY", "priv");
-  vi.stubEnv("VAPID_SUBJECT", "mailto:a@kairo.vn");
+  vi.stubEnv("VAPID_SUBJECT", "mailto:a@dealscore.vn");
 });
 
 describe("buildPushPayload", () => {
@@ -38,7 +38,7 @@ describe("buildPushPayload", () => {
       title: "SSD",
       body: `Còn ${formatVnd(1_000_000)}`,
       url: "https://k/ssd/a?variant=v",
-      tag: "kairo-alert",
+      tag: "dealscore-alert",
     });
     const many = buildPushPayload(
       [
@@ -57,20 +57,20 @@ describe("sendPushToUser", () => {
     sendNotification
       .mockRejectedValueOnce(Object.assign(new Error("gone"), { statusCode: 410 }))
       .mockRejectedValueOnce(Object.assign(new Error("boom"), { statusCode: 500 }));
-    const r = await sendPushToUser("u", { title: "t", body: "b", url: "u", tag: "kairo-alert" });
+    const r = await sendPushToUser("u", { title: "t", body: "b", url: "u", tag: "dealscore-alert" });
     expect(r).toEqual({ delivered: 0, removed: 2, failed: 1 });
     expect(deleted.sort()).toEqual(["s1", "s2"]);
   });
 
   it("success → updates last_success_at", async () => {
     sendNotification.mockResolvedValue({});
-    const r = await sendPushToUser("u", { title: "t", body: "b", url: "u", tag: "kairo-alert" });
+    const r = await sendPushToUser("u", { title: "t", body: "b", url: "u", tag: "dealscore-alert" });
     expect(r.delivered).toBe(2);
     expect(updated.map(([id]) => id).sort()).toEqual(["s1", "s2"]);
   });
 
   it("missing VAPID keys → throws", async () => {
     vi.stubEnv("VAPID_PRIVATE_KEY", "");
-    await expect(sendPushToUser("u", { title: "t", body: "b", url: "u", tag: "kairo-alert" })).rejects.toThrow();
+    await expect(sendPushToUser("u", { title: "t", body: "b", url: "u", tag: "dealscore-alert" })).rejects.toThrow();
   });
 });

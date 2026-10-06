@@ -31,7 +31,7 @@ const recompute = await import("@/app/api/admin/deal-scores/recompute/route");
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
 const req = (url: string, init: RequestInit = {}, auth = "Bearer s") =>
-  new Request(`https://kairo.vn${url}`, { ...init, headers: { authorization: auth, "content-type": "application/json" } });
+  new Request(`https://dealscore.vn${url}`, { ...init, headers: { authorization: auth, "content-type": "application/json" } });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -72,12 +72,12 @@ describe("POST /api/admin/tiktok/authorize-url", () => {
     vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k");
     vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec");
     vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc");
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://kairo.vn");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://dealscore.vn");
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
     const body = await res.json();
     expect(new URL(body.url).searchParams.get("service_id")).toBe("svc");
     expect(rpc).toHaveBeenCalledWith("try_acquire_job_lock", expect.objectContaining({ p_owner: "oauth-state", p_ttl_seconds: 1800 }));
-    expect(body.redirectUri).toBe("https://kairo.vn/api/tiktok/oauth/callback");
+    expect(body.redirectUri).toBe("https://dealscore.vn/api/tiktok/oauth/callback");
     expect(rpc).toHaveBeenCalledWith("admin_log", expect.objectContaining({ p_action: "tiktok.authorize_link" }));
   });
 });
@@ -138,7 +138,7 @@ describe("authorize-url nonce registration", () => {
 });
 
 describe("authorize-url audit failure", () => {
-  const env = () => { vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec"); vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc"); vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://kairo.vn"); };
+  const env = () => { vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec"); vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc"); vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://dealscore.vn"); };
   const failAdminLog = (result: () => Promise<unknown>) =>
     rpc.mockImplementation((async (name: string) => (name === "admin_log" ? result() : rpcDefault(name))) as never);
   it("still returns the link when admin_log returns an error", async () => {

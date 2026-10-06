@@ -14,7 +14,7 @@ vi.mock("@/lib/tiktok/oauth", async (orig) => ({
 const { GET } = await import("@/app/api/tiktok/oauth/callback/route");
 const { oauthStateKey, signState: sign } = await import("@/lib/tiktok/oauth");
 const signState = (_legacySecret: string, at: Date) => sign(oauthStateKey({ ADMIN_API_SECRET: "admin" })!, at);
-const req = (q: string) => new Request(`https://kairo.vn/api/tiktok/oauth/callback?${q}`);
+const req = (q: string) => new Request(`https://dealscore.vn/api/tiktok/oauth/callback?${q}`);
 
 beforeEach(() => {
   vi.clearAllMocks();

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildProductJsonLd, productMetadata, productPath, productRedirectPath, serializeJsonLd, type SeoProduct } from "@/lib/seo/product";
 
-const SITE = "https://kairo.vn";
+const SITE = "https://dealscore.vn";
 
 function product(over: Partial<SeoProduct> = {}): SeoProduct {
   return {

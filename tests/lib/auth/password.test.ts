@@ -16,7 +16,7 @@ describe("passwordProblem", () => {
   });
 
   it("rejects the email or its local part", () => {
-    expect(passwordProblem("an@kairo.vn1", "an@kairo.vn1")).toBe("same_as_email");
+    expect(passwordProblem("an@dealscore.vn1", "an@dealscore.vn1")).toBe("same_as_email");
     expect(passwordProblem("An12345678", "an12345678@x.vn")).toBe("same_as_email");
     expect(passwordProblem("an12345678", "someone@x.vn")).toBeNull();
   });

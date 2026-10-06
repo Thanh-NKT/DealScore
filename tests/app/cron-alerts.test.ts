@@ -10,7 +10,7 @@ vi.mock("@/lib/push", () => ({ sendPushToUser: vi.fn() }));
 
 const { POST } = await import("@/app/api/cron/alerts/route");
 const req = (auth?: string) =>
-  new Request("https://kairo.vn/api/cron/alerts", { method: "POST", headers: auth ? { authorization: auth } : {} });
+  new Request("https://dealscore.vn/api/cron/alerts", { method: "POST", headers: auth ? { authorization: auth } : {} });
 
 beforeEach(() => {
   vi.clearAllMocks();

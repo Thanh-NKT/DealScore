@@ -25,7 +25,7 @@ const { GET } = await import("@/app/auth/callback/route");
 
 async function call(qs: string): Promise<string> {
   try {
-    await GET(new Request(`https://kairo.vn/auth/callback?${qs}`) as never);
+    await GET(new Request(`https://dealscore.vn/auth/callback?${qs}`) as never);
   } catch (e) {
     if (e instanceof Redirect) return e.to;
     throw e;

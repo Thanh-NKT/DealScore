@@ -16,7 +16,7 @@ const NONCE_RE = /^[A-Za-z0-9_-]{22}$/;
 export function oauthStateKey(env: Env = process.env): string | null {
   const secret = env.ADMIN_API_SECRET;
   if (!secret) return null;
-  return createHmac("sha256", secret).update("kairo:tiktok-oauth-state:v2").digest("base64url");
+  return createHmac("sha256", secret).update("dealscore:tiktok-oauth-state:v2").digest("base64url");
 }
 
 function mac(key: string, ts: string, nonce: string): string {

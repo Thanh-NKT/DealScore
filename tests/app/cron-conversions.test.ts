@@ -13,7 +13,7 @@ vi.mock("@/lib/affiliate/shopee-client", async (orig) => ({
 const { POST } = await import("@/app/api/cron/conversions/route");
 const { ShopeeAffiliateError } = await import("@/lib/affiliate/shopee-client");
 const req = () =>
-  new Request("https://kairo.vn/api/cron/conversions", { method: "POST", headers: { authorization: "Bearer s" } });
+  new Request("https://dealscore.vn/api/cron/conversions", { method: "POST", headers: { authorization: "Bearer s" } });
 
 beforeEach(() => {
   vi.clearAllMocks();

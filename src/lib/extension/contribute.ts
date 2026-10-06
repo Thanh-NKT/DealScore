@@ -48,7 +48,7 @@ export function mapModelsToOffers(models: ObservationModel[], offers: OfferRef[]
  * ("u:<user id>" / "ip:<hash>") is hashed again: stable per contributor, not linkable to an account.
  */
 export function voucherReporterId(contributor: string): string {
-  const salt = process.env.LOOKUP_IP_SALT || "kairo_lookup_dev_salt";
+  const salt = process.env.LOOKUP_IP_SALT || "dealscore_lookup_dev_salt";
   return crypto.createHash("sha256").update(`voucher-reporter:${contributor}:${salt}`).digest("hex").slice(0, 32);
 }
 

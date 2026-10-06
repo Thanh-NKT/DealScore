@@ -9,10 +9,10 @@
  */
 
 /** Runs before paint to apply the saved theme (no flash). Allowed by its hash, not by the nonce. */
-export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("kairo-theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("dealscore-theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
 
 /** base64 sha256 of THEME_INIT_SCRIPT. tests/lib/security/headers.test.ts keeps it in sync. */
-export const THEME_INIT_SCRIPT_HASH = "sha256-vE/t0hq1ILG2F09K3cth2q3KlQbloNcHe31iOMiVZnc=";
+export const THEME_INIT_SCRIPT_HASH = "sha256-pG1HtRBCfKF7/qQXrpmfOeVcrGBVJqiBXptND4wMdQw=";
 
 export const SECURITY_HEADERS: { key: string; value: string }[] = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },

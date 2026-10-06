@@ -15,8 +15,8 @@ export function fakeShopeeItem(ext: string): MarketplaceItem {
     models: [{ modelId: `${itemId}_default`, name: "Tiêu chuẩn", price: 500000, originalPrice: 650000, stock: 50, isFlashSale: false }],
     // CDN-shaped URLs so they pass the image allow-list; they do not resolve (dev only).
     images: [
-      `https://down-vn.img.susercontent.com/file/vn-kairo-fake-${itemId}-1`,
-      `https://down-vn.img.susercontent.com/file/vn-kairo-fake-${itemId}-2`,
+      `https://down-vn.img.susercontent.com/file/vn-dealscore-fake-${itemId}-1`,
+      `https://down-vn.img.susercontent.com/file/vn-dealscore-fake-${itemId}-2`,
     ],
     // No codes: Shopee usually shows none, and a made-up code must never look real.
     vouchers: [

@@ -8,7 +8,7 @@ const runSourcing = vi.fn(async () => ({ queries: 1, seen: 1, ingested: 1, skipp
 vi.mock("@/lib/sourcing/run", () => ({ runSourcing, supabaseSourcingDeps: () => ({}) }));
 
 const { POST } = await import("@/app/api/cron/sourcing/route");
-const req = (auth = "Bearer s") => new Request("https://kairo.vn/api/cron/sourcing", { method: "POST", headers: { authorization: auth } });
+const req = (auth = "Bearer s") => new Request("https://dealscore.vn/api/cron/sourcing", { method: "POST", headers: { authorization: auth } });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -45,7 +45,7 @@ describe("POST /api/cron/sourcing", () => {
     expect(await (await POST(req() as never)).json()).toEqual({ skipped: "locked" });
   });
   it("?mode=demand runs demand mode; default is all", async () => {
-    const demandReq = new Request("https://kairo.vn/api/cron/sourcing?mode=demand", { method: "POST", headers: { authorization: "Bearer s" } });
+    const demandReq = new Request("https://dealscore.vn/api/cron/sourcing?mode=demand", { method: "POST", headers: { authorization: "Bearer s" } });
     await POST(demandReq as never);
     expect(runSourcing).toHaveBeenCalledWith(expect.objectContaining({ mode: "demand" }), expect.anything());
     runSourcing.mockClear();

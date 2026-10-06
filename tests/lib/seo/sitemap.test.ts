@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { brandSlug, buildSitemap, resolveBrandSlug } from "@/lib/seo/sitemap";
 
-const SITE = "https://kairo.vn";
+const SITE = "https://dealscore.vn";
 
 describe("buildSitemap", () => {
   const entries = buildSitemap(

@@ -11,7 +11,7 @@ interface RouteProps {
 
 const NO_STORE = { "Cache-Control": "no-store" };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SESSION_COOKIE = "kairo_sid";
+const SESSION_COOKIE = "dealscore_sid";
 const SOURCES: readonly ClickSource[] = ["web", "extension", "email", "push"];
 
 /**

@@ -2,7 +2,7 @@
  * Off-site logical backup (1.10): schema, roles-free data dump of the database in SUPABASE_DB_URL
  * (Dashboard → Connect → Session pooler URI). Complements Supabase's own daily backups / PITR:
  * this one lives outside Supabase, so a lost project or account can still be restored.
- * Run: pnpm db:backup   → backups/kairo-YYYYMMDD-HHmm-{schema,data}.sql
+ * Run: pnpm db:backup   → backups/dealscore-YYYYMMDD-HHmm-{schema,data}.sql
  *
  * Wrapped in main(): tsx compiles .ts files to CJS, which forbids top-level await.
  */
@@ -28,7 +28,7 @@ function main() {
   if (!dbUrl) throw new Error("Missing SUPABASE_DB_URL");
   const dir = "backups";
   mkdirSync(dir, { recursive: true });
-  const base = join(dir, `kairo-${stamp(new Date())}`);
+  const base = join(dir, `dealscore-${stamp(new Date())}`);
   dump(dbUrl, `${base}-schema.sql`, []);
   dump(dbUrl, `${base}-data.sql`, ["--data-only", "--use-copy"]);
   console.log(`Backup written: ${base}-{schema,data}.sql — store it outside this machine.`);

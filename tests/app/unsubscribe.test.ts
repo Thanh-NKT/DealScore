@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 
 const req = (t: string, accept = "*/*") =>
-  new Request(`https://kairo.vn/api/unsubscribe?t=${encodeURIComponent(t)}`, {
+  new Request(`https://dealscore.vn/api/unsubscribe?t=${encodeURIComponent(t)}`, {
     method: "POST",
     headers: { accept, "content-type": "application/x-www-form-urlencoded" },
     body: "List-Unsubscribe=One-Click",

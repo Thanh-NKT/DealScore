@@ -5,7 +5,7 @@ const input = {
   exportedAt: new Date("2026-09-23T20:00:00Z"),
   profile: {
     id: "u1",
-    email: "an@kairo.vn",
+    email: "an@dealscore.vn",
     auth_provider: "email",
     created_at: "2026-09-01T00:00:00Z",
     marketing_opt_in: false,
@@ -189,6 +189,6 @@ describe("buildAccountExport", () => {
 describe("exportFileName", () => {
   it("dated in Vietnam time", () => {
     // 20:00Z on the 23rd = 03:00 Vietnam time on the 24th
-    expect(exportFileName(new Date("2026-09-23T20:00:00Z"))).toBe("kairo-du-lieu-2026-09-24.json");
+    expect(exportFileName(new Date("2026-09-23T20:00:00Z"))).toBe("dealscore-du-lieu-2026-09-24.json");
   });
 });

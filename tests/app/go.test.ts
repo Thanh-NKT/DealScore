@@ -41,7 +41,7 @@ const USER = "7c7c7c7c-7c7c-4c7c-8c7c-7c7c7c7c7c7c";
 const { GET } = await import("@/app/go/[marketplace]/[offerId]/route");
 const call = (qs = "?src=email", cookie?: string) =>
   // NextRequest (not Request): the route reads request.cookies.
-  GET(new NextRequest(`https://kairo.vn/go/shopee/${OFFER}${qs}`, cookie ? { headers: { cookie } } : undefined), {
+  GET(new NextRequest(`https://dealscore.vn/go/shopee/${OFFER}${qs}`, cookie ? { headers: { cookie } } : undefined), {
     params: Promise.resolve({ marketplace: "shopee", offerId: OFFER }),
   });
 
@@ -109,11 +109,11 @@ describe("GET /go", () => {
   });
 
   it("a session cookie that is not our UUID is replaced", async () => {
-    const res = await call("?src=web", `kairo_sid=${"x".repeat(5000)}`);
+    const res = await call("?src=web", `dealscore_sid=${"x".repeat(5000)}`);
     expect(inserted[0].session_id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(res.headers.get("set-cookie")).toContain("kairo_sid=");
+    expect(res.headers.get("set-cookie")).toContain("dealscore_sid=");
     const ok = "8d8d8d8d-8d8d-4d8d-8d8d-8d8d8d8d8d8d";
-    const res2 = await call("?src=web", `kairo_sid=${ok}`);
+    const res2 = await call("?src=web", `dealscore_sid=${ok}`);
     expect(inserted[1].session_id).toBe(ok);
     expect(res2.headers.get("set-cookie")).toBeNull();
   });

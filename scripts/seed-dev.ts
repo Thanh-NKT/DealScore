@@ -17,7 +17,7 @@
  *     web) → conversions, analytics_events, lookup_requests, extension_observations /
  *     extension_contributions, job_locks.
  *
- * WARNING: wipes the catalog, every *@kairo.test account and the operational tables
+ * WARNING: wipes the catalog, every *@dealscore.test account and the operational tables
  * (clicks, conversions, analytics, lookups, runs, locks). guard-env.ts refuses to run when
  * NEXT_PUBLIC_SUPABASE_URL does not point at a local Supabase.
  *
@@ -47,8 +47,8 @@ const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
 const DAY_MS = 86_400_000;
 
 /** Local test accounts only — every seed user logs in with this password. */
-const SEED_PASSWORD = "KairoTest2026";
-const SEED_EMAIL_DOMAIN = "@kairo.test";
+const SEED_PASSWORD = "DealScoreTest2026";
+const SEED_EMAIL_DOMAIN = "@dealscore.test";
 
 const CATEGORIES: Array<[string, string]> = [
   ["ssd", "Ổ cứng SSD"],
@@ -594,7 +594,7 @@ async function seedVouchers(
   console.log("Creating vouchers…");
   const in30 = new Date(now.getTime() + 30 * DAY_MS).toISOString();
   const rows: Record<string, unknown>[] = [
-    { kind: "platform", code: "KAIROSALE", discount_type: "percent", discount_value: 10, max_discount: 100_000, min_spend: 500_000, expires_at: in30 },
+    { kind: "platform", code: "DEALSCORESALE", discount_type: "percent", discount_value: 10, max_discount: 100_000, min_spend: 500_000, expires_at: in30 },
     { kind: "shipping", code: null, discount_type: "amount", discount_value: 30_000, min_spend: 0, expires_at: in30 },
     { kind: "payment", code: "PAYDAY50", discount_type: "amount", discount_value: 50_000, min_spend: 1_000_000, expires_at: in30 },
     // Expired — must not show.

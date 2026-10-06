@@ -19,7 +19,7 @@ const { POST } = await import("@/app/api/extension/watch/route");
 
 const ORIGIN = "chrome-extension://abcdefghijklmnopabcdefghijklmnop";
 function req() {
-  return new Request("https://kairo.vn/api/extension/watch", {
+  return new Request("https://dealscore.vn/api/extension/watch", {
     method: "POST",
     headers: { origin: ORIGIN, "content-type": "application/json" },
     body: JSON.stringify({ variantId: "v1", targetPrice: 100000 }),

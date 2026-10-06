@@ -1,6 +1,6 @@
 /**
  * Run the Alert Engine once locally — pg_cron cannot reach a dev machine
- * unless the kairo_app_url secret is set in Vault.
+ * unless the dealscore_app_url secret is set in Vault.
  * Run: pnpm alerts:run
  *
  * Wrapped in main(): tsx compiles .ts files to CJS, which forbids top-level await.

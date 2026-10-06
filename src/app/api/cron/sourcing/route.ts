@@ -10,7 +10,7 @@ export const maxDuration = 60;
 const NO_STORE = { "Cache-Control": "no-store" };
 
 /**
- * Daily sourcing (pg_cron 'kairo-sourcing') and the 3-hourly demand-only pass ('kairo-sourcing-demand', ?mode=demand).
+ * Daily sourcing (pg_cron 'dealscore-sourcing') and the 3-hourly demand-only pass ('dealscore-sourcing-demand', ?mode=demand).
  * Both take the same 'sourcing' lock.
  */
 export async function POST(request: NextRequest) {

@@ -3,9 +3,9 @@ import { authErrorFromCode, isValidEmail, mapAuthError, normalizeEmail } from "@
 
 describe("normalizeEmail / isValidEmail", () => {
   it("trims and lowercases", () => {
-    expect(normalizeEmail("  An@Kairo.VN ")).toBe("an@kairo.vn");
+    expect(normalizeEmail("  An@DealScore.VN ")).toBe("an@dealscore.vn");
   });
-  it.each([["an@kairo.vn", true], ["an", false], ["an@", false], ["an@kairo", false], ["a n@kairo.vn", false]])(
+  it.each([["an@dealscore.vn", true], ["an", false], ["an@", false], ["an@dealscore", false], ["a n@dealscore.vn", false]])(
     "%s → %s",
     (email, ok) => expect(isValidEmail(email)).toBe(ok),
   );

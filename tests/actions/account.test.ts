@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const calls: string[] = [];
-const user = { id: "u1", email: "an@kairo.vn", consentVersion: null, marketingOptIn: false, deletedAt: null };
+const user = { id: "u1", email: "an@dealscore.vn", consentVersion: null, marketingOptIn: false, deletedAt: null };
 
 vi.mock("@/lib/auth/session", () => ({ requireUser: vi.fn(async () => user) }));
 

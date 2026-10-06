@@ -8,7 +8,7 @@ const { sendEmail, EmailSendError } = await import("@/lib/email");
 const { escapeHtml, formatVnDate } = await import("@/lib/email/escape");
 const { renderAccountDeletionEmail } = await import("@/lib/email/templates/account-deletion");
 
-const msg = { to: "an@kairo.vn", subject: "S", html: "<p>H</p>", text: "T" };
+const msg = { to: "an@dealscore.vn", subject: "S", html: "<p>H</p>", text: "T" };
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -18,25 +18,25 @@ afterEach(() => {
 describe("sendEmail", () => {
   it("with a key → sends via Resend with EMAIL_FROM", async () => {
     vi.stubEnv("RESEND_API_KEY", "re_x");
-    vi.stubEnv("EMAIL_FROM", "Kairo <a@kairo.vn>");
+    vi.stubEnv("EMAIL_FROM", "DealScore <a@dealscore.vn>");
     send.mockResolvedValue({ data: { id: "m1" }, error: null });
     await expect(sendEmail(msg)).resolves.toEqual({ id: "m1" });
-    expect(send).toHaveBeenCalledWith(expect.objectContaining({ from: "Kairo <a@kairo.vn>", to: "an@kairo.vn" }));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ from: "DealScore <a@dealscore.vn>", to: "an@dealscore.vn" }));
   });
 
   it("Resend returns an error → EmailSendError", async () => {
     vi.stubEnv("RESEND_API_KEY", "re_x");
-    vi.stubEnv("EMAIL_FROM", "Kairo <a@kairo.vn>");
+    vi.stubEnv("EMAIL_FROM", "DealScore <a@dealscore.vn>");
     send.mockResolvedValue({ data: null, error: { message: "bad" } });
     await expect(sendEmail(msg)).rejects.toBeInstanceOf(EmailSendError);
   });
 
   it("passes the idempotency key to Resend; an error keeps Resend's code", async () => {
     vi.stubEnv("RESEND_API_KEY", "re_x");
-    vi.stubEnv("EMAIL_FROM", "Kairo <a@kairo.vn>");
+    vi.stubEnv("EMAIL_FROM", "DealScore <a@dealscore.vn>");
     send.mockResolvedValue({ data: { id: "m1" }, error: null });
     await sendEmail({ ...msg, idempotencyKey: "alert/abc" });
-    expect(send).toHaveBeenLastCalledWith(expect.objectContaining({ to: "an@kairo.vn" }), { idempotencyKey: "alert/abc" });
+    expect(send).toHaveBeenLastCalledWith(expect.objectContaining({ to: "an@dealscore.vn" }), { idempotencyKey: "alert/abc" });
     await sendEmail(msg);
     expect(send.mock.lastCall).toHaveLength(1);
 
@@ -74,11 +74,11 @@ describe("renderAccountDeletionEmail", () => {
   it("has the hard-deletion date, login link, click notice; html escaped", () => {
     const e = renderAccountDeletionEmail({
       purgeDate: new Date("2026-10-23T03:00:00Z"),
-      siteUrl: "https://kairo.vn/<x>",
+      siteUrl: "https://dealscore.vn/<x>",
     });
     expect(e.subject).toContain("xóa");
     expect(e.text).toContain("23/10/2026");
-    expect(e.text).toContain("https://kairo.vn/<x>/login");
+    expect(e.text).toContain("https://dealscore.vn/<x>/login");
     expect(e.html).toContain("&lt;x&gt;");
     expect(e.html).not.toContain("<x>");
     expect(e.text).toMatch(/click/i);

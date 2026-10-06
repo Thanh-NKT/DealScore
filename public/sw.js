@@ -9,7 +9,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Kairo", {
       body: data.body || "",
-      tag: data.tag || "kairo-alert",
+      tag: data.tag || "dealscore-alert",
       data: { url: data.url || "/" },
     }),
   );

@@ -193,8 +193,8 @@ export function buildAccountExport(input: {
   };
 }
 
-/** kairo-du-lieu-YYYY-MM-DD.json, dated in Vietnam time. */
+/** dealscore-du-lieu-YYYY-MM-DD.json, dated in Vietnam time. */
 export function exportFileName(exportedAt: Date): string {
   const vnDate = exportedAt.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
-  return `kairo-du-lieu-${vnDate}.json`;
+  return `dealscore-du-lieu-${vnDate}.json`;
 }

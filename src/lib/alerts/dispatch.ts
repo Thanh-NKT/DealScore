@@ -19,7 +19,7 @@ export interface PushPayload {
   title: string;
   body: string;
   url: string;
-  tag: "kairo-alert";
+  tag: "dealscore-alert";
 }
 export type PushSender = (
   userId: string,

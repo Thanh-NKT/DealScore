@@ -9,7 +9,7 @@ export interface RateLimitVerdict {
   retryAfterSeconds?: number;
 }
 
-const DEV_SALT = "kairo_lookup_dev_salt";
+const DEV_SALT = "dealscore_lookup_dev_salt";
 
 export function hashIp(ip: string): string {
   const salt = process.env.LOOKUP_IP_SALT;

@@ -26,7 +26,7 @@ vi.mock("next/cache", () => ({ revalidateTag: (...a: unknown[]) => revalidateTag
 
 const { POST } = await import("@/app/api/vouchers/refresh/route");
 const call = () =>
-  POST(new Request("https://kairo.vn/api/vouchers/refresh", { method: "POST", body: JSON.stringify({ offerId: OFFER }) }) as never);
+  POST(new Request("https://dealscore.vn/api/vouchers/refresh", { method: "POST", body: JSON.stringify({ offerId: OFFER }) }) as never);
 
 beforeEach(() => {
   vi.clearAllMocks();

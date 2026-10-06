@@ -5,7 +5,7 @@ const p = { slug: "wd-sn850x", categorySlug: "ssd", canonicalName: "SSD WD SN850
 
 describe("share", () => {
   it("links to the canonical page with ref=share", () => {
-    expect(shareUrl("https://kairo.vn", p)).toBe("https://kairo.vn/ssd/wd-sn850x?ref=share");
+    expect(shareUrl("https://dealscore.vn", p)).toBe("https://dealscore.vn/ssd/wd-sn850x?ref=share");
   });
   it("text has name, price and verdict", () => {
     expect(shareText(p)).toBe("SSD WD SN850X — 2.390.000đ (Nên mua) trên Kairo");

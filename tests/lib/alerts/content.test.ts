@@ -47,17 +47,17 @@ const item = (o: Partial<AlertEmailItem> = {}): AlertEmailItem => ({
   recommendation: "buy",
   triggerTexts: ["Giá đã xuống dưới mức bạn đặt (2.600.000đ)"],
   scoreReasons: ["✓ Thấp hơn 12% so với giá trung vị 90 ngày"],
-  buyUrl: "https://kairo.vn/go/shopee/o1?src=email&watch=w1&alert=a1",
-  manageUrl: "https://kairo.vn/account/watch/w1",
-  pauseUrl: "https://kairo.vn/unsubscribe?t=x",
+  buyUrl: "https://dealscore.vn/go/shopee/o1?src=email&watch=w1&alert=a1",
+  manageUrl: "https://dealscore.vn/account/watch/w1",
+  pauseUrl: "https://dealscore.vn/unsubscribe?t=x",
   ...o,
 });
 
 describe("renderAlertEmail", () => {
   const input = (items: AlertEmailItem[]) => ({
     items,
-    unsubscribeAllUrl: "https://kairo.vn/unsubscribe?t=all",
-    siteUrl: "https://kairo.vn",
+    unsubscribeAllUrl: "https://dealscore.vn/unsubscribe?t=all",
+    siteUrl: "https://dealscore.vn",
   });
 
   it("1 item → name + price subject; 3 items → count", () => {
@@ -72,7 +72,7 @@ describe("renderAlertEmail", () => {
     for (const body of [e.html, e.text]) {
       expect(body).toContain("src=email&");
       expect(body).toContain("alert=a1");
-      expect(body).toContain("https://kairo.vn/unsubscribe?t=all");
+      expect(body).toContain("https://dealscore.vn/unsubscribe?t=all");
       expect(body).toContain("hoa hồng");
     }
   });
@@ -92,8 +92,8 @@ describe("renderAlertEmail", () => {
 
 describe("listUnsubscribeHeaders", () => {
   it("RFC 8058 compliant", () => {
-    expect(listUnsubscribeHeaders("https://kairo.vn/api/unsubscribe?t=a", "https://kairo.vn/unsubscribe?t=a")).toEqual({
-      "List-Unsubscribe": "<https://kairo.vn/api/unsubscribe?t=a>, <https://kairo.vn/unsubscribe?t=a>",
+    expect(listUnsubscribeHeaders("https://dealscore.vn/api/unsubscribe?t=a", "https://dealscore.vn/unsubscribe?t=a")).toEqual({
+      "List-Unsubscribe": "<https://dealscore.vn/api/unsubscribe?t=a>, <https://dealscore.vn/unsubscribe?t=a>",
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
     });
   });
