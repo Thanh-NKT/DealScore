@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { validateObservationPayload } from "@/lib/extension/payload";
 import { recordContribution } from "@/lib/extension/contribute";
 import { extForbidden, extJson, extPreflight, extensionOriginAllowed } from "@/lib/extension/http";
-import { clientIp, hashIp } from "@/lib/rate-limit";
+import { clientIp, hashIp, hashNetwork } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +40,13 @@ export async function POST(request: NextRequest) {
 
   try {
     // Identity from the session (never from the body); anonymous contributors by salted IP hash.
-    // The IP hash is also kept for signed-in users: corroboration counts one network as one peer,
-    // so the same person with and without the account cookie cannot corroborate themselves.
+    // The peer key is the salted hash of the NETWORK (IPv4 /24, IPv6 /64), also for signed-in users:
+    // corroboration counts one network as one peer, so the same person with and without the account
+    // cookie, or rotating addresses inside their own /64, cannot corroborate themselves.
     const { data: auth } = await (await createClient()).auth.getUser();
-    const ipHash = hashIp(clientIp(request.headers));
-    const contributor = auth.user ? `u:${auth.user.id}` : `ip:${ipHash}`;
+    const ip = clientIp(request.headers);
+    const peerKey = hashNetwork(ip);
+    const contributor = auth.user ? `u:${auth.user.id}` : `ip:${hashIp(ip)}`;
 
     const admin = createAdminClient();
     const { data: quota, error: qErr } = await admin.rpc("extension_contribution_begin", { p_contributor: contributor });
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
       return extJson(request, { error: "rate_limited", retryAfter: verdict?.retry_after_seconds ?? 3600 }, 429);
     }
 
-    const result = await recordContribution(admin, { contributor, peerKey: ipHash }, parsed.value, now);
+    const result = await recordContribution(admin, { contributor, peerKey }, parsed.value, now);
     return extJson(request, result, result.status === "unknown_item" ? 202 : 200);
   } catch (err) {
     console.error("api/extension/observations failed:", err);

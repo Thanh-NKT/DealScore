@@ -21,6 +21,70 @@ export function hashIp(ip: string): string {
   return crypto.createHash("sha256").update(`${ip}_${salt || DEV_SALT}`).digest("hex");
 }
 
+/** False when production runs without its own LOOKUP_IP_SALT (a configuration error). */
+export function ipSaltConfigured(): boolean {
+  return Boolean(process.env.LOOKUP_IP_SALT) || process.env.NODE_ENV !== "production";
+}
+
+/**
+ * Salted hash for rate-limit keys only (never stored as data). Unlike hashIp() it never throws: a
+ * missing salt must not switch a limiter off. Callers report !ipSaltConfigured() themselves.
+ */
+export function rateKeyHash(value: string): string {
+  return crypto.createHash("sha256").update(`${value}_${process.env.LOOKUP_IP_SALT || DEV_SALT}`).digest("hex");
+}
+
+/**
+ * The network an address belongs to: IPv4 /24, IPv6 /64 (one home or mobile connection owns a whole
+ * /64, so rotating addresses inside it is free). IPv4-mapped IPv6 counts as IPv4. Anything unparsable
+ * is returned as is (e.g. "unknown"). Pure.
+ */
+export function networkPrefix(ip: string): string {
+  let s = ip.trim().toLowerCase();
+  const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(s);
+  if (bracketed) s = bracketed[1];
+  s = s.split("%")[0]; // zone id
+  const v4 = /^(?:::ffff:)?(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?::\d+)?$/.exec(s);
+  if (v4) {
+    const o = v4.slice(1, 5).map(Number);
+    return o.every((n) => n <= 255) ? `${o.slice(0, 3).join(".")}.0/24` : s;
+  }
+  const groups = expandIpv6(s);
+  return groups ? `${groups.slice(0, 4).join(":")}::/64` : s;
+}
+
+/** The 8 groups of an IPv6 address (lower-case, no leading zeros), or null. */
+function expandIpv6(input: string): string[] | null {
+  if (!input.includes(":")) return null;
+  let s = input;
+  let tail: string[] = [];
+  const dotted = /^(.*:)(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+  if (dotted) {
+    const o = dotted.slice(2).map(Number);
+    if (o.some((n) => n > 255)) return null;
+    tail = [((o[0] << 8) | o[1]).toString(16), ((o[2] << 8) | o[3]).toString(16)];
+    s = dotted[1].endsWith("::") ? dotted[1] : dotted[1].slice(0, -1);
+  }
+  const halves = s.split("::");
+  if (halves.length > 2) return null;
+  const part = (h: string) => (h === "" ? [] : h.split(":"));
+  const head = part(halves[0]);
+  const rest = halves.length === 2 ? part(halves[1]) : [];
+  const given = head.length + rest.length + tail.length;
+  if (halves.length === 1 ? given !== 8 : given > 7) return null;
+  const all = [...head, ...Array<string>(8 - given).fill("0"), ...rest, ...tail];
+  if (!all.every((g) => /^[0-9a-f]{1,4}$/.test(g))) return null;
+  return all.map((g) => parseInt(g, 16).toString(16));
+}
+
+/**
+ * Salted hash of the client's network (networkPrefix): the extension's peer identity — addresses
+ * rotated inside one /64 (or one /24) are one peer, not many. Throws like hashIp() without a salt.
+ */
+export function hashNetwork(ip: string): string {
+  return hashIp(`net:${networkPrefix(ip)}`);
+}
+
 /**
  * Client IP, used as the rate-limit key.
  *

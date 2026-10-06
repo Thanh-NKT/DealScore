@@ -7,13 +7,18 @@
  * A pending observation is promoted when, within WINDOW_HOURS of it:
  *   - "api":  an API/collector price for the offer is within TOLERANCE, or
  *   - "peer": another contributor saw the same offer within TOLERANCE. A peer must differ in BOTH
- *     the contributor id and the network (peerKey = salted IP hash): one person with an account
- *     cookie and without it is one peer, not two. A peer-only promotion also needs a trusted anchor
+ *     the contributor id and the network (peerKey = salted hash of the IPv4 /24 or IPv6 /64,
+ *     hashNetwork()): one person with an account cookie and without it, or rotating addresses inside
+ *     their own /64, is one peer, not two. A peer-only promotion also needs a trusted anchor
  *     (the offer's latest API/collector price) and must stay inside [PEER_BAND_MIN, PEER_BAND_MAX]
  *     of it, so even several colluding networks cannot push an arbitrary price.
  * Observations claimed in the future (beyond CLOCK_SKEW_MS) are never promoted.
  * At most one promotion per offer per DEDUPE_MINUTES, so many viewers of one product don't
  * flood the daily rollup.
+ *
+ * A promoted row enters the price history. It becomes the CURRENT price (and so reaches the cached
+ * verdict and the watch alerts) only once a trusted observation of the offer is within TOLERANCE and
+ * WINDOW_HOURS of it — refresh_variant_current_price (migration 0028) keeps the same two constants.
  */
 
 export const TOLERANCE = 0.02;
@@ -28,7 +33,7 @@ export interface ExtObs {
   id: number;
   offerId: string;
   contributor: string;
-  /** Salted IP hash of the request; null when unknown (rows older than migration 0024). */
+  /** Salted network hash of the request (hashNetwork); null when unknown (rows older than migration 0024). */
   peerKey: string | null;
   observedAt: string;
   price: number;
@@ -50,10 +55,12 @@ const HOUR = 3_600_000;
 const close = (a: number, b: number) => Math.abs(a - b) / Math.max(a, b) <= TOLERANCE;
 const within = (a: string, b: string, ms: number) => Math.abs(Date.parse(a) - Date.parse(b)) <= ms;
 
-/** Peer identity: anonymous contributors are keyed by IP hash already ("ip:<hash>"). */
+/**
+ * Peer identity: the stored network key only. A row without one (older than 0024) cannot be a peer —
+ * the anonymous id "ip:<hash>" hashes the full address, not the network, so it is not comparable.
+ */
 export function peerKeyOf(o: Pick<ExtObs, "contributor" | "peerKey">): string | null {
-  if (o.peerKey) return o.peerKey;
-  return o.contributor.startsWith("ip:") ? o.contributor.slice(3) : null;
+  return o.peerKey || null;
 }
 
 function independent(a: ExtObs, b: ExtObs): boolean {

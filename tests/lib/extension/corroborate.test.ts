@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { corroborate, inPeerBand, peerKeyOf, type ExtObs } from "@/lib/extension/corroborate";
+import { hashNetwork } from "@/lib/rate-limit";
 
 const NOW = new Date("2026-09-25T12:00:00Z");
 const ago = (h: number) => new Date(NOW.getTime() - h * 3_600_000).toISOString();
@@ -41,8 +42,27 @@ describe("corroborate", () => {
     const signedIn = ext({ contributor: "u:user-1", peerKey: "hash-1", price: 100_000 });
     const anonymous = ext({ contributor: "ip:hash-1", peerKey: "hash-1", price: 100_000 });
     expect(run([signedIn, anonymous], { anchors: { o1: 120_000 } })).toEqual([]);
-    // Legacy anonymous rows without peer_key are keyed by the hash inside the contributor id.
+    // A legacy row without peer_key is no peer at all (its "ip:" id hashes the full address).
     expect(run([signedIn, { ...anonymous, peerKey: null }], { anchors: { o1: 120_000 } })).toEqual([]);
+  });
+
+  it("two contributors rotating addresses inside one IPv6 /64 (or one IPv4 /24) are one peer", () => {
+    const sameV6 = [
+      ext({ contributor: "ip:a", peerKey: hashNetwork("2001:db8:1:2:aaaa::1") }),
+      ext({ contributor: "u:b", peerKey: hashNetwork("2001:db8:1:2:ffff:1:2:3") }),
+    ];
+    expect(run(sameV6)).toEqual([]);
+    const sameV4 = [
+      ext({ contributor: "ip:a", peerKey: hashNetwork("198.51.100.7") }),
+      ext({ contributor: "ip:b", peerKey: hashNetwork("198.51.100.200") }),
+    ];
+    expect(run(sameV4)).toEqual([]);
+    // Different /64s are independent.
+    const otherV6 = [
+      ext({ contributor: "ip:a", peerKey: hashNetwork("2001:db8:1:2::1") }),
+      ext({ contributor: "ip:b", peerKey: hashNetwork("2001:db8:1:3::1") }),
+    ];
+    expect(run(otherV6).map((p) => p.reason)).toEqual(["peer"]);
   });
 
   it("two accounts on the same network are one peer", () => {
@@ -113,9 +133,9 @@ describe("corroborate", () => {
 });
 
 describe("peer helpers", () => {
-  it("peerKeyOf prefers the stored key, then the anonymous id", () => {
+  it("peerKeyOf is the stored network key only", () => {
     expect(peerKeyOf({ contributor: "u:x", peerKey: "k" })).toBe("k");
-    expect(peerKeyOf({ contributor: "ip:abc", peerKey: null })).toBe("abc");
+    expect(peerKeyOf({ contributor: "ip:abc", peerKey: null })).toBeNull();
     expect(peerKeyOf({ contributor: "u:x", peerKey: null })).toBeNull();
   });
 
