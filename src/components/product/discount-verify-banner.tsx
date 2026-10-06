@@ -16,7 +16,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
   // Say only what the check established; never claim more than the engine computed.
   const defaultNote =
     status === "insufficient"
-      ? "Chưa đủ lịch sử giá để kiểm tra mức giảm này. Kairo cần ít nhất 14 ngày dữ liệu hợp lệ."
+      ? "Chưa đủ lịch sử giá để kiểm tra mức giảm này. DealScore cần ít nhất 14 ngày dữ liệu hợp lệ."
       : status === "ok"
         ? "Không thấy dấu hiệu giá niêm yết bị đẩy cao so với giá hệ thống ghi nhận."
         : message || "Mức giá hiện tại chưa thấp hơn đáng kể so với lịch sử quan sát.";
@@ -52,7 +52,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
             onClick={() => setOpenModal(true)}
             className="flex min-h-11 items-center gap-1.5 text-body-sm font-bold text-primary hover:text-primary-hover transition-colors cursor-pointer"
           >
-            <span>Cách Kairo kiểm tra</span>
+            <span>Cách DealScore kiểm tra</span>
             <span aria-hidden="true">→</span>
           </button>
         </div>
@@ -85,7 +85,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
             </div>
 
             <p className="text-body-sm leading-relaxed text-ink-2">
-              Trước khi tin một nhãn giảm giá, Kairo so nó với giá đã ghi nhận. Nếu không đạt, trang sản phẩm hiện “Giảm giá chưa thực chất”.
+              Trước khi tin một nhãn giảm giá, DealScore so nó với giá đã ghi nhận. Nếu không đạt, trang sản phẩm hiện “Giảm giá chưa thực chất”.
             </p>
 
             <div className="flex flex-col gap-4">

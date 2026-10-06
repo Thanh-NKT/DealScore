@@ -8,10 +8,10 @@ describe("share", () => {
     expect(shareUrl("https://dealscore.vn", p)).toBe("https://dealscore.vn/ssd/wd-sn850x?ref=share");
   });
   it("text has name, price and verdict", () => {
-    expect(shareText(p)).toBe("SSD WD SN850X — 2.390.000đ (Nên mua) trên Kairo");
+    expect(shareText(p)).toBe("SSD WD SN850X — 2.390.000đ (Nên mua) trên DealScore");
   });
   it("text drops the price when there is none, and the verdict when not scored", () => {
-    expect(shareText({ ...p, price: null, recommendation: "insufficient_data" })).toBe("SSD WD SN850X trên Kairo");
+    expect(shareText({ ...p, price: null, recommendation: "insufficient_data" })).toBe("SSD WD SN850X trên DealScore");
   });
   it("detects visits coming from a shared link", () => {
     expect(isShareVisit("share")).toBe(true);

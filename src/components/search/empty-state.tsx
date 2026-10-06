@@ -57,7 +57,7 @@ export function EmptyState({ kind, query, clearFiltersHref = "/search", firstPag
             <p className="mt-1.5 text-body leading-relaxed text-ink-2">
               {kind === "load_error"
                 ? "Kết nối tới hệ thống đang gặp trục trặc, không phải do từ khóa của bạn. Thử lại sau giây lát."
-                : `Kairo tạm thời không cập nhật được giá từ ${source ?? "sàn này"}, nên kết quả có thể thiếu hoặc giá chưa mới. Thử lại sau ít phút.`}
+                : `DealScore tạm thời không cập nhật được giá từ ${source ?? "sàn này"}, nên kết quả có thể thiếu hoặc giá chưa mới. Thử lại sau ít phút.`}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <a href={retryHref} className={PRIMARY}>
@@ -109,7 +109,7 @@ export function EmptyState({ kind, query, clearFiltersHref = "/search", firstPag
           {q ? `Chưa có sản phẩm nào cho ${quoted(q)}` : "Chưa có sản phẩm nào"}
         </h2>
         <p className="mt-1.5 text-body leading-relaxed text-ink-2">
-          Kairo chỉ tìm trong những sản phẩm hệ thống đã theo dõi, nên có thể sản phẩm bạn cần chưa có ở đây.
+          DealScore chỉ tìm trong những sản phẩm hệ thống đã theo dõi, nên có thể sản phẩm bạn cần chưa có ở đây.
         </p>
         <ul className="mt-3 space-y-1.5 text-body-sm text-ink-2">
           <li className="flex gap-2">
@@ -123,7 +123,7 @@ export function EmptyState({ kind, query, clearFiltersHref = "/search", firstPag
         </ul>
       </div>
       <div className="border-t border-line pt-6">
-        <p className="mb-3 text-body-sm font-semibold text-ink">Có link sản phẩm Shopee? Dán vào đây để Kairo bắt đầu theo dõi:</p>
+        <p className="mb-3 text-body-sm font-semibold text-ink">Có link sản phẩm Shopee? Dán vào đây để DealScore bắt đầu theo dõi:</p>
         <UrlLookupForm />
       </div>
     </div>

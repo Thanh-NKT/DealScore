@@ -132,7 +132,7 @@ export function buildComparison(pa: ProductPageData, pb: ProductPageData): Compa
     },
     {
       key: "tracking",
-      label: "Kairo theo dõi từ",
+      label: "DealScore theo dõi từ",
       a: vnDate(pa.pricing.trackingSince),
       b: vnDate(pb.pricing.trackingSince),
       winner: null,

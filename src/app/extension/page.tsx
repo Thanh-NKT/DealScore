@@ -5,9 +5,9 @@ import { buttonClass } from "@/components/ui/button";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Tiện ích Chrome Kairo · Mua thông minh trên Shopee",
+  title: "Tiện ích Chrome DealScore · Mua thông minh trên Shopee",
   description:
-    "Tiện ích Kairo tự động hiện Deal Score, lịch sử giá 90 ngày và so sánh nơi bán khác ngay khi bạn duyệt Shopee.",
+    "Tiện ích DealScore tự động hiện Deal Score, lịch sử giá 90 ngày và so sánh nơi bán khác ngay khi bạn duyệt Shopee.",
 };
 
 export default function ExtensionPage() {
@@ -34,7 +34,7 @@ export default function ExtensionPage() {
               Biết ngay thời điểm mua tốt nhất ngay trên sàn
             </h1>
             <p className="text-body leading-[1.6] text-ink-2 sm:text-title">
-              Tiện ích Kairo tự động ghi nhận giá, tính Deal Score và so sánh với các nơi bán khác khi bạn đang xem bất kỳ sản phẩm nào.
+              Tiện ích DealScore tự động ghi nhận giá, tính Deal Score và so sánh với các nơi bán khác khi bạn đang xem bất kỳ sản phẩm nào.
             </p>
           </div>
 
@@ -302,7 +302,7 @@ export default function ExtensionPage() {
                     <div className="flex flex-col gap-0.5">
                       <span className="text-body-sm font-bold text-ink">Chưa đủ dữ liệu</span>
                       <span className="text-micro leading-tight text-ink-2">
-                        Mới ghi nhận 6/14 ngày. Kairo sẽ chấm điểm khi đủ lịch sử giá.
+                        Mới ghi nhận 6/14 ngày. DealScore sẽ chấm điểm khi đủ lịch sử giá.
                       </span>
                     </div>
                   </div>

@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 // Any pair of products is a URL: none of them should be indexed.
 export const metadata: Metadata = {
-  title: "So sánh sản phẩm | Kairo",
+  title: "So sánh sản phẩm | DealScore",
   robots: { index: false, follow: true },
 };
 

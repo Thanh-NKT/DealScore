@@ -7,7 +7,7 @@ import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { isGoogleAuthEnabled } from "@/lib/auth/oauth";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Tạo tài khoản — Kairo" };
+export const metadata: Metadata = { title: "Tạo tài khoản — DealScore" };
 
 const LINK = "font-semibold text-primary underline underline-offset-4 hover:text-primary-hover";
 
@@ -19,8 +19,8 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
     <AuthShell
       tab="register"
       next={next}
-      title="Tạo tài khoản Kairo"
-      intro="Miễn phí. Kairo gửi một thư để xác nhận email trước khi bạn bắt đầu theo dõi giá."
+      title="Tạo tài khoản DealScore"
+      intro="Miễn phí. DealScore gửi một thư để xác nhận email trước khi bạn bắt đầu theo dõi giá."
       footer={
         <p>
           Khi tạo tài khoản, bạn đồng ý với{" "}
@@ -31,7 +31,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           <Link href="/privacy" className={LINK}>
             Chính sách quyền riêng tư
           </Link>{" "}
-          của Kairo.
+          của DealScore.
         </p>
       }
     >

@@ -3,7 +3,7 @@ import { SearchIcon } from "@/components/ui/icons";
 import { ButtonLink } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Không tìm thấy trang | Kairo",
+  title: "Không tìm thấy trang | DealScore",
   robots: { index: false },
 };
 

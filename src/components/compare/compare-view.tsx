@@ -131,7 +131,7 @@ export function CompareView({ comparison }: { comparison: Comparison }) {
         </div>
       </div>
 
-      <Table caption="So sánh theo giá Kairo ghi nhận" rows={rows} a={a} b={b} />
+      <Table caption="So sánh theo giá DealScore ghi nhận" rows={rows} a={a} b={b} />
       <Table caption="Thông số" rows={specRows} a={a} b={b} />
 
       <p className="flex max-w-[75ch] items-start gap-2 text-label leading-[1.45] text-ink-3">

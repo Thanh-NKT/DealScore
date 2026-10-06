@@ -11,9 +11,9 @@ export function renderAccountDeletionEmail(input: {
   const hDate = escapeHtml(dateStr);
   const hLogin = escapeHtml(`${siteUrl}/login`);
 
-  const subject = "Xác nhận yêu cầu xóa tài khoản Kairo";
+  const subject = "Xác nhận yêu cầu xóa tài khoản DealScore";
 
-  const text = `Chúng tôi đã nhận được yêu cầu xóa tài khoản Kairo của bạn.
+  const text = `Chúng tôi đã nhận được yêu cầu xóa tài khoản DealScore của bạn.
 
 Mọi thông báo và theo dõi giá đã dừng ngay lập tức.
 Tài khoản và dữ liệu cá nhân của bạn sẽ bị xóa vĩnh viễn vào ngày ${dateStr}.
@@ -28,7 +28,7 @@ Lưu ý: Lịch sử click liên kết mua sắm được giữ lại độc l�
 <head><meta charset="utf-8" /></head>
 <body style="font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #15161A; max-width: 500px; margin: 0 auto; padding: 24px;">
   <h2>Xác nhận yêu cầu xóa tài khoản</h2>
-  <p>Chúng tôi đã nhận được yêu cầu xóa tài khoản Kairo của bạn.</p>
+  <p>Chúng tôi đã nhận được yêu cầu xóa tài khoản DealScore của bạn.</p>
   <p>Mọi thông báo và theo dõi giá đã được <strong>dừng ngay lập tức</strong>. Toàn bộ thông tin cá nhân và dữ liệu theo dõi sẽ được xóa vĩnh viễn vào ngày <strong>${hDate}</strong>.</p>
   <p>Trong vòng 30 ngày (trước ${hDate}), nếu bạn đổi ý, bạn có thể đăng nhập lại để khôi phục tài khoản nguyên vẹn:</p>
   <p style="margin: 20px 0;">

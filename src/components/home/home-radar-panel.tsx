@@ -62,7 +62,7 @@ export function HomeRadarPanel({
         <div className="flex flex-col items-start gap-1.5 rounded-tile border border-dashed border-line-strong/60 px-5 py-5">
           <p className="text-control font-semibold text-ink">Hôm nay chưa có sản phẩm nào giảm giá thật.</p>
           <p className="max-w-[60ch] text-body-sm leading-relaxed text-ink-2">
-            Kairo chỉ đưa sản phẩm vào đây khi giá thấp hơn trung vị 30 ngày ít nhất 10%. Danh sách được cập nhật mỗi
+            DealScore chỉ đưa sản phẩm vào đây khi giá thấp hơn trung vị 30 ngày ít nhất 10%. Danh sách được cập nhật mỗi
             ngày.
           </p>
         </div>

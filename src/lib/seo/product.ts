@@ -80,7 +80,7 @@ export function productMetadata(p: SeoProduct, siteUrl: string): Metadata {
     "Lịch sử giá 90 ngày, Deal Score có giải thích và báo khi giảm giá.",
   ].filter(Boolean);
 
-  const title = `${p.canonicalName} — giá hôm nay & lịch sử giá | Kairo`;
+  const title = `${p.canonicalName} — giá hôm nay & lịch sử giá | DealScore`;
   const description = `${p.canonicalName}: ${parts.join(". ")}`;
 
   return {
@@ -92,7 +92,7 @@ export function productMetadata(p: SeoProduct, siteUrl: string): Metadata {
       url,
       title,
       description,
-      siteName: "Kairo",
+      siteName: "DealScore",
       locale: "vi_VN",
     },
     // Draft = auto-created from a pasted URL, not reviewed: keep it out of the index, but let

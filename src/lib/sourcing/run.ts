@@ -9,7 +9,7 @@ import { reportError } from "@/lib/observability";
 
 /**
  * Automatic sourcing: walk the active sourcing_queries of one marketplace (pending demand keywords from
- * searches with few results first) page by page and ingest listings Kairo does not have yet
+ * searches with few results first) page by page and ingest listings DealScore does not have yet
  * (priority 3 = refreshed daily), up to SOURCING_DAILY_CAP per day.
  * New items go through the same ingest_listing + matcher as pasted links (draft + match_candidates
  * when unsure). Per-item failures are counted, never thrown.

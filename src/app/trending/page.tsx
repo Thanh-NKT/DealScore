@@ -40,7 +40,7 @@ function href(mode: TrendingMode, cat: string | undefined): string {
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const { mode, cat } = parse(await searchParams);
   return {
-    title: `Xu hướng — ${TABS[mode].text} | Kairo`,
+    title: `Xu hướng — ${TABS[mode].text} | DealScore`,
     description: TABS[mode].lead,
     alternates: { canonical: `${siteUrl()}${href(mode, cat)}` },
   };

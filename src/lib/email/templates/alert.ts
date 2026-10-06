@@ -25,7 +25,7 @@ function voucherLine(it: AlertEmailItem): string | null {
   return x != null && Number.isFinite(x) && x >= 0 && x < it.price ? `≈ ${formatVnd(x)} sau voucher` : null;
 }
 
-const DISCLOSURE = "Kairo có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.";
+const DISCLOSURE = "DealScore có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.";
 
 export function renderAlertEmail(input: { items: AlertEmailItem[]; unsubscribeAllUrl: string; siteUrl: string }): {
   subject: string;

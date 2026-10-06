@@ -24,7 +24,7 @@ export async function SiteHeader() {
       {/* Phones: logo + actions on the first row, the nav on its own scrollable row, so nothing overlaps at 375px. */}
       <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-14 max-[760px]:h-auto max-[760px]:flex-wrap max-[760px]:gap-y-1 max-[760px]:pt-3">
         <div className="flex min-w-0 items-center gap-3 sm:gap-7 max-[760px]:contents">
-          <Link href="/" aria-label="Kairo — Trang chủ" className="flex shrink-0 items-center gap-2.5 text-ink">
+          <Link href="/" aria-label="DealScore — Trang chủ" className="flex shrink-0 items-center gap-2.5 text-ink">
             <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-on-primary shadow-2xs">
               <TrendUpIcon className="size-5" strokeWidth={2.4} />
             </span>

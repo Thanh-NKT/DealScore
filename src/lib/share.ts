@@ -28,7 +28,7 @@ export function shareUrl(siteUrl: string, p: Pick<ShareableProduct, "slug" | "ca
 export function shareText(p: ShareableProduct): string {
   const verdict = p.recommendation ? VERDICT[p.recommendation] : undefined;
   const detail = p.price != null ? ` — ${formatVnd(p.price)}${verdict ? ` (${verdict})` : ""}` : "";
-  return `${p.canonicalName}${detail} trên Kairo`;
+  return `${p.canonicalName}${detail} trên DealScore`;
 }
 
 export function isShareVisit(ref: string | string[] | undefined): boolean {

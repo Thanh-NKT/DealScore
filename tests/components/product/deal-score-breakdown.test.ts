@@ -10,19 +10,19 @@ const render = (props: Parameters<typeof DealScoreBreakdown>[0]) => renderToStat
 describe("DealScoreBreakdown", () => {
   it("no score → the insufficient-data note PLUS the reasons", () => {
     const html = render({ score: null, recommendation: "insufficient_data", reasons: [VOUCHER] });
-    expect(html).toContain("Kairo cần ít nhất");
+    expect(html).toContain("DealScore cần ít nhất");
     expect(html).toContain("Dùng voucher: ước tính còn");
   });
 
   it("no score and no reasons → only the note", () => {
     const html = render({ score: null, recommendation: "insufficient_data", reasons: [] });
-    expect(html).toContain("Kairo cần ít nhất");
+    expect(html).toContain("DealScore cần ít nhất");
     expect(html).not.toContain("Chưa có lý do chi tiết");
   });
 
   it("with a score → the reasons, no insufficient-data note", () => {
     const html = render({ score: 80, recommendation: "buy", reasons: ["✓ Giá thấp", VOUCHER] });
-    expect(html).not.toContain("Kairo cần ít nhất");
+    expect(html).not.toContain("DealScore cần ít nhất");
     expect(html).toContain("Dùng voucher: ước tính còn");
   });
 });

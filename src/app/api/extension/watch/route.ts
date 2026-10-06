@@ -14,8 +14,8 @@ export function OPTIONS(request: NextRequest) {
 /**
  * POST /api/extension/watch { variantId, targetPrice? } — create or update the signed-in user's
  * Watch from the extension panel, through the same saveWatchForUser() (RLS client) as the website.
- * 401 → the panel asks the user to sign in on Kairo. 403 → the account must accept the current terms
- * or is pending deletion: the same AuthGate as the website, which the panel sends to Kairo.
+ * 401 → the panel asks the user to sign in on DealScore. 403 → the account must accept the current terms
+ * or is pending deletion: the same AuthGate as the website, which the panel sends to DealScore.
  */
 export async function POST(request: NextRequest) {
   if (!extensionOriginAllowed(request)) return extForbidden(request);

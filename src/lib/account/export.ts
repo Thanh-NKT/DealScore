@@ -169,7 +169,7 @@ export function buildAccountExport(input: {
     push_devices: input.pushDevices.map((d) => ({ created_at: d.created_at, user_agent: d.user_agent })),
     clicks: input.clicks.map((c) => ({ created_at: c.created_at, offer_id: c.offer_id, source: c.source })),
     url_lookups: input.lookups.map((l) => ({ created_at: l.created_at, outcome: l.outcome })),
-    // A8: do not export commission / raw / sub_ids — that is Kairo's revenue.
+    // A8: do not export commission / raw / sub_ids — that is DealScore's revenue.
     orders: input.orders.map((o) => ({
       purchase_time: o.purchase_time,
       status: o.status as ConversionStatus,

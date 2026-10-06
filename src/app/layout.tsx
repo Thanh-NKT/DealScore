@@ -12,7 +12,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   // Resolves relative Open Graph / canonical URLs (1.7).
   metadataBase: new URL(siteUrl()),
-  title: "Kairo — Đừng chỉ tìm giá rẻ. Tìm đúng thời điểm để mua.",
+  title: "DealScore — Đừng chỉ tìm giá rẻ. Tìm đúng thời điểm để mua.",
   description:
     "Lịch sử giá chuẩn hóa theo variant, Deal Score có giải thích, và câu trả lời Nên mua / Có thể chờ / Chưa nên mua.",
   // Without the manifest link the browser can't install the PWA, and the share target (1.1.d) never appears.

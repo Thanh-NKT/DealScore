@@ -5,7 +5,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Đặt mật khẩu mới — Kairo" };
+export const metadata: Metadata = { title: "Đặt mật khẩu mới — DealScore" };
 
 /** Reached from the recovery link via /auth/confirm, which has already opened a session. */
 export default async function ResetPasswordPage() {

@@ -144,7 +144,7 @@ export function validateObservationPayload(
 
 /**
  * Only our own extension may call the write endpoints. Web pages cannot send a chrome-extension://
- * Origin, so this also stops cross-site request forgery with the user's Kairo cookie.
+ * Origin, so this also stops cross-site request forgery with the user's DealScore cookie.
  * This is NOT authentication: any non-browser client can send this Origin, and the extension id is
  * public once it ships. Everything behind it treats the caller as untrusted (corroborate.ts).
  * EXTENSION_IDS = comma-separated ids; unset outside production = any unpacked dev extension.

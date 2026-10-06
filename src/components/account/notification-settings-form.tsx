@@ -139,7 +139,7 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
               <span>
                 <span className="block text-control font-semibold text-ink">Thông báo trên trình duyệt</span>
                 <span className="mt-0.5 block text-body-sm text-ink-2">
-                  Hiện ngay trên máy tính hoặc điện thoại. Trên iPhone cần thêm Kairo vào Màn hình chính (iOS 16.4 trở lên).
+                  Hiện ngay trên máy tính hoặc điện thoại. Trên iPhone cần thêm DealScore vào Màn hình chính (iOS 16.4 trở lên).
                 </span>
               </span>
               <input type="checkbox" name="pushEnabled" checked={values.push} onChange={(e) => set("push", e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-primary" />

@@ -30,7 +30,7 @@ export async function savePreferences(
       errors: {
         form:
           gate.reason === "consent"
-            ? "Hãy đồng ý điều khoản mới của Kairo (tải lại trang) rồi lưu lại sở thích."
+            ? "Hãy đồng ý điều khoản mới của DealScore (tải lại trang) rồi lưu lại sở thích."
             : "Tài khoản đang chờ xóa. Khôi phục tài khoản để lưu sở thích.",
       },
     };

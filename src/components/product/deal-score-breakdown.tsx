@@ -30,7 +30,7 @@ export function DealScoreBreakdown({
   // score (e.g. the voucher estimate, spec 2026-09-28 §4).
   const shownReasons = parseReasons(
     scoreVal == null
-      ? [`Kairo cần ít nhất ${MIN_DAYS_FOR_SCORE} ngày và ${MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá hợp lệ để chấm Deal Score.`, ...reasons]
+      ? [`DealScore cần ít nhất ${MIN_DAYS_FOR_SCORE} ngày và ${MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá hợp lệ để chấm Deal Score.`, ...reasons]
       : reasons,
   );
 

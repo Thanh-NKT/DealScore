@@ -12,7 +12,7 @@ import { parseVndInput } from "@/components/watch/price-input";
 interface PriceAlertCardProps {
   variantId: string;
   currentPrice: number | null;
-  /** Lowest price Kairo recorded in the last 90 days; null when there is no history. */
+  /** Lowest price DealScore recorded in the last 90 days; null when there is no history. */
   lowestPrice?: number | null;
   /** The user's existing watch config for this variant: its other conditions are kept on save. */
   existingConfig?: WatchConfig | null;
@@ -118,11 +118,11 @@ export function PriceAlertCard({
 
   let note: string | null = null;
   if (gap != null && gapPct != null && targetVal != null) {
-    if (gap <= 0) note = "Giá hiện tại đã thấp hơn hoặc bằng mức này. Kairo sẽ báo ở lần kiểm tra giá tới.";
+    if (gap <= 0) note = "Giá hiện tại đã thấp hơn hoặc bằng mức này. DealScore sẽ báo ở lần kiểm tra giá tới.";
     else if (low != null && targetVal >= low)
       note = `Cần giảm khoảng ${Math.max(1, Math.round(gapPct))}% nữa. Trong 90 ngày qua, giá từng xuống tới mức này.`;
     else if (low != null)
-      note = `Cần giảm khoảng ${Math.max(1, Math.round(gapPct))}% nữa. Mức này thấp hơn giá thấp nhất Kairo ghi nhận trong 90 ngày, nên có thể phải chờ lâu.`;
+      note = `Cần giảm khoảng ${Math.max(1, Math.round(gapPct))}% nữa. Mức này thấp hơn giá thấp nhất DealScore ghi nhận trong 90 ngày, nên có thể phải chờ lâu.`;
     else note = `Cần giảm khoảng ${Math.max(1, Math.round(gapPct))}% nữa.`;
   }
 
@@ -138,7 +138,7 @@ export function PriceAlertCard({
         </span>
         <div className="flex flex-col">
           <h2 className="display text-h3 font-bold tracking-tight text-ink">Đặt giá mong muốn</h2>
-          <span className="text-label text-ink-3">Kairo báo cho bạn khi giá xuống tới mức này</span>
+          <span className="text-label text-ink-3">DealScore báo cho bạn khi giá xuống tới mức này</span>
         </div>
       </div>
 

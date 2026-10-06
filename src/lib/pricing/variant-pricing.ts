@@ -46,7 +46,7 @@ export interface PricedOffer extends OfferRow {
 }
 
 /**
- * The seller's list-price discount passed Kairo's history check — the only case the solid "−X%" chip
+ * The seller's list-price discount passed DealScore's history check — the only case the solid "−X%" chip
  * (DESIGN.md "chip mức giảm thật") may be shown. Unchecked or doubtful discounts are shown neutrally.
  */
 export function isDiscountVerified(offer: Pick<PricedOffer, "discountPercent" | "discountChecked" | "fakeSaleMessage">): boolean {

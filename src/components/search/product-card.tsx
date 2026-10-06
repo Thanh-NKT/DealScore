@@ -114,7 +114,7 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
           </div>
         )}
 
-        {/* 3. Signature Kairo Price + Deal Score Capsule: the verdict words sit on top so the ring never stands alone */}
+        {/* 3. Signature DealScore Price + Deal Score Capsule: the verdict words sit on top so the ring never stands alone */}
         <div className="mt-auto flex flex-col gap-2 pt-0.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <VerdictTag recommendation={score == null ? null : recommendation} />

@@ -53,7 +53,7 @@ function NoVoucherData({ platform, goHref }: { platform: string; goHref?: string
             Mã giảm giá
           </h2>
           <p className="max-w-[68ch] text-body-sm leading-relaxed text-ink-2">
-            Kairo chưa thu thập chi tiết mã giảm giá cho sản phẩm này. Giá ở trên là giá chưa áp mã; hãy xem mã đang có
+            DealScore chưa thu thập chi tiết mã giảm giá cho sản phẩm này. Giá ở trên là giá chưa áp mã; hãy xem mã đang có
             trên {platform} trước khi thanh toán.
           </p>
         </div>
@@ -77,7 +77,7 @@ function NoVoucherData({ platform, goHref }: { platform: string; goHref?: string
 }
 
 const REFRESH_ERRORS: Record<string, string> = {
-  not_configured: "Kairo chưa kết nối được nguồn dữ liệu của sàn để làm mới mã.",
+  not_configured: "DealScore chưa kết nối được nguồn dữ liệu của sàn để làm mới mã.",
   rate_limited: "Bạn đã làm mới quá nhiều lần. Thử lại sau ít phút.",
   upstream_unavailable: "Sàn chưa phản hồi. Thử lại sau ít phút.",
 };
@@ -434,7 +434,7 @@ function VoucherGroups({
             )}
 
             <span className="text-micro leading-relaxed text-ink-3">
-              Voucher có thể hết lượt hoặc không áp dụng cho bạn. Giá cuối cùng do sàn tính khi thanh toán. Nếu bạn mua qua liên kết, Kairo có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
+              Voucher có thể hết lượt hoặc không áp dụng cho bạn. Giá cuối cùng do sàn tính khi thanh toán. Nếu bạn mua qua liên kết, DealScore có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
             </span>
           </aside>
         </div>

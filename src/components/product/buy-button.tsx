@@ -52,7 +52,7 @@ export function BuyButton({
           {unavailable}
         </button>
         {unavailable !== "Tạm hết hàng" && (
-          <span className="text-center text-micro text-ink-3">Kairo chưa có liên kết tới trang bán trên {name}.</span>
+          <span className="text-center text-micro text-ink-3">DealScore chưa có liên kết tới trang bán trên {name}.</span>
         )}
       </div>
     );

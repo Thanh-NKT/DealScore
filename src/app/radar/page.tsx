@@ -29,8 +29,8 @@ function href(cat: string | undefined, page = 1): string {
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const { cat, page } = parse(await searchParams);
   return {
-    title: "Giảm giá thật hôm nay | Kairo",
-    description: `Sản phẩm đang rẻ hơn ít nhất ${MIN_DROP_PCT}% so với giá trung vị 30 ngày Kairo ghi nhận — so với giá đã bán thật, không so với giá niêm yết.`,
+    title: "Giảm giá thật hôm nay | DealScore",
+    description: `Sản phẩm đang rẻ hơn ít nhất ${MIN_DROP_PCT}% so với giá trung vị 30 ngày DealScore ghi nhận — so với giá đã bán thật, không so với giá niêm yết.`,
     alternates: { canonical: `${siteUrl()}${href(cat, page)}` },
   };
 }
@@ -51,7 +51,7 @@ export default async function RadarPage({ searchParams }: PageProps) {
       lead={
         <>
           Những sản phẩm đang rẻ hơn ít nhất <strong className="font-semibold text-ink">{MIN_DROP_PCT}%</strong> so với giá
-          trung vị 30 ngày mà Kairo ghi nhận. Chúng tôi so với giá đã bán thật, không so với giá niêm yết người bán tự đặt,
+          trung vị 30 ngày mà DealScore ghi nhận. Chúng tôi so với giá đã bán thật, không so với giá niêm yết người bán tự đặt,
           nên “giảm 50%” trên giấy không lọt vào đây.
         </>
       }

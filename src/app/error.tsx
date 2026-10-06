@@ -23,7 +23,7 @@ export default function RouteError({ error, retry }: { error: Error & { digest?:
         </span>
         <h1 className="display text-h3 font-bold text-ink">Chưa tải được trang này</h1>
         <p className="text-body-sm leading-relaxed text-ink-2">
-          Kairo gặp trục trặc khi lấy dữ liệu. Thường chỉ cần thử lại sau vài giây. Nếu vẫn lỗi, hãy quay về trang chủ và
+          DealScore gặp trục trặc khi lấy dữ liệu. Thường chỉ cần thử lại sau vài giây. Nếu vẫn lỗi, hãy quay về trang chủ và
           tìm lại sản phẩm.
         </p>
         <div className="flex flex-wrap gap-2.5 pt-1">

@@ -42,7 +42,7 @@ export function DraftProductNotice({ isDraft, offerCount, dataDays }: DraftProdu
           Sản phẩm được thêm từ link dán vào
         </h3>
         <p className="mt-0.5 max-w-[75ch] text-body-sm leading-normal text-ink-2">
-          Tên, thương hiệu và phiên bản được lấy tự động từ trang người bán và chưa được Kairo duyệt lại.
+          Tên, thương hiệu và phiên bản được lấy tự động từ trang người bán và chưa được DealScore duyệt lại.
           {limits && <> {limits}</>}
         </p>
       </div>

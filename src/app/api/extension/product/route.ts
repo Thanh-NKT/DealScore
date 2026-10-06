@@ -15,7 +15,7 @@ export function OPTIONS(request: NextRequest) {
 
 /**
  * GET /api/extension/product?marketplace=shopee&item=shopId_itemId[&model=name]
- * What Kairo knows about the product on the page the user is viewing, plus their Watch if signed in.
+ * What DealScore knows about the product on the page the user is viewing, plus their Watch if signed in.
  * Not in the catalog → { found: false } (the panel offers to add it via /share-target).
  */
 export async function GET(request: NextRequest) {

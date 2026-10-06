@@ -1,7 +1,7 @@
 /**
  * "Where to buy": the offer that costs least once vouchers are applied. Pure.
  *
- * Kairo compares the same product across marketplaces (Shopee, TikTok Shop, …). The cheapest listed
+ * DealScore compares the same product across marketplaces (Shopee, TikTok Shop, …). The cheapest listed
  * price (`VariantPricing.cheapest`) stays the basis of the Deal Score — price history has no
  * vouchers — but the buy button, the voucher block and "Mua ở sàn nào?" follow the price the buyer
  * actually pays, so a marketplace with a higher listed price and a good voucher can win.

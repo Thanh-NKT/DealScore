@@ -145,7 +145,7 @@ export default async function AccountPage() {
         <div>
           <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Dữ liệu cá nhân &amp; Quyền riêng tư</h2>
           <p className="mt-1.5 text-control leading-relaxed text-ink-2">
-            Bạn có toàn quyền kiểm soát dữ liệu của mình tại Kairo theo quy định về bảo vệ dữ liệu cá nhân.
+            Bạn có toàn quyền kiểm soát dữ liệu của mình tại DealScore theo quy định về bảo vệ dữ liệu cá nhân.
           </p>
         </div>
 

@@ -14,14 +14,14 @@ function text(body: string, status: number) {
 const INVALID = "Liên kết ủy quyền đã hết hạn, đã được dùng hoặc không hợp lệ. Chạy lại pnpm tiktok:authorize để lấy link mới.";
 
 /**
- * TikTok Shop redirects here after the owner authorizes Kairo (link printed by `pnpm tiktok:authorize`
+ * TikTok Shop redirects here after the owner authorizes DealScore (link printed by `pnpm tiktok:authorize`
  * or the admin API). The signed `state` proves we printed that link, and its nonce is consumed so a
  * link works once; tokens go straight to marketplace_credentials.
  */
 export async function GET(request: NextRequest) {
   const cfg = tiktokConfig(process.env);
   const key = oauthStateKey(process.env);
-  if (!cfg || !key) return text("Kairo chưa cấu hình TikTok Shop.", 503);
+  if (!cfg || !key) return text("DealScore chưa cấu hình TikTok Shop.", 503);
 
   const params = new URL(request.url).searchParams;
   const code = params.get("code");

@@ -34,7 +34,7 @@ export function ConsentForm({ initialNext }: ConsentFormProps) {
   const [tried, setTried] = useState(false);
 
   const serverError = state.status === "error" ? state.errors.agree : null;
-  const localError = tried && !agreed ? "Hãy đánh dấu ô đồng ý ở trên để tiếp tục dùng Kairo." : null;
+  const localError = tried && !agreed ? "Hãy đánh dấu ô đồng ý ở trên để tiếp tục dùng DealScore." : null;
   const error = localError ?? serverError;
 
   return (
@@ -71,7 +71,7 @@ export function ConsentForm({ initialNext }: ConsentFormProps) {
             <Link href="/privacy" target="_blank" className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
               Chính sách quyền riêng tư
             </Link>{" "}
-            của Kairo. <span className="text-ink-3">(bắt buộc)</span>
+            của DealScore. <span className="text-ink-3">(bắt buộc)</span>
           </span>
         </label>
 

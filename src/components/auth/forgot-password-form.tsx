@@ -40,7 +40,7 @@ function ForgotFlow({
       <CheckEmail
         email={state.email}
         next="/"
-        lead="Nếu email này có tài khoản Kairo, link đặt lại mật khẩu đã được gửi tới"
+        lead="Nếu email này có tài khoản DealScore, link đặt lại mật khẩu đã được gửi tới"
         resend={requestPasswordReset}
         resendLabel="Gửi lại link"
         onRestart={onRestart}

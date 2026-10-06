@@ -23,7 +23,7 @@ export const MARKETPLACE_CHIP =
   "inline-block max-w-full truncate rounded-lg border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2";
 export const NEUTRAL_CHIP = "rounded-lg bg-buy-soft px-2 py-0.5 text-micro font-bold text-buy";
 export const AFFILIATE_SENTENCE =
-  "Các nút “Đến …” là liên kết tiếp thị. Nếu bạn mua qua liên kết, Kairo có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.";
+  "Các nút “Đến …” là liên kết tiếp thị. Nếu bạn mua qua liên kết, DealScore có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.";
 
 function validPrice(value: number | null | undefined): number | null {
   return value != null && Number.isFinite(value) && value > 0 ? value : null;

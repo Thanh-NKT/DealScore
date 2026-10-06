@@ -158,11 +158,11 @@ export function PushSetup({ onEnabled }: PushSetupProps) {
     case "ios_install":
       return (
         <div className={box}>
-          <p className="font-semibold text-ink">Trên iPhone, cần thêm Kairo vào Màn hình chính trước:</p>
+          <p className="font-semibold text-ink">Trên iPhone, cần thêm DealScore vào Màn hình chính trước:</p>
           <ol className="list-decimal space-y-1 pl-5">
             <li>Mở trang này bằng Safari, bấm nút Chia sẻ.</li>
             <li>Chọn “Thêm vào MH chính”.</li>
-            <li>Mở Kairo từ biểu tượng mới trên Màn hình chính, rồi quay lại trang này để bật thông báo.</li>
+            <li>Mở DealScore từ biểu tượng mới trên Màn hình chính, rồi quay lại trang này để bật thông báo.</li>
           </ol>
           <p className="text-ink-3">Cần iOS 16.4 trở lên.</p>
         </div>
@@ -181,10 +181,10 @@ export function PushSetup({ onEnabled }: PushSetupProps) {
         <div className={box}>
           <p className="flex items-start gap-2 font-semibold text-avoid">
             <AlertIcon className="mt-0.5 size-4 shrink-0" />
-            Trình duyệt đang chặn thông báo từ Kairo.
+            Trình duyệt đang chặn thông báo từ DealScore.
           </p>
           <p>
-            Bấm biểu tượng ổ khóa (hoặc biểu tượng cài đặt) cạnh địa chỉ trang, chọn Thông báo → Cho phép, rồi tải lại trang. Kairo không thể tự bỏ
+            Bấm biểu tượng ổ khóa (hoặc biểu tượng cài đặt) cạnh địa chỉ trang, chọn Thông báo → Cho phép, rồi tải lại trang. DealScore không thể tự bỏ
             chặn giúp bạn.
           </p>
         </div>

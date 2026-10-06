@@ -42,7 +42,7 @@ export async function lookupProductUrl(params: {
     return { status: "error", code: isUrl ? "not_shopee" : "not_a_url" };
   }
 
-  // A marketplace Kairo has no data for: say which one, for free. Shopee keeps its old answer
+  // A marketplace DealScore has no data for: say which one, for free. Shopee keeps its old answer
   // (upstream_unavailable) so the copy never reads "chưa đọc được link Shopee".
   const source = getSource(found.adapter.id);
   const usable = source?.isConfigured() ?? false;

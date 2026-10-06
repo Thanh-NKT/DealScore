@@ -109,7 +109,7 @@ export function parseWatchForm(
     notifyBackInStock;
 
   if (!hasCondition) {
-    errors._form = "Chọn ít nhất một điều kiện để Kairo biết khi nào cần báo.";
+    errors._form = "Chọn ít nhất một điều kiện để DealScore biết khi nào cần báo.";
   }
 
   // 7. channels

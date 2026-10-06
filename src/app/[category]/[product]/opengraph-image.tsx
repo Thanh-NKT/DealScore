@@ -5,7 +5,7 @@ import { loadOgProduct } from "@/lib/product/og-data";
 import { formatVnd } from "@/lib/format";
 import type { Recommendation } from "@/lib/pricing/deal-score";
 
-export const alt = "Giá hôm nay và lịch sử giá trên Kairo";
+export const alt = "Giá hôm nay và lịch sử giá trên DealScore";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

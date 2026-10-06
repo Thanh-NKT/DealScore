@@ -30,7 +30,7 @@ export function LoginForm({ initialNext, initialError }: { initialNext: string; 
       <CheckEmail
         email={resendState.email}
         next={initialNext}
-        lead="Kairo đã gửi lại thư xác nhận tới"
+        lead="DealScore đã gửi lại thư xác nhận tới"
         resend={resendConfirmation}
         resendLabel="Gửi lại thư"
         onRestart={() => setShowConfirmSent(false)}

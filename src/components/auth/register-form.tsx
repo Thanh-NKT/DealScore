@@ -44,7 +44,7 @@ function RegisterFlow({
       <CheckEmail
         email={state.email}
         next={state.next}
-        lead="Gần xong rồi. Bấm link xác nhận Kairo vừa gửi tới"
+        lead="Gần xong rồi. Bấm link xác nhận DealScore vừa gửi tới"
         note="Nếu email này đã có tài khoản, hãy đăng nhập hoặc đặt lại mật khẩu."
         resend={resendConfirmation}
         resendLabel="Gửi lại thư"

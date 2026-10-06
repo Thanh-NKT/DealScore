@@ -8,7 +8,7 @@ export function OPTIONS(request: NextRequest) {
   return extPreflight(request);
 }
 
-/** GET /api/extension/me — only whether the user is signed in on Kairo (no email, no id). */
+/** GET /api/extension/me — only whether the user is signed in on DealScore (no email, no id). */
 export async function GET(request: NextRequest) {
   if (!extensionOriginAllowed(request)) return extForbidden(request);
   const { data } = await (await createClient()).auth.getUser();

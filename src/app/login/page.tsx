@@ -7,7 +7,7 @@ import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { isGoogleAuthEnabled } from "@/lib/auth/oauth";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Đăng nhập — Kairo" };
+export const metadata: Metadata = { title: "Đăng nhập — DealScore" };
 
 interface LoginPageProps {
   searchParams: Promise<{ next?: string; error?: string }>;

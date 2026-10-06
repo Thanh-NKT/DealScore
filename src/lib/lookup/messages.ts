@@ -18,7 +18,7 @@ export const LOOKUP_ERROR_MESSAGE: Record<LookupErrorCode, string> = {
   unrecognized_format: "Không đọc được đường dẫn này. Hãy thử sao chép lại từ ứng dụng Shopee.",
   rate_limited: "Bạn đã tra cứu khá nhiều.",
   upstream_unavailable: "Chưa lấy được dữ liệu từ Shopee lúc này.",
-  internal: "Kairo đang gặp trục trặc nên chưa kiểm tra được. Thử lại sau ít phút.",
+  internal: "DealScore đang gặp trục trặc nên chưa kiểm tra được. Thử lại sau ít phút.",
 };
 
 export function lookupErrorMessage(code: LookupErrorCode, retryAfter?: number): string {

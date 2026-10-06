@@ -52,13 +52,13 @@ export function DeleteAccountForm() {
         </h2>
         <ul className="list-disc space-y-1.5 pl-5">
           <li>Danh sách sản phẩm bạn đang theo dõi, cùng giá mong muốn và các điều kiện báo bạn đã đặt.</li>
-          <li>Lịch sử các thông báo giá Kairo đã gửi cho bạn.</li>
+          <li>Lịch sử các thông báo giá DealScore đã gửi cho bạn.</li>
           <li>Cài đặt thông báo và các trình duyệt đã đăng ký nhận thông báo.</li>
           <li>Email và tài khoản đăng nhập của bạn.</li>
         </ul>
         <h2 className="display pt-2 text-h4 font-bold leading-tight">Chuyện gì xảy ra tiếp theo</h2>
         <ul className="list-disc space-y-1.5 pl-5">
-          <li>Kairo ngừng gửi mọi thông báo ngay, và bạn được đăng xuất khỏi tất cả thiết bị.</li>
+          <li>DealScore ngừng gửi mọi thông báo ngay, và bạn được đăng xuất khỏi tất cả thiết bị.</li>
           <li>
             Trong <b>30 ngày</b>, bạn vẫn có thể đăng nhập lại để khôi phục mọi thứ như cũ. Sau 30 ngày, dữ liệu trên bị xóa hẳn và{" "}
             <b>không thể khôi phục</b>.

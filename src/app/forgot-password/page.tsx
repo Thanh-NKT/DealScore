@@ -4,7 +4,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Quên mật khẩu — Kairo" };
+export const metadata: Metadata = { title: "Quên mật khẩu — DealScore" };
 
 export default async function ForgotPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
@@ -12,7 +12,7 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
   return (
     <AuthShell
       title="Quên mật khẩu"
-      intro="Nhập email bạn dùng với Kairo. Kairo sẽ gửi một link để bạn đặt mật khẩu mới."
+      intro="Nhập email bạn dùng với DealScore. DealScore sẽ gửi một link để bạn đặt mật khẩu mới."
       footer={
         <p>
           Nhớ ra rồi?{" "}

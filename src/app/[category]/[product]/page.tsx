@@ -291,7 +291,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                     />
                   </div>
                   <span className="text-micro leading-[1.45] text-ink-3">
-                    Nếu bạn mua qua liên kết, Kairo có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
+                    Nếu bạn mua qua liên kết, DealScore có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
                   </span>
                 </div>
               </div>

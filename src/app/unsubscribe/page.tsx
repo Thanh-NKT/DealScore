@@ -34,8 +34,8 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
           </h1>
           <p className={BODY}>
             {done === "watch"
-              ? "Kairo vẫn ghi nhận giá sản phẩm này; bạn chỉ không nhận thông báo nữa. Bật lại bất cứ lúc nào trong “Đang theo dõi”."
-              : "Kairo sẽ không gửi email thông báo giá nữa. Thông báo trên trình duyệt (nếu bạn đã bật) không thay đổi. Bật lại bất cứ lúc nào trong phần Thông báo."}
+              ? "DealScore vẫn ghi nhận giá sản phẩm này; bạn chỉ không nhận thông báo nữa. Bật lại bất cứ lúc nào trong “Đang theo dõi”."
+              : "DealScore sẽ không gửi email thông báo giá nữa. Thông báo trên trình duyệt (nếu bạn đã bật) không thay đổi. Bật lại bất cứ lúc nào trong phần Thông báo."}
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <Link href={done === "watch" ? "/account/watch" : "/account/notifications"} className={SECONDARY}>
@@ -86,7 +86,7 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
         <p className={BODY}>
           {scope.kind === "watch"
             ? "Bạn sẽ không nhận thông báo giá cho sản phẩm này nữa. Các sản phẩm khác không bị ảnh hưởng."
-            : "Bạn sẽ không nhận email thông báo giá từ Kairo nữa. Bạn vẫn xem được giá mọi lúc trên trang web."}
+            : "Bạn sẽ không nhận email thông báo giá từ DealScore nữa. Bạn vẫn xem được giá mọi lúc trên trang web."}
         </p>
         <UnsubscribeForm token={token} scopeKind={scope.kind} />
         <Link href="/" className="inline-flex min-h-11 items-center text-control font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">

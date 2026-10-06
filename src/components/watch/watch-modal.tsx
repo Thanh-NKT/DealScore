@@ -281,7 +281,7 @@ export function WatchModal({
               </span>
               <h3 className="display mt-3 text-h3 font-bold">Đã lưu theo dõi</h3>
               <p className="mx-auto mt-1 max-w-[40ch] text-control text-ink-2">
-                Kairo sẽ kiểm tra giá định kỳ và báo cho bạn khi có điều kiện được đáp ứng.
+                DealScore sẽ kiểm tra giá định kỳ và báo cho bạn khi có điều kiện được đáp ứng.
               </p>
               <button type="button" onClick={onClose} className={`${primaryBtn} mt-5`}>
                 Xong

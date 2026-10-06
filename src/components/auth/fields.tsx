@@ -8,7 +8,7 @@ import { AlertIcon, CheckIcon, DashIcon, EyeIcon, EyeOffIcon } from "@/component
 import { buttonClass } from "@/components/ui/button";
 import { FieldMessage, inputClass } from "@/components/ui/field";
 
-export const NETWORK_ERROR = "Chưa kết nối được tới Kairo. Kiểm tra mạng rồi thử lại.";
+export const NETWORK_ERROR = "Chưa kết nối được tới DealScore. Kiểm tra mạng rồi thử lại.";
 
 export const INPUT = inputClass({ size: "lg" });
 export const PRIMARY = buttonClass({ size: "lg", block: true });

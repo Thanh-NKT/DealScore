@@ -32,7 +32,7 @@ describe("parsePrice", () => {
 describe("readProductPage", () => {
   const text = "Ổ cứng SSD\n₫2.390.000 ₫2.990.000 -20%\nMiễn phí vận chuyển\n1.234 sản phẩm có sẵn";
 
-  it("builds the observation Kairo accepts, with the chosen variation as model name", () => {
+  it("builds the observation DealScore accepts, with the chosen variation as model name", () => {
     expect(shopee.readProductPage({ href: "https://shopee.vn/x-i.1.2", text, selectedOptions: [" 2TB ", "Đen"] })).toEqual({
       item: "1_2",
       modelName: "2TB, Đen",

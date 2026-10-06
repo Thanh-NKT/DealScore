@@ -45,7 +45,7 @@ const TABS: Array<{ key: Tab; label: string; empty: string; hint: string }> = [
     key: "active",
     label: "Đang theo dõi",
     empty: "Bạn chưa theo dõi sản phẩm nào.",
-    hint: "Mở một sản phẩm và bấm “Theo dõi giá” để Kairo báo khi giá xuống.",
+    hint: "Mở một sản phẩm và bấm “Theo dõi giá” để DealScore báo khi giá xuống.",
   },
   {
     key: "paused",
@@ -746,7 +746,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         )}
 
         <p className="max-w-[75ch] text-label leading-[1.45] text-ink-3">
-          Nếu bạn mua qua liên kết, Kairo có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
+          Nếu bạn mua qua liên kết, DealScore có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
         </p>
       </main>
     </div>

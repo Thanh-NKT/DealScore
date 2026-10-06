@@ -4,10 +4,10 @@ import type { ProductPageData } from "@/lib/product/page-data";
 import type { Recommendation } from "@/lib/pricing/deal-score";
 import { normalizeText } from "@/lib/matching/attributes";
 
-/** What the extension panel shows for a Shopee page. Only facts Kairo already shows on its own page. */
+/** What the extension panel shows for a Shopee page. Only facts DealScore already shows on its own page. */
 export interface ExtensionSummary {
   name: string;
-  /** Kairo product page (absolute), for "Xem lịch sử giá". */
+  /** DealScore product page (absolute), for "Xem lịch sử giá". */
   url: string;
   variantId: string;
   variantKey: string | null;

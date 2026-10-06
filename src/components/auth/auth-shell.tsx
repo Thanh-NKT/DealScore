@@ -24,7 +24,7 @@ function withNext(path: string, next?: string) {
 }
 
 /**
- * One centred white card on the canvas: the Kairo logo tile (night square, lime trend stroke, same
+ * One centred white card on the canvas: the DealScore logo tile (night square, lime trend stroke, same
  * as the header), an optional "Đăng nhập | Đăng ký" segmented switch, the title and the form. What an
  * account gets you sits quietly under the card.
  */

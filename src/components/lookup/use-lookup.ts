@@ -38,7 +38,7 @@ export function looksLikeLink(input: string): boolean {
   return /https?:\/\//i.test(t) || /^[a-z0-9-]+(\.[a-z0-9-]+)+\//i.test(t);
 }
 
-/** true when the input is a product link or short link of a marketplace Kairo recognises (the server decides if it can read it). */
+/** true when the input is a product link or short link of a marketplace DealScore recognises (the server decides if it can read it). */
 export function isLookupable(input: string): boolean {
   if (!input.trim()) return false;
   const parsed = parseProductUrl(normalizeLookupInput(input));
@@ -67,7 +67,7 @@ export function explainLookup(p: LookupProblem): { what: string; next: string | 
       return { what: "Đây chưa phải một đường dẫn.", next: "Dán link sản phẩm, ví dụ shopee.vn/… hoặc shope.ee/…, hoặc tìm theo tên sản phẩm." };
     case "not_shopee":
       return {
-        what: p.market ? `Kairo hiện mới đọc được link Shopee, chưa đọc được link ${p.market}.` : lookupErrorMessage("not_shopee"),
+        what: p.market ? `DealScore hiện mới đọc được link Shopee, chưa đọc được link ${p.market}.` : lookupErrorMessage("not_shopee"),
         next: "Bạn có thể tìm sản phẩm này theo tên.",
       };
     case "unrecognized_format":
@@ -83,7 +83,7 @@ export function explainLookup(p: LookupProblem): { what: string; next: string | 
         next: "Sản phẩm có thể đã bị gỡ, hoặc Shopee đang phản hồi chậm. Thử lại sau ít phút.",
       };
     case "timeout":
-      return { what: "Shopee phản hồi quá lâu nên Kairo đã dừng chờ.", next: "Thử lại sau ít phút; lần sau thường nhanh hơn." };
+      return { what: "Shopee phản hồi quá lâu nên DealScore đã dừng chờ.", next: "Thử lại sau ít phút; lần sau thường nhanh hơn." };
     case "offline":
       return { what: "Máy bạn đang mất kết nối mạng.", next: "Kiểm tra kết nối rồi thử lại." };
     default:
@@ -202,6 +202,6 @@ export function slowMessage(slow: 0 | 1 | 2): string {
   return slow === 0
     ? "Đang kiểm tra đường dẫn…"
     : slow === 1
-      ? "Lần đầu theo dõi sản phẩm này, Kairo đang lấy dữ liệu từ Shopee…"
+      ? "Lần đầu theo dõi sản phẩm này, DealScore đang lấy dữ liệu từ Shopee…"
       : "Vẫn đang chờ Shopee trả dữ liệu. Bạn có thể chờ thêm hoặc bấm Hủy.";
 }

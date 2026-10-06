@@ -8,7 +8,7 @@ import { confirmFailureUrl, parseConfirmParams } from "@/lib/auth/confirm";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Xác nhận — Kairo",
+  title: "Xác nhận — DealScore",
   robots: { index: false, follow: false },
 };
 
@@ -40,8 +40,8 @@ export default async function ConfirmPage({ searchParams }: ConfirmPageProps) {
         <h1 className={TITLE}>{recovery ? "Đặt lại mật khẩu" : "Xác nhận email của bạn"}</h1>
         <p className={BODY}>
           {recovery
-            ? "Bấm nút bên dưới để tiếp tục. Sau đó bạn đặt mật khẩu mới cho tài khoản Kairo."
-            : "Bấm nút bên dưới để hoàn tất đăng ký. Tài khoản Kairo dùng được ngay sau đó."}
+            ? "Bấm nút bên dưới để tiếp tục. Sau đó bạn đặt mật khẩu mới cho tài khoản DealScore."
+            : "Bấm nút bên dưới để hoàn tất đăng ký. Tài khoản DealScore dùng được ngay sau đó."}
         </p>
         <form action={confirmEmailLink}>
           <input type="hidden" name="token_hash" value={tokenHash} />
