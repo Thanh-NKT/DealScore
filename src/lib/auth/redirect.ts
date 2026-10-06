@@ -45,7 +45,14 @@ export function safeNextPath(
       return fallback;
     }
 
-    return `${url.pathname}${url.search}${url.hash}`;
+    // URL parsing removes dot segments and turns "\" into "/", so "/.//evil.com" or
+    // "/%2e//evil.com" normalize to the protocol-relative "//evil.com". Check the
+    // normalized result again, not only the raw input.
+    const out = `${pathname}${url.search}${url.hash}`;
+    if (out.startsWith("//") || out.startsWith("/\\")) {
+      return fallback;
+    }
+    return out;
   } catch {
     return fallback;
   }

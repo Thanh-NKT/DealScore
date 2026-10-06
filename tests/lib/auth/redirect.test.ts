@@ -38,6 +38,50 @@ describe("safeNextPath", () => {
     expect(safeNextPath("/login?next=/x")).toBe("/");
     expect(safeNextPath("/auth/confirm?token_hash=1")).toBe("/");
   });
+  it.each([
+    ["/.//evil.com"],
+    ["/..//evil.com"],
+    ["/a/..//evil.com"],
+    ["/%2e//evil.com"],
+    ["/%2e%2e//evil.com"],
+    ["/%2E/%2E%2E//evil.com"],
+    ["/.\\\\evil.com"],
+    ["/..\\\\evil.com"],
+    ["/a/..\\\\evil.com"],
+    ["/%2e\\\\evil.com"],
+    ["/./\\evil.com"],
+    ["/.\\/evil.com"],
+    ["/%2e/\\evil.com"],
+  ])("rejects %j, whose dot segments normalize to a protocol-relative URL", (raw) => {
+    expect(safeNextPath(raw)).toBe("/");
+  });
+  it("keeps harmless dot segments, normalized", () => {
+    expect(safeNextPath("/a/../ssd")).toBe("/ssd");
+    expect(safeNextPath("/./account")).toBe("/account");
+  });
+
+  // Seeded pseudo-random fuzz (no extra dependency): the output is always a
+  // same-origin path, never protocol-relative, and the function is idempotent.
+  it("output never starts with // or /\\ and safeNextPath is idempotent (fuzz)", () => {
+    const parts = ["/", "\\", ".", "..", "%2e", "%2E", "%2f", "%5c", "a", "evil.com", "?", "#", "@", ":", " ", "%", "login", "auth/"];
+    let seed = 0x2545f491;
+    const rand = () => {
+      seed ^= seed << 13;
+      seed ^= seed >>> 17;
+      seed ^= seed << 5;
+      return (seed >>> 0) / 0x100000000;
+    };
+    for (let i = 0; i < 5000; i++) {
+      const len = 1 + Math.floor(rand() * 8);
+      let raw = rand() < 0.9 ? "/" : "";
+      for (let j = 0; j < len; j++) raw += parts[Math.floor(rand() * parts.length)];
+      const once = safeNextPath(raw);
+      expect(once.startsWith("/"), raw).toBe(true);
+      expect(once.startsWith("//"), raw).toBe(false);
+      expect(once.startsWith("/\\"), raw).toBe(false);
+      expect(safeNextPath(once), raw).toBe(once);
+    }
+  });
 });
 
 describe("decideAuthGate", () => {
