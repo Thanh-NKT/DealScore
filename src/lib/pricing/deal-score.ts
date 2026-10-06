@@ -46,11 +46,20 @@ export interface DealScoreInput {
   /** Computation window, 90 days by default. */
   windowDays?: number;
   /**
+   * The scored price is a flash-sale price. History excludes flash sales, so such a price is compared
+   * with regular prices only: the result keeps its score but always leads with FLASH_SALE_REASON, so
+   * no surface (page, search cache, alerts) can present it as an ordinary "Nên mua".
+   */
+  isFlashSale?: boolean;
+  /**
    * Scoring instant, defaults to now. Pass it to backtest at a point in the
    * past and to keep tests independent of the real clock.
    */
   now?: Date;
 }
+
+export const FLASH_SALE_REASON =
+  "⚠ Giá hiện tại là giá flash sale, chỉ kéo dài trong thời gian ngắn";
 
 const MS_PER_DAY = 86_400_000;
 /** Vietnam is fixed at UTC+7, no daylight saving. */
@@ -207,6 +216,9 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
       `⚠ Hệ thống mới theo dõi sản phẩm này ${daysCovered} ngày`,
     );
   }
+
+  // A flash price is judged against flash-free history: say so first, always.
+  if (input.isFlashSale) reasons.unshift(FLASH_SALE_REASON);
 
   // --- Buy / Wait / Avoid (section C4) ---
   const recommendation = classify(score, price, med);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeDealScore, detectFakeSale, type PriceObservation } from "@/lib/pricing/deal-score";
+import { computeDealScore, detectFakeSale, FLASH_SALE_REASON, type PriceObservation } from "@/lib/pricing/deal-score";
+import { computeDealScoreV1 } from "@/lib/pricing/deal-score-v1";
 
 const NOW = new Date("2026-06-15T03:00:00Z"); // 10:00 Vietnam time
 
@@ -78,5 +79,23 @@ describe("detectFakeSale", () => {
         median60dBefore: 1000,
       }),
     ).toBe("Giá tăng gần đây trước đợt giảm.");
+  });
+});
+
+describe("computeDealScore — a flash-sale price is never an ordinary verdict", () => {
+  const hist = daily(40, (i) => 1000 + (i % 10) * 20);
+
+  it("isFlashSale keeps the score but always leads the reasons with the flash-sale warning", () => {
+    const normal = computeDealScore({ price: 900, history: hist, now: NOW });
+    const flash = computeDealScore({ price: 900, history: hist, now: NOW, isFlashSale: true });
+    expect(flash.score).toBe(normal.score);
+    expect(flash.reasons[0]).toBe(FLASH_SALE_REASON);
+    expect(flash.reasons.length).toBeLessThanOrEqual(4);
+    expect(normal.reasons).not.toContain(FLASH_SALE_REASON);
+  });
+
+  it("v1 (the production engine) keeps the warning first too", () => {
+    const flash = computeDealScoreV1({ price: 900, history: hist, now: NOW, isFlashSale: true, stock: 2 });
+    expect(flash.reasons[0]).toBe(FLASH_SALE_REASON);
   });
 });

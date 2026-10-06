@@ -130,7 +130,7 @@ export function DealScoreBreakdown({
       <div className="flex items-start gap-2 rounded-inner bg-surface-2/60 p-3 text-micro leading-relaxed text-ink-3">
         <InfoIcon className="mt-0.5 size-3.5 shrink-0 text-ink-3" />
         <span>
-          Giá flash sale và hoa hồng tiếp thị không làm thay đổi điểm. Cần ít nhất {MIN_DAYS_FOR_SCORE} ngày và {MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá để chấm.
+          Giá flash sale không được tính vào lịch sử giá; nếu giá hiện tại là giá flash sale, điểm so nó với giá thường và lý do đầu tiên sẽ nói rõ. Hoa hồng tiếp thị không làm thay đổi điểm. Cần ít nhất {MIN_DAYS_FOR_SCORE} ngày và {MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá để chấm.
         </span>
       </div>
     </div>

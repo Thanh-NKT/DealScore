@@ -14,12 +14,15 @@ const VERDICT_NOTE: Record<Exclude<Recommendation, "insufficient_data">, string>
  * both things at once, so the verdict and "Giảm giá chưa thực chất" never read as a contradiction:
  * the price can be good against history while the seller's "−25%" is measured from an inflated list price.
  */
-export function verdictNote(recommendation: Recommendation, fakeSale = false): string | undefined {
+export function verdictNote(recommendation: Recommendation, fakeSale = false, flashSale = false): string | undefined {
   if (recommendation === "insufficient_data") return undefined;
-  if (!fakeSale) return VERDICT_NOTE[recommendation];
-  return recommendation === "buy"
-    ? "Mức giảm người bán ghi chưa thực chất, nhưng giá thật vẫn đang ở vùng thấp so với giá hệ thống ghi nhận."
-    : `${VERDICT_NOTE[recommendation]} Mức giảm người bán ghi chưa thực chất.`;
+  const base = !fakeSale
+    ? VERDICT_NOTE[recommendation]
+    : recommendation === "buy"
+      ? "Mức giảm người bán ghi chưa thực chất, nhưng giá thật vẫn đang ở vùng thấp so với giá hệ thống ghi nhận."
+      : `${VERDICT_NOTE[recommendation]} Mức giảm người bán ghi chưa thực chất.`;
+  // A flash price is compared with regular prices only: the verdict must not read as an ordinary one.
+  return flashSale ? `${base} Đây là giá flash sale, chỉ kéo dài trong thời gian ngắn.` : base;
 }
 
 /** The engine prefixes reasons with a glyph; the list draws its own icons instead. */

@@ -76,7 +76,7 @@ export async function loadVariantSnapshots(
       observedAt: c.observed_at,
       isStale,
       // NO bestOffer (Đ7): the numbers in an alert must match the product page header score.
-      deal: price != null && price > 0 ? scoreDeal({ price, history: expandRollup(history.get(id) ?? []), now }) : null,
+      deal: price != null && price > 0 ? scoreDeal({ price, history: expandRollup(history.get(id) ?? []), now, isFlashSale: c.is_flash_sale }) : null,
     });
   }
   return result;

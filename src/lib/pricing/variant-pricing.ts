@@ -1,4 +1,4 @@
-import { detectFakeSale, type DealScoreResult } from "@/lib/pricing/deal-score";
+import { detectFakeSale, FLASH_SALE_REASON, type DealScoreResult } from "@/lib/pricing/deal-score";
 import { scoreDeal } from "@/lib/pricing/score";
 import { discountPercent } from "@/lib/format";
 import { pickBestBuy } from "@/lib/pricing/best-buy";
@@ -10,8 +10,7 @@ import {
   type HistoryStats,
 } from "@/lib/pricing/price-history";
 
-export const FLASH_SALE_REASON =
-  "⚠ Giá hiện tại là giá flash sale, chỉ kéo dài trong thời gian ngắn";
+export { FLASH_SALE_REASON };
 
 export interface OfferRow {
   offerId: string;
@@ -150,19 +149,13 @@ export function buildVariantPricing(input: {
   let headline: DealScoreResult | null = null;
   if (cheapest && cheapest.price != null) {
     // History-only (no stock / seller): must equal the cached listing score (Đ7).
+    // The flash-sale flag goes INTO the engine (it leads the reasons), exactly like the search cache.
     headline = scoreDeal({
       price: cheapest.price,
       history: historyObs,
       now,
+      isFlashSale: cheapest.isFlashSale,
     });
-    // History excludes flash sales, so a current flash price is almost always "Buy".
-    // Keep the score, but make clear this price is temporary.
-    if (cheapest.isFlashSale && headline.score != null) {
-      headline = {
-        ...headline,
-        reasons: [FLASH_SALE_REASON, ...headline.reasons].slice(0, 4),
-      };
-    }
   }
 
   // 6. Fake Sale Detection, per offer: the page shows one offer's price and list price (bestBuy),

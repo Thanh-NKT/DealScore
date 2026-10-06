@@ -34,12 +34,12 @@ export async function recomputeDealScores(
   const now = opts.now ?? new Date();
   const since = toVnDate(new Date(now.getTime() - WINDOW_DAYS * 86_400_000));
 
-  const current: Array<{ variant_id: string; price: number | null; in_stock: boolean }> = [];
+  const current: Array<{ variant_id: string; price: number | null; in_stock: boolean; is_flash_sale: boolean }> = [];
   if (opts.variantIds) {
     for (let i = 0; i < opts.variantIds.length; i += PAGE) {
       const { data, error } = await client
         .from("variant_current_price")
-        .select("variant_id, price, in_stock")
+        .select("variant_id, price, in_stock, is_flash_sale")
         .in("variant_id", opts.variantIds.slice(i, i + PAGE));
       if (error) throw new Error(`Failed to read current prices: ${error.message}`);
       current.push(...(data ?? []));
@@ -48,7 +48,7 @@ export async function recomputeDealScores(
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await client
         .from("variant_current_price")
-        .select("variant_id, price, in_stock")
+        .select("variant_id, price, in_stock, is_flash_sale")
         .order("variant_id")
         .range(from, from + PAGE - 1);
       if (error) throw new Error(`Failed to read current prices: ${error.message}`);
@@ -58,7 +58,7 @@ export async function recomputeDealScores(
   }
 
   const priced = current.filter(
-    (c): c is { variant_id: string; price: number; in_stock: true } => c.price != null && c.in_stock,
+    (c): c is { variant_id: string; price: number; in_stock: true; is_flash_sale: boolean } => c.price != null && c.in_stock,
   );
   const outOfStock = current.filter((c) => c.price != null && !c.in_stock).map((c) => c.variant_id);
   for (let i = 0; i < outOfStock.length; i += DELETE_BATCH) {
@@ -93,6 +93,8 @@ export async function recomputeDealScores(
         price: Number(v.price),
         history: expandRollup(byVariant.get(v.variant_id) ?? []),
         now,
+        // Same flag as the product page header, so the cached verdict and reasons match it.
+        isFlashSale: v.is_flash_sale,
       });
       tally[result.recommendation] = (tally[result.recommendation] ?? 0) + 1;
       rows.push({

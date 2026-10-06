@@ -232,7 +232,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                   <VerdictTag
                     recommendation={recommendation}
                     size="lg"
-                    note={verdictNote(recommendation, hasFakeSale)}
+                    note={verdictNote(recommendation, hasFakeSale, cheapest?.isFlashSale ?? false)}
                   />
                 )}
 
