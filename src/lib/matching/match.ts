@@ -14,6 +14,7 @@ import {
   type OfferAttributes,
 } from "@/lib/matching/attributes";
 import { brandForms } from "@/lib/matching/aliases";
+import { MODEL_SUFFIXES } from "@/lib/matching/model-suffixes";
 
 export const AUTO_MATCH_THRESHOLD = 0.95;
 export const SUGGEST_THRESHOLD = 0.5;
@@ -47,6 +48,12 @@ export interface OfferToMatch {
   modelName: string;
   /** Barcode read from the listing, when the marketplace exposes one. */
   gtin?: string | null;
+  /**
+   * The source gave a price RANGE for this model (min ≠ max): one listing-level price standing for
+   * several variants. It never auto-attaches to one variant of a multi-variant product — its price
+   * may belong to a sibling (the 128GB price filed under 256GB).
+   */
+  priceRange?: boolean;
 }
 
 export interface MatchResult {
@@ -60,6 +67,48 @@ const ATTRIBUTE_LABEL: Record<AttributeKey, string> = {
   color: "màu",
   sizeInch: "kích thước",
 };
+
+/**
+ * Words after a model that make it another model: "980 PRO" is not "980", "iPhone 15 Pro" is not
+ * "iPhone 15", "990 EVO" is not "990". The draft-key suffixes plus a few product-line words.
+ */
+const MODEL_EXTENSIONS: ReadonlySet<string> = new Set([...MODEL_SUFFIXES, "evo", "classic"]);
+
+/**
+ * How much of the catalog model appears in the title, on token boundaries.
+ * - full: the model tokens, compacted, equal a run of whole title tokens ("990PRO" = "990 pro") and the
+ *   next title token does not extend it into another model;
+ * - extended: the model only appears followed by an extension word → no model credit at all;
+ * - otherwise partial: model tokens found as whole title tokens, each not followed by an extension.
+ * Substrings never count: "G304" is not in "G3040".
+ */
+function modelCoverage(titleTokens: string[], model: string): { found: number; total: number; extended: boolean } {
+  const modelTokens = model.split(" ");
+  const total = modelTokens.length;
+  const compact = modelTokens.join("");
+  const own = new Set(modelTokens);
+  const extends_ = (next: string | undefined) => next != null && MODEL_EXTENSIONS.has(next) && !own.has(next);
+
+  let extended = false;
+  for (let i = 0; i < titleTokens.length; i++) {
+    let acc = "";
+    for (let j = i; j < titleTokens.length && acc.length < compact.length; j++) {
+      acc += titleTokens[j];
+      if (!compact.startsWith(acc)) break;
+      if (acc === compact) {
+        if (!extends_(titleTokens[j + 1])) return { found: total, total, extended: false };
+        extended = true;
+        break;
+      }
+    }
+  }
+  if (extended) return { found: 0, total, extended: true };
+
+  const found = modelTokens.filter((t) =>
+    titleTokens.some((tok, k) => tok === t && !extends_(titleTokens[k + 1])),
+  ).length;
+  return { found, total, extended: false };
+}
 
 function containsPhrase(normalizedText: string, normalizedPhrase: string): boolean {
   if (!normalizedPhrase) return false;
@@ -158,13 +207,12 @@ export function scoreCandidate(offer: OfferToMatch, c: MatchCandidate): MatchRes
 
   const model = normalizeText(c.model ?? "");
   if (model) {
-    const compactTitle = title.replace(/ /g, "");
-    const tokens = model.split(" ");
-    const found = compactTitle.includes(model.replace(/ /g, ""))
-      ? tokens.length
-      : tokens.filter((t) => containsPhrase(title, t)).length;
-    score += WEIGHT_MODEL * (found / tokens.length);
-    if (found === tokens.length) matched.push(`model ${c.model}`);
+    // "S24+" is "S24 Plus", not "S24": spell the plus out before normalizeText drops it (as draftKey does).
+    const titleTokens = normalizeText(offer.title.replace(/([a-z0-9])\+/gi, "$1 plus")).split(" ").filter(Boolean);
+    const { found, total, extended } = modelCoverage(titleTokens, model);
+    score += WEIGHT_MODEL * (found / total);
+    if (found === total) matched.push(`model ${c.model}`);
+    if (extended) matched.push(`tên model dài hơn ${c.model}`);
   }
 
   if (keys.length === 0) {
@@ -175,7 +223,14 @@ export function scoreCandidate(offer: OfferToMatch, c: MatchCandidate): MatchRes
     for (const k of keys) matched.push(`${ATTRIBUTE_LABEL[k]} ${formatAttribute(k, theirs[k])}`);
   }
 
-  return { variantId: c.variantId, confidence: round4(Math.min(1, score)), reason: `Khớp ${matched.join(", ")}` };
+  let confidence = round4(Math.min(1, score));
+  let reason = `Khớp ${matched.join(", ")}`;
+  if (offer.priceRange && c.siblingCount > 1 && confidence >= AUTO_MATCH_THRESHOLD) {
+    // One price for several variants: a human decides which variant (if any) it belongs to.
+    confidence = AMBIGUOUS_CONFIDENCE;
+    reason = `${reason} (tin bán có nhiều mức giá)`;
+  }
+  return { variantId: c.variantId, confidence, reason };
 }
 
 export function bestMatch(offer: OfferToMatch, candidates: MatchCandidate[]): MatchResult | null {

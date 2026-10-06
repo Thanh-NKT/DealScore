@@ -38,11 +38,16 @@ describe("normalizeShopeeOffer", () => {
       url: "https://shopee.vn/product/778899/22334455",
       title: "SSD Samsung 990 Pro 2TB",
       seller: { externalId: "778899", name: "Samsung Official", rating: 4.9, ratingCount: null, isOfficial: false },
-      models: [{ modelId: "default", name: "", price: 3_190_000, originalPrice: 3_987_500, stock: null, isFlashSale: false }],
+      models: [{ modelId: "default", name: "", price: 3_190_000, originalPrice: 3_987_500, stock: null, isFlashSale: false, priceIsRange: true }],
       images: ["https://down-vn.img.susercontent.com/file/abc"],
       vouchers: [],
       source: "api",
     });
+  });
+
+  it("one price (priceMax = priceMin, or no priceMax) is not a range", () => {
+    expect(normalizeShopeeOffer({ ...node, priceMax: "3190000" })!.models[0].priceIsRange).toBe(false);
+    expect(normalizeShopeeOffer({ ...node, priceMax: undefined })!.models[0].priceIsRange).toBe(false);
   });
 
   it("falls back to price when priceMin is missing; no discount → originalPrice null", () => {

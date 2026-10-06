@@ -24,6 +24,9 @@ const CATALOG: MatchCandidate[] = [
   c("u2723qe:std", "Dell", "U2723QE", "kich-thuoc=27 inch", 1),
   c("fury:16", "Kingston", "Fury Beast", "dung-luong=16GB", 2),
   c("fury:32", "Kingston", "Fury Beast", "dung-luong=32GB", 2),
+  // Only the base model is in the catalog: "iPhone 15 Pro" / "980 PRO" listings must not land here.
+  c("ip15:128", "Apple", "iPhone 15", "dung-luong=128GB", 2),
+  c("ip15:256", "Apple", "iPhone 15", "dung-luong=256GB", 2),
 ];
 
 const LABELED: Array<{ title: string; model: string; gtin?: string; expect: string | null }> = [
@@ -44,6 +47,8 @@ const LABELED: Array<{ title: string; model: string; gtin?: string; expect: stri
   { title: "Màn hình Dell UltraSharp U2723QE 27 inch 4K", model: "", expect: "u2723qe:std" },
   { title: "RAM Kingston Fury Beast DDR5", model: "16GB", expect: "fury:16" },
   { title: "Kingston FURY Beast 32GB 5600MHz", model: "", expect: "fury:32" },
+  { title: "Apple iPhone 15 128GB chính hãng VN/A", model: "", expect: "ip15:128" },
+  { title: "Điện thoại Apple iPhone 15", model: "256GB", expect: "ip15:256" },
   // Must NOT auto-match:
   { title: "SSD Samsung 990 Pro", model: "4TB", expect: null },
   { title: "Samsung 990 EVO Plus", model: "1TB", expect: null },
@@ -58,6 +63,15 @@ const LABELED: Array<{ title: string; model: string; gtin?: string; expect: stri
   { title: "SSD 2TB NVMe giá rẻ", model: "2TB", expect: null },
   { title: "Bàn phím Logitech", model: "", expect: null },
   { title: "Ổ cứng gắn trong chính hãng", model: "4TB", gtin: "718037891234", expect: null },
+  // Superset models: the catalog model is a prefix of the listing's model (review-pipeline I1).
+  { title: "Samsung 980 PRO 1TB", model: "", expect: null },
+  { title: "Ổ cứng SSD Samsung 980 PRO NVMe", model: "1TB", expect: null },
+  { title: "Apple iPhone 15 Pro 128GB", model: "", expect: null },
+  { title: "Apple iPhone 15 Pro Max 256GB", model: "", expect: null },
+  { title: "Apple iPhone 15 Plus 128GB", model: "", expect: null },
+  { title: "Apple iPhone 15+ 128GB", model: "", expect: null },
+  { title: "Chuột Logitech G3040", model: "Đen", expect: null },
+  { title: "Samsung 990 EVO 1TB", model: "", expect: null },
 ];
 
 const RECALL_FLOOR = 0.8;

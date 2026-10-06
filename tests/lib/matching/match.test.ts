@@ -98,6 +98,38 @@ describe("scoreCandidate", () => {
   });
 });
 
+describe("scoreCandidate — listing-level price range", () => {
+  it("never auto-attaches a price range to one variant of a multi-variant product", () => {
+    const offer = { title: "Ổ cứng SSD Samsung 990 PRO NVMe 2TB", modelName: "", priceRange: true };
+    const r = scoreCandidate(offer, candidate());
+    expect(r.confidence).toBeLessThan(AUTO_MATCH_THRESHOLD);
+    expect(r.confidence).toBeGreaterThanOrEqual(0.5);
+    expect(r.reason).toContain("nhiều mức giá");
+    expect(scoreCandidate({ ...offer, priceRange: false }, candidate()).confidence).toBeGreaterThanOrEqual(AUTO_MATCH_THRESHOLD);
+  });
+
+  it("a single-variant product is not affected", () => {
+    const r = scoreCandidate(
+      { title: "Tai nghe Sony WH-1000XM5", modelName: "", priceRange: true },
+      candidate({ brand: "Sony", model: "WH-1000XM5", variantKey: "Tiêu chuẩn", siblingCount: 1 }),
+    );
+    expect(r.confidence).toBeGreaterThanOrEqual(AUTO_MATCH_THRESHOLD);
+  });
+});
+
+describe("scoreCandidate — superset models", () => {
+  it("a longer model in the title gets no model credit", () => {
+    const base = candidate({ brand: "Samsung", model: "980", variantKey: "dung-luong=1TB", siblingCount: 1 });
+    expect(scoreCandidate({ title: "Samsung 980 PRO 1TB", modelName: "" }, base).confidence).toBeLessThan(AUTO_MATCH_THRESHOLD);
+    expect(scoreCandidate({ title: "Samsung 980 1TB", modelName: "" }, base).confidence).toBeGreaterThanOrEqual(AUTO_MATCH_THRESHOLD);
+  });
+
+  it("matches model tokens on boundaries, never as a substring", () => {
+    const g304 = candidate({ brand: "Logitech", model: "G304", variantKey: "mau=Đen" });
+    expect(scoreCandidate({ title: "Chuột Logitech G3040 Đen", modelName: "Đen" }, g304).confidence).toBeLessThan(AUTO_MATCH_THRESHOLD);
+  });
+});
+
 describe("bestMatch", () => {
   const offer = { title: "Samsung 990 Pro", modelName: "2TB" };
 

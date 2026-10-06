@@ -12,6 +12,11 @@ export interface MarketplaceModel {
   originalPrice: number | null;
   stock: number | null;
   isFlashSale: boolean;
+  /**
+   * The source only gave a listing-level price range and `price` is its minimum (Affiliate APIs): the
+   * price may belong to any of the listing's variants, so the matcher never auto-attaches it to one.
+   */
+  priceIsRange?: boolean;
 }
 
 export interface MarketplaceItem {

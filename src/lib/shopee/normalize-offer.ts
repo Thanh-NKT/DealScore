@@ -3,7 +3,9 @@ import type { MarketplaceItem } from "@/lib/marketplaces/types";
 
 /**
  * productOfferV2 node → MarketplaceItem (assumption S2). Pure. The Affiliate API gives one price range per
- * item, not per model, so every item becomes ONE model "default" priced at priceMin.
+ * item, not per model, so every item becomes ONE model "default" priced at priceMin. When priceMax is
+ * higher the item has variants at different prices: `priceIsRange` keeps the matcher from treating
+ * priceMin as the price of the variant named in the title.
  */
 export const OFFER_NODE_FIELDS =
   "itemId shopId productName shopName price priceMin priceMax priceDiscountRate imageUrl ratingStar sales productLink offerLink";
@@ -38,6 +40,8 @@ export function normalizeShopeeOffer(node: ShopeeOfferNode): MarketplaceItem | n
   if (!itemId || !shopId || !title) return null;
 
   const price = toVndPrice(node.priceMin) ?? toVndPrice(node.price);
+  const priceMax = toVndPrice(node.priceMax);
+  const priceIsRange = price != null && priceMax != null && priceMax > price;
   const rate = Number(node.priceDiscountRate);
   const originalPrice = price != null && rate > 0 && rate < 100 ? Math.round(price / (1 - rate / 100)) : null;
   const image = text(node.imageUrl);
@@ -48,7 +52,7 @@ export function normalizeShopeeOffer(node: ShopeeOfferNode): MarketplaceItem | n
     url: `https://shopee.vn/product/${shopId}/${itemId}`,
     title,
     seller: { externalId: shopId, name: text(node.shopName), rating: rating(node.ratingStar), ratingCount: null, isOfficial: false },
-    models: [{ modelId: "default", name: "", price, originalPrice, stock: null, isFlashSale: false }],
+    models: [{ modelId: "default", name: "", price, originalPrice, stock: null, isFlashSale: false, priceIsRange }],
     images: image ? [image] : [],
     vouchers: [],
     source: "api",

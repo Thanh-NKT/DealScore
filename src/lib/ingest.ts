@@ -110,7 +110,7 @@ export async function ingestItem(
         original_price: m.originalPrice,
         stock: m.stock,
         is_flash_sale: m.isFlashSale,
-        match: toRpcMatch(bestMatch({ title: item.title, modelName: m.name }, candidates)),
+        match: toRpcMatch(bestMatch({ title: item.title, modelName: m.name, priceRange: m.priceIsRange }, candidates)),
       })),
     },
   });

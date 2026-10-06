@@ -3,7 +3,8 @@ import type { MarketplaceItem } from "@/lib/marketplaces/types";
 
 /**
  * TikTok Shop product (assumption T4) → MarketplaceItem. Pure. Prices may be a plain string/number or
- * an object { minimum_amount | min | amount, currency }. One model "default" at the minimum price.
+ * an object { minimum_amount | min | amount, maximum_amount | max, currency }. One model "default" at the
+ * minimum price, flagged `priceIsRange` when the maximum is higher.
  */
 type Obj = Record<string, unknown>;
 
@@ -16,13 +17,14 @@ function text(v: unknown): string | null {
   return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
-/** { amount, currency } or null; currency "" means unknown (accepted as VND — region VN). */
-function readPrice(raw: unknown): { amount: number | null; currency: string } | null {
+/** { amount, max, currency } or null; currency "" means unknown (accepted as VND — region VN). */
+function readPrice(raw: unknown): { amount: number | null; max: number | null; currency: string } | null {
   if (raw == null) return null;
   const o = asObj(raw);
-  if (!o) return { amount: toVndPrice(raw), currency: "" };
+  if (!o) return { amount: toVndPrice(raw), max: null, currency: "" };
   const amount = toVndPrice(o.minimum_amount ?? o.min ?? o.amount ?? o.sale_price);
-  return { amount, currency: typeof o.currency === "string" ? o.currency.toUpperCase() : "" };
+  const max = toVndPrice(o.maximum_amount ?? o.max);
+  return { amount, max, currency: typeof o.currency === "string" ? o.currency.toUpperCase() : "" };
 }
 
 export function normalizeTikTokProduct(raw: unknown): MarketplaceItem | null {
@@ -53,6 +55,8 @@ export function normalizeTikTokProduct(raw: unknown): MarketplaceItem | null {
         originalPrice: original && (!original.currency || original.currency === "VND") ? original.amount : null,
         stock: null,
         isFlashSale: false,
+        // A min–max range: the minimum may be another variant's price (see MarketplaceModel.priceIsRange).
+        priceIsRange: sale?.amount != null && sale.max != null && sale.max > sale.amount,
       },
     ],
     images: image ? [image] : [],

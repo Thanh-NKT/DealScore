@@ -18,11 +18,17 @@ describe("normalizeTikTokProduct (T4)", () => {
       url: "https://www.tiktok.com/view/product/1729384756",
       title: "Tai nghe Sony WH-1000XM5",
       seller: { externalId: "7495", name: "Sony Official", rating: null, ratingCount: null, isOfficial: false },
-      models: [{ modelId: "default", name: "", price: 6_490_000, originalPrice: 8_490_000, stock: null, isFlashSale: false }],
+      models: [{ modelId: "default", name: "", price: 6_490_000, originalPrice: 8_490_000, stock: null, isFlashSale: false, priceIsRange: true }],
       images: ["https://p16-oec-va.ibyteimg.com/x.jpg"],
       vouchers: [],
       source: "api",
     });
+  });
+
+  it("a single sale price is not a range", () => {
+    const one = normalizeTikTokProduct({ ...product, sale_price: { minimum_amount: "6490000", maximum_amount: "6490000", currency: "VND" } });
+    expect(one!.models[0].priceIsRange).toBe(false);
+    expect(normalizeTikTokProduct({ ...product, sale_price: "6490000" })!.models[0].priceIsRange).toBe(false);
   });
 
   it("accepts price.{amount,currency} and string prices", () => {

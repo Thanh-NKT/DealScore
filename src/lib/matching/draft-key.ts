@@ -7,6 +7,7 @@
 import { detectBrand } from "@/lib/matching/match";
 import { brandForms } from "@/lib/matching/aliases";
 import { capacityEqual, extractAttributes, normalizeText } from "@/lib/matching/attributes";
+import { MODEL_SUFFIXES } from "@/lib/matching/model-suffixes";
 
 export { KNOWN_BRANDS } from "@/lib/matching/known-brands";
 
@@ -27,10 +28,7 @@ const CONDITION_PHRASES: readonly string[] = [
 /** Network generation tokens: "A15 4G" and "A15 5G" are different products. */
 const NETWORK_TOKENS: ReadonlySet<string> = new Set(["3g", "4g", "5g", "lte"]);
 
-/** Words that change the model when they follow it ("S24 Ultra" ≠ "S24"). */
-export const MODEL_SUFFIXES: ReadonlySet<string> = new Set([
-  "pro", "max", "ultra", "plus", "mini", "lite", "air", "se", "fe", "neo", "prime",
-]);
+export { MODEL_SUFFIXES };
 
 /** Short words that are never a model prefix ("cho s24" is not model "chos24"). */
 const STOPWORDS: ReadonlySet<string> = new Set([
