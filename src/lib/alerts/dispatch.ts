@@ -147,6 +147,9 @@ export function deliveryIdempotencyKey(deliveryIds: string[]): string {
   return `alert-delivery/${digest}`;
 }
 
+/** A send that must not be retried: it cannot succeed with the same idempotency key. */
+class NonRetryableDeliveryError extends Error {}
+
 function productUrl(site: string, e: EventDetail) {
   return `${site}/${e.product.categorySlug}/${e.product.slug}?variant=${e.watch.variantId}`;
 }
@@ -277,11 +280,17 @@ export async function dispatchDueDeliveries(
           });
           providerId = res.id;
         } catch (err) {
-          // The key was already used with another body (prices re-rendered on a later run): this
-          // delivery set was already sent. Anything else is a real failure.
-          if (!(err instanceof EmailSendError && err.code === "invalid_idempotent_request")) throw err;
+          // The key was already used with another body (prices re-rendered on a later run). That does
+          // NOT prove the first request was delivered: Resend's SDK docs (node_modules/resend) do not
+          // say a key is kept only for accepted requests. A retry cannot succeed either (same key, new
+          // body): stop as failed and report it — never mark it sent on a guess.
+          if (err instanceof EmailSendError && err.code === "invalid_idempotent_request") {
+            throw new NonRetryableDeliveryError(`invalid_idempotent_request: ${err.message}`);
+          }
+          throw err;
         }
       } else {
+        // Push has no idempotency key: a reclaimed delivery may notify a device twice.
         const payload = buildPushPayload(
           items.map((e) => ({ productName: e.product.name, price: e.price, url: productUrl(site, e) })),
           site,
@@ -296,6 +305,14 @@ export async function dispatchDueDeliveries(
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      if (err instanceof NonRetryableDeliveryError) {
+        reportError(err, { where: "alert_dispatch_non_retryable", channel: group.channel, deliveries: ids.length });
+        for (const d of group.deliveries) {
+          await update([d.deliveryId], { status: "failed", attempts: d.attempts + 1, last_error: message });
+        }
+        stats.failed += ids.length;
+        continue;
+      }
       for (const d of group.deliveries) {
         const attempts = d.attempts + 1;
         const retry = nextRetryAt(attempts, opts.now);

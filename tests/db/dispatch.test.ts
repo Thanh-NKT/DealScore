@@ -3,12 +3,19 @@ import type { EmailMessage } from "@/lib/email";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
 
 const sentMessages: EmailMessage[] = [];
+/** Resend error code the next send fails with (once). */
+let nextSendErrorCode: string | null = null;
 vi.mock("@/lib/email", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/email")>();
   return {
     ...actual,
     sendEmail: async (msg: EmailMessage) => {
       sentMessages.push(msg);
+      if (nextSendErrorCode) {
+        const code = nextSendErrorCode;
+        nextSendErrorCode = null;
+        throw new actual.EmailSendError("same key, other body", code);
+      }
       return actual.sendEmail(msg);
     },
   };
@@ -152,5 +159,19 @@ describe("dispatchDueDeliveries: send, then bookkeeping (at-least-once)", () => 
     const [row] = await deliveriesOf(u.id);
     expect(row).toMatchObject({ status: "failed", attempts: 3 });
     expect(sentMessages).toHaveLength(0);
+  });
+});
+
+describe("dispatchDueDeliveries: invalid_idempotent_request", () => {
+  it("is not taken as proof of delivery: the delivery fails (no retry) and it is reported", async () => {
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("UNSUBSCRIBE_SECRET", "test-secret");
+    const u = await userWithAlert();
+    nextSendErrorCode = "invalid_idempotent_request";
+    const stats = await dispatchDueDeliveries({ now: new Date() }, admin);
+    expect(stats).toMatchObject({ sent: 0, failed: 1, retried: 0 });
+    const [row] = await deliveriesOf(u.id);
+    expect(row).toMatchObject({ status: "failed", attempts: 1 });
+    expect(reportError).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ where: "alert_dispatch_non_retryable" }));
   });
 });
