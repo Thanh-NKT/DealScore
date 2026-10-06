@@ -1,22 +1,22 @@
 /**
- * Kairo extension — service worker. The ONLY place that talks to Kairo: it has host permission for
- * the Kairo origin, so requests carry the user's Kairo session cookie, and Kairo only accepts calls
+ * DealScore extension — service worker. The ONLY place that talks to DealScore: it has host permission for
+ * the DealScore origin, so requests carry the user's DealScore session cookie, and DealScore only accepts calls
  * whose Origin is this extension (src/lib/extension/http.ts).
  */
 /* global chrome */
 "use strict";
 
-const DEFAULT_ORIGIN = "https://kairo.vn";
+const DEFAULT_ORIGIN = "https://dealscore.vn";
 /** Don't resend the same product's prices more often than this. */
 const CONTRIBUTE_EVERY_MS = 30 * 60 * 1000;
 
-async function kairoOrigin() {
-  const { kairoOrigin } = await chrome.storage.local.get("kairoOrigin");
-  return kairoOrigin || DEFAULT_ORIGIN;
+async function dealscoreOrigin() {
+  const { dealscoreOrigin } = await chrome.storage.local.get("dealscoreOrigin");
+  return dealscoreOrigin || DEFAULT_ORIGIN;
 }
 
 async function api(path, init) {
-  const origin = await kairoOrigin();
+  const origin = await dealscoreOrigin();
   const res = await fetch(origin + path, {
     ...(init || {}),
     credentials: "include",
@@ -64,7 +64,7 @@ async function handle(msg) {
     case "me":
       return api("/api/extension/me");
     case "origin":
-      return { origin: await kairoOrigin() };
+      return { origin: await dealscoreOrigin() };
     default:
       return { status: 400, error: "unknown_message" };
   }

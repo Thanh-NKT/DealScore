@@ -1,5 +1,5 @@
 /**
- * Kairo extension — read a Shopee product page. Pure functions over plain strings, so they are
+ * DealScore extension — read a Shopee product page. Pure functions over plain strings, so they are
  * unit-tested (tests/extension/parse-shopee.test.ts) without a browser.
  *
  * ASSUMPTION E1 (like G1–G6 for the API): Shopee renders prices as "₫2.390.000", a range
@@ -7,7 +7,7 @@
  * "-NN%" badge, stock as "N sản phẩm có sẵn". Verify on the live site before publishing; when a
  * page doesn't match, the parser returns nothing rather than a guess.
  *
- * Loaded as a classic content script (window.KairoShopee) and as a CommonJS module in tests.
+ * Loaded as a classic content script (window.DealScoreShopee) and as a CommonJS module in tests.
  */
 (function (root) {
   "use strict";
@@ -180,5 +180,5 @@
     readProductPage: readProductPage,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else root.KairoShopee = api;
+  else root.DealScoreShopee = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

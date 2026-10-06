@@ -1,10 +1,10 @@
 /**
- * Kairo extension — content script on shopee.vn. Shows Kairo's answer for the product being viewed
+ * DealScore extension — content script on shopee.vn. Shows DealScore's answer for the product being viewed
  * in a small label in the corner (Shadow DOM: Shopee's CSS never leaks in, ours never leaks out).
  * Reads only product facts from the page (price, stock, free shipping, voucher) — never anything
  * personal — and sends them only if the user turned sharing on (checked in the service worker).
  */
-/* global chrome, KairoShopee */
+/* global chrome, DealScoreShopee */
 (function () {
   "use strict";
 
@@ -94,7 +94,7 @@
   function mount() {
     if (host) return;
     host = document.createElement("div");
-    host.setAttribute("data-kairo", "");
+    host.setAttribute("data-dealscore", "");
     shadow = host.attachShadow({ mode: "closed" });
     document.documentElement.appendChild(host);
   }
@@ -109,9 +109,9 @@
     mount();
     shadow.innerHTML =
       "<style>" + STYLE + "</style>" +
-      '<section class="k" role="complementary" aria-label="Kairo">' +
+      '<section class="k" role="complementary" aria-label="DealScore">' +
       '<div class="top"><span class="brand"><span class="mark" aria-hidden="true">K</span>Kairo</span>' +
-      '<button class="x" type="button" aria-label="Ẩn khung Kairo cho sản phẩm này">×</button></div>' +
+      '<button class="x" type="button" aria-label="Ẩn khung DealScore cho sản phẩm này">×</button></div>' +
       inner +
       "</section>";
     shadow.querySelector(".x").addEventListener("click", function () {
@@ -138,16 +138,16 @@
         ? target
           ? '<button class="btn sec" type="button" data-watch>Theo dõi, báo khi ≤ ' + vnd(target) + "</button>"
           : ""
-        : '<a class="btn sec" target="_blank" rel="noopener" href="' + esc(res.origin + "/login?next=" + encodeURIComponent(new URL(s.url).pathname + new URL(s.url).search)) + '">Đăng nhập Kairo để theo dõi giá</a>';
+        : '<a class="btn sec" target="_blank" rel="noopener" href="' + esc(res.origin + "/login?next=" + encodeURIComponent(new URL(s.url).pathname + new URL(s.url).search)) + '">Đăng nhập DealScore để theo dõi giá</a>';
 
     render(
-      '<div class="cap">Giá thấp nhất Kairo ghi nhận' + (s.variantKey ? " · " + esc(s.variantKey) : "") + "</div>" +
+      '<div class="cap">Giá thấp nhất DealScore ghi nhận' + (s.variantKey ? " · " + esc(s.variantKey) : "") + "</div>" +
         '<div class="price">' + vnd(s.price) + "</div>" +
         '<div class="row">' + tag(s.recommendation) +
         (s.score != null ? '<span class="score">Deal Score <b>' + s.score + "</b>/100</span>" : "") + "</div>" +
         (s.reasons.length ? "<ul>" + s.reasons.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>" : "") +
-        (s.isStale ? '<p class="stale">Giá có thể đã khác, Kairo chưa cập nhật gần đây.</p>' : "") +
-        '<div class="act"><a class="btn pri" target="_blank" rel="noopener" href="' + esc(s.url) + '">Xem lịch sử giá trên Kairo</a>' + watchBlock + "</div>",
+        (s.isStale ? '<p class="stale">Giá có thể đã khác, DealScore chưa cập nhật gần đây.</p>' : "") +
+        '<div class="act"><a class="btn pri" target="_blank" rel="noopener" href="' + esc(s.url) + '">Xem lịch sử giá trên DealScore</a>' + watchBlock + "</div>",
       item,
     );
 
@@ -157,9 +157,9 @@
         btn.textContent = "Đang lưu…";
         btn.setAttribute("aria-disabled", "true");
         send({ type: "watch", variantId: s.variantId, targetPrice: target }).then(function (r) {
-          if (r.status === 200) btn.outerHTML = '<p class="done">' + CHECK + "Đã theo dõi. Kairo sẽ báo khi giá ≤ " + vnd(target) + "</p>";
-          else if (r.status === 401) btn.outerHTML = '<p class="msg">Phiên đăng nhập đã hết. Hãy đăng nhập lại trên Kairo.</p>';
-          else if (r.status === 403) btn.outerHTML = '<p class="msg">Mở Kairo để hoàn tất tài khoản (đồng ý điều khoản hoặc khôi phục tài khoản) rồi thử lại.</p>';
+          if (r.status === 200) btn.outerHTML = '<p class="done">' + CHECK + "Đã theo dõi. DealScore sẽ báo khi giá ≤ " + vnd(target) + "</p>";
+          else if (r.status === 401) btn.outerHTML = '<p class="msg">Phiên đăng nhập đã hết. Hãy đăng nhập lại trên DealScore.</p>';
+          else if (r.status === 403) btn.outerHTML = '<p class="msg">Mở DealScore để hoàn tất tài khoản (đồng ý điều khoản hoặc khôi phục tài khoản) rồi thử lại.</p>';
           else btn.outerHTML = '<p class="msg">Chưa lưu được. Thử lại sau ít phút.</p>';
         });
       });
@@ -168,10 +168,10 @@
 
   function renderMissing(origin, item) {
     render(
-      '<p class="msg">Kairo chưa theo dõi giá sản phẩm này.</p>' +
+      '<p class="msg">DealScore chưa theo dõi giá sản phẩm này.</p>' +
         '<div class="act"><a class="btn sec" target="_blank" rel="noopener" href="' +
         esc(origin + "/share-target?url=" + encodeURIComponent(location.href)) +
-        '">Thêm vào Kairo để theo dõi</a></div>',
+        '">Thêm vào DealScore để theo dõi</a></div>',
       item,
     );
   }
@@ -193,7 +193,7 @@
       .map(function (img) {
         return img.currentSrc || img.src;
       });
-    return KairoShopee.readProductPage({
+    return DealScoreShopee.readProductPage({
       href: location.href,
       text: (document.body && document.body.innerText) || "",
       selectedOptions: selected,
@@ -202,7 +202,7 @@
   }
 
   function onPage() {
-    var item = KairoShopee.itemIdFromUrl(location.href);
+    var item = DealScoreShopee.itemIdFromUrl(location.href);
     if (!item) {
       unmount();
       return;
@@ -214,10 +214,10 @@
       var page = readPage();
       if (!page || page.item !== item) return;
       send({ type: "lookup", item: item, model: page.modelName }).then(function (res) {
-        if (KairoShopee.itemIdFromUrl(location.href) !== item || item === dismissedItem) return;
+        if (DealScoreShopee.itemIdFromUrl(location.href) !== item || item === dismissedItem) return;
         if (res.status === 200 && res.body && res.body.found) renderFound(res, item);
         else if (res.status === 200 && res.body) renderMissing(res.origin, item);
-        else render('<p class="msg">Chưa kết nối được Kairo. Thử tải lại trang sau.</p>', item);
+        else render('<p class="msg">Chưa kết nối được DealScore. Thử tải lại trang sau.</p>', item);
       });
       if (page.observation) send({ type: "contribute", observation: page.observation });
     }, RENDER_DELAY_MS);

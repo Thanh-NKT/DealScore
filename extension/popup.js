@@ -11,11 +11,11 @@
   share.checked = Boolean(shareObservations);
   share.addEventListener("change", () => chrome.storage.sync.set({ shareObservations: share.checked }));
 
-  const { kairoOrigin } = await chrome.storage.local.get("kairoOrigin");
-  origin.value = kairoOrigin || "https://kairo.vn";
+  const { dealscoreOrigin } = await chrome.storage.local.get("dealscoreOrigin");
+  origin.value = dealscoreOrigin || "https://dealscore.vn";
   open.href = origin.value;
   origin.addEventListener("change", async () => {
-    await chrome.storage.local.set({ kairoOrigin: origin.value });
+    await chrome.storage.local.set({ dealscoreOrigin: origin.value });
     open.href = origin.value;
     checkAccount();
   });
@@ -24,7 +24,7 @@
     account.textContent = "Đang kiểm tra…";
     chrome.runtime.sendMessage({ type: "me" }, (res) => {
       if (!res || res.status !== 200) {
-        account.textContent = "Chưa kết nối được Kairo.";
+        account.textContent = "Chưa kết nối được DealScore.";
         return;
       }
       if (res.body && res.body.signedIn) {
@@ -35,7 +35,7 @@
         a.href = res.origin + "/login";
         a.target = "_blank";
         a.rel = "noopener";
-        a.textContent = "Đăng nhập Kairo";
+        a.textContent = "Đăng nhập DealScore";
         account.append(a, " để đặt theo dõi giá.");
       }
     });
