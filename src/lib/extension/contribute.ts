@@ -202,7 +202,11 @@ export async function promoteExtensionObservations(client: Client, offerIds: str
     const today = toVnDate(now);
     const { error: cErr } = await client.rpc("refresh_variant_current_price", { p_variant_ids: variantIds });
     if (cErr) throw new Error(`refresh_variant_current_price: ${cErr.message}`);
-    const { error: dErr } = await client.rpc("refresh_variant_daily_prices", { p_from: from, p_to: today });
+    const { error: dErr } = await client.rpc("refresh_variant_daily_prices", {
+      p_from: from,
+      p_to: today,
+      p_variant_ids: variantIds,
+    });
     if (dErr) throw new Error(`refresh_variant_daily_prices: ${dErr.message}`);
     await recomputeDealScores(client, { now, variantIds });
   }

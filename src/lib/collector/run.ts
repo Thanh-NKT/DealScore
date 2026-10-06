@@ -214,7 +214,11 @@ export async function runCollector(
   try {
     if (variantIds.length > 0) {
       const today = toVnDate(now);
-      const { error } = await client.rpc("refresh_variant_daily_prices", { p_from: today, p_to: today });
+      const { error } = await client.rpc("refresh_variant_daily_prices", {
+        p_from: today,
+        p_to: today,
+        p_variant_ids: variantIds,
+      });
       if (error) throw new Error(`refresh_variant_daily_prices: ${error.message}`);
       await recomputeDealScores(client, { now, variantIds });
       await evaluate({ now, variantIds, deadline: opts.deadline }, client);

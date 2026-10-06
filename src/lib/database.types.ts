@@ -568,6 +568,7 @@ export type Database = {
       }
       listings: {
         Row: {
+          deactivated_by: string | null
           external_item_id: string
           first_seen_at: string
           id: string
@@ -582,6 +583,7 @@ export type Database = {
           url: string | null
         }
         Insert: {
+          deactivated_by?: string | null
           external_item_id: string
           first_seen_at?: string
           id?: string
@@ -596,6 +598,7 @@ export type Database = {
           url?: string | null
         }
         Update: {
+          deactivated_by?: string | null
           external_item_id?: string
           first_seen_at?: string
           id?: string
@@ -1658,6 +1661,7 @@ export type Database = {
           schedule: string
         }[]
       }
+      admin_lock_product: { Args: { p_product_id: string }; Returns: string }
       admin_log: {
         Args: {
           p_action: string
@@ -1775,6 +1779,14 @@ export type Database = {
           reason: string
         }[]
       }
+      offer_is_visible: {
+        Args: {
+          p_listing_status: string
+          p_match_status: string
+          p_product_status: string
+        }
+        Returns: boolean
+      }
       price_drop_radar: {
         Args: {
           p_category_id?: string
@@ -1823,7 +1835,7 @@ export type Database = {
         Returns: undefined
       }
       refresh_variant_daily_prices: {
-        Args: { p_from: string; p_to: string }
+        Args: { p_from: string; p_to: string; p_variant_ids?: string[] }
         Returns: number
       }
       release_job_lock: {
