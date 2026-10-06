@@ -3,15 +3,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { fakeTikTokItem, fakeTikTokSearch } from "@/lib/tiktok/fake-source";
 import { tiktokConfig, type TikTokConfig } from "@/lib/tiktok/config";
 import { callTikTok, type TikTokCaller } from "@/lib/tiktok/api";
-import { getTikTokAccessToken, supabaseTokenStore } from "@/lib/tiktok/credentials";
+import { getTikTokAccessToken, supabaseTokenStore, type RefreshBackoff } from "@/lib/tiktok/credentials";
 import { refreshTokens } from "@/lib/tiktok/oauth";
 import { fetchTikTokItem, searchTikTokItems } from "@/lib/tiktok/affiliate-source";
 import { isFakeEnabled, MarketplaceUnavailableError, type Env, type MarketplaceSource } from "@/lib/marketplaces/types";
+
+/** Shared by every call in this process: a failing refresh is retried at most every REFRESH_BACKOFF_MS. */
+const refreshBackoff: RefreshBackoff = { failedAt: null };
 
 function realCaller(cfg: TikTokConfig): TikTokCaller {
   return async <T>(path: string, opts: { query?: Record<string, string>; body?: unknown }) => {
     const accessToken = await getTikTokAccessToken(supabaseTokenStore(createAdminClient()), {
       refresh: (refreshToken) => refreshTokens(cfg, refreshToken),
+      backoff: refreshBackoff,
     });
     return callTikTok<T>(cfg, path, opts, { accessToken });
   };

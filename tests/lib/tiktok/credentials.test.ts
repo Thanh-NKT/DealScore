@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getTikTokAccessToken, REFRESH_MARGIN_MS, type TokenStore } from "@/lib/tiktok/credentials";
+import { getTikTokAccessToken, REFRESH_BACKOFF_MS, REFRESH_MARGIN_MS, type TokenStore } from "@/lib/tiktok/credentials";
 import type { TikTokTokens } from "@/lib/tiktok/oauth";
 import { MarketplaceUnavailableError } from "@/lib/marketplaces/types";
 
@@ -99,6 +99,19 @@ describe("getTikTokAccessToken", () => {
     });
     expect(await getTikTokAccessToken(store, { now, refresh })).toBe("A0");
     expect(await store.tryLock("x")).toBe(true);
+  });
+
+  it("after a failed refresh, later calls reuse the valid token without retrying until the backoff ends", async () => {
+    const store = memoryStore(tokens(3_600_000));
+    const refresh = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    const backoff = { failedAt: null };
+    expect(await getTikTokAccessToken(store, { now, refresh, backoff })).toBe("A0");
+    expect(await getTikTokAccessToken(store, { now: at(60_000), refresh, backoff })).toBe("A0");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(await getTikTokAccessToken(store, { now: at(REFRESH_BACKOFF_MS + 1), refresh, backoff })).toBe("A0");
+    expect(refresh).toHaveBeenCalledTimes(2);
   });
 
   it("save fails after a successful refresh → still returns the new token, logs no token", async () => {

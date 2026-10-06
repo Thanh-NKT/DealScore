@@ -3,11 +3,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import type { TikTokTokens } from "@/lib/tiktok/oauth";
 import { MarketplaceUnavailableError } from "@/lib/marketplaces/types";
+import { reportError } from "@/lib/observability";
 
 /** Refresh the access token when less than this is left. */
 export const REFRESH_MARGIN_MS = 24 * 3_600_000;
 const LOCK_NAME = "tiktok_token_refresh";
 const LOCK_TTL_SECONDS = 60;
+/** After a failed refresh, keep using the still-valid token this long before trying again. */
+export const REFRESH_BACKOFF_MS = 10 * 60_000;
+
+/** Per-process memory of the last failed refresh (one per source; tests pass their own). */
+export interface RefreshBackoff {
+  failedAt: number | null;
+}
 
 export interface TokenStore {
   load(): Promise<TikTokTokens | null>;
@@ -61,7 +69,12 @@ const unavailable = (message: string, cause?: unknown) =>
 /** A valid access token, refreshed (once, under a lock) when it has less than 24h left. */
 export async function getTikTokAccessToken(
   store: TokenStore,
-  opts: { now?: Date; refresh: (refreshToken: string) => Promise<TikTokTokens>; sleep?: (ms: number) => Promise<void> },
+  opts: {
+    now?: Date;
+    refresh: (refreshToken: string) => Promise<TikTokTokens>;
+    sleep?: (ms: number) => Promise<void>;
+    backoff?: RefreshBackoff;
+  },
 ): Promise<string> {
   const now = opts.now ?? new Date();
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
@@ -74,6 +87,9 @@ export async function getTikTokAccessToken(
   if (current.refreshExpiresAt.getTime() <= now.getTime()) {
     throw unavailable("TikTok Shop authorization expired — run pnpm tiktok:authorize");
   }
+  // A refresh failed a moment ago: do not retry it (lock + HTTP) on every API call of the run.
+  const failedAt = opts.backoff?.failedAt;
+  if (usable(current) && failedAt != null && now.getTime() - failedAt < REFRESH_BACKOFF_MS) return current.accessToken;
 
   const owner = randomUUID();
   if (!(await store.tryLock(owner))) {
@@ -91,15 +107,20 @@ export async function getTikTokAccessToken(
     try {
       next = await opts.refresh(latest.refreshToken);
     } catch (err) {
-      // The current token still works: use it and retry the refresh on a later call.
+      if (opts.backoff) opts.backoff.failedAt = now.getTime();
+      // The current token still works: use it and retry the refresh after the backoff.
       if (usable(latest)) return latest.accessToken;
       throw unavailable("TikTok token refresh failed", err);
     }
+    if (opts.backoff) opts.backoff.failedAt = null;
     try {
       await store.save(next);
     } catch (err) {
-      // The new token is valid for this call; the next call retries the refresh. Never log token values.
-      console.error("Failed to save refreshed TikTok token:", err instanceof Error ? err.message : "unknown error");
+      // The new token is valid for this call; the next call retries the refresh. If TikTok rotated the
+      // refresh token, the stored one may now be dead: this needs attention. Never log token values.
+      reportError(new Error(`Failed to save refreshed TikTok token: ${err instanceof Error ? err.message : "unknown error"}`), {
+        where: "getTikTokAccessToken.save",
+      });
     }
     return next.accessToken;
   } finally {
