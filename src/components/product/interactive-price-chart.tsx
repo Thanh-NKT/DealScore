@@ -1,154 +1,128 @@
 "use client";
 
-import { useId, useMemo, useState, type MouseEvent, type TouchEvent } from "react";
-import type { DailyPriceRow } from "@/lib/pricing/price-history";
+import { useId, useMemo, useState, type KeyboardEvent, type MouseEvent, type TouchEvent } from "react";
+import { historyStats, type DailyPriceRow } from "@/lib/pricing/price-history";
+import { buildChartSeries } from "@/lib/pricing/chart-series";
 import { formatVnd } from "@/lib/format";
 import { SegmentedControl } from "@/components/ui/segmented";
 
+export type ChartRange = 7 | 30 | 90;
+
 interface InteractivePriceChartProps {
   rows: DailyPriceRow[];
-  initialRange?: 7 | 30 | 90;
+  initialRange?: ChartRange;
   variantTitle?: string;
   currentPrice?: number | null;
+  /** The current price is a flash-sale price: drawn as a flash marker, not on the regular line. */
+  currentIsFlashSale?: boolean;
+  /** The page's "now" (ISO), so server and client render the same Vietnam day. Defaults to now. */
+  nowIso?: string;
 }
 
+const H = 280;
+const W = 800;
+const PAD = 24;
+
+function formatDay(day: string): string {
+  const parts = day.split("-");
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}` : day;
+}
+
+/**
+ * "Lịch sử giá": the last N calendar days (Vietnam time) from buildChartSeries — x is the day, gaps
+ * break the line, flash-sale days are markers — and low / median / high from historyStats(), the same
+ * window and median the Deal Score uses.
+ */
 export function InteractivePriceChart({
   rows,
   initialRange = 90,
   variantTitle,
   currentPrice,
+  currentIsFlashSale = false,
+  nowIso,
 }: InteractivePriceChartProps) {
   const uid = useId();
-  const [range, setRange] = useState<7 | 30 | 90>(initialRange);
+  const [range, setRange] = useState<ChartRange>(initialRange);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
-  // Parse rows to sorted points
-  const points = useMemo(() => {
-    const valid: { day: string; price: number; hasFlash: boolean }[] = rows
-      .filter((r) => r.min_price != null && Number.isFinite(r.min_price) && (r.min_price as number) > 0)
-      .map((r) => ({
-        day: r.day,
-        price: Number(r.min_price),
-        hasFlash: Boolean(r.has_flash_sale),
-      }))
-      .sort((a, b) => a.day.localeCompare(b.day));
+  const now = useMemo(() => (nowIso ? new Date(nowIso) : new Date()), [nowIso]);
+  const current = currentPrice != null && Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : null;
 
-    // If current price is provided and not in rows, append today
-    if (currentPrice && currentPrice > 0) {
-      const todayStr = new Date().toISOString().slice(0, 10);
-      if (valid.length === 0 || valid[valid.length - 1].day !== todayStr) {
-        valid.push({ day: todayStr, price: currentPrice, hasFlash: false });
-      }
-    }
+  const series = useMemo(
+    () => buildChartSeries(rows, range, now, { currentPrice: current, currentIsFlashSale }),
+    [rows, range, now, current, currentIsFlashSale],
+  );
+  const history = useMemo(() => historyStats(rows, now, range), [rows, now, range]);
 
-    return valid;
-  }, [rows, currentPrice]);
+  const points = series.points;
+  const m = points.length;
+  const last = m > 0 ? points[m - 1] : null;
+  const fallback = current ?? last?.price ?? 0;
+  const lo = history.low ?? fallback;
+  const hi = history.high ?? fallback;
+  const med = history.median ?? fallback;
+  const compared = current != null && !currentIsFlashSale ? current : (last?.price ?? null);
+  const diffMedPct = compared != null && med > 0 ? ((compared - med) / med) * 100 : 0;
 
-  // Slice for selected period
-  const activePoints = useMemo(() => {
-    if (points.length <= range) return points;
-    return points.slice(-range);
-  }, [points, range]);
+  const scaleLo = Math.min(lo, series.min ?? lo);
+  const scaleHi = Math.max(hi, series.max ?? hi);
+  const minVal = Math.min(scaleLo * 0.98, scaleLo);
+  const maxVal = Math.max(scaleHi * 1.02, scaleHi + 1000);
+  const span = series.spanDays;
 
-  // Calculations for scale, median, min, max
-  const stats = useMemo(() => {
-    if (activePoints.length === 0) {
-      const fallback = currentPrice && currentPrice > 0 ? currentPrice : 0;
-      return {
-        lo: fallback,
-        hi: fallback,
-        med: fallback,
-        diffMedPct: 0,
-      };
-    }
-    const prices: number[] = activePoints.map((p) => p.price);
-    const sorted = [...prices].sort((a, b) => a - b);
-    const lo = sorted[0] ?? 0;
-    const hi = sorted[sorted.length - 1] ?? 0;
-    const med = sorted[Math.floor(sorted.length / 2)] ?? 0;
-    const cur = prices[prices.length - 1] ?? 0;
-    const diffMedPct = med > 0 ? ((cur - med) / med) * 100 : 0;
-    return { lo, hi, med, diffMedPct };
-  }, [activePoints, currentPrice]);
+  const getY = (val: number) => (maxVal === minVal ? H / 2 : PAD + ((maxVal - val) / (maxVal - minVal)) * (H - 2 * PAD));
+  const getX = (x: number) => (span > 0 ? (x / span) * W : W / 2);
 
-  const m = activePoints.length;
-  const H = 280;
-  const W = 800;
-  const pad = 24;
+  const lines = series.segments.map((seg) => seg.map((p) => `${getX(p.x).toFixed(1)},${getY(p.price).toFixed(1)}`));
 
-  const minVal = Math.min(stats.lo * 0.98, stats.lo);
-  const maxVal = Math.max(stats.hi * 1.02, stats.hi + 1000);
+  let lowestIdx = -1;
+  for (let i = 0; i < m; i++) {
+    if (lowestIdx < 0 || points[i].price < points[lowestIdx].price) lowestIdx = i;
+  }
 
-  const getY = (val: number) => {
-    if (maxVal === minVal) return H / 2;
-    return pad + ((maxVal - val) / (maxVal - minVal)) * (H - 2 * pad);
-  };
-
-  const getX = (idx: number) => {
-    if (m <= 1) return W / 2;
-    return (idx / (m - 1)) * W;
-  };
-
-  const polylinePts = useMemo(() => {
-    if (m === 0) return "";
-    return activePoints.map((p, i) => `${getX(i).toFixed(1)},${getY(p.price).toFixed(1)}`).join(" ");
-  }, [activePoints, minVal, maxVal]);
-
-  const areaPath = useMemo(() => {
-    if (!polylinePts || m === 0) return "";
-    return `M 0,${H} L ${polylinePts.split(" ").join(" L ")} L ${W},${H} Z`;
-  }, [polylinePts, m]);
-
-  // Find lowest point index
-  const lowestIdx = useMemo(() => {
-    if (m === 0) return 0;
-    let minIdx = 0;
-    for (let i = 1; i < m; i++) {
-      if (activePoints[i].price < activePoints[minIdx].price) {
-        minIdx = i;
-      }
-    }
-    return minIdx;
-  }, [activePoints, m]);
-
-  // Hover position & active item
   const activeIdx = hoverIndex !== null && hoverIndex >= 0 && hoverIndex < m ? hoverIndex : m - 1;
-  const activeItem = (m > 0 && activePoints[activeIdx]) ? activePoints[activeIdx] : { day: "Hôm nay", price: stats.lo };
-  const hoverX = getX(activeIdx);
-  const hoverY = getY(activeItem.price);
-
-  const handlePointer = (clientX: number, rect: DOMRect) => {
-    if (m <= 1) return;
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const idx = Math.round(ratio * (m - 1));
-    setHoverIndex(idx);
-  };
-
-  const onMouseMove = (e: MouseEvent<SVGRectElement>) => {
-    handlePointer(e.clientX, e.currentTarget.getBoundingClientRect());
-  };
-
-  const onTouchMove = (e: TouchEvent<SVGRectElement>) => {
-    if (e.touches.length > 0) {
-      handlePointer(e.touches[0].clientX, e.currentTarget.getBoundingClientRect());
-    }
-  };
-
-  const formatDay = (dayStr: string) => {
-    try {
-      const parts = dayStr.split("-");
-      if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
-    } catch {}
-    return dayStr;
-  };
-
-  const daysDiff = m > 0 && activeIdx < m - 1 ? m - 1 - activeIdx : 0;
-  const hoverDateLabel =
-    activeIdx === m - 1
+  const activeItem = m > 0 ? points[activeIdx] : null;
+  const daysAgo = activeItem ? span - activeItem.x : 0;
+  const hoverDateLabel = !activeItem
+    ? "Hôm nay"
+    : daysAgo === 0
       ? "Hôm nay"
-      : daysDiff === 1
+      : daysAgo === 1
         ? "Hôm qua"
-        : `${formatDay(activeItem.day)} (${daysDiff} ngày trước)`;
+        : `${formatDay(activeItem.day)} (${daysAgo} ngày trước)`;
+
+  /** Nearest plotted day to a horizontal position. */
+  const handlePointer = (clientX: number, rect: DOMRect) => {
+    if (m === 0) return;
+    const target = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * span;
+    let best = 0;
+    for (let i = 1; i < m; i++) {
+      if (Math.abs(points[i].x - target) < Math.abs(points[best].x - target)) best = i;
+    }
+    setHoverIndex(best);
+  };
+
+  const onMouseMove = (e: MouseEvent<SVGRectElement>) => handlePointer(e.clientX, e.currentTarget.getBoundingClientRect());
+  const onTouchMove = (e: TouchEvent<SVGRectElement>) => {
+    if (e.touches.length > 0) handlePointer(e.touches[0].clientX, e.currentTarget.getBoundingClientRect());
+  };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (m === 0) return;
+    const at = hoverIndex ?? m - 1;
+    const next =
+      e.key === "ArrowLeft" ? Math.max(0, at - 1)
+      : e.key === "ArrowRight" ? Math.min(m - 1, at + 1)
+      : e.key === "Home" ? 0
+      : e.key === "End" ? m - 1
+      : null;
+    if (next == null) return;
+    e.preventDefault();
+    setHoverIndex(next);
+  };
+
+  const hoverX = activeItem ? getX(activeItem.x) : W / 2;
+  const hoverY = getY(activeItem?.price ?? lo);
+  const dataDays = history.dayCount;
 
   return (
     <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6 sm:p-7">
@@ -164,9 +138,9 @@ export function InteractivePriceChart({
             )}
           </div>
           <span className="text-label text-ink-3">
-            {m < range
-              ? `Mới có ${m} ngày dữ liệu. Rê chuột lên biểu đồ để xem giá từng ngày.`
-              : "Giá thấp nhất mỗi ngày trên các nơi bán đã gom. Rê chuột để xem từng ngày."}
+            {dataDays < range
+              ? `Mới có ${dataDays} ngày dữ liệu trong ${range} ngày qua. Rê chuột hoặc dùng phím mũi tên để xem giá từng ngày.`
+              : "Giá thấp nhất mỗi ngày trên các nơi bán đã gom. Rê chuột hoặc dùng phím mũi tên để xem từng ngày."}
           </span>
         </div>
 
@@ -186,31 +160,30 @@ export function InteractivePriceChart({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="flex flex-col gap-0.5 rounded-md bg-buy-soft p-3 sm:px-3.5">
           <span className="text-micro font-semibold text-buy">Thấp nhất</span>
-          <span className="num display text-title font-bold text-buy">{formatVnd(stats.lo)}</span>
+          <span className="num display text-title font-bold text-buy">{formatVnd(lo)}</span>
         </div>
         <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
           <span className="text-micro font-semibold text-ink-3">Giá trung vị</span>
-          <span className="num display text-title font-bold text-ink">{formatVnd(stats.med)}</span>
+          <span className="num display text-title font-bold text-ink">{formatVnd(med)}</span>
         </div>
         <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
           <span className="text-micro font-semibold text-ink-3">Cao nhất</span>
-          <span className="num display text-title font-bold text-ink">{formatVnd(stats.hi)}</span>
+          <span className="num display text-title font-bold text-ink">{formatVnd(hi)}</span>
         </div>
         <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
           <span className="text-micro font-semibold text-ink-3">So với giá trung vị</span>
-          <span
-            className={`num display text-title font-bold ${
-              stats.diffMedPct <= 0 ? "text-buy" : "text-avoid"
-            }`}
-          >
-            {stats.diffMedPct <= 0 ? "−" : "+"}
-            {Math.abs(stats.diffMedPct).toFixed(1).replace(".", ",")}%
+          <span className={`num display text-title font-bold ${diffMedPct <= 0 ? "text-buy" : "text-avoid"}`}>
+            {diffMedPct <= 0 ? "−" : "+"}
+            {Math.abs(diffMedPct).toFixed(1).replace(".", ",")}%
           </span>
         </div>
       </div>
 
-      {/* Active Point Inspector Card */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-surface-2 px-4 py-2.5 text-label text-ink">
+      {/* Active Point Inspector Card (announced to screen readers as it changes) */}
+      <div
+        aria-live="polite"
+        className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-surface-2 px-4 py-2.5 text-label text-ink"
+      >
         <span className="flex items-center gap-1.5 font-medium">
           <span className="size-2 rounded-full bg-primary" />
           <span>
@@ -219,33 +192,35 @@ export function InteractivePriceChart({
         </span>
         <span>
           Giá ghi nhận:{" "}
-          <strong className="num text-body font-bold text-primary">{formatVnd(activeItem.price)}</strong>
+          <strong className="num text-body font-bold text-primary">{formatVnd(activeItem?.price ?? (current ?? null))}</strong>
         </span>
-        <span className="text-ink-3">
-          {activeIdx === m - 1 ? "Giá hiện tại" : "Thấp nhất trong ngày"}
-        </span>
+        <span className="text-ink-3">{activeItem?.current ? "Giá hiện tại" : "Thấp nhất trong ngày"}</span>
       </div>
 
       {/* SVG Chart with Crosshair & Interactivity */}
-      <div className="relative h-[280px] w-full pl-24">
+      <div
+        className="relative h-[280px] w-full rounded-sm pl-24 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        tabIndex={m > 0 ? 0 : undefined}
+        role="group"
+        aria-label={`Biểu đồ lịch sử giá ${range} ngày. Dùng phím mũi tên trái, phải để xem từng ngày.`}
+        onKeyDown={onKeyDown}
+        onBlur={() => setHoverIndex(null)}
+      >
         {/* Y-axis Labels */}
-        <span
-          style={{ top: `${Math.max(4, Math.min(250, getY(stats.hi) - 10))}px` }}
-          className="absolute left-0 text-micro text-ink-3"
-        >
-          {formatVnd(stats.hi)}
+        <span style={{ top: `${Math.max(4, Math.min(250, getY(hi) - 10))}px` }} className="absolute left-0 text-micro text-ink-3">
+          {formatVnd(hi)}
         </span>
         <span
-          style={{ top: `${Math.max(4, Math.min(250, getY(stats.med) - 10))}px` }}
+          style={{ top: `${Math.max(4, Math.min(250, getY(med) - 10))}px` }}
           className="absolute left-0 text-micro font-semibold text-ink-2"
         >
-          {formatVnd(stats.med)}
+          {formatVnd(med)}
         </span>
         <span
-          style={{ top: `${Math.max(4, Math.min(250, getY(stats.lo) - 10))}px` }}
+          style={{ top: `${Math.max(4, Math.min(250, getY(lo) - 10))}px` }}
           className="absolute left-0 text-micro font-semibold text-buy"
         >
-          {formatVnd(stats.lo)}
+          {formatVnd(lo)}
         </span>
 
         <svg
@@ -253,8 +228,7 @@ export function InteractivePriceChart({
           height="280"
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
-          role="img"
-          aria-label={`Biểu đồ lịch sử giá ${range} ngày`}
+          aria-hidden="true"
           className="overflow-visible"
         >
           <defs>
@@ -265,39 +239,69 @@ export function InteractivePriceChart({
           </defs>
 
           {/* Background Grid Lines */}
-          <line x1="0" x2={W} y1={getY(stats.hi)} y2={getY(stats.hi)} stroke="var(--line)" strokeWidth="1" />
-          <line x1="0" x2={W} y1={getY(stats.lo)} y2={getY(stats.lo)} stroke="var(--line)" strokeWidth="1" />
+          <line x1="0" x2={W} y1={getY(hi)} y2={getY(hi)} stroke="var(--line)" strokeWidth="1" />
+          <line x1="0" x2={W} y1={getY(lo)} y2={getY(lo)} stroke="var(--line)" strokeWidth="1" />
           <line
             x1="0"
             x2={W}
-            y1={getY(stats.med)}
-            y2={getY(stats.med)}
+            y1={getY(med)}
+            y2={getY(med)}
             stroke="var(--line-strong)"
             strokeWidth="1.5"
             strokeDasharray="6 6"
           />
 
-          {/* Area fill */}
-          {areaPath && <path d={areaPath} fill={`url(#${uid}-area)`} />}
-
-          {/* Main Line */}
-          {polylinePts && (
-            <polyline
-              points={polylinePts}
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth="2.5"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-            />
+          {/* One area + line per continuous segment: a day without data is a gap, never interpolated */}
+          {lines.map((pts, i) =>
+            pts.length >= 2 ? (
+              <g key={`seg-${i}`} data-segment="">
+                <path
+                  d={`M ${pts[0].split(",")[0]},${H} L ${pts.join(" L ")} L ${pts[pts.length - 1].split(",")[0]},${H} Z`}
+                  fill={`url(#${uid}-area)`}
+                />
+                <polyline
+                  points={pts.join(" ")}
+                  fill="none"
+                  stroke="var(--primary)"
+                  strokeWidth="2.5"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </g>
+            ) : (
+              <circle
+                key={`seg-${i}`}
+                data-segment=""
+                cx={pts[0].split(",")[0]}
+                cy={pts[0].split(",")[1]}
+                r="3.5"
+                fill="var(--primary)"
+                vectorEffect="non-scaling-stroke"
+              />
+            ),
           )}
 
-          {/* Lowest Point Ring */}
-          {m > 0 && (
+          {/* Flash-sale days: markers only, they are not part of the regular history */}
+          {series.flashMarkers.map((f) => (
             <circle
-              cx={getX(lowestIdx)}
-              cy={getY(activePoints[lowestIdx].price)}
+              key={`flash-${f.day}`}
+              data-flash=""
+              cx={getX(f.x)}
+              cy={getY(f.price)}
+              r="4.5"
+              fill="var(--wait)"
+              stroke="var(--surface)"
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+
+          {/* Lowest Point Ring */}
+          {lowestIdx >= 0 && (
+            <circle
+              cx={getX(points[lowestIdx].x)}
+              cy={getY(points[lowestIdx].price)}
               r="6"
               fill="var(--surface)"
               stroke="var(--buy)"
@@ -307,10 +311,10 @@ export function InteractivePriceChart({
           )}
 
           {/* Current Point Dot */}
-          {m > 0 && (
+          {last && (
             <circle
-              cx={getX(m - 1)}
-              cy={getY(activePoints[m - 1].price)}
+              cx={getX(last.x)}
+              cy={getY(last.price)}
               r="7"
               fill="var(--primary)"
               stroke="var(--surface)"
@@ -320,7 +324,7 @@ export function InteractivePriceChart({
           )}
 
           {/* Hover Crosshair & Dot */}
-          {hoverIndex !== null && (
+          {hoverIndex !== null && activeItem && (
             <>
               <line
                 x1={hoverX}
@@ -359,7 +363,7 @@ export function InteractivePriceChart({
         </svg>
       </div>
 
-      {/* X-axis date labels */}
+      {/* X-axis date labels: x is the calendar day, so even spacing is true spacing */}
       <div className="flex justify-between pl-24 text-micro text-ink-3">
         <span>{range} ngày trước</span>
         <span>{Math.round((range * 2) / 3)} ngày trước</span>
@@ -385,6 +389,12 @@ export function InteractivePriceChart({
           <span className="size-2.5 rounded-full bg-primary" />
           <span>Ngày đang xem</span>
         </span>
+        {series.flashMarkers.length > 0 && (
+          <span className="flex items-center gap-2">
+            <span className="size-2.5 rounded-full bg-wait" />
+            <span>Flash sale (không tính vào lịch sử giá)</span>
+          </span>
+        )}
       </div>
     </div>
   );

@@ -68,6 +68,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   }
 
   const { product, variants, selectedVariantId, pricing, dailyPrices } = data;
+  // One "now" for server and client renders of the chart (its Vietnam day decides the window).
+  const nowIso = new Date().toISOString();
 
   const user = await getCurrentUser();
   const existingWatch = user
@@ -297,7 +299,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           <section className="grid grid-cols-1 items-start gap-6 min-[1121px]:grid-cols-[1fr_420px]">
             <InteractivePriceChart
               rows={dailyPrices}
-              currentPrice={currentPrice ?? 0}
+              initialRange={range}
+              nowIso={nowIso}
+              // Only a live in-stock price is "today"; the last known price of a sold-out variant is not.
+              currentPrice={cheapest?.price ?? null}
+              currentIsFlashSale={cheapest?.isFlashSale ?? false}
               variantTitle={currentVariant ? variantLabel(currentVariant.variantKey) : product.canonicalName}
             />
 
