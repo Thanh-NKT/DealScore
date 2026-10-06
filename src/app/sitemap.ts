@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { buildSitemap } from "@/lib/seo/sitemap";
@@ -55,6 +56,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       siteUrl(),
     );
   } catch (err) {
+    // At runtime, fail: ISR then keeps serving the last good sitemap instead of caching a root-only
+    // one for an hour. Only the build (no DB reachable) falls back to the static core routes.
+    if (process.env.NEXT_PHASE !== PHASE_PRODUCTION_BUILD) throw err;
     console.warn("sitemap: could not fetch catalog data during build, generating static core routes", err);
     return buildSitemap(
       {
