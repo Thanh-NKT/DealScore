@@ -99,6 +99,65 @@ export async function listVouchersForListing(
   return (data ?? []).map(toVoucher);
 }
 
+/** Tag of the product page's cached voucher reads; /api/vouchers/refresh expires it after a write. */
+export const VOUCHERS_CACHE_TAG = "vouchers";
+
+export interface VoucherScope {
+  marketplace: string;
+  listingId: string;
+  sellerId: string | null;
+}
+
+/** The scope test of listVouchersForListing(), in code: tied to the listing, its seller, or marketplace-wide. */
+function inScope(v: Voucher, l: VoucherScope): boolean {
+  if (v.marketplace !== l.marketplace) return false;
+  if (v.listingId != null) return v.listingId === l.listingId;
+  return v.sellerId == null || v.sellerId === l.sellerId;
+}
+
+/** PostgREST caps a read at 1,000 rows (silently). */
+const MAX_BATCH_ROWS = 1000;
+
+/**
+ * listVouchersForListing() for many listings in ONE query (the product page used to run one per
+ * listing). Returns listingId → candidates, each list newest first and at most MAX_LIST long, as the
+ * single-listing read. Callers still run activeVouchers().
+ */
+export async function listVouchersForListings(
+  client: Client,
+  listings: readonly VoucherScope[],
+  now = new Date(),
+): Promise<Record<string, Voucher[]>> {
+  const valid = listings.filter((l) => UUID_RE.test(l.listingId) && (l.sellerId == null || UUID_RE.test(l.sellerId)));
+  const out: Record<string, Voucher[]> = Object.fromEntries(listings.map((l) => [l.listingId, [] as Voucher[]]));
+  if (valid.length === 0) return out;
+
+  const since = new Date(now.getTime() - VOUCHER_FRESH_DAYS * 86_400_000).toISOString();
+  const listingIds = [...new Set(valid.map((l) => l.listingId))];
+  const sellerIds = [...new Set(valid.map((l) => l.sellerId).filter((s): s is string => s != null))];
+  const markets = [...new Set(valid.map((l) => l.marketplace))];
+  const scope = [
+    `listing_id.in.(${listingIds.join(",")})`,
+    sellerIds.length > 0
+      ? `and(listing_id.is.null,or(seller_id.in.(${sellerIds.join(",")}),seller_id.is.null))`
+      : "and(listing_id.is.null,seller_id.is.null)",
+  ].join(",");
+
+  const { data, error } = await client
+    .from("vouchers")
+    .select("*")
+    .in("marketplace", markets)
+    .gte("last_seen_at", since)
+    .or(scope)
+    .order("last_seen_at", { ascending: false })
+    .limit(Math.min(MAX_BATCH_ROWS, MAX_LIST * valid.length));
+  if (error) throw new Error(`Failed to read vouchers: ${error.message}`);
+
+  const rows = (data ?? []).map(toVoucher);
+  for (const l of valid) out[l.listingId] = rows.filter((v) => inScope(v, l)).slice(0, MAX_LIST);
+  return out;
+}
+
 /** When the newest of these vouchers was last seen (for "cập nhật … trước"). */
 export function collectedAt(vouchers: readonly Voucher[]): string | null {
   return vouchers.reduce<string | null>((m, v) => (m == null || v.lastSeenAt > m ? v.lastSeenAt : m), null);

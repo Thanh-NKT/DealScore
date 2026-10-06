@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import {
   buildVariantPricing,
   type OfferRow,
@@ -7,7 +9,7 @@ import {
 import type { DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
 import { productGallery } from "@/lib/product/images";
-import { listVouchersForListing } from "@/lib/vouchers/store";
+import { listVouchersForListings, VOUCHERS_CACHE_TAG, type VoucherScope } from "@/lib/vouchers/store";
 import { activeVouchers } from "@/lib/vouchers/select";
 import { effectivePriceFor, withEffectiveReason } from "@/lib/vouchers/effective";
 import type { Voucher } from "@/lib/vouchers/types";
@@ -265,33 +267,58 @@ export async function loadProductPageData(params: {
   }
 }
 
-/** offerId → loadActiveVouchers() of its listing (one read per distinct listing). */
+/** Vouchers are collected at most every few hours; a 5-minute shared cache is invisible to users. */
+const VOUCHERS_CACHE_SECONDS = 300;
+
+/**
+ * Voucher candidates of a set of listings, ONE query, shared across requests for VOUCHERS_CACHE_SECONDS.
+ * Public catalog data read with the cookie-less client: nothing user-bound can enter the cache. The
+ * key is the (sorted) scopes; the "seen in the last 7 days" bound uses the time of the read, and
+ * activeVouchers() re-applies freshness and expiry with the request's own "now" after the cache.
+ * A failed read throws inside the cache, so it is never cached.
+ */
+const cachedVoucherCandidates = unstable_cache(
+  async (scopes: VoucherScope[]) => listVouchersForListings(createPublicClient(), scopes),
+  ["voucher-candidates-v1"],
+  { revalidate: VOUCHERS_CACHE_SECONDS, tags: [VOUCHERS_CACHE_TAG] },
+);
+
+/**
+ * listingId → vouchers that apply to that listing right now (activeVouchers rules). A failed read is
+ * logged and treated as "no vouchers collected": vouchers are an extra, never worth a broken page.
+ */
+export async function loadActiveVouchersFor(
+  listings: readonly OfferListing[],
+  now = new Date(),
+): Promise<Record<string, Voucher[]>> {
+  const byListing = new Map<string, VoucherScope>();
+  for (const l of listings) byListing.set(l.listingId, { listingId: l.listingId, sellerId: l.sellerId, marketplace: l.marketplace });
+  const scopes = [...byListing.values()].sort((a, b) => a.listingId.localeCompare(b.listingId));
+  if (scopes.length === 0) return {};
+  let candidates: Record<string, Voucher[]>;
+  try {
+    candidates = await cachedVoucherCandidates(scopes);
+  } catch (err) {
+    console.error("loadActiveVouchers failed:", err);
+    return {};
+  }
+  return Object.fromEntries(
+    scopes.map((l) => [l.listingId, activeVouchers(candidates[l.listingId] ?? [], { now, ...l })]),
+  );
+}
+
+/** offerId → the active vouchers of its listing (one batched, cached read for all listings). */
 async function loadOfferVouchers(
   offerListings: Record<string, OfferListing>,
   now: Date,
 ): Promise<Record<string, Voucher[]>> {
-  const byListing = new Map<string, OfferListing>();
-  for (const l of Object.values(offerListings)) byListing.set(l.listingId, l);
-  const lists = new Map<string, Voucher[]>();
-  await Promise.all(
-    [...byListing.values()].map(async (l) => lists.set(l.listingId, await loadActiveVouchers(l, now))),
-  );
+  const lists = await loadActiveVouchersFor(Object.values(offerListings), now);
   return Object.fromEntries(
-    Object.entries(offerListings).map(([offerId, l]) => [offerId, lists.get(l.listingId) ?? []]),
+    Object.entries(offerListings).map(([offerId, l]) => [offerId, lists[l.listingId] ?? []]),
   );
 }
 
-/**
- * Vouchers that apply to this offer's listing right now (activeVouchers rules). A failed read is
- * logged and treated as "no vouchers collected": vouchers are an extra, never worth a broken page.
- */
+/** Vouchers that apply to one listing right now (see loadActiveVouchersFor). */
 export async function loadActiveVouchers(listing: OfferListing, now = new Date()): Promise<Voucher[]> {
-  try {
-    const supabase = await createClient();
-    const list = await listVouchersForListing(supabase, { ...listing, now });
-    return activeVouchers(list, { now, ...listing });
-  } catch (err) {
-    console.error("loadActiveVouchers failed:", err);
-    return [];
-  }
+  return (await loadActiveVouchersFor([listing], now))[listing.listingId] ?? [];
 }

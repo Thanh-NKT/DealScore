@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -7,6 +8,7 @@ import { getSource } from "@/lib/marketplaces/sources";
 import { MarketplaceItemGoneError, MarketplaceItemNotFoundError, MarketplaceUnavailableError } from "@/lib/marketplaces/types";
 import { saveListingExtras } from "@/lib/listing-extras";
 import { canRefreshVouchers } from "@/lib/vouchers/refresh";
+import { VOUCHERS_CACHE_TAG } from "@/lib/vouchers/store";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +92,10 @@ export async function POST(request: NextRequest) {
       vouchers: detail.vouchers,
       source: detail.source,
     });
+
+    // The product page caches voucher reads for a few minutes: the person who asked for a refresh
+    // must see the new vouchers on the next render, not the cached ones.
+    revalidateTag(VOUCHERS_CACHE_TAG, { expire: 0 });
 
     if (requestId != null) await finishLookup(requestId, "resolved");
     return json({ status: "ok", ...saved }, 200);

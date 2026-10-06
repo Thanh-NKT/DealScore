@@ -74,6 +74,10 @@ Never mix these up; the choice encodes the security model.
 - `src/lib/supabase/client.ts` — **browser** client, anon key + RLS. Client Components only.
 - `src/lib/supabase/server.ts` — **server** client, anon key + RLS, reads/writes session via
   cookies. Server Components / Route Handlers / Server Actions.
+- `src/lib/supabase/public.ts` — **cookie-less** anon client (no session, RLS as anonymous). Only for
+  public catalog reads inside `unstable_cache` (product page vouchers in `lib/product/page-data.ts`,
+  OG image data in `lib/product/og-data.ts`). Never for user-bound data. Pages stay `force-dynamic`
+  (nonce CSP); only these data reads are shared. `/api/vouchers/refresh` expires tag `vouchers`.
 - `src/lib/supabase/admin.ts` — **service-role** client, **bypasses RLS**. Trusted server code
   only (collector, cron, admin). **Never import into a Client Component** (enforced by
   `server-only`).

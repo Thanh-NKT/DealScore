@@ -85,7 +85,16 @@ function fakeClient() {
 }
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => fakeClient() }));
-vi.mock("@/lib/vouchers/store", () => ({ listVouchersForListing: async () => state.vouchers }));
+const voucherReads = vi.fn();
+vi.mock("next/cache", () => ({ unstable_cache: <T>(fn: T) => fn }));
+vi.mock("@/lib/supabase/public", () => ({ createPublicClient: () => ({}) }));
+vi.mock("@/lib/vouchers/store", () => ({
+  VOUCHERS_CACHE_TAG: "vouchers",
+  listVouchersForListings: async (_client: unknown, scopes: Array<{ listingId: string }>) => {
+    voucherReads(scopes);
+    return Object.fromEntries(scopes.map((s) => [s.listingId, state.vouchers]));
+  },
+}));
 
 const { loadProductPageData } = await import("@/lib/product/page-data");
 const { effectiveReason } = await import("@/lib/vouchers/effective");
@@ -116,6 +125,7 @@ function voucher(over: Partial<Voucher> = {}): Voucher {
 
 beforeEach(() => {
   state.vouchers = [voucher()];
+  voucherReads.mockClear();
 });
 
 describe("loadProductPageData — live effective price", () => {
@@ -135,6 +145,13 @@ describe("loadProductPageData — live effective price", () => {
     const data = (await loadProductPageData({ productSlug: "ssd-x" }))!;
     expect(data.pricing.cheapest!.effectivePrice).toBeNull();
     expect(data.pricing.headline!.reasons.some((r) => r.startsWith("Dùng voucher"))).toBe(false);
+  });
+
+  it("vouchers are read once per page, for all listings together", async () => {
+    state.price = 1_050_000;
+    await loadProductPageData({ productSlug: "ssd-x" });
+    expect(voucherReads).toHaveBeenCalledTimes(1);
+    expect(voucherReads.mock.calls[0][0]).toEqual([{ listingId: LISTING, sellerId: SELLER, marketplace: "shopee" }]);
   });
 
   it("expired voucher → no effective price", async () => {

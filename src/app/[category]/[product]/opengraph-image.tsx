@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { loadProductPageData } from "@/lib/product/page-data";
-import { toSeoProduct } from "@/lib/seo/product";
+import { loadOgProduct } from "@/lib/product/og-data";
 import { formatVnd } from "@/lib/format";
 import type { Recommendation } from "@/lib/pricing/deal-score";
 
@@ -55,15 +54,14 @@ async function fonts() {
 
 export default async function Image({ params }: { params: Promise<{ category: string; product: string }> }) {
   const { product: slug } = await params;
-  // A broken OG image must not fail the share preview: log it and fall back to the generic card.
-  const data = await loadProductPageData({ productSlug: slug }).catch((err) => {
-    console.error("opengraph-image: loadProductPageData failed", err);
+  // One cached public read (name, lowest price, cached verdict) instead of the whole product page load:
+  // share previews and crawlers hit this route in bursts. A broken OG image must not fail the share
+  // preview: log it and fall back to the generic card.
+  const seo = await loadOgProduct(slug).catch((err) => {
+    console.error("opengraph-image: loadOgProduct failed", err);
     return null;
   });
-  const seo = data ? toSeoProduct(data) : null;
-
-  const prices = (seo?.variants ?? []).filter((v) => v.inStock && v.price != null).map((v) => v.price as number);
-  const low = prices.length > 0 ? Math.min(...prices) : null;
+  const low = seo?.lowPrice ?? null;
   const verdict = seo?.recommendation ? VERDICT[seo.recommendation] : null;
 
   return new ImageResponse(

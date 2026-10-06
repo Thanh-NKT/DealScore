@@ -21,6 +21,8 @@ vi.mock("@/lib/rate-limit", () => ({
 const fetchItem = vi.fn(async () => ({ images: [], vouchers: [], source: "api" }));
 vi.mock("@/lib/marketplaces/sources", () => ({ getSource: () => ({ isConfigured: () => true, fetchItem }) }));
 vi.mock("@/lib/listing-extras", () => ({ saveListingExtras: async () => ({ images: 0, vouchers: 0 }) }));
+const revalidateTag = vi.fn();
+vi.mock("next/cache", () => ({ revalidateTag: (...a: unknown[]) => revalidateTag(...a) }));
 
 const { POST } = await import("@/app/api/vouchers/refresh/route");
 const call = () =>
@@ -38,6 +40,8 @@ describe("POST /api/vouchers/refresh", () => {
     expect(res.status).toBe(200);
     expect(fetchItem).toHaveBeenCalledWith("1_2");
     expect(rpc).toHaveBeenCalledWith("rate_hit", expect.objectContaining({ p_window_seconds: 86_400, p_limit: 500 }));
+    // The page's cached voucher reads are expired at once, so the refresh is visible on the next render.
+    expect(revalidateTag).toHaveBeenCalledWith("vouchers", { expire: 0 });
   });
 
   it("global daily cap reached → 503, no upstream call, lookup marked rejected", async () => {
