@@ -14,6 +14,9 @@ import { toVnDate } from "@/lib/format";
  * header score (Đ7), so listing and detail page show the same number. Goes through scoreDeal() so
  * the cache always uses the same Deal Score version as the page.
  *
+ * A variant whose current price is out of stock everywhere gets NO cached verdict (its row is deleted),
+ * like the detail page, which shows no headline when every offer is out of stock.
+ *
  * Every read is chunked: PostgREST silently truncates at 1000 rows.
  */
 
@@ -22,6 +25,7 @@ const PAGE = 1000;
 /** 10 variants × 90 days ≤ 900 rollup rows per query — under the 1000-row cap. */
 const HISTORY_CHUNK = 10;
 const UPSERT_BATCH = 500;
+const DELETE_BATCH = 200;
 
 export async function recomputeDealScores(
   client: SupabaseClient<Database>,
@@ -30,12 +34,12 @@ export async function recomputeDealScores(
   const now = opts.now ?? new Date();
   const since = toVnDate(new Date(now.getTime() - WINDOW_DAYS * 86_400_000));
 
-  const current: Array<{ variant_id: string; price: number | null }> = [];
+  const current: Array<{ variant_id: string; price: number | null; in_stock: boolean }> = [];
   if (opts.variantIds) {
     for (let i = 0; i < opts.variantIds.length; i += PAGE) {
       const { data, error } = await client
         .from("variant_current_price")
-        .select("variant_id, price")
+        .select("variant_id, price, in_stock")
         .in("variant_id", opts.variantIds.slice(i, i + PAGE));
       if (error) throw new Error(`Failed to read current prices: ${error.message}`);
       current.push(...(data ?? []));
@@ -44,7 +48,7 @@ export async function recomputeDealScores(
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await client
         .from("variant_current_price")
-        .select("variant_id, price")
+        .select("variant_id, price, in_stock")
         .order("variant_id")
         .range(from, from + PAGE - 1);
       if (error) throw new Error(`Failed to read current prices: ${error.message}`);
@@ -53,7 +57,17 @@ export async function recomputeDealScores(
     }
   }
 
-  const priced = current.filter((c): c is { variant_id: string; price: number } => c.price != null);
+  const priced = current.filter(
+    (c): c is { variant_id: string; price: number; in_stock: true } => c.price != null && c.in_stock,
+  );
+  const outOfStock = current.filter((c) => c.price != null && !c.in_stock).map((c) => c.variant_id);
+  for (let i = 0; i < outOfStock.length; i += DELETE_BATCH) {
+    const { error } = await client
+      .from("variant_deal_scores")
+      .delete()
+      .in("variant_id", outOfStock.slice(i, i + DELETE_BATCH));
+    if (error) throw new Error(`Failed to drop out-of-stock deal scores: ${error.message}`);
+  }
   const rows: Database["public"]["Tables"]["variant_deal_scores"]["Insert"][] = [];
   const tally: Partial<Record<Recommendation, number>> = {};
 
