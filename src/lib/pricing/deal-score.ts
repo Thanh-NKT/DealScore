@@ -58,6 +58,10 @@ export interface DealScoreInput {
   now?: Date;
 }
 
+/** Data-coverage reasons (prefixes). Alerts leave them out of the e-mail (src/lib/alerts/evaluate.ts). */
+export const NEW_TRACKING_REASON_PREFIX = "⚠ Hệ thống mới theo dõi";
+export const FEW_OBSERVATIONS_REASON_PREFIX = "⚠ Mới có";
+
 export const FLASH_SALE_REASON =
   "⚠ Giá hiện tại là giá flash sale, chỉ kéo dài trong thời gian ngắn";
 
@@ -113,6 +117,16 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
   const windowDays = input.windowDays ?? 90;
   const today = vnDayIndex(input.now ?? new Date());
 
+  // A missing or non-positive price cannot be scored: never let NaN reach classify() (it reads as "wait").
+  if (!Number.isFinite(price) || price <= 0) {
+    return {
+      score: null,
+      recommendation: "insufficient_data",
+      reasons: ["⚠ Chưa có giá hợp lệ để chấm điểm"],
+      stats: { observations: 0, daysCovered: 0, low: null, median: null, high: null, percentileRank: null },
+    };
+  }
+
   const valid = history.filter((o) => {
     const day = vnDayIndex(new Date(o.observed_at));
     return (
@@ -145,11 +159,14 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
     valid.length < MIN_OBSERVATIONS_FOR_SCORE ||
     daysCovered < MIN_DAYS_FOR_SCORE
   ) {
+    // Name the threshold that is actually missing: enough days but too few observations is not "new".
     return {
       score: null,
       recommendation: "insufficient_data",
       reasons: [
-        `⚠ Hệ thống mới theo dõi sản phẩm này ${daysCovered} ngày`,
+        daysCovered < MIN_DAYS_FOR_SCORE
+          ? `${NEW_TRACKING_REASON_PREFIX} sản phẩm này ${daysCovered} ngày`
+          : `${FEW_OBSERVATIONS_REASON_PREFIX} ${valid.length} lần ghi nhận giá hợp lệ, cần ít nhất ${MIN_OBSERVATIONS_FOR_SCORE} để chấm điểm`,
       ],
       stats: emptyStats,
     };
@@ -190,10 +207,10 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
   // --- Auto-generated reasons (section C3) ---
   const diffFromMedian = Math.round(((med - price) / med) * 100);
   if (diffFromMedian > 0) {
-    reasons.push(`✓ Thấp hơn ${diffFromMedian}% so với giá trung vị 90 ngày`);
+    reasons.push(`✓ Thấp hơn ${diffFromMedian}% so với giá trung vị ${windowDays} ngày`);
   } else if (diffFromMedian < 0) {
     reasons.push(
-      `⚠ Cao hơn ${Math.abs(diffFromMedian)}% so với giá trung vị 90 ngày`,
+      `⚠ Cao hơn ${Math.abs(diffFromMedian)}% so với giá trung vị ${windowDays} ngày`,
     );
   }
 
@@ -212,9 +229,7 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
   }
 
   if (daysCovered < 30) {
-    reasons.push(
-      `⚠ Hệ thống mới theo dõi sản phẩm này ${daysCovered} ngày`,
-    );
+    reasons.push(`${NEW_TRACKING_REASON_PREFIX} sản phẩm này ${daysCovered} ngày`);
   }
 
   // A flash price is judged against flash-free history: say so first, always.
@@ -238,13 +253,14 @@ export function computeDealScore(input: DealScoreInput): DealScoreResult {
   };
 }
 
+/** `median` is the median of the scoring window (90 days by default), not a 30-day median. */
 export function classify(
   score: number,
   price: number,
-  median30: number,
+  median: number,
 ): Recommendation {
-  if (score >= 75 && price <= median30) return "buy";
-  if (score < 50 || price > median30 * 1.05) return "avoid";
+  if (score >= 75 && price <= median) return "buy";
+  if (score < 50 || price > median * 1.05) return "avoid";
   if (score >= 50 && score <= 74) return "wait";
   // Falls in the remaining range (score 75+ but price > median) → wait.
   return "wait";

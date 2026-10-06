@@ -99,3 +99,28 @@ describe("computeDealScore — a flash-sale price is never an ordinary verdict",
     expect(flash.reasons[0]).toBe(FLASH_SALE_REASON);
   });
 });
+
+describe("computeDealScore — input and coverage copy", () => {
+  it("an invalid price is insufficient_data, never a NaN score read as 'wait'", () => {
+    const hist = daily(40, () => 1000);
+    for (const price of [Number.NaN, 0, -5, Number.POSITIVE_INFINITY]) {
+      const r = computeDealScore({ price, history: hist, now: NOW });
+      expect(r.score, String(price)).toBeNull();
+      expect(r.recommendation).toBe("insufficient_data");
+    }
+  });
+
+  it("enough days but too few observations names the observation count, not 'new'", () => {
+    // 20 days covered, only 5 observations.
+    const sparse = daily(20, () => 1000).filter((_, i) => i % 4 === 0);
+    const r = computeDealScore({ price: 1000, history: sparse, now: NOW });
+    expect(r.recommendation).toBe("insufficient_data");
+    expect(r.reasons[0]).toMatch(/^⚠ Mới có \d+ lần ghi nhận giá hợp lệ/);
+  });
+
+  it("the median reason names the actual window", () => {
+    const hist = daily(40, (i) => 1000 + (i % 10) * 20);
+    const r = computeDealScore({ price: 900, history: hist, now: NOW, windowDays: 60 });
+    expect(r.reasons.join(" ")).toContain("giá trung vị 60 ngày");
+  });
+});

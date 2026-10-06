@@ -6,8 +6,10 @@ import { decideAlert } from "@/lib/watch/decide";
 import { configFromRow, stateFromRow, toRpcState, type WatchRow } from "@/lib/watch/rows";
 import { loadVariantSnapshots } from "@/lib/watch/snapshot";
 import { computeDeliverAfter } from "@/lib/alerts/schedule";
+import { FEW_OBSERVATIONS_REASON_PREFIX, NEW_TRACKING_REASON_PREFIX } from "@/lib/pricing/deal-score";
 
-const NEW_TRACKING_REASON = "⚠ Hệ thống mới theo dõi";
+/** Data-coverage notes are not reasons to buy: they stay out of the alert. */
+const isCoverageReason = (r: string) => r.startsWith(NEW_TRACKING_REASON_PREFIX) || r.startsWith(FEW_OBSERVATIONS_REASON_PREFIX);
 
 export async function evaluateWatches(
   opts: { now: Date; variantIds?: string[]; limit?: number; deadline?: number },
@@ -65,7 +67,7 @@ export async function evaluateWatches(
             previous_alert_price: state.lastAlertPrice,
             deal_score: snap.deal?.score ?? null,
             recommendation: snap.deal?.recommendation ?? null,
-            score_reasons: (snap.deal?.reasons ?? []).filter((r) => !r.startsWith(NEW_TRACKING_REASON)),
+            score_reasons: (snap.deal?.reasons ?? []).filter((r) => !isCoverageReason(r)),
             deliver_after: computeDeliverAfter(settings, opts.now).toISOString(),
             channels,
           };
