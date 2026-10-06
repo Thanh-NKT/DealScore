@@ -43,20 +43,24 @@ Ba giá trị in ra chép thẳng vào `.env.local`. Cách này cho phép chạy
 
 ## Sinh lại type từ DB
 
-**Bắt buộc sau mỗi lần đổi schema.** `src/lib/database.types.ts` hiện viết tay
-và chưa biết gì về các bảng thêm ở `0002` — `tsc` sẽ đỏ khi chạy `seed-dev`.
+**Bắt buộc sau mỗi lần đổi schema.** `src/lib/database.types.ts` được sinh từ DB
+local (đừng sửa tay). Áp migration lên DB local trước (`supabase migration up --local`), rồi:
 
 ```bash
 corepack pnpm db:types
 ```
 
-Lệnh này cần `db:link` chạy trước (nó dùng cờ `--linked`).
+Lệnh dùng cờ `--local`. App `Admin-DealScore` giữ một bản sao y hệt của file này — chép sang
+mỗi khi nó đổi.
 
 ## Ghi chú schema
 
-- **RLS** chỉ bật cho dữ liệu người dùng (`users`, `watches`, `alert_events`,
-  `click_events`) và bảng vận hành `lookup_requests`. Catalog & price data đọc
-  công khai; ghi qua **service role** (collector/cron) sẽ bỏ qua RLS.
+- **RLS** bật cho mọi bảng dữ liệu người dùng (`users`, `watches`, `alert_events`,
+  `alert_deliveries`, `click_events`, `notification_settings`, `push_subscriptions`,
+  `user_preferences`, `watch_folders`, …) và các bảng vận hành / nội bộ (`lookup_requests`,
+  `extension_*`, `admin_audit`, …). Catalog & price data đọc công khai; ghi qua
+  **service role** (collector/cron) sẽ bỏ qua RLS. `tests/db/privileges.test.ts` (qua
+  `privilege_report()`) giữ danh sách bảng `authenticated` được ghi và RPC definer công khai.
 - `lookup_requests` bật RLS nhưng **không có policy nào** — chỉ service role
   đọc/ghi được.
 - **Quyền bảng** (`0004`): Supabase mặc định cấp ALL trên schema `public` cho
