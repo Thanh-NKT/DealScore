@@ -88,7 +88,7 @@ Never mix these up; the choice encodes the security model.
   `src/lib/listing-extras.ts` + `src/lib/vouchers/store.ts` (`upsertVouchers`, called with the admin client),
   `src/app/api/vouchers/refresh/route.ts`, `src/lib/vouchers/refresh-effective.ts`,
   `src/lib/tiktok/source.ts`, `src/app/api/tiktok/oauth/callback/route.ts`, `src/lib/sourcing/run.ts` (qua client truyền vào), `src/lib/sourcing/record-demand.ts`, `src/app/api/cron/sourcing/route.ts`, `scripts/run-sourcing.ts`,
-  `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`, `src/app/api/admin/*/route.ts`.
+  `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`, `scripts/tiktok-authorize.ts`, `src/app/api/admin/*/route.ts`.
   **Admin:** app riêng `Admin-DealScore` (một người dùng) gọi RPC `admin_*` (migration 0021, ghi `admin_audit`) và `/api/admin/*` (bảo vệ bằng `ADMIN_API_SECRET`).
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.
@@ -141,7 +141,7 @@ Never mix these up; the choice encodes the security model.
   `SOURCING_DEMAND_DAILY_CAP`); job `kairo-sourcing-demand` 3 giờ/lần chỉ chạy từ khóa nhu cầu đang chờ.
   Ingest dùng RPC `ingest_listing` (`ingest_shopee_item` chỉ còn là wrapper).
 - **Extension (G2):** `extension/` (MV3) chỉ nói chuyện với `/api/extension/*`; các route này chỉ nhận Origin của
-  extension (`EXTENSION_IDS`). Giá do extension gửi chỉ vào lịch sử khi `corroborate()` xác nhận chéo.
+  extension (`EXTENSION_IDS`). Giá do extension gửi chỉ vào lịch sử khi `corroborate()` xác nhận chéo: khớp giá API, hoặc 2 người khác cả contributor lẫn IP hash (`peer_key`) và nằm trong 0,5–1,5× giá API gần nhất. Kiểm Origin chỉ chống CSRF, không phải xác thực.
 - **Intent search (G3):** `src/lib/intent/` rule-based (không LLM); tham số URL luôn thắng suy luận từ ý định,
   `intent=0` tắt hẳn. Giá sau voucher lưu ở `offers.effective_price` (`refreshEffectivePrices`), Deal Score
   không đổi. User preferences chỉ áp vào search qua `?prefs=1`.
