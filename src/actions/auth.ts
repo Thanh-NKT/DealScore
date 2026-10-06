@@ -167,10 +167,20 @@ export async function updatePassword(_prev: AuthFormState, form: FormData): Prom
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    // A 401/403 here means the recovery session is gone.
-    const expired = error.status === 401 || error.status === 403;
+    // A 401/403 here means the recovery session is gone. With secure_password_change on,
+    // a session older than 24h needs reauthentication: a fresh reset link gives a new session.
+    const expired =
+      error.status === 401 ||
+      error.status === 403 ||
+      error.code === "reauthentication_needed" ||
+      error.code === "reauth_nonce_missing";
     return { status: "error", error: expired ? authError("link_expired") : mapAuthError(error), email, next };
   }
+
+  // Whoever else holds a session (a stolen token, an old device) is signed out. The password
+  // is already changed, so a failure here is only logged.
+  const { error: signOutError } = await supabase.auth.signOut({ scope: "others" });
+  if (signOutError) console.error("updatePassword: signing out other sessions failed:", signOutError.message);
 
   return redirectAfterLogin(supabase, user.id, next);
 }

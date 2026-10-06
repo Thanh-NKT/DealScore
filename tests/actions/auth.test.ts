@@ -7,6 +7,7 @@ const auth = {
   resetPasswordForEmail: vi.fn(),
   updateUser: vi.fn(),
   getUser: vi.fn(),
+  signOut: vi.fn<(opts: { scope: string }) => Promise<{ error: { message: string } | null }>>(async () => ({ error: null })),
 };
 const profile = { data: { consent_version: "2026-09-23", deleted_at: null }, error: null };
 const client = {
@@ -27,8 +28,8 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const throttleAuth = vi.fn(async (..._args: unknown[]): Promise<unknown> => null);
-vi.mock("@/lib/auth/throttle", () => ({ throttleAuth: (...args: unknown[]) => throttleAuth(...args) }));
+const throttleAuth = vi.fn<(action: string, input: unknown) => Promise<unknown>>(async () => null);
+vi.mock("@/lib/auth/throttle", () => ({ throttleAuth: (action: string, input: unknown) => throttleAuth(action, input) }));
 const requestHeaders = new Headers({ "x-real-ip": "203.0.113.7" });
 vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
 
@@ -172,6 +173,33 @@ describe("updatePassword", () => {
       url: "/account",
     });
     expect(auth.updateUser).toHaveBeenCalledWith({ password: "abc12345" });
+    // Other sessions (a stolen token, an old device) are revoked; this one stays.
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: "others" });
+  });
+
+  it("revoking other sessions fails → the password change still succeeds", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "an@kairo.vn" } } });
+    auth.updateUser.mockResolvedValue({ data: {}, error: null });
+    auth.signOut.mockResolvedValueOnce({ error: { message: "boom" } });
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await expect(updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12345" }))).rejects.toMatchObject({
+      url: "/account",
+    });
+    log.mockRestore();
+  });
+
+  it("failed change → other sessions are not touched", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "an@kairo.vn" } } });
+    auth.updateUser.mockResolvedValue({ data: {}, error: { code: "same_password", status: 422 } });
+    await updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12345" }));
+    expect(auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it("reauthentication needed (session older than 24h) → ask for a new reset link", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "an@kairo.vn" } } });
+    auth.updateUser.mockResolvedValue({ data: {}, error: { code: "reauthentication_needed", status: 400 } });
+    const r = await updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12345" }));
+    expect(r).toMatchObject({ status: "error", error: { code: "link_expired" } });
   });
 });
 
