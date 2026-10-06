@@ -31,7 +31,8 @@ async function query(variables: Record<string, unknown>, env: Env): Promise<Offe
   try {
     return (await callShopeeAffiliate<OfferResponse>(creds, PRODUCT_OFFER_QUERY, variables)).productOfferV2;
   } catch (err) {
-    if (err instanceof ShopeeAffiliateError && err.retryable) {
+    // Rate limit / outage / broken credentials: stop calling Shopee for the rest of the run.
+    if (err instanceof ShopeeAffiliateError && (err.retryable || err.auth)) {
       throw new MarketplaceUnavailableError(err.message, { cause: err, marketplace: "shopee" });
     }
     throw err;
@@ -41,7 +42,11 @@ async function query(variables: Record<string, unknown>, env: Env): Promise<Offe
 export async function fetchShopeeItem(ext: string, env: Env = process.env): Promise<MarketplaceItem> {
   const m = /^(\d+)_(\d+)$/.exec(ext);
   if (!m) throw new Error(`Invalid Shopee external id: ${ext}`);
-  const result = await query({ shopId: Number(m[1]), itemId: Number(m[2]), limit: 1 }, env);
+  // Int64 variables are sent as JS numbers: refuse ids that would silently lose precision (> 2^53).
+  const shopId = Number(m[1]);
+  const itemId = Number(m[2]);
+  if (!Number.isSafeInteger(shopId) || !Number.isSafeInteger(itemId)) throw new Error(`Shopee id out of range: ${ext}`);
+  const result = await query({ shopId, itemId, limit: 1 }, env);
   for (const node of result.nodes ?? []) {
     const item = normalizeShopeeOffer(node);
     if (item && item.externalItemId === ext) return item;

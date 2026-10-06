@@ -39,8 +39,21 @@ describe("fetchShopeeItem", () => {
     expect(err.marketplace).toBe("shopee");
   });
 
+  it("bad credentials (401 or an auth GraphQL error) → MarketplaceUnavailableError, not an item error", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 401 })));
+    await expect(fetchShopeeItem("1_2", env)).rejects.toBeInstanceOf(MarketplaceUnavailableError);
+    graphql({ errors: [{ message: "Invalid Signature", extensions: { code: 10020 } }] });
+    await expect(fetchShopeeItem("1_2", env)).rejects.toBeInstanceOf(MarketplaceUnavailableError);
+  });
+
   it("malformed external id → plain error", async () => {
     await expect(fetchShopeeItem("abc", env)).rejects.toThrow("Invalid Shopee external id");
+  });
+
+  it("ids beyond 2^53 are refused instead of losing precision", async () => {
+    const f = graphql({ data: { productOfferV2: { nodes: [], pageInfo: { hasNextPage: false } } } });
+    await expect(fetchShopeeItem("1_90071992547409930", env)).rejects.toThrow("out of range");
+    expect(f).not.toHaveBeenCalled();
   });
 });
 

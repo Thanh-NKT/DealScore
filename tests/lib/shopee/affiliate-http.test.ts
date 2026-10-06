@@ -39,6 +39,26 @@ describe("callShopeeAffiliate", () => {
     await expect(callShopeeAffiliate(creds, "{ ok }", {})).rejects.toMatchObject({ retryable: true });
   });
 
+  it("401/403 and auth GraphQL errors are auth errors, not item errors", async () => {
+    for (const status of [401, 403]) {
+      vi.stubGlobal("fetch", reply({}, status));
+      await expect(callShopeeAffiliate(creds, "{ ok }", {})).rejects.toMatchObject({ retryable: false, auth: true });
+    }
+    vi.stubGlobal("fetch", reply({ errors: [{ message: "Invalid Signature", extensions: { code: 10020 } }] }));
+    await expect(callShopeeAffiliate(creds, "{ ok }", {})).rejects.toMatchObject({ auth: true });
+    vi.stubGlobal("fetch", reply({ errors: [{ message: "Access deny" }] }));
+    await expect(callShopeeAffiliate(creds, "{ ok }", {})).rejects.toMatchObject({ auth: true });
+    vi.stubGlobal("fetch", reply({ errors: [{ message: "bad field" }] }));
+    await expect(callShopeeAffiliate(creds, "{ ok }", {})).rejects.toMatchObject({ auth: false });
+  });
+
+  it("a non-JSON 200 body is classified as retryable, not thrown as a SyntaxError", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>maintenance</html>", { status: 200 })));
+    const err = await callShopeeAffiliate<never>(creds, "{ ok }", {}).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ShopeeAffiliateError);
+    expect(err).toMatchObject({ retryable: true });
+  });
+
   it("network failure is retryable", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("fetch failed"); }));
     const err = await callShopeeAffiliate<never>(creds, "{ ok }", {}).catch((e: unknown) => e as ShopeeAffiliateError);
