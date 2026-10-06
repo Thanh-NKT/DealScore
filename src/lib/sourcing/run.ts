@@ -5,6 +5,7 @@ import { MarketplaceUnavailableError, type MarketplaceId, type MarketplaceItem, 
 import { ingestItem, type IngestResult } from "@/lib/ingest";
 import { planSourcing, sourcingCap, type SourcingMode, type SourcingQuery } from "@/lib/sourcing/plan";
 import { toVnDate } from "@/lib/format";
+import { reportError } from "@/lib/observability";
 
 /**
  * Automatic sourcing: walk the active sourcing_queries of one marketplace (pending demand keywords from
@@ -94,6 +95,8 @@ export async function runSourcing(
 
       const existing = await deps.existingIds(opts.marketplace, page.items.map((i) => i.externalItemId));
       let pageDone = true;
+      let attempted = 0;
+      let pageFailed = 0;
       for (const item of page.items) {
         if (ingested >= budget || (opts.deadline && Date.now() > opts.deadline)) {
           pageDone = false;
@@ -104,9 +107,11 @@ export async function runSourcing(
           continue;
         }
         if (item.models.every((m) => m.price == null)) continue;
+        attempted++;
         const r = await deps.ingest(item);
         if (r.status === "error") {
           failed++;
+          pageFailed++;
           if (errors.length < MAX_ERROR_MESSAGES) errors.push(`${item.externalItemId}: ingest ${r.code}`);
         } else if (r.status === "ingested") {
           ingested++;
@@ -114,6 +119,9 @@ export async function runSourcing(
           skippedExisting++;
         }
       }
+      // Every ingest on the page failed (DB trouble): keep the cursor so the page is retried next run
+      // instead of being skipped until the query wraps around.
+      if (attempted > 0 && pageFailed === attempted) pageDone = false;
       // Stopped mid-page: keep the cursor so the unprocessed items are revisited. A finished query
       // starts again from page 1 next time.
       await deps.saveQuery(q.id, { nextPage: pageDone ? page.nextCursor : q.nextPage, lastRunAt: now.toISOString() });
@@ -195,9 +203,23 @@ export function supabaseSourcingDeps(client: SupabaseClient<Database>, marketpla
     },
     ingest: (item) => ingestItem(item, { refreshPriority: 3 }, client),
     async ingestedToday(m, now) {
-      const { data, error } = await client.from("sourcing_runs").select("ingested").eq("marketplace", m).gte("started_at", vnDayStart(now));
-      if (error) throw new Error(`sourcing_runs: ${error.message}`);
-      return (data ?? []).reduce((sum, r) => sum + r.ingested, 0);
+      // sourcing_runs is written at the END of a run: a run killed by maxDuration (or a failed
+      // recordRun) leaves its ingests uncounted. Sourced listings themselves (refresh_priority 3, new
+      // today) are counted too, and the larger number wins, so the cap cannot be overshot that way.
+      const since = vnDayStart(now);
+      const [runs, listings] = await Promise.all([
+        client.from("sourcing_runs").select("ingested").eq("marketplace", m).gte("started_at", since),
+        client
+          .from("listings")
+          .select("id", { count: "exact", head: true })
+          .eq("marketplace", m)
+          .eq("refresh_priority", 3)
+          .gte("first_seen_at", since),
+      ]);
+      if (runs.error) throw new Error(`sourcing_runs: ${runs.error.message}`);
+      if (listings.error) throw new Error(`listings count: ${listings.error.message}`);
+      const fromRuns = (runs.data ?? []).reduce((sum, r) => sum + r.ingested, 0);
+      return Math.max(fromRuns, listings.count ?? 0);
     },
     async recordRun(row) {
       const { error } = await client.from("sourcing_runs").insert({
@@ -211,7 +233,7 @@ export function supabaseSourcingDeps(client: SupabaseClient<Database>, marketpla
         failed: row.failed,
         error_summary: row.errorSummary,
       });
-      if (error) console.error("Failed to record sourcing run:", error.message);
+      if (error) reportError(new Error(`Failed to record sourcing run: ${error.message}`), { where: "sourcing.recordRun", marketplace: row.marketplace });
     },
   };
 }

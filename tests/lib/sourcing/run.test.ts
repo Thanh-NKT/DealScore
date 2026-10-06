@@ -113,6 +113,34 @@ describe("runSourcing", () => {
     expect(saved).toEqual([["a", expect.objectContaining({ nextPage: null })]]);
   });
 
+  it("a page whose every ingest failed keeps the cursor, so it is retried rather than skipped", async () => {
+    const { d, saved } = deps(
+      { "b@3": { items: [item("1"), item("2")], nextCursor: "4" } },
+      {
+        loadQueries: async () => [query("b", "3")],
+        ingest: vi.fn(async () => ({ status: "error" as const, code: "internal" as const })),
+      },
+    );
+    const r = await runSourcing({ marketplace: "shopee", cap: 10 }, d);
+    expect(r).toMatchObject({ failed: 2, ingested: 0 });
+    expect(saved).toEqual([["b", expect.objectContaining({ nextPage: "3" })]]);
+  });
+
+  it("a page with some successful ingests moves on", async () => {
+    let n = 0;
+    const { d, saved } = deps(
+      { "b@3": { items: [item("1"), item("2")], nextCursor: "4" } },
+      {
+        loadQueries: async () => [query("b", "3")],
+        ingest: vi.fn(async () =>
+          n++ === 0 ? ({ status: "error" as const, code: "internal" as const }) : ({ status: "ingested" as const, productUrl: "/x" }),
+        ),
+      },
+    );
+    await runSourcing({ marketplace: "shopee", cap: 10 }, d);
+    expect(saved).toEqual([["b", expect.objectContaining({ nextPage: "4" })]]);
+  });
+
   it("unexpected throw after ingesting still records the run, then rethrows", async () => {
     let calls = 0;
     const { d, runs } = deps(
