@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { isAuthorizedCronRequest } from "@/lib/cron";
+import { acquireJobLock, isAuthorizedCronRequest, releaseJobLock } from "@/lib/cron";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runCollector } from "@/lib/collector/run";
 import { configuredMarketplaces } from "@/lib/marketplaces/sources";
@@ -19,14 +18,8 @@ export async function POST(request: NextRequest) {
   if (configuredMarketplaces().length === 0) return NextResponse.json({ skipped: "not_configured" }, { headers: NO_STORE });
 
   const admin = createAdminClient();
-  const owner = randomUUID();
-  const { data: acquired, error } = await admin.rpc("try_acquire_job_lock", {
-    p_name: "collector",
-    p_owner: owner,
-    p_ttl_seconds: 600,
-  });
-  if (error) throw new Error(`Failed to acquire lock: ${error.message}`);
-  if (!acquired) return NextResponse.json({ skipped: "locked" }, { headers: NO_STORE });
+  const owner = await acquireJobLock(admin, "collector");
+  if (!owner) return NextResponse.json({ skipped: "locked" }, { headers: NO_STORE });
 
   try {
     const result = await runCollector({ now: new Date(), deadline: Date.now() + 50_000 }, admin);
@@ -35,6 +28,6 @@ export async function POST(request: NextRequest) {
     reportError(err, { job: "collector" });
     throw err;
   } finally {
-    await admin.rpc("release_job_lock", { p_name: "collector", p_owner: owner });
+    await releaseJobLock(admin, "collector", owner);
   }
 }

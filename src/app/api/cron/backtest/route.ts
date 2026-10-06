@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { isAuthorizedCronRequest } from "@/lib/cron";
+import { acquireJobLock, isAuthorizedCronRequest, releaseJobLock } from "@/lib/cron";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runBacktest } from "@/lib/pricing/backtest-job";
 import { reportError } from "@/lib/observability";
@@ -16,14 +15,8 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const owner = randomUUID();
-  const { data: acquired, error } = await admin.rpc("try_acquire_job_lock", {
-    p_name: "backtest",
-    p_owner: owner,
-    p_ttl_seconds: 600,
-  });
-  if (error) throw new Error(`Failed to acquire lock: ${error.message}`);
-  if (!acquired) return NextResponse.json({ skipped: "locked" }, { headers: NO_STORE });
+  const owner = await acquireJobLock(admin, "backtest");
+  if (!owner) return NextResponse.json({ skipped: "locked" }, { headers: NO_STORE });
 
   try {
     // v0 and v1 side by side: the weekly numbers decide whether v1 stays the default.
@@ -38,6 +31,6 @@ export async function POST(request: NextRequest) {
     reportError(err, { job: "backtest" });
     throw err;
   } finally {
-    await admin.rpc("release_job_lock", { p_name: "backtest", p_owner: owner });
+    await releaseJobLock(admin, "backtest", owner);
   }
 }

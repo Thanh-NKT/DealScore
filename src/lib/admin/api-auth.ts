@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { isAuthorizedBearer } from "@/lib/bearer-auth";
 
 export const NO_STORE = { "Cache-Control": "no-store" };
 
 /** true when Authorization is exactly "Bearer ${secret}". Constant-time comparison. */
 export function isAuthorizedAdminRequest(headers: Headers, secret: string | undefined): boolean {
-  if (!secret) return false;
-  const got = Buffer.from(headers.get("authorization") ?? "");
-  const want = Buffer.from(`Bearer ${secret}`);
-  return got.length === want.length && timingSafeEqual(got, want);
+  return isAuthorizedBearer(headers, secret);
 }
 
 /** null when authorized, otherwise the response to return (500 missing secret, 401 wrong). */
