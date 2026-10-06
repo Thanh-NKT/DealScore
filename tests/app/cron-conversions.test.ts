@@ -41,4 +41,21 @@ describe("POST /api/cron/conversions", () => {
     const res = await POST(req() as never);
     expect(await res.json()).toMatchObject({ inserted: 2, matched: 1 });
   });
+  it("incomplete pull → reported, 503 with the stats and error 'incomplete'", async () => {
+    pullConversions.mockResolvedValue({
+      pages: 9, rows: 2, rejected: 0, inserted: 2, updated: 0, matched: 1, complete: false, pulledFrom: "2026-09-01T00:00:00.000Z",
+    });
+    const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const res = await POST(req() as never);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ error: "incomplete", complete: false, inserted: 2 });
+    expect(err).toHaveBeenCalledWith("reportError", expect.objectContaining({ job: "conversions" }), expect.any(Error));
+    expect(rpc).toHaveBeenLastCalledWith("release_job_lock", expect.objectContaining({ p_name: "conversions" }));
+  });
+  it("lock RPC error → reported and thrown", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "db down" } });
+    const err = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await expect(POST(req() as never)).rejects.toThrow("Failed to acquire lock");
+    expect(err).toHaveBeenCalledWith("reportError", expect.objectContaining({ job: "conversions" }), expect.any(Error));
+  });
 });

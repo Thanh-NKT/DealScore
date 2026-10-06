@@ -26,22 +26,59 @@ export async function upsertNormalizedConversions(
 }
 
 export const PULL_WINDOW_DAYS = 60; // G6
+/** The window is pulled in slices of this many days, NEWEST first. */
+export const PULL_SLICE_DAYS = 7;
 const PAGE_LIMIT = 500;
+const DAY_MS = 86_400_000;
 
+export interface PullResult {
+  pages: number;
+  rows: number;
+  rejected: number;
+  inserted: number;
+  updated: number;
+  matched: number;
+  /** false = the deadline stopped the pull before the oldest slice; `pulledFrom` says how far it got. */
+  complete: boolean;
+  /** Start of the oldest slice that was pulled completely (ISO), or null when none was. */
+  pulledFrom: string | null;
+}
+
+/**
+ * Pull the conversion report for the last PULL_WINDOW_DAYS, newest slice first: when a run cannot
+ * finish within its deadline it is the OLDEST orders (status updates only) that wait, never the
+ * newest ones. Upsert is idempotent, so the next run simply pulls again; an incomplete pull is
+ * reported by the caller (complete: false).
+ */
 export async function pullConversions(
   opts: { client: ShopeeAffiliateClient; now: Date; deadline?: number },
   upsert: (rows: NormalizedConversion[]) => Promise<{ inserted: number; updated: number; matched: number }> =
     upsertNormalizedConversions,
-): Promise<{ pages: number; rows: number; rejected: number; inserted: number; updated: number; matched: number; complete: boolean }> {
-  const out = { pages: 0, rows: 0, rejected: 0, inserted: 0, updated: 0, matched: 0, complete: false };
-  const start = new Date(opts.now.getTime() - PULL_WINDOW_DAYS * 86_400_000);
+): Promise<PullResult> {
+  const out: PullResult = { pages: 0, rows: 0, rejected: 0, inserted: 0, updated: 0, matched: 0, complete: false, pulledFrom: null };
+  const windowStart = opts.now.getTime() - PULL_WINDOW_DAYS * DAY_MS;
+
+  for (let endMs = opts.now.getTime(); endMs > windowStart; endMs -= PULL_SLICE_DAYS * DAY_MS) {
+    const start = new Date(Math.max(windowStart, endMs - PULL_SLICE_DAYS * DAY_MS));
+    const done = await pullSlice(opts, { start, end: new Date(endMs) }, upsert, out);
+    if (!done) return out;
+    out.pulledFrom = start.toISOString();
+  }
+  out.complete = true;
+  return out;
+}
+
+async function pullSlice(
+  opts: { client: ShopeeAffiliateClient; deadline?: number },
+  slice: { start: Date; end: Date },
+  upsert: (rows: NormalizedConversion[]) => Promise<{ inserted: number; updated: number; matched: number }>,
+  out: PullResult,
+): Promise<boolean> {
   let scrollId: string | null = null;
-
   do {
-    // Stopping midway is harmless: the next run pulls from the start again, and upsert is idempotent.
-    if (opts.deadline && Date.now() > opts.deadline) return out;
+    if (opts.deadline && Date.now() > opts.deadline) return false;
 
-    const page = await opts.client.conversionReport({ start, end: opts.now, scrollId, limit: PAGE_LIMIT });
+    const page = await opts.client.conversionReport({ start: slice.start, end: slice.end, scrollId, limit: PAGE_LIMIT });
     out.pages++;
     const rows: NormalizedConversion[] = [];
     for (const order of page.orders) {
@@ -63,7 +100,5 @@ export async function pullConversions(
     }
     scrollId = page.nextScrollId;
   } while (scrollId);
-
-  out.complete = true;
-  return out;
+  return true;
 }
