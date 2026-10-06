@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { loadActiveVouchers, loadProductPageData } from "@/lib/product/page-data";
 import { toGroups } from "@/lib/vouchers/select";
@@ -18,7 +18,7 @@ import { DraftProductNotice } from "@/components/product/draft-product-notice";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getMyWatchForVariant } from "@/lib/watch/queries";
 import { WatchButton } from "@/components/watch/watch-button";
-import { buildProductJsonLd, productMetadata, serializeJsonLd, toSeoProduct } from "@/lib/seo/product";
+import { buildProductJsonLd, productMetadata, productRedirectPath, serializeJsonLd, toSeoProduct } from "@/lib/seo/product";
 import { siteUrl } from "@/lib/site-url";
 import { trackAfter } from "@/lib/analytics/track";
 import { isShareVisit, shareText, shareUrl } from "@/lib/share";
@@ -54,8 +54,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 }
 
 export default async function ProductPage({ params, searchParams }: PageProps) {
-  const { product: productSlug } = await params;
-  const { variant, range: rawRange, ref } = await searchParams;
+  const { category: categorySegment, product: productSlug } = await params;
+  const query = await searchParams;
+  const { variant, range: rawRange, ref } = query;
 
   let range: 7 | 30 | 90 = 30;
   if (rawRange === "7") range = 7;
@@ -67,7 +68,13 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     notFound();
   }
 
+  // /{anything}/{slug} used to render the page too: send it to the product's own category (308).
+  const canonicalTarget = productRedirectPath(categorySegment, data.product, query);
+  if (canonicalTarget) permanentRedirect(canonicalTarget);
+
   const { product, variants, selectedVariantId, pricing, dailyPrices } = data;
+  // The indexable category landing page; a product without a category (san-pham fallback) has none.
+  const categoryHref = product.categorySlug === "san-pham" ? "/search" : `/${product.categorySlug}`;
   // One "now" for server and client renders of the chart (its Vietnam day decides the window).
   const nowIso = new Date().toISOString();
 
@@ -140,7 +147,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             Trang chủ
           </Link>
           <span aria-hidden="true">/</span>
-          <Link href={`/search?cat=${product.categorySlug}`} className="transition-colors hover:text-ink">
+          <Link href={categoryHref} className="transition-colors hover:text-ink">
             {product.categoryName}
           </Link>
           <span aria-hidden="true">/</span>
@@ -165,7 +172,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
-                      href={`/search?cat=${product.categorySlug}`}
+                      href={categoryHref}
                       className="rounded-full border border-line bg-surface-2/60 px-3 py-1 text-micro font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
                     >
                       {product.categoryName}

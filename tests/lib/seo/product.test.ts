@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildProductJsonLd, productMetadata, productPath, serializeJsonLd, type SeoProduct } from "@/lib/seo/product";
+import { buildProductJsonLd, productMetadata, productPath, productRedirectPath, serializeJsonLd, type SeoProduct } from "@/lib/seo/product";
 
 const SITE = "https://kairo.vn";
 
@@ -13,9 +13,9 @@ function product(over: Partial<SeoProduct> = {}): SeoProduct {
     image: "/samples/ssd.svg",
     status: "verified",
     variants: [
-      { price: 2_500_000, inStock: true },
-      { price: 4_000_000, inStock: true },
-      { price: 1_900_000, inStock: false },
+      { price: 2_500_000, inStock: true, offerCount: 3 },
+      { price: 4_000_000, inStock: true, offerCount: 2 },
+      { price: 1_900_000, inStock: false, offerCount: 4 },
     ],
     recommendation: "buy",
     ...over,
@@ -25,6 +25,21 @@ function product(over: Partial<SeoProduct> = {}): SeoProduct {
 describe("productPath", () => {
   it("is /{category}/{slug}", () => {
     expect(productPath(product())).toBe("/ssd/samsung-990-pro");
+  });
+});
+
+describe("productRedirectPath", () => {
+  it("null when the category segment is the product's own", () => {
+    expect(productRedirectPath("ssd", product())).toBeNull();
+  });
+
+  it("a wrong category segment redirects to the canonical path, keeping the query", () => {
+    expect(productRedirectPath("anything", product(), { variant: "v1", range: "7" })).toBe("/ssd/samsung-990-pro?variant=v1&range=7");
+    expect(productRedirectPath("anything", product())).toBe("/ssd/samsung-990-pro");
+  });
+
+  it("a product without a category lives under the shared san-pham fallback", () => {
+    expect(productRedirectPath("san-pham", product({ categorySlug: "san-pham" }))).toBeNull();
   });
 });
 
@@ -73,10 +88,15 @@ describe("buildProductJsonLd", () => {
         priceCurrency: "VND",
         lowPrice: 2_500_000,
         highPrice: 4_000_000,
-        offerCount: 2,
+        offerCount: 5, // offers behind the in-stock prices, not the number of variants
         availability: "https://schema.org/InStock",
       },
     });
+  });
+
+  it("omits offerCount when the offer count is unknown", () => {
+    const ld = buildProductJsonLd(product({ variants: [{ price: 1_000_000, inStock: true }] }), SITE)!;
+    expect(ld.offers).not.toHaveProperty("offerCount");
   });
 
   it("has no offers when no variant has an in-stock price", () => {

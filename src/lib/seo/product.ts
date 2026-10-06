@@ -17,7 +17,8 @@ export interface SeoProduct {
   model: string | null;
   image: string | null;
   status: "draft" | "verified";
-  variants: Array<{ price: number | null; inStock: boolean }>;
+  /** offerCount = offers (sellers) behind that variant price; absent when unknown. */
+  variants: Array<{ price: number | null; inStock: boolean; offerCount?: number }>;
   /** Headline recommendation of the default variant, null when there is no price at all. */
   recommendation: Recommendation | null;
 }
@@ -31,6 +32,31 @@ const VERDICT: Record<Recommendation, string> = {
 
 export function productPath(p: Pick<SeoProduct, "slug" | "categorySlug">): string {
   return `/${p.categorySlug}/${p.slug}`;
+}
+
+/**
+ * Where /{category}/{product} must permanently redirect when the category segment is not the
+ * product's own (any first segment used to render the page: soft duplicates). null = already right.
+ * The query (?variant, ?range, ?ref) is kept.
+ */
+export function productRedirectPath(
+  urlCategory: string,
+  p: Pick<SeoProduct, "slug" | "categorySlug">,
+  query: Record<string, string | string[] | undefined> = {},
+): string | null {
+  let segment = urlCategory;
+  try {
+    segment = decodeURIComponent(urlCategory);
+  } catch {
+    // keep the raw segment: it cannot match a real slug anyway
+  }
+  if (segment === p.categorySlug) return null;
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(query)) {
+    for (const one of Array.isArray(v) ? v : v != null ? [v] : []) sp.append(k, one);
+  }
+  const qs = sp.toString();
+  return `${productPath(p)}${qs ? `?${qs}` : ""}`;
 }
 
 function absolute(siteUrl: string, pathOrUrl: string): string {
@@ -79,6 +105,11 @@ export function buildProductJsonLd(p: SeoProduct, siteUrl: string): Record<strin
   if (p.status === "draft") return null;
 
   const prices = inStockPrices(p);
+  const priced = p.variants.filter((v) => v.inStock && v.price != null && v.price > 0);
+  // schema.org offerCount counts OFFERS, not variants; omit it when the count is unknown.
+  const offerCount = priced.every((v) => v.offerCount != null)
+    ? priced.reduce((n, v) => n + (v.offerCount ?? 0), 0)
+    : null;
   const ld: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -94,7 +125,7 @@ export function buildProductJsonLd(p: SeoProduct, siteUrl: string): Record<strin
       priceCurrency: "VND",
       lowPrice: Math.min(...prices),
       highPrice: Math.max(...prices),
-      offerCount: prices.length,
+      ...(offerCount != null && offerCount > 0 ? { offerCount } : {}),
       availability: "https://schema.org/InStock",
     };
   }
@@ -118,7 +149,7 @@ export function toSeoProduct(data: ProductPageData): SeoProduct {
     model: data.product.model,
     image: data.product.image,
     status: data.product.status,
-    variants: data.variants.map((v) => ({ price: v.price, inStock: v.inStock })),
+    variants: data.variants.map((v) => ({ price: v.price, inStock: v.inStock, offerCount: v.offerCount })),
     recommendation: headline ? (headline.score != null ? headline.recommendation : "insufficient_data") : null,
   };
 }

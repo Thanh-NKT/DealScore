@@ -40,6 +40,8 @@ export interface ProductPageData {
     variantKey: string;
     price: number | null;
     inStock: boolean;
+    /** Visible offers with a price for this variant (variant_current_price.offer_count). */
+    offerCount?: number;
   }>;
   selectedVariantId: string;
   pricing: VariantPricing;
@@ -72,7 +74,7 @@ export async function loadProductPageData(params: {
         categories ( slug, name ),
         product_variants (
           id, variant_key, specs,
-          variant_current_price ( price, original_price, in_stock, observed_at )
+          variant_current_price ( price, original_price, in_stock, observed_at, offer_count )
         )
       `)
       .eq("slug", productSlug)
@@ -99,6 +101,7 @@ export async function loadProductPageData(params: {
         variantKey: (v.variant_key as string) || "Tiêu chuẩn",
         price: vcp?.price != null ? Number(vcp.price) : null,
         inStock: (vcp?.in_stock as boolean | undefined) ?? true,
+        offerCount: vcp?.offer_count != null ? Number(vcp.offer_count) : 0,
       };
     });
 
@@ -249,8 +252,9 @@ export async function loadProductPageData(params: {
             ? (product.specs as Record<string, unknown>)
             : {},
         status: product.status === "draft" ? "draft" : "verified",
-        categorySlug: cat?.slug || "linh-kien",
-        categoryName: cat?.name || "Linh kiện",
+        // Same fallback as search, discovery, alerts and ingest links: one URL per product.
+        categorySlug: cat?.slug || "san-pham",
+        categoryName: cat?.name || "Sản phẩm",
       },
       variants,
       selectedVariantId: targetVariantId,
