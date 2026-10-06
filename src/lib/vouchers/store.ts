@@ -143,6 +143,7 @@ export async function listVouchersForListings(
       : "and(listing_id.is.null,seller_id.is.null)",
   ].join(",");
 
+  const limit = Math.min(MAX_BATCH_ROWS, MAX_LIST * valid.length);
   const { data, error } = await client
     .from("vouchers")
     .select("*")
@@ -150,8 +151,16 @@ export async function listVouchersForListings(
     .gte("last_seen_at", since)
     .or(scope)
     .order("last_seen_at", { ascending: false })
-    .limit(Math.min(MAX_BATCH_ROWS, MAX_LIST * valid.length));
+    .limit(limit);
   if (error) throw new Error(`Failed to read vouchers: ${error.message}`);
+
+  // A full page may be truncated: one listing's many recent vouchers can push another listing's
+  // candidates out of a shared newest-first limit. Then read per listing, as the single read does.
+  if ((data ?? []).length >= limit && valid.length > 1) {
+    const per = await Promise.all(valid.map((l) => listVouchersForListing(client, { ...l, now })));
+    valid.forEach((l, i) => (out[l.listingId] = per[i]));
+    return out;
+  }
 
   const rows = (data ?? []).map(toVoucher);
   for (const l of valid) out[l.listingId] = rows.filter((v) => inScope(v, l)).slice(0, MAX_LIST);
