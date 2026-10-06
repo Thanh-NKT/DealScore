@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const rpc = vi.fn(async () => ({ data: null, error: null }));
+// try_acquire_job_lock registers the OAuth nonce; every other RPC (admin_log) answers null.
+const rpcDefault = async (name: string) => ({ data: name === "try_acquire_job_lock" ? true : null, error: null });
+const rpc = vi.fn(rpcDefault);
 // variant_current_price rows that still exist after a recompute; variant_deal_scores deletions are recorded.
 let priced: string[] = [];
 const deletedScores: string[][] = [];
@@ -33,6 +35,7 @@ const req = (url: string, init: RequestInit = {}, auth = "Bearer s") =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  rpc.mockImplementation(rpcDefault);
   vi.unstubAllEnvs();
   vi.stubEnv("ADMIN_API_SECRET", "s");
   for (const k of ["SHOPEE_CLIENT", "TIKTOK_CLIENT", "SHOPEE_AFFILIATE_APP_ID", "SHOPEE_AFFILIATE_SECRET", "TIKTOK_SHOP_APP_KEY", "TIKTOK_SHOP_APP_SECRET", "TIKTOK_SHOP_SERVICE_ID"]) vi.stubEnv(k, "");
@@ -69,11 +72,11 @@ describe("POST /api/admin/tiktok/authorize-url", () => {
     vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k");
     vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec");
     vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc");
-    vi.stubEnv("CRON_SECRET", "cron");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://kairo.vn");
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
     const body = await res.json();
     expect(new URL(body.url).searchParams.get("service_id")).toBe("svc");
+    expect(rpc).toHaveBeenCalledWith("try_acquire_job_lock", expect.objectContaining({ p_owner: "oauth-state", p_ttl_seconds: 1800 }));
     expect(body.redirectUri).toBe("https://kairo.vn/api/tiktok/oauth/callback");
     expect(rpc).toHaveBeenCalledWith("admin_log", expect.objectContaining({ p_action: "tiktok.authorize_link" }));
   });
@@ -115,18 +118,31 @@ describe("POST /api/admin/deal-scores/recompute", () => {
   });
 });
 
+describe("authorize-url nonce registration", () => {
+  it("500 and no link when the nonce cannot be registered", async () => {
+    vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec"); vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc");
+    rpc.mockImplementation((async () => ({ data: null, error: { message: "db down" } })) as never);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "internal" });
+  });
+});
+
 describe("authorize-url audit failure", () => {
-  const env = () => { vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec"); vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc"); vi.stubEnv("CRON_SECRET", "cron"); vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://kairo.vn"); };
+  const env = () => { vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec"); vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc"); vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://kairo.vn"); };
+  const failAdminLog = (result: () => Promise<unknown>) =>
+    rpc.mockImplementation((async (name: string) => (name === "admin_log" ? result() : rpcDefault(name))) as never);
   it("still returns the link when admin_log returns an error", async () => {
     env();
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "x" } } as never);
+    failAdminLog(async () => ({ data: null, error: { message: "x" } }));
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
     expect(res.status).toBe(200);
     expect((await res.json()).url).toContain("svc");
   });
   it("still returns the link when admin_log rejects", async () => {
     env();
-    rpc.mockRejectedValueOnce(new Error("down"));
+    failAdminLog(async () => { throw new Error("down"); });
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
     expect(res.status).toBe(200);
     expect((await res.json()).url).toContain("svc");

@@ -2,20 +2,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const save = vi.fn(async () => undefined);
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
+const consumeState = vi.fn(async () => true);
 vi.mock("@/lib/tiktok/credentials", () => ({ supabaseTokenStore: () => ({ save }) }));
 const exchangeCode = vi.fn();
 vi.mock("@/lib/tiktok/oauth", async (orig) => ({
   ...(await orig<typeof import("@/lib/tiktok/oauth")>()),
   exchangeCode: (...a: unknown[]) => exchangeCode(...a),
+  consumeState: () => consumeState(),
 }));
 
 const { GET } = await import("@/app/api/tiktok/oauth/callback/route");
-const { signState } = await import("@/lib/tiktok/oauth");
+const { oauthStateKey, signState: sign } = await import("@/lib/tiktok/oauth");
+const signState = (_legacySecret: string, at: Date) => sign(oauthStateKey({ ADMIN_API_SECRET: "admin" })!, at);
 const req = (q: string) => new Request(`https://kairo.vn/api/tiktok/oauth/callback?${q}`);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubEnv("CRON_SECRET", "cron");
+  vi.stubEnv("ADMIN_API_SECRET", "admin");
+  consumeState.mockResolvedValue(true);
   vi.stubEnv("TIKTOK_SHOP_APP_KEY", "key");
   vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec");
   vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc");
@@ -40,6 +44,19 @@ describe("GET /api/tiktok/oauth/callback", () => {
       expect(res.status).toBe(400);
     }
     expect(exchangeCode).not.toHaveBeenCalled();
+  });
+
+  it("a state already used (or never registered) → 400, no exchange", async () => {
+    consumeState.mockResolvedValue(false);
+    const res = await GET(req(`code=C1&state=${signState("cron", new Date())}`) as never);
+    expect(res.status).toBe(400);
+    expect(exchangeCode).not.toHaveBeenCalled();
+  });
+
+  it("a state signed with CRON_SECRET is no longer accepted", async () => {
+    const res = await GET(req(`code=C1&state=${sign("cron", new Date())}`) as never);
+    expect(res.status).toBe(400);
+    expect(consumeState).not.toHaveBeenCalled();
   });
 
   it("TikTok not configured → 503", async () => {

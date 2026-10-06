@@ -1,6 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { tiktokConfig } from "@/lib/tiktok/config";
-import { buildAuthorizeUrl, exchangeCode, parseTokenResponse, refreshTokens, signState, STATE_TTL_MS, verifyState } from "@/lib/tiktok/oauth";
+import {
+  buildAuthorizeUrl,
+  consumeState,
+  exchangeCode,
+  oauthStateKey,
+  parseTokenResponse,
+  refreshTokens,
+  registerState,
+  signState,
+  STATE_TTL_MS,
+  verifyState,
+} from "@/lib/tiktok/oauth";
 
 const env = { TIKTOK_SHOP_APP_KEY: "key", TIKTOK_SHOP_APP_SECRET: "sec", TIKTOK_SHOP_SERVICE_ID: "svc" };
 const cfg = tiktokConfig(env)!;
@@ -21,17 +32,50 @@ describe("tiktokConfig", () => {
 });
 
 describe("state", () => {
-  it("round-trips within 30 minutes", () => {
-    const s = signState("cron", now);
-    expect(verifyState("cron", s, new Date(now.getTime() + STATE_TTL_MS - 1000))).toBe(true);
+  it("round-trips within 30 minutes and returns its nonce", () => {
+    const s = signState("k", now, "AAAAAAAAAAAAAAAAAAAAAA");
+    expect(verifyState("k", s, new Date(now.getTime() + STATE_TTL_MS - 1000))).toBe("AAAAAAAAAAAAAAAAAAAAAA");
+    expect(signState("k", now)).not.toBe(signState("k", now)); // a fresh random nonce each time
   });
-  it("rejects expired, wrong secret, tampered, malformed", () => {
-    const s = signState("cron", now);
-    expect(verifyState("cron", s, new Date(now.getTime() + STATE_TTL_MS + 1000))).toBe(false);
-    expect(verifyState("other", s, now)).toBe(false);
-    expect(verifyState("cron", s.replace(/.$/, (c) => (c === "a" ? "b" : "a")), now)).toBe(false);
-    expect(verifyState("cron", "garbage", now)).toBe(false);
-    expect(verifyState("cron", "", now)).toBe(false);
+  it("rejects expired, wrong key, tampered, malformed", () => {
+    const s = signState("k", now);
+    expect(verifyState("k", s, new Date(now.getTime() + STATE_TTL_MS + 1000))).toBeNull();
+    expect(verifyState("other", s, now)).toBeNull();
+    expect(verifyState("k", s.replace(/.$/, (c) => (c === "a" ? "b" : "a")), now)).toBeNull();
+    const [ts, , sig] = s.split(".");
+    expect(verifyState("k", `${ts}.BBBBBBBBBBBBBBBBBBBBBB.${sig}`, now)).toBeNull(); // nonce swapped
+    expect(verifyState("k", "garbage", now)).toBeNull();
+    expect(verifyState("k", "", now)).toBeNull();
+  });
+  it("the key derives from ADMIN_API_SECRET, never CRON_SECRET", () => {
+    expect(oauthStateKey({ CRON_SECRET: "cron" })).toBeNull();
+    const k = oauthStateKey({ ADMIN_API_SECRET: "admin" });
+    expect(k).toHaveLength(43);
+    expect(k).not.toBe("admin");
+  });
+});
+
+describe("single-use nonce", () => {
+  it("registers the nonce as a 30-minute job lock and consumes it with one conditional update", async () => {
+    const rpc = vi.fn(async () => ({ data: true, error: null }));
+    const select = vi.fn(async () => ({ data: [{ name: "x" }], error: null }));
+    const filters: unknown[][] = [];
+    const chain: Record<string, unknown> = {};
+    chain.eq = (...a: unknown[]) => (filters.push(["eq", ...a]), chain);
+    chain.gt = (...a: unknown[]) => (filters.push(["gt", ...a]), chain);
+    chain.select = select;
+    const update = vi.fn(() => chain);
+    const client = { rpc, from: vi.fn(() => ({ update })) } as never;
+
+    const s = signState("k", now, "CCCCCCCCCCCCCCCCCCCCCC");
+    await registerState(client, s);
+    expect(rpc).toHaveBeenCalledWith("try_acquire_job_lock", { p_name: "tiktok-oauth:CCCCCCCCCCCCCCCCCCCCCC", p_owner: "oauth-state", p_ttl_seconds: 1800 });
+
+    expect(await consumeState(client, "CCCCCCCCCCCCCCCCCCCCCC", now)).toBe(true);
+    expect(update).toHaveBeenCalledWith({ locked_until: "-infinity" });
+    expect(filters).toContainEqual(["gt", "locked_until", now.toISOString()]);
+    select.mockResolvedValueOnce({ data: [], error: null });
+    expect(await consumeState(client, "CCCCCCCCCCCCCCCCCCCCCC", now)).toBe(false);
   });
 });
 

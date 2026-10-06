@@ -1,30 +1,85 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/database.types";
+import type { Env } from "@/lib/marketplaces/types";
 import type { TikTokConfig } from "@/lib/tiktok/config";
 
 /** A printed authorize link is valid this long. */
 export const STATE_TTL_MS = 30 * 60_000;
 const TIMEOUT_MS = 15_000;
+const NONCE_RE = /^[A-Za-z0-9_-]{22}$/;
 
-function mac(secret: string, ts: string): string {
-  return createHmac("sha256", secret).update(`tiktok-oauth:${ts}`).digest("base64url");
+/**
+ * Key that signs the OAuth state. Derived from ADMIN_API_SECRET (owner-only, like the authorize link
+ * itself) and domain-separated, so CRON_SECRET is no longer reused for a second purpose.
+ */
+export function oauthStateKey(env: Env = process.env): string | null {
+  const secret = env.ADMIN_API_SECRET;
+  if (!secret) return null;
+  return createHmac("sha256", secret).update("kairo:tiktok-oauth-state:v2").digest("base64url");
 }
 
-/** state = base64url(unix seconds) + "." + HMAC — proves the callback answers a link we printed. */
-export function signState(secret: string, now: Date): string {
+function mac(key: string, ts: string, nonce: string): string {
+  return createHmac("sha256", key).update(`tiktok-oauth:${ts}:${nonce}`).digest("base64url");
+}
+
+/**
+ * state = base64url(unix seconds) + "." + nonce + "." + HMAC — proves the callback answers a link we
+ * printed. The nonce is registered in job_locks (registerState) and consumed once (consumeState).
+ */
+export function signState(key: string, now: Date, nonce: string = randomBytes(16).toString("base64url")): string {
   const ts = String(Math.floor(now.getTime() / 1000));
-  return `${Buffer.from(ts).toString("base64url")}.${mac(secret, ts)}`;
+  return `${Buffer.from(ts).toString("base64url")}.${nonce}.${mac(key, ts, nonce)}`;
 }
 
-export function verifyState(secret: string, state: string, now: Date): boolean {
-  const [encTs, sig, extra] = state.split(".");
-  if (!encTs || !sig || extra !== undefined) return false;
+/** The state's nonce when the signature and age are valid, else null. Single use is checked by consumeState. */
+export function verifyState(key: string, state: string, now: Date): string | null {
+  const [encTs, nonce, sig, extra] = state.split(".");
+  if (!encTs || !nonce || !sig || extra !== undefined || !NONCE_RE.test(nonce)) return null;
   const ts = Buffer.from(encTs, "base64url").toString();
-  if (!/^\d+$/.test(ts)) return false;
-  const want = Buffer.from(mac(secret, ts));
+  if (!/^\d+$/.test(ts)) return null;
+  const want = Buffer.from(mac(key, ts, nonce));
   const got = Buffer.from(sig);
-  if (got.length !== want.length || !timingSafeEqual(got, want)) return false;
+  if (got.length !== want.length || !timingSafeEqual(got, want)) return null;
   const age = now.getTime() - Number(ts) * 1000;
-  return age >= 0 && age <= STATE_TTL_MS;
+  return age >= 0 && age <= STATE_TTL_MS ? nonce : null;
+}
+
+function stateNonce(state: string): string | null {
+  const nonce = state.split(".")[1];
+  return nonce && NONCE_RE.test(nonce) ? nonce : null;
+}
+
+const lockName = (nonce: string) => `tiktok-oauth:${nonce}`;
+const STATE_OWNER = "oauth-state";
+
+/** Register a freshly signed state so it can be used once, within STATE_TTL_MS. Throws on DB error. */
+export async function registerState(client: SupabaseClient<Database>, state: string): Promise<void> {
+  const nonce = stateNonce(state);
+  if (!nonce) throw new Error("Malformed OAuth state");
+  const { data, error } = await client.rpc("try_acquire_job_lock", {
+    p_name: lockName(nonce),
+    p_owner: STATE_OWNER,
+    p_ttl_seconds: Math.ceil(STATE_TTL_MS / 1000),
+  });
+  if (error || !data) throw new Error(`Failed to register OAuth state: ${error?.message ?? "nonce already used"}`);
+}
+
+/**
+ * Mark the state's nonce used. true only for the first callback within the TTL: a leaked or replayed
+ * link cannot overwrite the stored credentials a second time. One UPDATE, so two racing callbacks
+ * cannot both win.
+ */
+export async function consumeState(client: SupabaseClient<Database>, nonce: string, now = new Date()): Promise<boolean> {
+  const { data, error } = await client
+    .from("job_locks")
+    .update({ locked_until: "-infinity" })
+    .eq("name", lockName(nonce))
+    .eq("owner", STATE_OWNER)
+    .gt("locked_until", now.toISOString())
+    .select("name");
+  if (error) throw new Error(`Failed to consume OAuth state: ${error.message}`);
+  return (data ?? []).length === 1;
 }
 
 export function buildAuthorizeUrl(cfg: TikTokConfig, state: string): string {

@@ -44,7 +44,7 @@
 - [x] **P0** Endpoint `/api/admin/*` + kiểm `ADMIN_API_SECRET` (so sánh constant-time như `isAuthorizedCronRequest`), không
   dùng cookie, `Cache-Control: no-store`
 - [x] **P0** [API] `GET /api/admin/status` → sàn nào đã cấu hình, thật hay giả lập, có link affiliate chưa (`configuredMarketplaces()`)
-- [x] **P0** [API] `POST /api/admin/tiktok/authorize-url` → trả link ủy quyền TikTok (state ký bằng `CRON_SECRET` nằm ở Kairo)
+- [x] **P0** [API] `POST /api/admin/tiktok/authorize-url` → trả link ủy quyền TikTok (state ký bằng khóa suy ra từ `ADMIN_API_SECRET`, dùng một lần)
 - [ ] **P1** [API] `POST /api/admin/probe` `{ marketplace, input }` → dữ liệu gốc (đã che secret) + `MarketplaceItem` (logic
   `pnpm marketplace:probe`)
 - [ ] **P1** [API] `POST /api/admin/sourcing/run` `{ marketplace?, mode }` → chạy một lượt sourcing (dùng chung khóa `sourcing`)

@@ -1,29 +1,34 @@
 /**
- * Print the one-time TikTok Shop authorization link (valid 30 minutes).
- * Needs TIKTOK_SHOP_APP_KEY / TIKTOK_SHOP_APP_SECRET / TIKTOK_SHOP_SERVICE_ID, CRON_SECRET and
- * NEXT_PUBLIC_SITE_URL — the SAME CRON_SECRET as the deployed app, or the callback rejects the state.
+ * Print the one-time TikTok Shop authorization link (valid 30 minutes, usable once).
+ * Needs TIKTOK_SHOP_APP_KEY / TIKTOK_SHOP_APP_SECRET / TIKTOK_SHOP_SERVICE_ID, ADMIN_API_SECRET,
+ * NEXT_PUBLIC_SITE_URL and the Supabase service-role env — the SAME ADMIN_API_SECRET and database as the
+ * deployed app, or the callback rejects the state.
  * Run: pnpm tiktok:authorize
  *
  * Wrapped in main(): tsx compiles .ts files to CJS, which forbids top-level await.
  */
 import { tiktokConfig } from "@/lib/tiktok/config";
-import { buildAuthorizeUrl, signState } from "@/lib/tiktok/oauth";
+import { buildAuthorizeUrl, oauthStateKey, registerState, signState } from "@/lib/tiktok/oauth";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 async function main() {
   const cfg = tiktokConfig(process.env);
-  const secret = process.env.CRON_SECRET;
+  const key = oauthStateKey(process.env);
   const site = process.env.NEXT_PUBLIC_SITE_URL;
   const missing = [
     !cfg && "TIKTOK_SHOP_APP_KEY / TIKTOK_SHOP_APP_SECRET / TIKTOK_SHOP_SERVICE_ID",
-    !secret && "CRON_SECRET",
+    !key && "ADMIN_API_SECRET",
     !site && "NEXT_PUBLIC_SITE_URL",
   ].filter(Boolean);
   if (missing.length > 0) throw new Error(`Missing env: ${missing.join(", ")}`);
 
+  const state = signState(key!, new Date());
+  await registerState(createAdminClient(), state);
+
   console.log("Redirect URI to register on TikTok Shop Partner Center:");
   console.log(`  ${site!.replace(/\/+$/, "")}/api/tiktok/oauth/callback\n`);
-  console.log("Open this link (valid 30 minutes) and approve:");
-  console.log(`  ${buildAuthorizeUrl(cfg!, signState(secret!, new Date()))}`);
+  console.log("Open this link (valid 30 minutes, works once) and approve:");
+  console.log(`  ${buildAuthorizeUrl(cfg!, state)}`);
 }
 
 main().catch((err) => {
