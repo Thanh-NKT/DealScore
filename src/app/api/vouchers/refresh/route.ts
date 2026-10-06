@@ -13,6 +13,12 @@ export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** System-wide refreshes per day: anonymous traffic must not drain the API quota the collector needs. */
+function dailyCap(): number {
+  const n = parseInt(process.env.VOUCHER_REFRESH_DAILY_CAP || "500", 10);
+  return Number.isFinite(n) && n > 0 ? n : 500;
+}
+
 function json(body: unknown, status: number, headers: Record<string, string> = {}) {
   return NextResponse.json(body, { status, headers: { ...NO_STORE, ...headers } });
 }
@@ -20,8 +26,9 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 /**
  * POST /api/vouchers/refresh { offerId } — re-read images + vouchers for the offer's listing from
  * the listing's marketplace (getSource(…).fetchItem). Counts against the lookup quota (per IP /
- * per user, src/lib/rate-limit.ts). 503 { error: "not_configured" } when that marketplace has no
- * data source yet (canRefreshVouchers).
+ * per user, src/lib/rate-limit.ts) and a global daily cap (VOUCHER_REFRESH_DAILY_CAP, default 500 → 503
+ * upstream_unavailable). Only active listings are refreshed. 503 { error: "not_configured" } when that
+ * marketplace has no data source yet (canRefreshVouchers).
  */
 export async function POST(request: NextRequest) {
   let offerId: unknown;
@@ -49,12 +56,13 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient();
     const { data: offer, error } = await admin
       .from("offers")
-      .select("id, listings!inner ( id, marketplace, external_item_id )")
+      .select("id, listings!inner ( id, marketplace, external_item_id, status )")
       .eq("id", offerId)
       .maybeSingle();
     if (error) throw new Error(`Failed to read offer: ${error.message}`);
     const listing = offer?.listings;
-    if (!listing) {
+    // A gone / deactivated listing has nothing to refresh: no upstream call for it.
+    if (!listing || listing.status !== "active") {
       if (requestId != null) await finishLookup(requestId, "rejected");
       return json({ error: "not_found" }, 404);
     }
@@ -62,6 +70,17 @@ export async function POST(request: NextRequest) {
     if (!canRefreshVouchers(listing.marketplace)) {
       if (requestId != null) await finishLookup(requestId, "rejected");
       return json({ error: "not_configured" }, 503);
+    }
+
+    const { data: underCap, error: capErr } = await admin.rpc("rate_hit", {
+      p_key: `vouchers-refresh:${new Date().toISOString().slice(0, 10)}`,
+      p_window_seconds: 86_400,
+      p_limit: dailyCap(),
+    });
+    if (capErr) throw new Error(`rate_hit: ${capErr.message}`);
+    if (!underCap) {
+      if (requestId != null) await finishLookup(requestId, "rejected");
+      return json({ error: "upstream_unavailable" }, 503, { "Retry-After": "3600" });
     }
 
     const detail = await getSource(listing.marketplace)!.fetchItem(listing.external_item_id);
