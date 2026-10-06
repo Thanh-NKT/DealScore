@@ -6,6 +6,12 @@ import { marketplaceName, marketplaceStyle } from "./marketplace";
 
 interface OfferListProps {
   offers: PricedOffer[];
+  /**
+   * The offer the page's main buy button goes to (pricing.bestBuy: cheapest after vouchers). It gets
+   * the "Giá tốt nhất" badge and the primary style, so the list and the hero never name two "best"
+   * offers. Absent → the cheapest listed in-stock offer.
+   */
+  bestBuyId?: string | null;
 }
 
 const VISIBLE_ROWS = 8;
@@ -37,13 +43,14 @@ function OfferRow({
 }: {
   offer: PricedOffer;
   cheapestPrice: number | null;
+  /** Several in-stock offers: badge the primary one as "Giá tốt nhất". */
   showBest: boolean;
   primary: boolean;
 }) {
   const price = validPrice(offer.price);
   // Price after the best voucher combination, shipping not included (page-data keeps it fresh + lower).
   const effective = validPrice(offer.effectivePrice);
-  const isBest = showBest && offer.inStock && price != null && price === cheapestPrice;
+  const isBest = showBest && primary;
   const seller = offer.sellerName?.trim() || "Người bán chưa rõ tên";
   const rating = offer.sellerRating;
   const ratingCount = offer.sellerRatingCount;
@@ -91,7 +98,7 @@ function OfferRow({
           {hasRating ? (
             <span className="inline-flex items-center gap-1">
               <b className="num font-bold text-ink">{rating.toFixed(1).replace(".", ",")} ★</b>
-              {ratingCount && <span className="text-ink-3">({formatCount(ratingCount)})</span>}
+              {ratingCount != null && ratingCount > 0 && <span className="text-ink-3">({formatCount(ratingCount)})</span>}
             </span>
           ) : (
             <span className="text-ink-3">Chưa có đánh giá</span>
@@ -159,7 +166,7 @@ function OfferRow({
   );
 }
 
-export function OfferList({ offers }: OfferListProps) {
+export function OfferList({ offers, bestBuyId }: OfferListProps) {
   const list = offers ?? [];
 
   if (list.length === 0) {
@@ -177,7 +184,10 @@ export function OfferList({ offers }: OfferListProps) {
 
   const priced = list.filter((o) => o.inStock && validPrice(o.price) != null);
   const cheapestPrice = priced.length > 0 ? Math.min(...priced.map((o) => o.price as number)) : null;
-  const primaryId = priced.find((o) => o.price === cheapestPrice)?.offerId ?? null;
+  const primaryId =
+    (bestBuyId && priced.some((o) => o.offerId === bestBuyId) ? bestBuyId : null) ??
+    priced.find((o) => o.price === cheapestPrice)?.offerId ??
+    null;
   const showBest = priced.length > 1;
   const head = list.slice(0, VISIBLE_ROWS);
   const rest = list.slice(VISIBLE_ROWS);

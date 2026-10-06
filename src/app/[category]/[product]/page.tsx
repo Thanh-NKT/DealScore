@@ -213,7 +213,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                   <PriceSummary
                     cheapest={buy ?? pricing.lastKnown}
                     offerCount={offerCount}
-                    discountDoubtful={hasFakeSale}
                   />
 
                   {recommendation && (
@@ -319,7 +318,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
           {/* Section 3: Marketplace Comparison & Price Alert */}
           <section className="grid grid-cols-1 items-start gap-6 min-[1121px]:grid-cols-[1fr_420px]">
-            <OfferList offers={pricing.offers} />
+            <OfferList offers={pricing.offers} bestBuyId={buy?.offerId ?? null} />
 
             <PriceAlertCard
               currentPrice={currentPrice}
@@ -345,10 +344,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
           {/* Section 4: Discount Verification Banner */}
           {/* Only when the seller advertises a discount: there is nothing to verify otherwise. */}
-          {cheapest?.discountPercent != null && (
+          {/* Same offer as the hero price and its discount chip (buy), so the two never disagree. */}
+          {buy?.discountPercent != null && (
             <section>
               <DiscountVerifyBanner
-                status={hasFakeSale ? "fake" : recommendation === "insufficient_data" ? "insufficient" : "ok"}
+                status={hasFakeSale ? "fake" : buy.discountChecked ? "ok" : "insufficient"}
                 message={pricing.fakeSaleMessage}
               />
             </section>

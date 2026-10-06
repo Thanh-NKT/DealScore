@@ -1,17 +1,16 @@
-import type { PricedOffer } from "@/lib/pricing/variant-pricing";
+import { isDiscountVerified, type PricedOffer } from "@/lib/pricing/variant-pricing";
 import { formatVnd } from "@/lib/format";
 import { ClockIcon, TrendDownIcon } from "@/components/ui/icons";
 import { marketplaceName, marketplaceStyle } from "./marketplace";
 
 interface PriceSummaryProps {
-  /** Cheapest in-stock offer, or — when out of stock everywhere — the offer with the most recent recorded price. */
+  /**
+   * The offer whose price the page shows (best buy, else cheapest), or — when out of stock everywhere —
+   * the offer with the most recent recorded price. Its own discount check (fakeSaleMessage /
+   * discountChecked) decides how the seller's "−X%" is shown.
+   */
   cheapest: PricedOffer | null;
   offerCount: number;
-  /**
-   * The discount check failed (detectFakeSale): the seller's "−X%" is replaced by the words
-   * "Giảm giá chưa thực chất".
-   */
-  discountDoubtful?: boolean;
 }
 
 /** 0 or negative prices are marketplace data errors: never render them as "0đ". */
@@ -21,7 +20,7 @@ function validPrice(value: number | null | undefined): number | null {
 
 const LABEL = "text-label font-semibold text-ink-3";
 
-export function PriceSummary({ cheapest, offerCount, discountDoubtful = false }: PriceSummaryProps) {
+export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
   const price = validPrice(cheapest?.price);
 
   if (!cheapest || price == null) {
@@ -63,6 +62,11 @@ export function PriceSummary({ cheapest, offerCount, discountDoubtful = false }:
   const off = cheapest.discountPercent;
   const showListed = listed != null && off != null && off > 0 && listed > price;
   const saved = showListed && listed != null ? listed - price : null;
+  // Three honest states for the seller's list-price discount: verified against history (solid buy chip,
+  // "Tiết kiệm"), flagged by the fake-sale check ("Giảm giá chưa thực chất"), or not checkable yet
+  // (neutral chip: it is only the seller's claim).
+  const discountDoubtful = Boolean(cheapest.fakeSaleMessage?.trim());
+  const discountVerified = isDiscountVerified(cheapest);
   const effectiveRaw = validPrice(cheapest.effectivePrice);
   const effective = effectiveRaw != null && effectiveRaw < price ? effectiveRaw : null;
   const text = formatVnd(price);
@@ -91,9 +95,14 @@ export function PriceSummary({ cheapest, offerCount, discountDoubtful = false }:
           {text}
         </p>
 
-        {showListed && !discountDoubtful && off != null && (
+        {showListed && discountVerified && off != null && (
           <span className="num inline-flex items-center gap-1 rounded-full bg-buy px-2.5 py-1 text-label font-extrabold text-canvas shadow-2xs">
             <TrendDownIcon className="size-3.5" strokeWidth={2.6} />
+            −{off}%
+          </span>
+        )}
+        {showListed && !discountVerified && !discountDoubtful && off != null && (
+          <span className="num inline-flex items-center rounded-full border border-line-strong bg-surface px-2.5 py-1 text-label font-bold text-ink-2">
             −{off}%
           </span>
         )}
@@ -117,10 +126,12 @@ export function PriceSummary({ cheapest, offerCount, discountDoubtful = false }:
                 <span className="rounded-sm bg-wait-soft px-2 py-0.5 text-micro font-semibold text-wait">
                   Giảm giá chưa thực chất
                 </span>
-              ) : saved != null && saved > 0 ? (
+              ) : discountVerified && saved != null && saved > 0 ? (
                 <span className="font-bold text-buy">
                   · Tiết kiệm <span className="num">{formatVnd(saved)}</span>
                 </span>
+              ) : !discountVerified ? (
+                <span>· Mức giảm do người bán ghi, chưa đủ lịch sử để kiểm tra</span>
               ) : null}
             </span>
           )}

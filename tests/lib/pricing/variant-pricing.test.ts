@@ -4,6 +4,7 @@ import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 import {
   buildVariantPricing,
   FLASH_SALE_REASON,
+  isDiscountVerified,
   isOfferVisible,
   type OfferRow,
 } from "@/lib/pricing/variant-pricing";
@@ -168,25 +169,63 @@ describe("buildVariantPricing — header score (decision Đ7)", () => {
     expect(out.headline!.score).toBeLessThan(inflated.score!);
   });
 
-  it("the cheapest offer's row must NOT show a score different from the header", () => {
-    // If the per-offer loop passed bestOffer = the cheapest offer itself, component
-    // 3 would always be 100 and that row would show up to 20 points above the header.
-    // The user would see two contradicting numbers on the same screen.
+  it("offers carry no score of their own: the header is the only Deal Score on the page", () => {
+    // Per-offer scores used other rules (cross-offer component, stock/seller adjustments), so a
+    // pricier offer could out-score the cheapest. Nothing rendered them; they are gone.
     const out = buildVariantPricing({
       ...base,
       offers: [offer({ offerId: "a", price: 1100 }), offer({ offerId: "b", price: 1400 })],
     });
-    expect(out.cheapest?.dealScore?.score).toBe(out.headline?.score);
+    for (const o of out.offers) expect(o).not.toHaveProperty("dealScore");
   });
+});
 
-  it("a pricier offer scores lower than the cheapest", () => {
+describe("buildVariantPricing — the discount check follows the offer the page shows", () => {
+  const base = { trackingSince: null, isDraftProduct: false, now: NOW, history: history(40, () => 1000) };
+
+  it("bestBuy (another seller) has an inflated list price → its fake-sale message is the page's", () => {
     const out = buildVariantPricing({
       ...base,
-      offers: [offer({ offerId: "a", price: 900 }), offer({ offerId: "b", price: 1500 })],
+      offers: [
+        offer({ offerId: "a", price: 1000 }),
+        // 50% "off" a 2100 list price, yet at the usual level; a voucher makes it the best buy.
+        offer({ offerId: "b", price: 1050, originalPrice: 2100, effectivePrice: 900 }),
+      ],
     });
-    const a = out.offers.find((o) => o.offerId === "a")!;
-    const b = out.offers.find((o) => o.offerId === "b")!;
-    expect(a.dealScore!.score).toBeGreaterThan(b.dealScore!.score!);
+    expect(out.cheapest!.offerId).toBe("a");
+    expect(out.bestBuy!.offerId).toBe("b");
+    expect(out.bestBuy!.fakeSaleMessage).not.toBeNull();
+    expect(out.fakeSaleMessage).toBe(out.bestBuy!.fakeSaleMessage);
+    expect(out.cheapest!.fakeSaleMessage).toBeNull();
+  });
+
+  it("the cheapest offer's inflated list price does not taint an honest best buy", () => {
+    const out = buildVariantPricing({
+      ...base,
+      offers: [
+        offer({ offerId: "a", price: 1000, originalPrice: 2000 }),
+        offer({ offerId: "b", price: 1020, effectivePrice: 900 }),
+      ],
+    });
+    expect(out.bestBuy!.offerId).toBe("b");
+    expect(out.offers.find((o) => o.offerId === "a")!.fakeSaleMessage).not.toBeNull();
+    expect(out.fakeSaleMessage).toBeNull();
+  });
+
+  it("a discount is verified only when the check ran and found nothing", () => {
+    const real = buildVariantPricing({ ...base, offers: [offer({ price: 800, originalPrice: 1000 })] });
+    expect(isDiscountVerified(real.cheapest!)).toBe(true);
+
+    const fake = buildVariantPricing({ ...base, offers: [offer({ price: 1000, originalPrice: 2000 })] });
+    expect(isDiscountVerified(fake.cheapest!)).toBe(false);
+
+    const unchecked = buildVariantPricing({
+      ...base,
+      history: history(5, () => 1000),
+      offers: [offer({ price: 800, originalPrice: 1000 })],
+    });
+    expect(unchecked.cheapest!.discountChecked).toBe(false);
+    expect(isDiscountVerified(unchecked.cheapest!)).toBe(false);
   });
 });
 

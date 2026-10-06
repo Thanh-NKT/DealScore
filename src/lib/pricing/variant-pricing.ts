@@ -37,8 +37,21 @@ export interface OfferRow {
 export interface PricedOffer extends OfferRow {
   inStock: boolean;
   discountPercent: number | null;
-  /** This offer's own score relative to the cheapest offer. null when data is missing or it cannot be computed. */
-  dealScore: DealScoreResult | null;
+  /**
+   * detectFakeSale() for THIS offer's price and list price against the variant's history. null = no
+   * sign found, or the check could not run (see discountChecked).
+   */
+  fakeSaleMessage: string | null;
+  /** The history check ran (≥ 14 days in the last 30). Only then can a list-price discount be called real. */
+  discountChecked: boolean;
+}
+
+/**
+ * The seller's list-price discount passed Kairo's history check — the only case the solid "−X%" chip
+ * (DESIGN.md "chip mức giảm thật") may be shown. Unchecked or doubtful discounts are shown neutrally.
+ */
+export function isDiscountVerified(offer: Pick<PricedOffer, "discountPercent" | "discountChecked" | "fakeSaleMessage">): boolean {
+  return offer.discountPercent != null && offer.discountChecked && !offer.fakeSaleMessage?.trim();
 }
 
 export interface VariantPricing {
@@ -63,6 +76,10 @@ export interface VariantPricing {
    * Score is below threshold (1.2.d.3: "still show the numbers we have").
    */
   stats: HistoryStats;
+  /**
+   * Fake-sale message for the offer the page shows as its price (bestBuy, else cheapest): the hero's
+   * discount chip, the verdict note and the discount banner all describe that same offer.
+   */
   fakeSaleMessage: string | null;
   trackingSince: string | null; // 'YYYY-MM-DD'
   updatedAt: string | null;
@@ -99,7 +116,8 @@ export function buildVariantPricing(input: {
       ...o,
       inStock,
       discountPercent: disc,
-      dealScore: null,
+      fakeSaleMessage: null,
+      discountChecked: false,
     };
   });
 
@@ -147,57 +165,32 @@ export function buildVariantPricing(input: {
     }
   }
 
-  // 6. Per-offer Deal Score (relative to the cheapest offer).
-  //
-  // For the cheapest offer ITSELF this comparison is against itself: cBetween
-  // is always 100 and that row would show up to 20 points above the header score.
-  // The user would see two contradicting numbers on the same screen.
-  // So the cheapest offer reuses the exact header score (62.5/37.5 reweight branch).
+  // 6. Fake Sale Detection, per offer: the page shows one offer's price and list price (bestBuy),
+  // so its discount chip must be judged on that offer — not on another seller's list price.
+  const m30 = medianWindow(history, 30, 0, now);
+  const m14 = medianWindow(history, 14, 0, now);
+  const m60 = medianWindow(history, 74, 14, now);
   for (const offer of mappedOffers) {
     if (offer.price == null || offer.price <= 0) continue;
-
-    offer.dealScore =
-      cheapest != null && offer.offerId === cheapest.offerId
-        ? headline
-        : scoreDeal({
-            price: offer.price,
-            history: historyObs,
-            bestOffer: cheapest?.price ?? undefined,
-            now,
-            stock: offer.stock,
-            seller: { rating: offer.sellerRating, isOfficial: offer.sellerIsOfficial },
-          });
-  }
-
-  // 7. Fake Sale Detection
-  let fakeSaleMessage: string | null = null;
-  if (cheapest && cheapest.price != null) {
-    const m30 = medianWindow(history, 30, 0, now);
-    const m14 = medianWindow(history, 14, 0, now);
-    const m60 = medianWindow(history, 74, 14, now);
-
+    // Heuristic #1 only runs when m30.dayCount >= 14
+    if (m30.dayCount < 14) continue;
     // Heuristic #2 ("price hike before the sale") only makes sense when a sale IS
     // running: a struck-through list price, or a current price below the 14-day
     // median. Otherwise a product that merely raised its price gets labelled — a
     // claim about the seller that "better to miss" (design §13) does not allow.
-    const onSale =
-      cheapest.discountPercent != null ||
-      (m14.value != null && cheapest.price < m14.value);
+    const onSale = offer.discountPercent != null || (m14.value != null && offer.price < m14.value);
     const priceHikeCheckable = onSale && m14.dayCount >= 10 && m60.dayCount >= 30;
-
-    // Heuristic #1 only runs when m30.dayCount >= 14
-    if (m30.dayCount >= 14) {
-      fakeSaleMessage = detectFakeSale({
-        currentPrice: cheapest.price,
-        listedPrice: cheapest.originalPrice ?? 0,
-        median30d: m30.value ?? 0,
-        median14dBeforeSale: priceHikeCheckable ? m14.value ?? undefined : undefined,
-        median60dBefore: priceHikeCheckable ? m60.value ?? undefined : undefined,
-      });
-    }
+    offer.discountChecked = true;
+    offer.fakeSaleMessage = detectFakeSale({
+      currentPrice: offer.price,
+      listedPrice: offer.originalPrice ?? 0,
+      median30d: m30.value ?? 0,
+      median14dBeforeSale: priceHikeCheckable ? m14.value ?? undefined : undefined,
+      median60dBefore: priceHikeCheckable ? m60.value ?? undefined : undefined,
+    });
   }
 
-  // 8. Update time & stale-data warning (> 48h)
+  // 7. Update time & stale-data warning (> 48h)
   // Only counts displayable offers: a hidden offer (inactive listing,
   // uncertain matching) must not make the data look fresher than it is.
   let latestObservedAt: string | null = null;
@@ -214,15 +207,16 @@ export function buildVariantPricing(input: {
     ? now.getTime() - new Date(latestObservedAt).getTime() > ms48Hours
     : false;
 
+  const bestBuy = pickBestBuy(mappedOffers);
   return {
     offers: mappedOffers,
     cheapest,
-    bestBuy: pickBestBuy(mappedOffers),
+    bestBuy,
     lastKnown,
     allOutOfStock: cheapest == null && lastKnown != null,
     headline,
     stats: historyStats(history, now),
-    fakeSaleMessage,
+    fakeSaleMessage: (bestBuy ?? cheapest)?.fakeSaleMessage ?? null,
     trackingSince,
     updatedAt: latestObservedAt,
     isStale,
