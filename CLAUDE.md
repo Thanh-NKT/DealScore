@@ -95,7 +95,9 @@ Never mix these up; the choice encodes the security model.
 - **Auth:** trang cần đăng nhập gọi `requireUser({ path })` từ `src/lib/auth/session.ts` (không kiểm
   quyền trong `proxy.ts`). Đăng nhập bằng **email + mật khẩu** (`src/actions/auth.ts`, quy tắc mật khẩu ở
   `src/lib/auth/password.ts`, khớp `config.toml`). Link email (xác nhận đăng ký, đặt lại mật khẩu) dùng luồng
-  `token_hash` qua `src/app/auth/confirm/route.ts`; `type=recovery` đi thẳng `/reset-password`, bỏ qua AuthGate.
+  `token_hash`: trang `src/app/auth/confirm/page.tsx` chỉ hiện nút "Xác nhận" (GET không dùng token — trình quét link
+  trong hộp thư không đốt được), Server Action `confirmEmailLink` (`src/actions/confirm.ts`) mới `verifyOtp`;
+  `type=recovery` đi thẳng `/reset-password`, bỏ qua AuthGate.
 - **Watch & Alert (1.3/1.4):** hàm thuần `decideAlert()` (`src/lib/watch/decide.ts`) quyết định có báo
   không; `tests/lib/alerts/scenarios.test.ts` là cam kết "không spam" — đừng sửa kỳ vọng ở đó để test xanh.
   Ngưỡng nằm ở `src/lib/watch/constants.ts` (và `50` trong trigger `watches_enforce_limit`). Truy vấn có thể
