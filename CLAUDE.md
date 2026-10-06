@@ -148,6 +148,9 @@ Never mix these up; the choice encodes the security model.
 - `src/lib/supabase/proxy.ts` — `updateSession()`, called from `src/proxy.ts` on every
   request to refresh the auth token. Do not insert logic between `createServerClient` and the
   `getUser()` call there.
+- **Security headers:** `src/lib/security/headers.ts`. HSTS / X-Frame-Options / … via `next.config.ts` `headers()`;
+  the CSP (per-request nonce, `frame-ancestors 'none'`) only in `src/proxy.ts`, not on `/api/*`. A new inline
+  `<script>` needs its sha256 in `script-src` (like `THEME_INIT_SCRIPT_HASH`); JSON-LD data blocks need nothing.
 
 **RLS model** (`supabase/migrations/0001_init.sql`): RLS is enabled **only** on user-owned
 tables (`users`, `watches`, `alert_events`, `click_events`). Catalog and price data are

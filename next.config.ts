@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
+import { SECURITY_HEADERS } from "./src/lib/security/headers";
 
 // Legacy Vietnamese URLs → English routes. Kept permanently: emails already sent
 // (magic links, unsubscribe links, account-deletion notices) still point at the old paths.
@@ -19,6 +20,10 @@ const LEGACY_ROUTES: Array<[string, string]> = [
 ];
 
 const nextConfig: NextConfig = {
+  // HSTS, X-Frame-Options, … on every response. The CSP (per-request nonce) is set in src/proxy.ts.
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
   async redirects() {
     return LEGACY_ROUTES.map(([source, destination]) => ({
       source,

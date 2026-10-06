@@ -22,8 +22,8 @@ export const metadata: Metadata = {
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { siteUrl } from "@/lib/site-url";
-
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("kairo-theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
+// Allowed by the CSP through its hash (src/lib/security/headers.ts).
+import { THEME_INIT_SCRIPT } from "@/lib/security/headers";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
