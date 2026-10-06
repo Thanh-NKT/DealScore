@@ -16,7 +16,7 @@ Các ví dụ công nghệ (SSD, laptop, card đồ họa) trong backlog, spec v
 
 ## Product Purpose
 
-Kairo (Personal Shopping Intelligence) lưu lịch sử giá chuẩn hóa theo variant, gom các listing khác nhau về cùng một sản phẩm, chấm Deal Score có giải thích và trả lời **Nên mua / Có thể chờ / Chưa nên mua**. Sau đó người dùng đặt giá mục tiêu (Watch) và nhận Alert khi đến lúc.
+DealScore (Personal Shopping Intelligence) lưu lịch sử giá chuẩn hóa theo variant, gom các listing khác nhau về cùng một sản phẩm, chấm Deal Score có giải thích và trả lời **Nên mua / Có thể chờ / Chưa nên mua**. Sau đó người dùng đặt giá mục tiêu (Watch) và nhận Alert khi đến lúc.
 
 Vòng lặp lõi cần chứng minh: Search → hiểu đúng sản phẩm → giá hiện tại → giá lịch sử → Deal Score → Buy/Wait → đặt mục tiêu → nhận alert → bấm link affiliate → có hoa hồng.
 
@@ -24,14 +24,14 @@ Thành công: người dùng tin câu trả lời đủ để hành động theo
 
 ## Positioning
 
-Đối thủ (BeeCost, Lichsugia, Mua Thông Minh, AliPrice, BigBuy360) chủ yếu đưa biểu đồ lịch sử giá. Kairo đưa **câu trả lời có giải thích**, nói như một người bạn am hiểu mua sắm: Deal Score kèm 2–4 lý do bằng lời thường, khuyến nghị mua/chờ, so sánh giữa các sàn và seller, cảnh báo giảm giá chưa thực chất. Khi chưa đủ dữ liệu, Kairo nói thẳng là chưa đủ.
+Đối thủ (BeeCost, Lichsugia, Mua Thông Minh, AliPrice, BigBuy360) chủ yếu đưa biểu đồ lịch sử giá. DealScore đưa **câu trả lời có giải thích**, nói như một người bạn am hiểu mua sắm: Deal Score kèm 2–4 lý do bằng lời thường, khuyến nghị mua/chờ, so sánh giữa các sàn và seller, cảnh báo giảm giá chưa thực chất. Khi chưa đủ dữ liệu, DealScore nói thẳng là chưa đủ.
 
-Kairo không phải công cụ phân tích tài chính và không phải trang khuyến mãi ồn ào.
+DealScore không phải công cụ phân tích tài chính và không phải trang khuyến mãi ồn ào.
 
 ## Operating Context
 
-- **Thiết bị:** thiết kế ưu tiên **desktop** (quyết định của chủ sản phẩm, theo backlog), responsive trên tablet và mobile. Nhưng rất nhiều người dùng tới từ điện thoại: đang lướt Shopee/TikTok Shop rồi mở sang Kairo để kiểm tra giá, kết nối có thể chậm. Luồng tra cứu nhanh phải chạy tốt trên điện thoại và mạng chậm.
-- **Cửa vào:** dán URL sàn → trang sản phẩm; tìm kiếm từ khóa (chịu gõ sai, gõ không dấu); PWA share target trên Android (Share từ app sàn → Kairo); về sau là Chrome Extension.
+- **Thiết bị:** thiết kế ưu tiên **desktop** (quyết định của chủ sản phẩm, theo backlog), responsive trên tablet và mobile. Nhưng rất nhiều người dùng tới từ điện thoại: đang lướt Shopee/TikTok Shop rồi mở sang DealScore để kiểm tra giá, kết nối có thể chậm. Luồng tra cứu nhanh phải chạy tốt trên điện thoại và mạng chậm.
+- **Cửa vào:** dán URL sàn → trang sản phẩm; tìm kiếm từ khóa (chịu gõ sai, gõ không dấu); PWA share target trên Android (Share từ app sàn → DealScore); về sau là Chrome Extension.
 - **Trang sản phẩm là nơi quyết định:** giá hiện tại theo variant, giá giữa các sàn/seller, biểu đồ giá, thấp nhất/trung vị/cao nhất, Deal Score + lý do, khuyến nghị, cảnh báo sale chưa thực chất, thời điểm cập nhật, nút mua qua `/go/…`.
 - **Sau đó:** Watch với điều kiện (giá ≤ mục tiêu, giảm ≥ X%, chạm đáy, Deal Score ≥ X, có hàng lại), Alert qua email / web push.
 - **Doanh thu:** affiliate (Phase 1); về sau sponsored/featured có gắn nhãn, Premium.
@@ -50,7 +50,7 @@ Kairo không phải công cụ phân tích tài chính và không phải trang k
 
 ## Brand Commitments
 
-- Tên: **Kairo**. Tagline: **"Đừng chỉ tìm giá rẻ. Tìm đúng thời điểm để mua."**
+- Tên: **DealScore**. Tagline: **"Đừng chỉ tìm giá rẻ. Tìm đúng thời điểm để mua."**
 - **Cảm giác:** đáng tin, trung lập, dễ hiểu như lời khuyên của một người bạn am hiểu mua sắm.
 - **Giọng điệu:** ngắn gọn, bình tĩnh, nói theo dữ liệu. Không hứa hẹn ("chắc chắn giá sẽ giảm"), không quy kết người bán ("lừa đảo"). Ví dụ đúng: "Mức giá hiện tại chưa thấp hơn đáng kể so với lịch sử quan sát."
 - **Trung lập với mọi sàn:** không ưu ái sàn nào; thứ tự và khuyến nghị chỉ theo dữ liệu.

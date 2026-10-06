@@ -1,5 +1,5 @@
 ---
-name: Kairo
+name: DealScore
 description: Bàn giá sáng. Kết luận và con số trả lời trước, biểu đồ chứng minh sau; một màu xanh dầu cho hành động, hổ phách ấm để nhấn, lime cho trạng thái đang theo dõi.
 colors:
   canvas: "#EFECE5"
@@ -497,13 +497,13 @@ components:
     width: "544px"
 ---
 
-# Design System: Kairo
+# Design System: DealScore
 
 ## Overview
 
 **Creative North Star: "Bàn giá sáng"**
 
-Kairo là một bàn giá sáng sủa và điềm tĩnh: người mua đặt câu hỏi (dán link hoặc gõ tìm), và câu trả lời nằm ngay trên mặt bàn. Kết luận (Nên mua / Có thể chờ / Chưa nên mua / Chưa đủ dữ liệu) và giá hiện tại nói trước; vòng điểm, biểu đồ và bảng so sánh nơi bán đứng sau để chứng minh. Hệ thống từ chối hai kiểu mặc định của ngành: sàn khuyến mãi ồn ào (nhãn đỏ, đồng hồ đếm ngược) và bảng phân tích xám lạnh.
+DealScore là một bàn giá sáng sủa và điềm tĩnh: người mua đặt câu hỏi (dán link hoặc gõ tìm), và câu trả lời nằm ngay trên mặt bàn. Kết luận (Nên mua / Có thể chờ / Chưa nên mua / Chưa đủ dữ liệu) và giá hiện tại nói trước; vòng điểm, biểu đồ và bảng so sánh nơi bán đứng sau để chứng minh. Hệ thống từ chối hai kiểu mặc định của ngành: sàn khuyến mãi ồn ào (nhãn đỏ, đồng hồ đếm ngược) và bảng phân tích xám lạnh.
 
 Chất liệu là nền giấy ngà ấm (`canvas`) và các tấm thẻ trắng ngà (`surface`) bo 20px viền mảnh 1px; bên trong thẻ, các ô lõm `surface-2` nửa trong suốt (35–60%) chia nhóm thông tin thay cho đường kẻ. Một màu **xanh dầu** duy nhất cho hành động, một **hổ phách ấm** để nhấn (chữ gradient trong tiêu đề, nhãn "Bước N", nút "Theo dõi giá" khi chưa theo dõi), và **lime** cho trạng thái đang theo dõi và từ tô sáng "đúng lúc". Toàn bộ chữ và số dùng một phông, Plus Jakarta Sans, số viết chữ số đều. Nút mua mang màu nhận diện của sàn đích để người dùng biết mình sắp rời sang đâu.
 
@@ -552,7 +552,7 @@ Giao diện tối là bảng màu riêng ("Slate Charcoal": nền xám than xanh
 - **Mực** (`ink`; tối #F4F5F7): tiêu đề, con số, chữ chính.
 - **Mực phụ** (`ink-2`; tối #CBD0DA): nội dung, mô tả, mục điều hướng chưa chọn, vế đầu mờ của tiêu đề trang chủ.
 - **Mực chú thích** (`ink-3`, 4.9:1 trên `surface-2`; tối #949BA8): chú thích, thời điểm cập nhật, giá niêm yết gạch ngang, câu công bố affiliate. Không có chữ nào nhạt hơn mức này.
-- **Đêm** (`night`; tối #14171D), **đêm nổi** (`night-2`; tối #1E222B), **viền đêm** (`night-line`; tối #737B8D), **chữ đêm** (`night-ink` / `night-ink-2` / `night-ink-3`): giờ chỉ còn là điểm nhấn nhỏ: phiên bản đang chọn, con trỏ trên thang Deal Score, số thứ tự và nút xác nhận trong hộp thoại "Cách Kairo kiểm tra", ô logo trang xác thực và trang tiện ích, thanh tiêu đề cửa sổ minh họa tiện ích, bộ lọc nền đêm của trang khám phá, nền phủ hộp thoại (60%).
+- **Đêm** (`night`; tối #14171D), **đêm nổi** (`night-2`; tối #1E222B), **viền đêm** (`night-line`; tối #737B8D), **chữ đêm** (`night-ink` / `night-ink-2` / `night-ink-3`): giờ chỉ còn là điểm nhấn nhỏ: phiên bản đang chọn, con trỏ trên thang Deal Score, số thứ tự và nút xác nhận trong hộp thoại "Cách DealScore kiểm tra", ô logo trang xác thực và trang tiện ích, thanh tiêu đề cửa sổ minh họa tiện ích, bộ lọc nền đêm của trang khám phá, nền phủ hộp thoại (60%).
 - **Pastel danh mục** (`tint-peach`, `tint-lilac`, `tint-violet`, `tint-sky`, `tint-butter`, `tint-mint`; tối #3B2C22, #36283E, #1B333B, #1E3142, #382B14, #17362A): ô biểu tượng danh mục, cuống phiếu mã giảm giá.
 
 ### Màu sàn
@@ -667,7 +667,7 @@ Mỗi thành phần là một ô trên bàn giá: rõ ràng, sáng, không có g
 
 ### Header và điều hướng
 - **Khung:** nền `surface`, cao 72px, viền dưới 1px `line`, dính trên cùng, nội dung trong khung 1440px.
-- **Logo:** ô 36px nền `primary` bo 12px bóng sợi, biểu tượng xu hướng trắng nét 2.4, cạnh chữ "Kairo" 22px/700.
+- **Logo:** ô 36px nền `primary` bo 12px bóng sợi, biểu tượng xu hướng trắng nét 2.4, cạnh chữ "DealScore" 22px/700. *Ghi chú:* chữ logo (wordmark) trong code vẫn hiện "Kairo" cho tới khi có logo mới; chủ sản phẩm sẽ làm lại logo, đừng tự đổi.
 - **Mục điều hướng:** Tìm kiếm · Giảm giá thật · Xu hướng · Đang theo dõi; cao 44px (40px trên điện thoại), đệm ngang 14px, bo 12px, 14px/500 `ink-2`, hover nền `surface-2`. Đang chọn: nền `surface-2`, chữ `ink` 600.
 - **Bên phải:** "Cài tiện ích" và chuông (không có chấm "chưa đọc" cho tới khi có dữ liệu thông báo chưa đọc thật) 44px nền `surface-2` 60% viền `line` bo 12px, biểu tượng `primary`, hover viền `primary` 40%; nút đổi giao diện; "Đăng nhập" dạng chữ 14px/600; hoặc viên thuốc tài khoản 44px viền `line` với ô chữ cái đầu lime, mở menu `surface` bo 12px bóng `--lift`.
 
@@ -682,7 +682,7 @@ Mọi nút đi qua `src/components/ui/button.tsx`: `<Button>`, `<ButtonLink>` ho
 - **Mua (màu sàn):** giống nút chính nhưng nền màu sàn và bóng chạm; cao 44px (`md`, 14px) hoặc 52px (`lg`, 16px/700), bo 12px, có biểu tượng mở ngoài và câu hoặc nhãn công bố bên dưới. Không có link: nền `surface-2`, chữ `ink-3`, viền `line`.
 - **Theo dõi:** "Theo dõi giá" cao 52px, bo 12px, 15px/700: chưa theo dõi nền `wait-soft` 80% viền `wait` 35% chữ `wait`; đang theo dõi nền và viền `accent`, chữ `on-accent`; tạm dừng nền `surface-2` viền `line-strong` chữ `ink-2`. `aria-pressed` phản ánh trạng thái.
 - **Phụ:** nền `surface`, viền 1px `line-strong`, chữ `ink` 14–15px/600, cao 44–52px, bo 10–12px; hover `surface-2`.
-- **Mực:** nền `night`, chữ `night-ink` 14px/700, cao 44px, bo 12px, hover mờ 90%: nút xác nhận trong hộp thoại "Cách Kairo kiểm tra".
+- **Mực:** nền `night`, chữ `night-ink` 14px/700, cao 44px, bo 12px, hover mờ 90%: nút xác nhận trong hộp thoại "Cách DealScore kiểm tra".
 - **Liên kết hành động:** chữ `primary` 13–14px/600, hover `primary-hover` và gạch chân lệch 4px ("Xem tất cả", "Xóa lọc", "Xem thêm").
 - **Viên gợi ý:** cao 40px, bo tròn, nền `surface-2` 55%, viền `line`, 13px/600; hover viền `line-strong` (gợi ý giá mong muốn).
 - **Focus:** viền ngoài 2px `--focus` cách 2px trên mọi nút.
@@ -734,7 +734,7 @@ Thẻ `surface` bo 20px đệm 24–28px: ô biểu tượng mục tiêu 40px `p
 Thẻ `surface` bo 20px; phiếu bo 12px viền 2px (`line` lúc nghỉ, `primary` khi chọn), cuống pastel ngăn cách bằng nét đứt; tóm tắt ước tính nằm trong khung đứt `line-strong` bo 14px trên nền `surface`, tổng "~" lớn, ghi chú 12px `ink-3`. Mã, mệnh giá, điều kiện và hạn dùng chỉ đến từ dữ liệu sàn thật.
 
 ### Kiểm tra mức giảm
-Banner `surface` viền `line`: biểu tượng khiên màu kết quả, tiêu đề, viên kết quả ("Hợp lệ" / "Chưa thực chất" / "Chưa đủ dữ liệu"), một câu `ink-2`, liên kết "Cách Kairo kiểm tra →" mở hộp thoại `surface` bo 20px bóng `--lift`, nền phủ đen 60%, ba bước đánh số trong vòng 26px nền `night`, nút mực 44px.
+Banner `surface` viền `line`: biểu tượng khiên màu kết quả, tiêu đề, viên kết quả ("Hợp lệ" / "Chưa thực chất" / "Chưa đủ dữ liệu"), một câu `ink-2`, liên kết "Cách DealScore kiểm tra →" mở hộp thoại `surface` bo 20px bóng `--lift`, nền phủ đen 60%, ba bước đánh số trong vòng 26px nền `night`, nút mực 44px.
 
 ### Thẻ sản phẩm
 - **Khung:** `surface`, viền 1px `line`, bo 20px, đệm 14px; hover nhấc 4px, viền `primary` 45%, bóng `--lift` (200ms), tên đổi `primary`.

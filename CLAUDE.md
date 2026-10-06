@@ -51,7 +51,9 @@ primitives in `src/components/ui/` (`Button`/`buttonClass`, `SegmentedControl`/`
 ESLint rejects `text-[Npx]`, `rounded-[Npx]`, `rounded-xl` and `font-[family-name:…]`.
 Numbers use the `num` utility (Plus Jakarta Sans, tabular), headings `display`; text ≥ 11px (11px only for nano labels). Page frame
 `max-w-[1440px] px-4 sm:px-6 lg:px-14`. `UI-mockup/` is the original reference; `docs/design-system/specimen.html`
-is the retired "Nhãn giá kệ hàng" world — don't copy it.
+is the retired "Nhãn giá kệ hàng" world — don't copy it. The product is **DealScore** (renamed from Kairo), but the
+logo wordmarks (header, footer, auth tile, extension popup/panel, OG image mark) still read "Kairo" until the owner's new
+logo lands — leave them alone.
 
 ## Next.js 16 gotchas
 
@@ -131,7 +133,9 @@ Never mix these up; the choice encodes the security model.
 - **Collector (1.10):** `runCollector()` (`src/lib/collector/run.ts`) → `record_observations` → rollup →
   `recomputeDealScores()` → `evaluateWatches()`. Chạy mọi sàn có nguồn (`configuredMarketplaces()` trong `src/lib/marketplaces/sources.ts`); một sàn sập chỉ dừng sàn đó.
   Backtest hằng tuần: `src/lib/pricing/backtest.ts` (thuần) → `backtest_runs`. `/api/health` cho uptime; Sentry chỉ
-  bật khi có `SENTRY_DSN`; lỗi đã bắt trong cron gửi qua `reportError()`.
+  bật khi có `SENTRY_DSN`; lỗi đã bắt trong cron gửi qua `reportError()`. Job pg_cron tên `dealscore-*` (đổi từ `kairo-*`
+  ở 0029: alerts, conversions, collector, backtest, sourcing, sourcing-demand, retention), đọc Vault `dealscore_app_url` /
+  `dealscore_cron_secret`; `admin_cron_status()` chỉ liệt kê `dealscore-*`.
 - **SEO (1.7):** `src/lib/seo/` (metadata, JSON-LD, sitemap — thuần). Canonical sản phẩm là `/{category}/{slug}`
   không query; draft là `noindex`. Trang danh mục `/{category}` và `/brand/{slug}`.
 - **Analytics (1.11):** first-party, bảng `analytics_events` + view `metrics_*`. Chỉ ghi qua `trackAfter()` phía server,
@@ -147,7 +151,7 @@ Never mix these up; the choice encodes the security model.
   Gom bản nháp: `draftKey()` (`src/lib/matching/draft-key.ts`, hãng + mã model + thuộc tính) → `ingest_listing` gắn tin bán
   vào bản nháp cùng khóa và giá trong ×2; search ẩn bản nháp chỉ có 1 listing, ưu tiên verified. Tự tìm theo nhu cầu: tìm theo
   tên ra < 3 kết quả → `recordSearchDemand()` (trong `after()`) → `request_sourcing_query` (`origin = 'demand'`, trần
-  `SOURCING_DEMAND_DAILY_CAP`); job `kairo-sourcing-demand` 3 giờ/lần chỉ chạy từ khóa nhu cầu đang chờ.
+  `SOURCING_DEMAND_DAILY_CAP`); job `dealscore-sourcing-demand` 3 giờ/lần chỉ chạy từ khóa nhu cầu đang chờ.
   Ingest dùng RPC `ingest_listing` (`ingest_shopee_item` chỉ còn là wrapper).
 - **Extension (G2):** `extension/` (MV3) chỉ nói chuyện với `/api/extension/*`; các route này chỉ nhận Origin của
   extension (`EXTENSION_IDS`). Giá do extension gửi chỉ vào lịch sử khi `corroborate()` xác nhận chéo: khớp giá API, hoặc 2 người khác cả contributor lẫn IP hash (`peer_key`) và nằm trong 0,5–1,5× giá API gần nhất. Kiểm Origin chỉ chống CSRF, không phải xác thực.

@@ -129,7 +129,7 @@
 
 ## 📈 Giai đoạn 2 — Mở rộng & tạo moat (tháng 4–6)
 - [x] Chrome Extension (nhận diện trang Shopee, Deal Score, tạo Watch, thu quan sát giá có đồng ý)
-  - `extension/` (MV3): khung Kairo trên trang Shopee, Watch một chạm, chia sẻ giá khi bật (mặc định tắt). API `/api/extension/*` chỉ nhận Origin của extension.
+  - `extension/` (MV3): khung DealScore trên trang Shopee, Watch một chạm, chia sẻ giá khi bật (mặc định tắt). API `/api/extension/*` chỉ nhận Origin của extension.
   - ✏️ Giá từ extension chỉ vào lịch sử khi **xác nhận chéo** (≥ 2 người khác nhau lệch ≤ 2% trong 24 giờ, hoặc khớp giá API). ⚠️ Bộ đọc trang (E1) và cookie phiên (E2) là giả định, phải kiểm trên Shopee/Chrome thật; cần icon + `EXTENSION_IDS` trước khi lên Web Store.
 - [ ] Mở rộng nguồn: TikTok Shop → Lazada
   - ✏️ Đã có khung adapter đa sàn (`src/lib/marketplaces/`): nhận diện URL TikTok Shop / Lazada, `/go` và collector theo sàn. ⚠️ Chưa có nguồn dữ liệu (chờ spike API).

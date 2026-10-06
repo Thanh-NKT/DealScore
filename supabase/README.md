@@ -115,8 +115,8 @@ Thứ tự chạy (một lần, lúc ít truy cập):
 - **Site URL** = `NEXT_PUBLIC_SITE_URL`; **Redirect URLs** = `${NEXT_PUBLIC_SITE_URL}/**`.
 - **Providers → Email:** bật *Confirm email*; mật khẩu tối thiểu 8 ký tự, yêu cầu *letters and digits*
   (khớp `config.toml` và `src/lib/auth/password.ts`).
-- **Template** `Confirm signup` = `supabase/templates/confirm-signup.html` (subject "Xác nhận email Kairo");
-  `Reset Password` = `supabase/templates/reset-password.html` (subject "Đặt lại mật khẩu Kairo").
+- **Template** `Confirm signup` = `supabase/templates/confirm-signup.html` (subject "Xác nhận email DealScore");
+  `Reset Password` = `supabase/templates/reset-password.html` (subject "Đặt lại mật khẩu DealScore").
 - **Rate limit** gửi email mỗi giờ: đặt theo gói Resend. `max_frequency` = 60 giây.
 - **Xác minh domain gửi** trên Resend (SPF, DKIM, DMARC) **trước** khi mở đăng ký.
 - Đổi `config.toml` ở local thì phải `supabase stop && supabase start` — Auth chỉ nạp cấu hình lúc khởi động.
@@ -124,29 +124,34 @@ Thứ tự chạy (một lần, lúc ít truy cập):
 
 ## Lịch chạy (pg_cron) — mỗi môi trường
 
-Migration 0006 tạo job `kairo-alerts` (mỗi 15 phút). Job đọc URL và secret từ Vault lúc chạy:
+Migration 0006 tạo job `dealscore-alerts` (mỗi 15 phút). Job đọc URL và secret từ Vault lúc chạy:
 
-    select vault.create_secret('https://kairo.vn', 'kairo_app_url');   -- local: http://host.docker.internal:3000
-    select vault.create_secret('<CRON_SECRET>', 'kairo_cron_secret');  -- trùng env CRON_SECRET của app
+    select vault.create_secret('https://dealscore.vn', 'dealscore_app_url');   -- local: http://host.docker.internal:3000
+    select vault.create_secret('<CRON_SECRET>', 'dealscore_cron_secret');  -- trùng env CRON_SECRET của app
+
+Tên job và secret: các migration 0006–0023 tạo job tên `kairo-*` đọc secret `kairo_app_url` / `kairo_cron_secret`;
+migration 0029 đổi chúng thành `dealscore-*` (cùng lịch, cùng lệnh) và đổi tên hai secret Vault nếu đã có (giữ nguyên
+giá trị). Bên dưới dùng tên sau 0029. Môi trường dựng mới chỉ cần tạo hai secret `dealscore_*` ở trên. Job dọn dữ liệu
+vận hành (0023) là `dealscore-retention` (03:23 giờ VN).
 
 Xem lịch sử chạy: `select * from cron.job_run_details order by start_time desc limit 20;`
 Ở local không đặt Vault thì dùng `pnpm alerts:run`.
 
-Migration 0007 thêm job `kairo-conversions` (phút 7, mỗi 6 giờ) — dùng chung hai secret Vault ở trên.
+Migration 0007 thêm job `dealscore-conversions` (phút 7, mỗi 6 giờ) — dùng chung hai secret Vault ở trên.
 Chưa đặt `SHOPEE_AFFILIATE_APP_ID` / `SHOPEE_AFFILIATE_SECRET` thì route trả `{ skipped: "not_configured" }`.
 
 Migration 0009 thêm hai job, cùng hai secret Vault ở trên:
 
-- `kairo-collector` (phút 17 mỗi giờ) → `/api/cron/collector`. Mỗi sàn chỉ được làm mới khi có nguồn dữ liệu
+- `dealscore-collector` (phút 17 mỗi giờ) → `/api/cron/collector`. Mỗi sàn chỉ được làm mới khi có nguồn dữ liệu
   (`configuredMarketplaces()` — Shopee Affiliate API / TikTok Shop API / fake ở dev); chưa sàn nào có thì route trả
   `{ skipped: "not_configured" }` và **không** ghi `collector_runs`. Một sàn sập không chặn sàn khác. Ở local:
   `SHOPEE_CLIENT=fake` rồi `pnpm collector:run`.
-- `kairo-backtest` (03:00 thứ Hai giờ VN) → `/api/cron/backtest`, ghi `backtest_runs`. Chạy tay: `pnpm backtest:run`.
+- `dealscore-backtest` (03:00 thứ Hai giờ VN) → `/api/cron/backtest`, ghi `backtest_runs`. Chạy tay: `pnpm backtest:run`.
   Xem kết quả: `select ran_at, samples, accuracy, buy_correct, buy_n, wait_correct, wait_n from backtest_runs order by ran_at desc;`
 
-Migration 0017 thêm job `kairo-sourcing` (02:41 giờ VN mỗi ngày) → `/api/cron/sourcing`, cùng hai secret Vault ở trên:
+Migration 0017 thêm job `dealscore-sourcing` (02:41 giờ VN mỗi ngày) → `/api/cron/sourcing`, cùng hai secret Vault ở trên:
 tự lấy sản phẩm mới cho từng sàn đã cấu hình, có trần mỗi ngày, ghi `sourcing_runs`. Chạy tay: `pnpm sourcing:run`.
-Migration 0019 thêm job `kairo-sourcing-demand` (`11 */3 * * *`) → `/api/cron/sourcing?mode=demand`: chỉ chạy các từ khóa nhu cầu
+Migration 0019 thêm job `dealscore-sourcing-demand` (`11 */3 * * *`) → `/api/cron/sourcing?mode=demand`: chỉ chạy các từ khóa nhu cầu
 (`origin = 'demand'`) đang chờ. Chạy tay: `pnpm sourcing:run all demand`.
 
 ## Giám sát (1.10)
@@ -165,12 +170,12 @@ Migration 0019 thêm job `kairo-sourcing-demand` (`11 */3 * * *`) → `/api/cron
 | Lớp | Cách | Giữ |
 |---|---|---|
 | 1. Supabase | Backup hằng ngày tự động (gói Pro). Bật thêm **PITR** khi có người dùng trả tiền / dữ liệu Watch lớn | 7 ngày (Pro), PITR theo add-on |
-| 2. Ngoài Supabase | `pnpm db:backup` (cần `SUPABASE_DB_URL` = connection string Session pooler) → `backups/kairo-YYYYMMDD-HHmm-{schema,data}.sql`. Chạy **hằng tuần**, chép lên kho lưu trữ khác (vd Google Drive / S3) | 8 bản gần nhất |
+| 2. Ngoài Supabase | `pnpm db:backup` (cần `SUPABASE_DB_URL` = connection string Session pooler) → `backups/dealscore-YYYYMMDD-HHmm-{schema,data}.sql`. Chạy **hằng tuần**, chép lên kho lưu trữ khác (vd Google Drive / S3) | 8 bản gần nhất |
 
 Mục tiêu: **RPO ≤ 24 giờ** (lớp 1), **RTO ≤ 4 giờ**. Khôi phục bản ngoài Supabase vào project mới:
 
-    psql "$NEW_DB_URL" -f backups/kairo-…-schema.sql
-    psql "$NEW_DB_URL" -f backups/kairo-…-data.sql
+    psql "$NEW_DB_URL" -f backups/dealscore-…-schema.sql
+    psql "$NEW_DB_URL" -f backups/dealscore-…-data.sql
 
 Lịch sử giá (`price_observations`) là thứ **không lấy lại được** nếu mất — ưu tiên kiểm tra bản backup có nó.
 Diễn tập khôi phục vào Supabase local mỗi quý (`supabase start` rồi hai lệnh `psql` ở trên với DB local).

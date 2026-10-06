@@ -1,4 +1,4 @@
-# Kairo — Personal Shopping Intelligence
+# DealScore — Personal Shopping Intelligence
 
 > "Đừng chỉ tìm giá rẻ. Tìm đúng thời điểm để mua."
 
