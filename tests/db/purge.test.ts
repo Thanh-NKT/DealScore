@@ -57,4 +57,21 @@ describe("purgeDeletedAccounts", () => {
     const r2 = await purgeDeletedAccounts({ now: new Date() }, admin);
     expect(r2.purged).not.toContain(old.id);
   });
+
+  it("works in batches until the backlog is empty", async () => {
+    const a = await userDeletedDaysAgo(40);
+    const b = await userDeletedDaysAgo(35);
+    const r = await purgeDeletedAccounts({ now: new Date(), limit: 1 }, admin);
+    expect(r.purged).toEqual(expect.arrayContaining([a.id, b.id]));
+    expect(r.remaining).toBe(0);
+  });
+
+  it("out of time → stops and reports the due accounts still remaining", async () => {
+    const a = await userDeletedDaysAgo(40);
+    const r = await purgeDeletedAccounts({ now: new Date(), deadline: Date.now() - 1 }, admin);
+    expect(r.purged).toEqual([]);
+    expect(r.remaining).toBeGreaterThanOrEqual(1);
+    const { data } = await admin.from("users").select("id").eq("id", a.id);
+    expect(data).toHaveLength(1);
+  });
 });
