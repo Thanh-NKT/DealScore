@@ -4,7 +4,8 @@ import { isAllowedExtensionOrigin } from "@/lib/extension/payload";
 /**
  * HTTP helpers for /api/extension/*. The extension calls from its service worker with the user's
  * Kairo cookie; only our extension's Origin is accepted, so no web page can use these endpoints
- * with that cookie.
+ * with that cookie. The Origin check is CSRF protection, NOT authentication: a script outside a
+ * browser can forge it, so request bodies stay untrusted (see src/lib/extension/corroborate.ts).
  */
 
 export function extensionOriginAllowed(request: Request): boolean {

@@ -45,6 +45,14 @@ describe("validateObservationPayload", () => {
     const fine = validateObservationPayload({ ...ok, observedAt: "2026-09-25T11:55:00Z" }, NOW);
     expect(fine.ok && fine.value.observedAt).toBe("2026-09-25T11:55:00.000Z");
   });
+
+  it("never stores a time in the future: a small lead is clamped to now, a larger one is rejected", () => {
+    const ahead = new Date(NOW.getTime() + 60_000).toISOString();
+    const clamped = validateObservationPayload({ ...ok, observedAt: ahead }, NOW);
+    expect(clamped.ok && clamped.value.observedAt).toBe(NOW.toISOString());
+    const future = new Date(NOW.getTime() + 5 * 60_000).toISOString();
+    expect(validateObservationPayload({ ...ok, observedAt: future }, NOW)).toEqual({ ok: false, error: "observedAt" });
+  });
 });
 
 describe("validateObservationPayload — vouchers and images", () => {

@@ -59,6 +59,8 @@ afterAll(async () => {
   await admin.from("extension_contributions").delete().like("contributor", `%${tag}%`);
 });
 
+const who = (contributor: string, peerKey: string) => ({ contributor, peerKey });
+
 const variantOf = async () =>
   (await admin.from("offers").select("variant_id").eq("id", offerId).single()).data?.variant_id ?? null;
 
@@ -67,17 +69,23 @@ const extensionRows = async () =>
 
 describe("recordContribution", () => {
   it("ignores items that are not in the catalog", async () => {
-    expect(await recordContribution(admin, `u:a-${tag}`, { ...payload(1), item: "1_1" })).toEqual({ status: "unknown_item" });
+    expect(await recordContribution(admin, who(`u:a-${tag}`, `netA-${tag}`), { ...payload(1), item: "1_1" })).toEqual({ status: "unknown_item" });
   });
 
   it("one contributor far from the API price is stored but not promoted", async () => {
-    const r = await recordContribution(admin, `u:a-${tag}`, payload(1_200_000));
+    const r = await recordContribution(admin, who(`u:a-${tag}`, `netA-${tag}`), payload(1_200_000));
     expect(r).toEqual({ status: "recorded", recorded: 1, promoted: 0 });
     expect(await extensionRows()).toEqual([]);
   });
 
-  it("a second contributor within 2% promotes one observation into the price history", async () => {
-    const r = await recordContribution(admin, `ip:b-${tag}`, payload(1_210_000));
+  it("the same person without the account cookie (same network) does not corroborate themselves", async () => {
+    const r = await recordContribution(admin, who(`ip:netA-${tag}`, `netA-${tag}`), payload(1_210_000));
+    expect(r).toEqual({ status: "recorded", recorded: 1, promoted: 0 });
+    expect(await extensionRows()).toEqual([]);
+  });
+
+  it("a second independent contributor within 2% promotes one observation into the price history", async () => {
+    const r = await recordContribution(admin, who(`ip:netB-${tag}`, `netB-${tag}`), payload(1_210_000));
     expect(r.status === "recorded" && r.promoted).toBe(1);
     const rows = await extensionRows();
     expect(rows).toHaveLength(1);
@@ -106,8 +114,50 @@ describe("recordContribution", () => {
   });
 
   it("the same offer is not promoted again within the hour", async () => {
-    await recordContribution(admin, `u:c-${tag}`, payload(1_205_000));
+    await recordContribution(admin, who(`u:c-${tag}`, `netC-${tag}`), payload(1_205_000));
     expect(await extensionRows()).toHaveLength(1);
+  });
+});
+
+describe("recordContribution — forged prices", () => {
+  const item2 = `8${Date.now() % 1_000_000}_${Math.floor(Math.random() * 1e9)}`;
+  let offer2: string;
+
+  beforeAll(async () => {
+    const { error } = await admin.rpc("ingest_shopee_item", {
+      p: {
+        ext_item_id: item2,
+        url: "https://shopee.vn/product/1/3",
+        title: `Ext forged ${tag}`,
+        slug_base: `test-ext-${tag}-forged`,
+        source: "seed",
+        seller: { external_id: `seller-${tag}` },
+        models: [{ model_id: "m1", name: "Tiêu chuẩn", price: 1_000_000, stock: 5 }],
+      },
+    });
+    if (error) throw error;
+    offer2 = (await admin.from("offers").select("id, listings!inner(external_item_id)").eq("listings.external_item_id", item2).single()).data!.id;
+  });
+
+  afterAll(async () => {
+    await admin.from("listings").delete().eq("external_item_id", item2);
+  });
+
+  it("two independent contributors agreeing on a price far below the API price are not promoted", async () => {
+    const forged = { ...payload(100_000), item: item2 };
+    await recordContribution(admin, who(`u:f1-${tag}`, `netF1-${tag}`), forged);
+    const r = await recordContribution(admin, who(`ip:netF2-${tag}`, `netF2-${tag}`), forged);
+    expect(r).toEqual({ status: "recorded", recorded: 1, promoted: 0 });
+    const { data } = await admin.from("price_observations").select("price").eq("offer_id", offer2).eq("source", "extension");
+    expect(data).toEqual([]);
+  });
+
+  it("stores the peer key with the contribution", async () => {
+    const { data } = await admin.from("extension_observations").select("contributor, peer_key").eq("offer_id", offer2).order("id");
+    expect(data).toEqual([
+      { contributor: `u:f1-${tag}`, peer_key: `netF1-${tag}` },
+      { contributor: `ip:netF2-${tag}`, peer_key: `netF2-${tag}` },
+    ]);
   });
 });
 

@@ -40,8 +40,11 @@ export async function POST(request: NextRequest) {
 
   try {
     // Identity from the session (never from the body); anonymous contributors by salted IP hash.
+    // The IP hash is also kept for signed-in users: corroboration counts one network as one peer,
+    // so the same person with and without the account cookie cannot corroborate themselves.
     const { data: auth } = await (await createClient()).auth.getUser();
-    const contributor = auth.user ? `u:${auth.user.id}` : `ip:${hashIp(clientIp(request.headers))}`;
+    const ipHash = hashIp(clientIp(request.headers));
+    const contributor = auth.user ? `u:${auth.user.id}` : `ip:${ipHash}`;
 
     const admin = createAdminClient();
     const { data: quota, error: qErr } = await admin.rpc("extension_contribution_begin", { p_contributor: contributor });
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
       return extJson(request, { error: "rate_limited", retryAfter: verdict?.retry_after_seconds ?? 3600 }, 429);
     }
 
-    const result = await recordContribution(admin, contributor, parsed.value, now);
+    const result = await recordContribution(admin, { contributor, peerKey: ipHash }, parsed.value, now);
     return extJson(request, result, result.status === "unknown_item" ? 202 : 200);
   } catch (err) {
     console.error("api/extension/observations failed:", err);

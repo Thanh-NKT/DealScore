@@ -377,6 +377,7 @@ export type Database = {
           id: string
           items_failed: number
           items_ok: number
+          pending_variant_ids: string[] | null
           per_marketplace: Json | null
           source: string
           started_at: string
@@ -387,6 +388,7 @@ export type Database = {
           id?: string
           items_failed?: number
           items_ok?: number
+          pending_variant_ids?: string[] | null
           per_marketplace?: Json | null
           source: string
           started_at?: string
@@ -397,6 +399,7 @@ export type Database = {
           id?: string
           items_failed?: number
           items_ok?: number
+          pending_variant_ids?: string[] | null
           per_marketplace?: Json | null
           source?: string
           started_at?: string
@@ -519,6 +522,7 @@ export type Database = {
           observed_at: string
           offer_id: string
           original_price: number | null
+          peer_key: string | null
           price: number
           promoted_at: string | null
           stock: number | null
@@ -533,6 +537,7 @@ export type Database = {
           observed_at: string
           offer_id: string
           original_price?: number | null
+          peer_key?: string | null
           price: number
           promoted_at?: string | null
           stock?: number | null
@@ -547,6 +552,7 @@ export type Database = {
           observed_at?: string
           offer_id?: string
           original_price?: number | null
+          peer_key?: string | null
           price?: number
           promoted_at?: string | null
           stock?: number | null
@@ -1042,6 +1048,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rate_counters: {
+        Row: {
+          expires_at: string
+          hits: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          expires_at: string
+          hits: number
+          key: string
+          window_start: string
+        }
+        Update: {
+          expires_at?: string
+          hits?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
       }
       sellers: {
         Row: {
@@ -1859,6 +1886,10 @@ export type Database = {
         }[]
       }
       prune_operational_data: { Args: never; Returns: Json }
+      rate_hit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: boolean
+      }
       record_observations: { Args: { p: Json }; Returns: string[] }
       record_watch_evaluation: {
         Args: {

@@ -25,8 +25,10 @@ interface OfferRef {
 
 /**
  * Which offer each model the extension read belongs to: by Shopee model id when the page gave one,
- * else by name against the variant key, else — only when the listing has exactly one offer — that
- * one. Anything ambiguous is dropped rather than guessed. Pure.
+ * else by name against the variant key, else — only when the page shows exactly ONE model and the
+ * listing has exactly one offer — that one. API-sourced listings have a single "default" offer for
+ * the whole listing: several page models (5.0M / 6.5M / 8.0M) must not all be filed under it, so an
+ * unmatched model of a multi-model page is dropped. Anything ambiguous is dropped rather than guessed. Pure.
  */
 export function mapModelsToOffers(models: ObservationModel[], offers: OfferRef[]): Array<{ model: ObservationModel; offerId: string }> {
   const out: Array<{ model: ObservationModel; offerId: string }> = [];
@@ -34,7 +36,8 @@ export function mapModelsToOffers(models: ObservationModel[], offers: OfferRef[]
     const byId = m.modelId ? offers.find((o) => o.externalModelId === m.modelId) : undefined;
     const name = normalizeText(m.name);
     const byName = name ? offers.filter((o) => o.variantKey && normalizeText(o.variantKey) === name) : [];
-    const offer = byId ?? (byName.length === 1 ? byName[0] : offers.length === 1 ? offers[0] : undefined);
+    const single = models.length === 1 && offers.length === 1 ? offers[0] : undefined;
+    const offer = byId ?? (byName.length === 1 ? byName[0] : single);
     if (offer) out.push({ model: m, offerId: offer.id });
   }
   return out;
@@ -49,13 +52,23 @@ export function voucherReporterId(contributor: string): string {
   return crypto.createHash("sha256").update(`voucher-reporter:${contributor}:${salt}`).digest("hex").slice(0, 32);
 }
 
+/**
+ * Who sent a contribution. `contributor` ("u:<user id>" / "ip:<hash>") keys the quota and the account
+ * link; `peerKey` (the salted IP hash, also for signed-in users) keys peer independence in corroborate().
+ */
+export interface Contributor {
+  contributor: string;
+  peerKey: string | null;
+}
+
 /** Record one contribution (listing must already be in the catalog), then try to promote. */
 export async function recordContribution(
   client: Client,
-  contributor: string,
+  who: Contributor,
   p: ObservationPayload,
   now = new Date(),
 ): Promise<ContributionResult> {
+  const { contributor, peerKey } = who;
   const { data: listing, error: lErr } = await client
     .from("listings")
     .select("id, offers ( id, external_model_id, variant_id, product_variants ( variant_key ) )")
@@ -94,6 +107,7 @@ export async function recordContribution(
     mapped.map(({ model, offerId }) => ({
       offer_id: offerId,
       contributor,
+      peer_key: peerKey,
       observed_at: p.observedAt,
       price: model.price,
       original_price: model.originalPrice,
@@ -108,6 +122,52 @@ export async function recordContribution(
   return { status: "recorded", recorded: mapped.length, promoted };
 }
 
+/** Price sources a contribution can be checked against (never 'extension' itself). */
+const TRUSTED_SOURCES = ["api", "seed"];
+const PAGE = 1000;
+const MAX_PAGES = 20;
+
+/** Read every page of a ranged query (bounded): PostgREST silently caps a read at 1,000 rows. */
+async function readPaged<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < MAX_PAGES; i++) {
+    const { data, error } = await page(i * PAGE, i * PAGE + PAGE - 1);
+    if (error) throw new Error(`Failed to read extension promotion inputs: ${error.message}`);
+    out.push(...(data ?? []));
+    if ((data ?? []).length < PAGE) break;
+  }
+  return out;
+}
+
+/**
+ * The latest valid API/collector price of each offer, whatever its age: the anchor a peer-only
+ * promotion must stay close to (corroborate.ts). Offers without one get no peer promotion.
+ */
+export async function latestTrustedPrices(client: Client, offerIds: string[]): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  const results = await Promise.all(
+    offerIds.map((id) =>
+      client
+        .from("price_observations")
+        .select("price")
+        .eq("offer_id", id)
+        .in("source", TRUSTED_SOURCES)
+        .eq("is_valid", true)
+        .not("price", "is", null)
+        .order("observed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ),
+  );
+  results.forEach(({ data, error }, i) => {
+    if (error) throw new Error(`Failed to read the trusted price: ${error.message}`);
+    if (data?.price != null) out[offerIds[i]] = Number(data.price);
+  });
+  return out;
+}
+
 /**
  * Run the corroboration rule for these offers and copy the promoted observations into
  * price_observations (source 'extension'), then refresh current price, today's rollup and scores.
@@ -116,35 +176,42 @@ export async function promoteExtensionObservations(client: Client, offerIds: str
   if (offerIds.length === 0) return 0;
   const since = new Date(now.getTime() - 2 * WINDOW_HOURS * 3_600_000).toISOString();
 
-  const [extRes, apiRes] = await Promise.all([
-    client
-      .from("extension_observations")
-      .select("id, offer_id, contributor, observed_at, price, original_price, stock, free_shipping, has_voucher, promoted_at")
-      .in("offer_id", offerIds)
-      .gte("observed_at", since)
-      .limit(1000),
-    client
-      .from("price_observations")
-      .select("offer_id, observed_at, price")
-      .in("offer_id", offerIds)
-      .in("source", ["api", "seed"])
-      .eq("is_valid", true)
-      .gte("observed_at", since)
-      .limit(1000),
+  // Newest first and paged: on a hot listing a bare 1,000-row read would drop rows at random.
+  const [rows, apiRows, anchors] = await Promise.all([
+    readPaged((from, to) =>
+      client
+        .from("extension_observations")
+        .select("id, offer_id, contributor, peer_key, observed_at, price, original_price, stock, free_shipping, has_voucher, promoted_at")
+        .in("offer_id", offerIds)
+        .gte("observed_at", since)
+        .order("observed_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    ),
+    readPaged((from, to) =>
+      client
+        .from("price_observations")
+        .select("offer_id, observed_at, price")
+        .in("offer_id", offerIds)
+        .in("source", TRUSTED_SOURCES)
+        .eq("is_valid", true)
+        .gte("observed_at", since)
+        .order("observed_at", { ascending: false })
+        .range(from, to),
+    ),
+    latestTrustedPrices(client, offerIds),
   ]);
-  if (extRes.error) throw new Error(`Failed to read contributions: ${extRes.error.message}`);
-  if (apiRes.error) throw new Error(`Failed to read API prices: ${apiRes.error.message}`);
 
-  const rows = extRes.data ?? [];
   const ext: ExtObs[] = rows.map((r) => ({
     id: r.id,
     offerId: r.offer_id,
     contributor: r.contributor,
+    peerKey: r.peer_key,
     observedAt: r.observed_at,
     price: Number(r.price),
     promotedAt: r.promoted_at,
   }));
-  const api: ApiObs[] = (apiRes.data ?? [])
+  const api: ApiObs[] = apiRows
     .filter((r) => r.price != null)
     .map((r) => ({ offerId: r.offer_id, observedAt: r.observed_at, price: Number(r.price) }));
 
@@ -155,7 +222,14 @@ export async function promoteExtensionObservations(client: Client, offerIds: str
     }
   }
 
-  const promotions = corroborate({ pending: ext.filter((e) => !e.promotedAt), recentExt: ext, recentApi: api, lastPromotedAt, now });
+  const promotions = corroborate({
+    pending: ext.filter((e) => !e.promotedAt),
+    recentExt: ext,
+    recentApi: api,
+    anchors,
+    lastPromotedAt,
+    now,
+  });
   if (promotions.length === 0) return 0;
 
   const byId = new Map(rows.map((r) => [r.id, r]));

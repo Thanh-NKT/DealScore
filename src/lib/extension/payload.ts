@@ -68,7 +68,10 @@ function extensionVouchers(raw: unknown[]): ExtensionVoucher[] {
 
 const MAX_MODELS = 50;
 const MAX_PRICE = 10_000_000_000;
+/** A claimed time this far in the past is replaced by the server time (the client clock looks off). */
 const CLOCK_SKEW_MS = 10 * 60_000;
+/** A claimed time further ahead than this is rejected; a smaller lead is clamped to the server time. */
+export const FUTURE_SKEW_MS = 2 * 60_000;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const optBool = (v: unknown): boolean | null => (typeof v === "boolean" ? v : null);
@@ -115,9 +118,14 @@ export function validateObservationPayload(
     return { ok: false, error: "images" };
   }
 
+  // Never store a time in the future: such a row would outlive the next collector observation and
+  // stay the "current" price. Slightly ahead → server time; clearly ahead → rejected.
   const claimed = typeof body.observedAt === "string" ? Date.parse(body.observedAt) : NaN;
+  if (Number.isFinite(claimed) && claimed - now.getTime() > FUTURE_SKEW_MS) return { ok: false, error: "observedAt" };
   const observedAt =
-    Number.isFinite(claimed) && Math.abs(claimed - now.getTime()) <= CLOCK_SKEW_MS ? new Date(claimed) : now;
+    Number.isFinite(claimed) && claimed <= now.getTime() && now.getTime() - claimed <= CLOCK_SKEW_MS
+      ? new Date(claimed)
+      : now;
 
   return {
     ok: true,
@@ -137,6 +145,8 @@ export function validateObservationPayload(
 /**
  * Only our own extension may call the write endpoints. Web pages cannot send a chrome-extension://
  * Origin, so this also stops cross-site request forgery with the user's Kairo cookie.
+ * This is NOT authentication: any non-browser client can send this Origin, and the extension id is
+ * public once it ships. Everything behind it treats the caller as untrusted (corroborate.ts).
  * EXTENSION_IDS = comma-separated ids; unset outside production = any unpacked dev extension.
  */
 export function isAllowedExtensionOrigin(origin: string | null, env: { ids?: string; production: boolean }): boolean {
