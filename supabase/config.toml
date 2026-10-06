@@ -2,6 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
+# Kept as "Kairo" after the DealScore rebrand: renaming it renames the local Docker volumes and orphans the local data.
 project_id = "Kairo"
 
 [api]
@@ -233,11 +234,11 @@ otp_length = 6
 otp_expiry = 3600
 
 [auth.email.template.confirmation]
-subject = "Xác nhận email Kairo"
+subject = "Xác nhận email DealScore"
 content_path = "./supabase/templates/confirm-signup.html"
 
 [auth.email.template.recovery]
-subject = "Đặt lại mật khẩu Kairo"
+subject = "Đặt lại mật khẩu DealScore"
 content_path = "./supabase/templates/reset-password.html"
 
 [auth.sms]
