@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth/session";
 import { restoreAccount, signOut } from "@/actions/account";
 import { ClockIcon } from "@/components/ui/icons";
 import { buttonClass } from "@/components/ui/button";
+import { purgeDate } from "@/lib/account/purge-date";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +18,8 @@ export default async function RestoreAccountPage() {
     redirect("/account");
   }
 
-  const deletedDate = new Date(user.deletedAt);
-  const purgeDate = new Date(deletedDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const purgeDateStr = purgeDate.toLocaleDateString("vi-VN", {
+  // Same rule as the purge job (PURGE_AFTER_DAYS), so the promised date cannot drift.
+  const purgeDateStr = purgeDate(new Date(user.deletedAt)).toLocaleDateString("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
     day: "2-digit",
     month: "2-digit",
