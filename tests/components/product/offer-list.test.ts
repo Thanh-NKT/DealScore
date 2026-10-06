@@ -62,3 +62,11 @@ describe("OfferList — one 'best' offer, the same one the hero's buy button goe
     expect(html.indexOf("Shop A")).toBeGreaterThan(html.indexOf("Giá tốt nhất"));
   });
 });
+
+describe("OfferList — after-voucher estimate", () => {
+  it("is marked as an estimate", () => {
+    const html = render([offer({ effectivePrice: 900_000 })]);
+    expect(html).toContain("~");
+    expect(html).toContain("Ước tính");
+  });
+});

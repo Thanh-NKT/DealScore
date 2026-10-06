@@ -54,3 +54,11 @@ describe("PriceSummary — the seller's list-price discount", () => {
     expect(html).toContain("chưa đủ lịch sử để kiểm tra");
   });
 });
+
+describe("PriceSummary — after-voucher estimate", () => {
+  it("is not shown as a number in the decision box; it links to the framed voucher block", () => {
+    const html = render(offer({ effectivePrice: 700_000 }));
+    expect(html).not.toContain("700.000đ");
+    expect(html).toContain('href="#ma-giam-gia"');
+  });
+});

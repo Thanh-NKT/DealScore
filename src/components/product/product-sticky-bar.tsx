@@ -18,6 +18,8 @@ interface ProductStickyBarProps {
   buyUrl?: string | null;
   buyLabel?: string;
   marketplace?: string | null;
+  /** The buy link carries our affiliate id: the disclosure sits next to it, on every screen width. */
+  affiliate?: boolean;
   isWatching?: boolean;
   onToggleWatch?: () => void;
   /** Id of the main buy area; the bar only shows once that area has scrolled out above the viewport. */
@@ -41,6 +43,7 @@ export function ProductStickyBar({
   buyUrl,
   buyLabel = "Mua ngay",
   marketplace,
+  affiliate = false,
   isWatching = false,
   onToggleWatch,
   anchorId,
@@ -141,7 +144,7 @@ export function ProductStickyBar({
                   <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                 </svg>
               </a>
-            <span className="hidden text-micro text-ink-3 sm:block">Liên kết tiếp thị</span>
+              {affiliate && <span className="text-micro text-ink-3">Liên kết tiếp thị</span>}
             </div>
           ) : (
             <button

@@ -367,6 +367,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         buyUrl={goHref}
         buyLabel={buy ? `Đến ${marketplaceName(buy.marketplace)}` : "Xem nơi bán"}
         marketplace={buy?.marketplace}
+        affiliate={buy?.affiliateEligible ?? false}
         isWatching={existingWatch?.status === "active"}
         anchorId="primary-buy"
       />

@@ -108,10 +108,13 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
         )}
       </div>
 
+      {/* DESIGN.md "Giá ước tính trong khung": the after-voucher estimate never sits in the decision box
+          next to the real price. Point to the voucher block, which shows it framed ("~", "Ước tính"). */}
       {effective != null && (
         <p className="text-body-sm text-ink-2">
-          ≈ <span className="num font-bold text-buy">{formatVnd(effective)}</span> sau voucher trên {where}{" "}
-          <span className="text-ink-3">(chưa gồm phí ship)</span>
+          <a href="#ma-giam-gia" className="font-semibold text-primary underline-offset-2 hover:underline">
+            Có mã giảm giá trên {where} · xem giá ước tính
+          </a>
         </p>
       )}
 

@@ -138,8 +138,13 @@ function OfferRow({
           <span className="text-body-sm font-medium text-ink-3">Chưa có giá</span>
         )}
         {price != null && effective != null && effective < price && (
-          <span className="text-micro font-semibold text-ink-2">
-            ≈ <span className="num">{formatVnd(effective)}</span> sau voucher
+          <span className="flex flex-wrap items-center gap-1 text-micro font-semibold text-ink-2 min-[761px]:justify-end">
+            <span>
+              ~<span className="num">{formatVnd(effective)}</span> sau voucher
+            </span>
+            <span className="rounded-sm border border-dashed border-line-strong px-1.5 text-nano font-bold text-ink-3">
+              Ước tính
+            </span>
           </span>
         )}
         {diffFromBest != null && (
