@@ -69,6 +69,7 @@ export interface VariantPricing {
   isStale: boolean; // updatedAt older than 48 hours
 }
 
+/** Same rule as SQL `offer_is_visible()` (migration 0022) — keep the two in sync. */
 export function isOfferVisible(offer: OfferRow, isDraftProduct: boolean): boolean {
   if (offer.listingStatus !== "active") return false;
   if (offer.matchStatus === "auto" || offer.matchStatus === "manual") return true;

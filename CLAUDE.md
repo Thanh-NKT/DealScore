@@ -110,6 +110,15 @@ Never mix these up; the choice encodes the security model.
 - **Matching v0 (1.9):** `src/lib/matching/` chấm offer ↔ variant **verified** (brand + model + dung lượng/màu/size).
   ≥ 0.95 → `ingest_shopee_item` gắn `auto`; thấp hơn → product draft + `match_candidates` (duyệt ở Admin — xem
   `docs/admin-checklist.md`). Giá hiện tại của variant luôn tính lại bằng RPC `refresh_variant_current_price`.
+- **Offer hiển thị — MỘT quy tắc (migration 0022):** offer được tính khi listing `active` **và**
+  (`match_status` ∈ `auto`/`manual`, hoặc `pending` trên product **draft**). SQL: `offer_is_visible()`; TS:
+  `isOfferVisible()` (`src/lib/pricing/variant-pricing.ts`). Dùng cho rollup (`refresh_variant_daily_prices`,
+  `admin_rebuild_variant_rollup`), `refresh_variant_current_price`, cụm draft trong `ingest_listing`, `search_products`
+  (cổng draft + lọc sàn), `filter_availability`. Không có offer `pending` trên product verified (promote chuyển sang `manual`).
+  Deal Score cache: `recomputeDealScores()` không lưu verdict cho variant hết hàng mọi nơi; `search_products` /
+  `trending_products` / `price_drop_radar` chỉ hiện score khi `price_at_compute` = giá trên thẻ. Rollup gọi kèm
+  `p_variant_ids` khi biết variant nào bị chạm (lọc theo khoảng `observed_at`, có index). Thứ tự khóa vòng đời draft:
+  advisory `draft:<key>` → dòng product → offer (`admin_lock_product()`); hàm nào sửa draft phải theo đúng thứ tự này.
 - **Collector (1.10):** `runCollector()` (`src/lib/collector/run.ts`) → `record_observations` → rollup →
   `recomputeDealScores()` → `evaluateWatches()`. Chạy mọi sàn có nguồn (`configuredMarketplaces()` trong `src/lib/marketplaces/sources.ts`); một sàn sập chỉ dừng sàn đó.
   Backtest hằng tuần: `src/lib/pricing/backtest.ts` (thuần) → `backtest_runs`. `/api/health` cho uptime; Sentry chỉ
