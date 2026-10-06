@@ -27,6 +27,11 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+const throttleAuth = vi.fn(async (..._args: unknown[]): Promise<unknown> => null);
+vi.mock("@/lib/auth/throttle", () => ({ throttleAuth: (...args: unknown[]) => throttleAuth(...args) }));
+const requestHeaders = new Headers({ "x-real-ip": "203.0.113.7" });
+vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
+
 const { signIn, signUp, resendConfirmation, requestPasswordReset, updatePassword } = await import("@/actions/auth");
 
 const IDLE = { status: "idle" } as const;
@@ -167,6 +172,66 @@ describe("updatePassword", () => {
       url: "/account",
     });
     expect(auth.updateUser).toHaveBeenCalledWith({ password: "abc12345" });
+  });
+});
+
+describe("app-level throttle in front of every auth call", () => {
+  const LIMITED = { code: "rate_limited", message: "Bạn đã thử quá nhiều lần. Đợi khoảng 15 phút rồi thử lại.", retryAfterSeconds: 900 };
+
+  it("counts each action with its own key, the normalized email and the request headers", async () => {
+    auth.signInWithPassword.mockResolvedValue({ data: { user: null }, error: { code: "invalid_credentials", status: 400 } });
+    auth.signUp.mockResolvedValue({ data: { user: { id: "u1" }, session: null }, error: null });
+    auth.resend.mockResolvedValue({ data: {}, error: null });
+    auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "An@Kairo.vn" } } });
+    auth.updateUser.mockResolvedValue({ data: {}, error: null });
+
+    await signIn(IDLE, form({ email: " An@Kairo.VN ", password: "abc12345", next: "/" }));
+    await signUp(IDLE, form({ email: "an@kairo.vn", password: "abc12345", confirm: "abc12345", next: "/" }));
+    await resendConfirmation(IDLE, form({ email: "an@kairo.vn", next: "/" }));
+    await requestPasswordReset(IDLE, form({ email: "an@kairo.vn" }));
+    await updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12345" })).catch(() => undefined);
+
+    expect(throttleAuth.mock.calls.map((c) => c[0])).toEqual(["sign_in", "sign_up", "resend", "reset", "update_password"]);
+    for (const [, input] of throttleAuth.mock.calls) {
+      expect(input).toEqual({ email: "an@kairo.vn", headers: requestHeaders });
+    }
+  });
+
+  it("invalid input is rejected locally and does not consume an attempt", async () => {
+    await signIn(IDLE, form({ email: "bad", password: "", next: "/" }));
+    await signUp(IDLE, form({ email: "an@kairo.vn", password: "short", next: "/" }));
+    await requestPasswordReset(IDLE, form({ email: "" }));
+    expect(throttleAuth).not.toHaveBeenCalled();
+  });
+
+  it("throttled sign-in → rate_limited, Supabase not called", async () => {
+    throttleAuth.mockResolvedValueOnce(LIMITED);
+    const r = await signIn(IDLE, form({ email: "an@kairo.vn", password: "abc12345", next: "/x" }));
+    expect(r).toEqual({ status: "error", error: LIMITED, email: "an@kairo.vn", next: "/x" });
+    expect(auth.signInWithPassword).not.toHaveBeenCalled();
+  });
+
+  it("throttled sign-up / resend / reset → rate_limited, no email is sent", async () => {
+    throttleAuth.mockResolvedValue(LIMITED);
+    const states = [
+      await signUp(IDLE, form({ email: "an@kairo.vn", password: "abc12345", confirm: "abc12345", next: "/" })),
+      await resendConfirmation(IDLE, form({ email: "an@kairo.vn", next: "/" })),
+      await requestPasswordReset(IDLE, form({ email: "ghost@kairo.vn" })),
+    ];
+    throttleAuth.mockResolvedValue(null);
+    for (const s of states) expect(s).toMatchObject({ status: "error", error: { code: "rate_limited" } });
+    expect(auth.signUp).not.toHaveBeenCalled();
+    expect(auth.resend).not.toHaveBeenCalled();
+    expect(auth.resetPasswordForEmail).not.toHaveBeenCalled();
+  });
+
+  it("throttled password change → rate_limited, updateUser not called", async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: "u1", email: "an@kairo.vn" } } });
+    throttleAuth.mockResolvedValueOnce(LIMITED);
+    const r = await updatePassword(IDLE, form({ password: "abc12345", confirm: "abc12345" }));
+    expect(r).toMatchObject({ status: "error", error: { code: "rate_limited" } });
+    expect(auth.updateUser).not.toHaveBeenCalled();
   });
 });
 

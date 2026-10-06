@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -13,6 +14,7 @@ import {
 import { PASSWORD_MESSAGES, passwordProblem } from "@/lib/auth/password";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { redirectAfterLogin } from "@/lib/auth/session";
+import { throttleAuth, type AuthAction } from "@/lib/auth/throttle";
 import { trackAfter } from "@/lib/analytics/track";
 import { siteUrl } from "@/lib/site-url";
 
@@ -41,6 +43,11 @@ function emailProblem(email: string): string | undefined {
   if (!isValidEmail(email)) return EMAIL_INVALID;
 }
 
+/** Counted only for attempts that pass local validation, right before the Supabase call. */
+async function throttled(action: AuthAction, email: string): Promise<AuthErrorInfo | null> {
+  return throttleAuth(action, { email, headers: await headers() });
+}
+
 function confirmRedirect(next: string): string {
   return `${siteUrl()}/auth/confirm?next=${encodeURIComponent(next)}`;
 }
@@ -54,6 +61,9 @@ export async function signIn(_prev: AuthFormState, form: FormData): Promise<Auth
   if (emailErr) fields.email = emailErr;
   if (!password) fields.password = PASSWORD_MESSAGES.empty;
   if (fields.email || fields.password) return { status: "error", fields, email, next };
+
+  const limited = await throttled("sign_in", email);
+  if (limited) return { status: "error", error: limited, email, next };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -76,6 +86,9 @@ export async function signUp(_prev: AuthFormState, form: FormData): Promise<Auth
   if (password !== confirm) fields.confirm = AUTH_MESSAGES.password_mismatch;
   if (fields.email || fields.password || fields.confirm) return { status: "error", fields, email, next };
 
+  const limited = await throttled("sign_up", email);
+  if (limited) return { status: "error", error: limited, email, next };
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -96,6 +109,9 @@ export async function resendConfirmation(_prev: AuthFormState, form: FormData): 
   const emailErr = emailProblem(email);
   if (emailErr) return { status: "error", fields: { email: emailErr }, email, next };
 
+  const limited = await throttled("resend", email);
+  if (limited) return { status: "error", error: limited, email, next };
+
   const supabase = await createClient();
   const { error } = await supabase.auth.resend({
     type: "signup",
@@ -111,6 +127,9 @@ export async function requestPasswordReset(_prev: AuthFormState, form: FormData)
   const next = "/";
   const emailErr = emailProblem(email);
   if (emailErr) return { status: "error", fields: { email: emailErr }, email, next };
+
+  const limited = await throttled("reset", email);
+  if (limited) return { status: "error", error: limited, email, next };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -142,6 +161,9 @@ export async function updatePassword(_prev: AuthFormState, form: FormData): Prom
   if (pwProblem) fields.password = PASSWORD_MESSAGES[pwProblem];
   if (password !== confirm) fields.confirm = AUTH_MESSAGES.password_mismatch;
   if (fields.password || fields.confirm) return { status: "error", fields, email, next };
+
+  const limited = await throttled("update_password", normalizeEmail(email));
+  if (limited) return { status: "error", error: limited, email, next };
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
