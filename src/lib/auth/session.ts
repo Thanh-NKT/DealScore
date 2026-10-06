@@ -82,6 +82,39 @@ export async function requireUser(opts: {
   redirect(gate.to);
 }
 
+export type GatedUser =
+  | { kind: "ok"; userId: string }
+  | { kind: "signed_out" }
+  /** Signed in, but the AuthGate would send them to consent or restore first. */
+  | { kind: "blocked"; reason: "consent" | "restore" };
+
+/**
+ * The AuthGate without a redirect, for API routes and Server Actions that answer with a status
+ * or an error instead of a page (the extension, form actions). Same rules as requireUser().
+ */
+export async function gateUser(supabase: SupabaseClient<Database>): Promise<GatedUser> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { kind: "signed_out" };
+
+  const { data: profile, error } = await supabase
+    .from("users")
+    .select("consent_version, deleted_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error) throw new Error(`Could not load user profile ${user.id}: ${error.message}`);
+
+  const gate = decideAuthGate({
+    userId: user.id,
+    profile: profile ? { consentVersion: profile.consent_version, deletedAt: profile.deleted_at } : null,
+    path: "/",
+  });
+  if (gate.kind === "ok") return { kind: "ok", userId: user.id };
+  if (gate.kind === "login") return { kind: "signed_out" };
+  return { kind: "blocked", reason: gate.kind };
+}
+
 /**
  * Route the user after a successful OTP verification.
  * Checks whether the account is pending deletion or needs consent before going to `next`.

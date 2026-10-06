@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CURRENT_CONSENT_VERSION } from "@/lib/account/consent";
 
 // Fake RLS client: records what the action writes.
 const upsert = vi.fn<(row: unknown, opts?: unknown) => Promise<{ error: { message: string } | null }>>(async () => ({ error: null }));
 let sessionUser: { id: string } | null = { id: "session-user" };
+let profile: { consent_version: string | null; deleted_at: string | null } = { consent_version: CURRENT_CONSENT_VERSION, deleted_at: null };
 const client = {
   auth: { getUser: vi.fn(async () => ({ data: { user: sessionUser }, error: null })) },
   from: vi.fn((table: string) => {
+    if (table === "users") return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: profile, error: null }) }) }) };
     if (table !== "user_preferences") throw new Error(`unexpected table ${table}`);
     return { upsert };
   }),
@@ -31,6 +34,7 @@ function form(entries: Array<[string, string]>): FormData {
 beforeEach(() => {
   vi.clearAllMocks();
   sessionUser = { id: "session-user" };
+  profile = { consent_version: CURRENT_CONSENT_VERSION, deleted_at: null };
   upsert.mockImplementation(async () => ({ error: null }));
 });
 
@@ -40,6 +44,17 @@ describe("savePreferences", () => {
     const r = await savePreferences(IDLE, form([["brands", "WD"]]));
     expect(r.status).toBe("error");
     expect(r.status === "error" && r.errors.form).toMatch(/đăng nhập/);
+    expect(upsert).not.toHaveBeenCalled();
+    expect(trackAfter).not.toHaveBeenCalled();
+  });
+
+  it("missing the current consent, or pending deletion → error, nothing written (AuthGate)", async () => {
+    profile = { consent_version: null, deleted_at: null };
+    const r1 = await savePreferences(IDLE, form([["brands", "WD"]]));
+    expect(r1.status === "error" && r1.errors.form).toMatch(/điều khoản/);
+    profile = { consent_version: CURRENT_CONSENT_VERSION, deleted_at: "2026-10-01T00:00:00Z" };
+    const r2 = await savePreferences(IDLE, form([["brands", "WD"]]));
+    expect(r2.status === "error" && r2.errors.form).toMatch(/chờ xóa/);
     expect(upsert).not.toHaveBeenCalled();
     expect(trackAfter).not.toHaveBeenCalled();
   });

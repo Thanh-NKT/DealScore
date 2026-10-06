@@ -6,6 +6,7 @@ import { trackAfter } from "@/lib/analytics/track";
 import { parsePreferencesForm, type PreferencesField } from "@/lib/preferences";
 import { savePreferencesForUser } from "@/lib/preferences/queries";
 import { createClient } from "@/lib/supabase/server";
+import { gateUser } from "@/lib/auth/session";
 
 export type PreferencesActionResult = ActionResult<PreferencesField | "form">;
 
@@ -18,12 +19,23 @@ export async function savePreferences(
   form: FormData,
 ): Promise<PreferencesActionResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  // Same AuthGate as the page: no writes without the current consent, or while pending deletion.
+  const gate = await gateUser(supabase);
+  if (gate.kind === "signed_out") {
     return { status: "error", errors: { form: "Phiên đăng nhập đã hết. Hãy đăng nhập lại để lưu sở thích." } };
   }
+  if (gate.kind === "blocked") {
+    return {
+      status: "error",
+      errors: {
+        form:
+          gate.reason === "consent"
+            ? "Hãy đồng ý điều khoản mới của Kairo (tải lại trang) rồi lưu lại sở thích."
+            : "Tài khoản đang chờ xóa. Khôi phục tài khoản để lưu sở thích.",
+      },
+    };
+  }
+  const user = { id: gate.userId };
 
   const parsed = parsePreferencesForm(form);
   if (!parsed.ok) return { status: "error", errors: parsed.errors };

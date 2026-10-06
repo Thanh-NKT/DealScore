@@ -159,6 +159,7 @@
         send({ type: "watch", variantId: s.variantId, targetPrice: target }).then(function (r) {
           if (r.status === 200) btn.outerHTML = '<p class="done">' + CHECK + "Đã theo dõi. Kairo sẽ báo khi giá ≤ " + vnd(target) + "</p>";
           else if (r.status === 401) btn.outerHTML = '<p class="msg">Phiên đăng nhập đã hết. Hãy đăng nhập lại trên Kairo.</p>';
+          else if (r.status === 403) btn.outerHTML = '<p class="msg">Mở Kairo để hoàn tất tài khoản (đồng ý điều khoản hoặc khôi phục tài khoản) rồi thử lại.</p>';
           else btn.outerHTML = '<p class="msg">Chưa lưu được. Thử lại sau ít phút.</p>';
         });
       });
