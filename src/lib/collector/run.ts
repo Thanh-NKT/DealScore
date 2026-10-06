@@ -97,6 +97,8 @@ export const POST_PROCESSING_RESERVE_MS = 20_000;
 /** A run still open after this long was killed: the collector lock lives 600 s. */
 export const STALE_RUN_MS = 15 * 60_000;
 const MAX_ADOPTED_RUNS = 50;
+/** Save the touched variant ids to the run row every N listings (kill-during-fetch safety). */
+const PENDING_FLUSH_EVERY = 25;
 
 /**
  * Variants left un-scored by earlier runs (killed, or post-processing failed), and the earliest day
@@ -134,7 +136,15 @@ async function adoptPendingRuns(
       .in("id", abandoned);
     if (closeError) errors.push(`close abandoned runs: ${closeError.message}`);
   }
-  // The ids now belong to this run (written to its own row below until they are re-scored).
+  // The ids now belong to this run: write them to its own row BEFORE clearing the old rows, so a run
+  // killed from here on still leaves them for the next one. If that write fails, keep the old rows.
+  if (variantIds.length > 0) {
+    const { error: ownError } = await client.from("collector_runs").update({ pending_variant_ids: variantIds }).eq("id", ownRunId);
+    if (ownError) {
+      errors.push(`adopt pending variants: ${ownError.message}`);
+      return { variantIds, since: rows[0].started_at };
+    }
+  }
   const { error: clearError } = await client.from("collector_runs").update({ pending_variant_ids: null }).in("id", adopted);
   if (clearError) errors.push(`adopt pending variants: ${clearError.message}`);
   return { variantIds, since: rows[0].started_at };
@@ -175,8 +185,23 @@ export async function runCollector(
   const perMarketplace: Record<string, MarketplaceRunStats> = {};
   const stats = (m: string) => (perMarketplace[m] ??= { ok: 0, failed: 0, aborted: false });
 
+  // Touched ids are saved every PENDING_FLUSH_EVERY listings, so a run killed while fetching leaves
+  // them (and the adopted ones) for the next run to re-score.
+  let flushedSize = touched.size;
+  let sinceFlush = 0;
+  const flushPending = async () => {
+    if (touched.size === flushedSize) return;
+    const { error } = await client.from("collector_runs").update({ pending_variant_ids: [...touched] }).eq("id", run.id);
+    if (!error) flushedSize = touched.size;
+    else if (errors.length < MAX_ERROR_MESSAGES) errors.push(`pending variants: ${error.message}`);
+  };
+
   for (const listing of due) {
     if (fetchDeadline && Date.now() > fetchDeadline) break;
+    if (++sinceFlush > PENDING_FLUSH_EVERY) {
+      sinceFlush = 1;
+      await flushPending();
+    }
     const s = stats(listing.marketplace);
     // A marketplace that is down is not called again this run; the others continue.
     if (s.aborted) continue;

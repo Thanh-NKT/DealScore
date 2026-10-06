@@ -278,6 +278,28 @@ describe("runCollector", () => {
     expect(mine!.pending_variant_ids).toBeNull();
   });
 
+  it("adopted ids are on the run's own row while it fetches (a kill during fetching loses nothing)", async () => {
+    const { data: killed } = await admin
+      .from("collector_runs")
+      .insert({ source: "seed", started_at: new Date(Date.now() - 3_600_000).toISOString(), pending_variant_ids: [variantId] })
+      .select("id")
+      .single();
+    runIds.push(killed!.id);
+    const l = await makeListing(2_000_000);
+    let holders: string[] = [];
+    const d = deps([l], async () => {
+      // "Killed" here: which rows still hold the id?
+      const { data } = await admin.from("collector_runs").select("id").contains("pending_variant_ids", [variantId]);
+      holders = (data ?? []).map((r) => r.id);
+      throw new MarketplaceItemNotFoundError("nope");
+    });
+    const r = await runCollector({ deadline: Date.now() + 50_000 }, admin, d);
+    if ("skipped" in r) throw new Error("unexpected skip");
+    runIds.push(r.runId);
+    expect(holders).toContain(r.runId);
+    expect(holders).not.toContain(killed!.id);
+  });
+
   it("records last_attempt_at on a failed fetch so it does not block the queue; the listing stays active", async () => {
     const missing = await makeListing(2_000_000);
     const before = Date.now();
