@@ -43,6 +43,14 @@ describe("lookupProductUrl", () => {
     expect(await call("https://evil.com/x")).toEqual({ status: "error", code: "not_shopee" });
   });
 
+  it("ingest quota denied → the lookup row is closed as rejected, not left pending", async () => {
+    configured.add("shopee");
+    beginIngest.mockResolvedValueOnce({ allowed: false, reason: "global_daily", retryAfterSeconds: 86_400 } as never);
+    expect(await call("https://shopee.vn/product/1/2")).toMatchObject({ status: "error", code: "upstream_unavailable" });
+    expect(finishLookup).toHaveBeenCalledWith(7, "rejected");
+    expect(ingestProduct).not.toHaveBeenCalled();
+  });
+
   it("existing listing → ok without ingest", async () => {
     configured.add("shopee");
     findExistingProductUrl.mockResolvedValueOnce("/ssd/x");

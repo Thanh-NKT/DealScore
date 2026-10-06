@@ -88,7 +88,8 @@ export async function lookupProductUrl(params: {
 
     const ingestVerdict = await beginIngest(requestId);
     if (!ingestVerdict.allowed) {
-      // System-wide cap reached: the user did nothing wrong.
+      // System-wide cap reached: the user did nothing wrong. Close the request row (not left 'pending').
+      await finishLookup(requestId, "rejected");
       return {
         status: "error",
         code: ingestVerdict.reason === "global_daily" ? "upstream_unavailable" : "rate_limited",
