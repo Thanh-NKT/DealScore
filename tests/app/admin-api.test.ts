@@ -101,6 +101,14 @@ describe("POST /api/admin/deal-scores/recompute", () => {
     await recompute.POST(req("/api/admin/deal-scores/recompute", { method: "POST", body: JSON.stringify({ variantIds: [A, B] }) }) as never);
     expect(deletedScores).toEqual([]);
   });
+  it("reads and deletes in chunks of at most 200 ids", async () => {
+    const many = Array.from({ length: 450 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
+    priced = [];
+    deletedScores.length = 0;
+    const res = await recompute.POST(req("/api/admin/deal-scores/recompute", { method: "POST", body: JSON.stringify({ variantIds: many }) }) as never);
+    expect(res.status).toBe(200);
+    expect(deletedScores.map((d) => d.length)).toEqual([200, 200, 50]);
+  });
   it("400 for a bad body or > 500 ids", async () => {
     expect((await recompute.POST(req("/api/admin/deal-scores/recompute", { method: "POST", body: "{}" }) as never)).status).toBe(400);
     const many = Array.from({ length: 501 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
