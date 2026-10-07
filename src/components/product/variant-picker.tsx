@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { formatVnd } from "@/lib/format";
+import type { VariantVerdict } from "@/lib/pricing/variant-verdict";
+import { verdictText } from "./verdict-tag";
 import { variantLabel } from "./variant-label";
 
 type Variant = {
@@ -7,7 +9,41 @@ type Variant = {
   variantKey: string;
   price: number | null;
   inStock: boolean;
+  /** Deal Score label of this variant (variantVerdict); { kind: "none" } shows nothing. */
+  verdict: VariantVerdict;
 };
+
+const DOT = { buy: "bg-buy", wait: "bg-wait", avoid: "bg-avoid" } as const;
+
+function chipTitle(label: string, note: string, verdict: VariantVerdict): string {
+  const base = `${label} (${note})`;
+  if (verdict.kind === "score") return `${base} · Deal Score ${verdict.score}/100 — ${verdictText(verdict.recommendation)}`;
+  if (verdict.kind === "insufficient") return `${base} · Chưa đủ dữ liệu để chấm điểm`;
+  return base;
+}
+
+/** Small verdict line inside a chip: the dot is the verdict colour, so green/red/grey still mean only the verdict. */
+function VerdictLine({ verdict, selected }: { verdict: VariantVerdict; selected: boolean }) {
+  if (verdict.kind === "none") return null;
+  const ink = selected ? "text-night-ink-2" : verdict.kind === "score" ? "text-ink-2" : "text-ink-3";
+  return (
+    <span aria-hidden="true" className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-micro font-semibold ${ink}`}>
+      {verdict.kind === "score" ? (
+        <>
+          <span className={`size-2 shrink-0 rounded-full ${DOT[verdict.recommendation]}`} />
+          <span>
+            {verdictText(verdict.recommendation)} · <span className="num">{verdict.score}</span>
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="size-2 shrink-0 rounded-full border border-ink-3" />
+          <span>Chưa đủ dữ liệu</span>
+        </>
+      )}
+    </span>
+  );
+}
 
 interface VariantPickerProps {
   variants: Variant[];
@@ -26,26 +62,34 @@ function priceNote(v: Variant): string {
 function Chip({ v, selected, range }: { v: Variant; selected: boolean; range: number }) {
   const label = variantLabel(v.variantKey);
   const note = priceNote(v);
+  const title = chipTitle(label, note, v.verdict);
+  const hasVerdict = v.verdict.kind !== "none";
   return (
     <Link
       href={`?variant=${encodeURIComponent(v.id)}&range=${range}`}
       scroll={false}
       aria-current={selected ? "true" : undefined}
-      title={`${label} (${note})`}
-      className={`inline-flex min-h-11 max-w-full items-center gap-2 rounded-md border px-4 py-1.5 text-body-sm font-semibold transition-colors duration-150 ease-out ${
+      title={title}
+      aria-label={hasVerdict ? title : undefined}
+      className={`inline-flex min-h-11 max-w-full items-center gap-x-2 gap-y-0.5 rounded-md border px-4 py-1.5 text-body-sm font-semibold transition-colors duration-150 ease-out ${
+        hasVerdict ? "max-sm:max-h-14 max-sm:flex-col max-sm:items-start max-sm:justify-center" : ""
+      } ${
         selected
           ? "border-night bg-night text-night-ink"
           : "border-line-strong bg-surface text-ink hover:bg-surface-2"
       }`}
     >
-      <span className="min-w-0 truncate">{label}</span>
-      <span
-        className={`shrink-0 whitespace-nowrap text-label font-medium ${v.inStock && note !== "Chưa có giá" ? "num" : ""} ${
-          selected ? "text-night-ink-2" : "text-ink-3"
-        }`}
-      >
-        {note}
+      <span className="inline-flex min-w-0 max-w-full items-center gap-2">
+        <span className="min-w-0 truncate">{label}</span>
+        <span
+          className={`shrink-0 whitespace-nowrap text-label font-medium ${v.inStock && note !== "Chưa có giá" ? "num" : ""} ${
+            selected ? "text-night-ink-2" : "text-ink-3"
+          }`}
+        >
+          {note}
+        </span>
       </span>
+      <VerdictLine verdict={v.verdict} selected={selected} />
     </Link>
   );
 }

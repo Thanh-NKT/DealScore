@@ -7,6 +7,7 @@ import { toGroups } from "@/lib/vouchers/select";
 import { collectedAt as vouchersCollectedAt } from "@/lib/vouchers/store";
 import { PriceSummary } from "@/components/product/price-summary";
 import { VariantPicker } from "@/components/product/variant-picker";
+import { variantVerdict } from "@/lib/pricing/variant-verdict";
 import { verdictNote } from "@/lib/pricing/verdict-copy";
 import { compareMarketplaces } from "@/lib/pricing/marketplace-compare";
 import { MarketplaceCompare } from "@/components/product/marketplace-compare";
@@ -93,6 +94,12 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const recommendation: Recommendation | null =
     headline && headline.score != null ? headline.recommendation : headline ? "insufficient_data" : null;
   const hasFakeSale = Boolean(pricing.fakeSaleMessage?.trim());
+  // Deal Score label per variant chip: live headline for the selected one, a still-matching cache for the others.
+  const verdictNow = new Date(nowIso);
+  const pickerVariants = variants.map((v) => ({
+    ...v,
+    verdict: variantVerdict({ variant: v, selectedId: selectedVariantId, headline, cached: v.cachedScore, now: verdictNow }),
+  }));
   // Deal Score, Watch and the chart work on the cheapest LISTED price (history has no vouchers)…
   const cheapest = pricing.cheapest;
   const currentPrice = cheapest?.price ?? pricing.lastKnown?.price ?? null;
@@ -210,7 +217,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                 </div>
 
                 {/* Variant Selector */}
-                <VariantPicker variants={variants} selectedId={selectedVariantId} range={range} />
+                <VariantPicker variants={pickerVariants} selectedId={selectedVariantId} range={range} />
               </div>
 
               {/* Main Price & Decision Box */}

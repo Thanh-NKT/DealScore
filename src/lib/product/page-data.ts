@@ -7,6 +7,8 @@ import {
   type VariantPricing,
 } from "@/lib/pricing/variant-pricing";
 import type { DailyPriceRow } from "@/lib/pricing/price-history";
+import type { Recommendation } from "@/lib/pricing/deal-score";
+import type { CachedVariantScore } from "@/lib/pricing/variant-verdict";
 import { toVnDate } from "@/lib/format";
 import { productGallery } from "@/lib/product/images";
 import { listVouchersForListings, VOUCHERS_CACHE_TAG, type VoucherScope } from "@/lib/vouchers/store";
@@ -42,6 +44,8 @@ export interface ProductPageData {
     inStock: boolean;
     /** Visible offers with a price for this variant (variant_current_price.offer_count). */
     offerCount?: number;
+    /** variant_deal_scores row (null = none); only shown while it matches the price (variantVerdict). */
+    cachedScore: CachedVariantScore | null;
   }>;
   selectedVariantId: string;
   pricing: VariantPricing;
@@ -74,7 +78,8 @@ export async function loadProductPageData(params: {
         categories ( slug, name ),
         product_variants (
           id, variant_key, specs,
-          variant_current_price ( price, original_price, in_stock, observed_at, offer_count )
+          variant_current_price ( price, original_price, in_stock, observed_at, offer_count ),
+          variant_deal_scores ( score, recommendation, price_at_compute, computed_at )
         )
       `)
       .eq("slug", productSlug)
@@ -96,12 +101,23 @@ export async function loadProductPageData(params: {
       const vcp = (Array.isArray(v.variant_current_price)
         ? v.variant_current_price[0]
         : v.variant_current_price) as Record<string, unknown> | undefined;
+      const vds = (Array.isArray(v.variant_deal_scores)
+        ? v.variant_deal_scores[0]
+        : v.variant_deal_scores) as Record<string, unknown> | null | undefined;
       return {
         id: v.id as string,
         variantKey: (v.variant_key as string) || "Tiêu chuẩn",
         price: vcp?.price != null ? Number(vcp.price) : null,
         inStock: (vcp?.in_stock as boolean | undefined) ?? true,
         offerCount: vcp?.offer_count != null ? Number(vcp.offer_count) : 0,
+        cachedScore: vds
+          ? {
+              score: vds.score != null ? Number(vds.score) : null,
+              recommendation: vds.recommendation as Recommendation,
+              priceAtCompute: vds.price_at_compute != null ? Number(vds.price_at_compute) : null,
+              computedAt: String(vds.computed_at),
+            }
+          : null,
       };
     });
 
