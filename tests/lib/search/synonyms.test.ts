@@ -1,0 +1,138 @@
+import { describe, expect, it } from "vitest";
+import {
+  expandQuery,
+  MAX_ALTERNATIVES,
+  MAX_TERM_GROUPS,
+  SYNONYM_RULES,
+} from "@/lib/search/synonyms";
+
+describe("expandQuery — category words", () => {
+  it("'tai nghe sony' → an OR-group for the phrase, the brand alone", () => {
+    const groups = expandQuery("tai nghe sony")!;
+    expect(groups).toHaveLength(2);
+    expect(groups[0][0]).toBe("tai nghe");
+    expect(groups[0]).toEqual(expect.arrayContaining(["headphone", "earbuds"]));
+    expect(groups[1]).toEqual(["sony"]);
+  });
+
+  it("works both ways: 'headphone' reaches 'tai nghe'", () => {
+    const [group] = expandQuery("Headphone")!;
+    expect(group[0]).toBe("headphone");
+    expect(group).toContain("tai nghe");
+  });
+
+  it("folds diacritics before matching ('Tai nghe', 'Điện thoại')", () => {
+    expect(expandQuery("Tai nghe")![0]).toContain("headphone");
+    expect(expandQuery("Điện thoại")![0]).toEqual(expect.arrayContaining(["dien thoai", "phone", "smartphone"]));
+  });
+
+  it("'dt' / 'đt' expand to phone words; the abbreviation is never offered as an alternative", () => {
+    expect(expandQuery("dt samsung")).toEqual([
+      ["dt", "dien thoai", "phone", "smartphone"],
+      ["samsung"],
+    ]);
+    expect(expandQuery("đt")).toEqual([["dt", "dien thoai", "phone", "smartphone"]]);
+    expect(expandQuery("smartphone")![0]).not.toContain("dt");
+  });
+
+  it("longest phrase wins ('sac du phong' before any shorter rule)", () => {
+    expect(expandQuery("sạc dự phòng anker")).toEqual([
+      ["sac du phong", "pin du phong", "powerbank", "power bank"],
+      ["anker"],
+    ]);
+  });
+
+  it("'o cung' adds ssd / hdd, but 'ssd' alone does not widen to hdd", () => {
+    expect(expandQuery("ổ cứng")).toEqual([["o cung", "ssd", "hdd"]]);
+    expect(expandQuery("ssd")).toBeUndefined();
+  });
+
+  it("covers the rest of the curated category words", () => {
+    const has = (q: string, alt: string) => expect(expandQuery(q)![0]).toContain(alt);
+    has("laptop", "may tinh xach tay");
+    has("lap", "laptop");
+    has("dong ho thong minh", "smartwatch");
+    has("loa", "speaker");
+    has("chuột", "mouse");
+    has("bàn phím", "keyboard");
+    has("màn hình", "monitor");
+    has("tivi", "tv");
+  });
+});
+
+describe("expandQuery — brand / model shorthands", () => {
+  it("'ip 15' → iphone 15", () => {
+    expect(expandQuery("ip 15")).toEqual([["ip 15", "iphone 15"]]);
+  });
+
+  it("glued forms: 'ip15pm', 'ipp15', 'iphone15'", () => {
+    expect(expandQuery("ip15pm")).toEqual([["ip15pm", "iphone 15 pro max"]]);
+    expect(expandQuery("ipp15")).toEqual([["ipp15", "iphone 15 pro"]]);
+    expect(expandQuery("iphone15")).toEqual([["iphone15", "iphone 15"]]);
+  });
+
+  it("'ip 15 pm' and 'ipp 14' with spaces", () => {
+    expect(expandQuery("ip 15 pm")).toEqual([["ip 15 pm", "iphone 15 pro max"]]);
+    expect(expandQuery("ipp 14")).toEqual([["ipp 14", "iphone 14 pro"]]);
+  });
+
+  it("'ip' without a number is left alone", () => {
+    expect(expandQuery("ip camera")).toBeUndefined();
+  });
+
+  it("ss → samsung, xm / mi → xiaomi, pm → pro max", () => {
+    expect(expandQuery("ss s24")).toEqual([["ss", "samsung"], ["s24"]]);
+    expect(expandQuery("xm")).toEqual([["xm", "xiaomi"]]);
+    expect(expandQuery("mi band")).toEqual([["mi", "xiaomi"], ["band"]]);
+    expect(expandQuery("galaxy pm")).toEqual([["galaxy"], ["pm", "pro max"]]);
+  });
+
+  it("capacity spacing: '2tb' ≡ '2 tb'", () => {
+    expect(expandQuery("ssd 2tb")).toEqual([["ssd"], ["2tb", "2 tb"]]);
+    expect(expandQuery("ssd 2 TB")).toEqual([["ssd"], ["2 tb", "2tb"]]);
+    expect(expandQuery("512gb")).toEqual([["512gb", "512 gb"]]);
+  });
+});
+
+describe("expandQuery — safety and no-op cases", () => {
+  it("no synonym → undefined (the RPC runs its plain v11 query)", () => {
+    expect(expandQuery("sony wh 1000xm5")).toBeUndefined();
+    expect(expandQuery("")).toBeUndefined();
+    expect(expandQuery("   !!! ")).toBeUndefined();
+  });
+
+  it("the original phrase is always first", () => {
+    for (const q of ["tai nghe", "headphone", "dt", "ip 15", "2tb", "loa"]) {
+      const groups = expandQuery(q)!;
+      expect(groups[0][0]).toBe(q.replace(/\s+/g, " "));
+    }
+  });
+
+  it(`at most ${MAX_ALTERNATIVES} alternatives per group`, () => {
+    for (const rule of SYNONYM_RULES) {
+      for (const phrase of rule.match) {
+        for (const group of expandQuery(phrase) ?? []) {
+          expect(group.length).toBeLessThanOrEqual(MAX_ALTERNATIVES);
+          expect(new Set(group).size).toBe(group.length);
+        }
+      }
+    }
+  });
+
+  it(`more than ${MAX_TERM_GROUPS} groups → no expansion (never drop words)`, () => {
+    const words = Array.from({ length: MAX_TERM_GROUPS }, (_, i) => `w${i}`).join(" ");
+    expect(expandQuery(`tai nghe ${words}`)).toBeUndefined();
+    expect(expandQuery(`tai nghe ${words.split(" ").slice(1).join(" ")}`)).toHaveLength(MAX_TERM_GROUPS);
+  });
+
+  it("output only holds folded [a-z0-9] words — punctuation never reaches the RPC", () => {
+    const groups = expandQuery("tai-nghe | (sony) & !headphone:*")!;
+    for (const g of groups) for (const alt of g) expect(alt).toMatch(/^[a-z0-9]+( [a-z0-9]+)*$/);
+  });
+
+  it("every lexicon phrase is already in folded form", () => {
+    for (const rule of SYNONYM_RULES) {
+      for (const p of [...rule.match, ...rule.alternatives]) expect(p).toMatch(/^[a-z0-9]+( [a-z0-9]+)*$/);
+    }
+  });
+});
