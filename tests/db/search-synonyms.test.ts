@@ -167,20 +167,46 @@ describe("search_products — synonym groups", () => {
     expect(spaced).toEqual(glued);
   });
 
-  it("hostile group values are only words: no error, no tsquery syntax", async () => {
-    const { error } = await admin.rpc("search_products", {
-      p_q: tag,
-      p_term_groups: [["a)|(b:*", "!!", "c & d <-> e"], ["'; drop table products; --"], [], "x", 5, null, { k: 1 }],
+  async function ids(pQ: string, groups?: unknown) {
+    const { data, error } = await admin.rpc("search_products", {
+      p_q: pQ,
+      p_term_groups: groups as Database["public"]["Functions"]["search_products"]["Args"]["p_term_groups"],
+      p_limit: 60,
     });
-    expect(error).toBeNull();
-    const { error: notArray } = await admin.rpc("search_products", { p_q: tag, p_term_groups: { a: 1 } });
-    expect(notArray).toBeNull();
+    if (error) throw error;
+    return (data ?? []).map((r) => r.product_id).sort();
+  }
+
+  it("hostile group values are only words: no error, and the rows are exactly the plain query's", async () => {
+    const plain = await ids(tag);
+    expect(plain.length).toBeGreaterThan(0);
+    expect(await ids(tag, [["a)|(b:*", "!!", "c & d <-> e"], ["'; drop table products; --"], [], "x", 5, null, { k: 1 }])).toEqual(plain);
+    expect(await ids(tag, { a: 1 })).toEqual(plain);
   });
 
-  it("caps: more than 10 groups / 6 alternatives are ignored, not an error", async () => {
-    const many = Array.from({ length: 15 }, () => Array.from({ length: 9 }, (_, i) => `w${i}`));
-    const { error } = await admin.rpc("search_products", { p_q: tag, p_term_groups: [[tag], ...many] });
-    expect(error).toBeNull();
+  // A keyword that matches nothing by itself, so only the groups decide the rows.
+  const none = "qqzzqqzzqq";
+
+  it("caps: only the first 10 groups are read (an 11th, impossible group is ignored)", async () => {
+    const tagged = await ids(tag);
+    const ten = Array.from({ length: 10 }, () => [tag]);
+    expect(await ids(none, ten)).toEqual(tagged);
+    expect(await ids(none, [...ten, ["nomatchzzqq"]])).toEqual(tagged);
+    expect(await ids(none, [...ten.slice(1), ["nomatchzzqq"]])).toEqual([]);
+  });
+
+  it("caps: only the first 6 alternatives of a group are read", async () => {
+    const decoys = ["n1zzqq", "n2zzqq", "n3zzqq", "n4zzqq", "n5zzqq"];
+    expect(await ids(none, [[...decoys, tag]])).toEqual(await ids(tag));
+    expect(await ids(none, [[...decoys, "n6zzqq", tag]])).toEqual([]);
+  });
+
+  it("an oversized p_term_groups costs no more than the caps (read by index, not enumerated)", async () => {
+    const tagged = await ids(tag);
+    const huge = [[tag, ...Array.from({ length: 20_000 }, (_, i) => `a${i}`)], ...Array.from({ length: 20_000 }, () => [tag])];
+    const t0 = performance.now();
+    expect(await ids(none, huge)).toEqual(tagged);
+    expect(performance.now() - t0).toBeLessThan(5_000);
   });
 });
 
