@@ -55,3 +55,13 @@ describe("WatchList rows", () => {
     expect(html).toContain("Chưa có giá để so");
   });
 });
+
+describe("WatchList — price-hike status (roadmap P2 item C)", () => {
+  it("opted in: summary line; active edge: the wait-toned status line", () => {
+    expect(render([item({}, { priceHike: { active: false } })])).toContain("Báo khi giá bị đẩy lên");
+    const html = render([item({}, { priceHike: { active: true } })]);
+    expect(html).toContain("Giá đang cao hơn mức thường thấy");
+    expect(html).toContain("text-wait");
+    expect(render([item()])).not.toContain("giá bị đẩy lên");
+  });
+});

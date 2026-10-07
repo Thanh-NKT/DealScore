@@ -10,6 +10,8 @@ import { WatchModal } from "@/components/watch/watch-modal";
 import type { MyWatchItem } from "@/lib/watch/queries";
 import { watchGoHref } from "@/lib/watch/links";
 import { changeLabel, countDropped7d } from "@/components/watch/change-label";
+import { purchaseNotice, savingsCopy } from "@/components/watch/savings-copy";
+import { summarizeSavings } from "@/lib/watch/savings";
 import { marketplaceName } from "@/components/product/marketplace";
 import { variantLabel } from "@/components/product/variant-label";
 import { verdictText } from "@/components/product/verdict-tag";
@@ -101,6 +103,8 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  /** Watch just marked "Đã mua": its result line shows once the refreshed list has it as done. */
+  const [purchasedId, setPurchasedId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   // Alert emails link to /account/watch#{watchId}: switch to that watch's tab, then scroll to it.
@@ -177,6 +181,12 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
   const alertsOnCount = items.filter((i) => i.status === "active").length;
 
   const currentTabInfo = TABS.find((t) => t.key === activeTab)!;
+
+  // "Đã mua" savings: net over purchases with enough price history, shown only when positive.
+  const savings = summarizeSavings(
+    items.filter((i) => i.status === "done" && i.purchase).map((i) => i.purchase!),
+  );
+  const purchased = purchasedId ? items.find((i) => i.id === purchasedId && i.status === "done") : undefined;
 
   return (
     <div className="grid grid-cols-1 items-start gap-8 min-[1080px]:grid-cols-[260px_1fr]">
@@ -339,6 +349,23 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
           })}
         </div>
 
+        {purchased && (
+          <p role="status" className="text-body-sm font-semibold text-ink-2">
+            {purchaseNotice(purchased.product.name?.trim() || "Sản phẩm", purchased.purchase)}
+          </p>
+        )}
+
+        {activeTab === "done" && savings.counted >= 1 && savings.total > 0 && (
+          <div className="flex flex-col gap-1 rounded-md border border-line bg-surface px-4 py-3 shadow-xs">
+            <span className="num display text-stat font-extrabold leading-none text-buy">{formatVnd(savings.total)}</span>
+            <span className="text-label font-medium text-ink-2">Bạn đã mua thấp hơn trung vị 30 ngày</span>
+            <span className="text-micro text-ink-3">
+              Tính trên <span className="num">{savings.counted}</span> lần mua có đủ lịch sử giá · giá DealScore ghi nhận lúc bạn
+              bấm “Đã mua”.
+            </span>
+          </div>
+        )}
+
         {/* Tracked Items Table */}
         {folderFilteredItems.length === 0 ? (
           <div className="rounded-lg border border-dashed border-line-strong bg-surface p-12 text-center">
@@ -386,6 +413,8 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
 
                 const price = view.price != null && view.price > 0 ? view.price : null;
                 const chg = changeLabel(view);
+                const saving = item.status === "done" && item.purchase ? savingsCopy(item.purchase) : null;
+                const savingColor = saving?.tone === "buy" ? "text-buy" : saving?.tone === "ink-2" ? "text-ink-2" : "text-ink-3";
                 const chgColor = chg.tone === "buy" ? "text-buy" : chg.tone === "avoid" ? "text-avoid" : "text-ink-3";
                 const goHref = watchGoHref(item);
                 const buy = goHref ? item.buy : null;
@@ -499,6 +528,11 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                           <ClockIcon className="size-3.5 text-ink-3" />
                           <span>{updatedAgo ?? "Chưa rõ thời điểm cập nhật"}</span>
                         </span>
+                        {view.priceHike?.active ? (
+                          <span className="text-micro font-semibold text-wait">Giá đang cao hơn mức thường thấy</span>
+                        ) : view.priceHike ? (
+                          <span className="text-micro text-ink-3">Báo khi giá bị đẩy lên</span>
+                        ) : null}
                       </div>
                     </div>
 
@@ -507,13 +541,22 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                       <span className="display whitespace-nowrap text-title font-bold text-ink">
                         {price != null ? formatVnd(price) : "—"}
                       </span>
-                      <span
-                        title={chg.title ?? undefined}
-                        className={`num whitespace-nowrap text-micro font-semibold ${chgColor}`}
-                      >
-                        {chg.text}
-                      </span>
-                      {chg.sub && <span className="num whitespace-nowrap text-micro text-ink-3">{chg.sub}</span>}
+                      {saving ? (
+                        <>
+                          <span className={`num text-micro font-semibold ${savingColor}`}>{saving.text}</span>
+                          <span className="num text-micro text-ink-3">{saving.sub}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span
+                            title={chg.title ?? undefined}
+                            className={`num whitespace-nowrap text-micro font-semibold ${chgColor}`}
+                          >
+                            {chg.text}
+                          </span>
+                          {chg.sub && <span className="num whitespace-nowrap text-micro text-ink-3">{chg.sub}</span>}
+                        </>
+                      )}
                     </div>
 
                     {/* Col 3: Deal Score (Visual Progress Ring + Status Badge) */}
@@ -770,6 +813,10 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
             }}
             folders={folders}
             currentPath="/account/watch"
+            onStatusChange={(status) => {
+              setPurchasedId(status === "done" ? editing.id : null);
+              router.refresh();
+            }}
           />
         )}
 

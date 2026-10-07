@@ -30,6 +30,8 @@ interface WatchModalProps {
   currentPath: string;
   /** When given, the modal shows a "Thư mục" select and files the Watch on save. */
   folders?: WatchFolder[];
+  /** Called after the server confirmed a status change (pause / resume / "Đã mua"). */
+  onStatusChange?: (status: "active" | "paused" | "done") => void;
 }
 
 type ChannelMode = "account" | "email" | "push" | "both";
@@ -92,6 +94,7 @@ export function WatchModal({
   existingWatch,
   currentPath,
   folders,
+  onStatusChange,
 }: WatchModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const uid = useId();
@@ -184,12 +187,13 @@ export function WatchModal({
     setDirty(false);
   };
 
-  const runStatus = async (next: "active" | "paused") => {
+  const runStatus = async (next: "active" | "paused" | "done") => {
     if (!existingWatch) return;
     setBusy("status");
     setActionError(null);
     try {
       await setWatchStatus(existingWatch.id, next);
+      onStatusChange?.(next);
       onClose();
     } catch (err) {
       unstable_rethrow(err);
@@ -527,6 +531,11 @@ export function WatchModal({
                   >
                     {busy === "status" ? "Đang cập nhật…" : existingWatch.status === "active" ? "Tạm dừng" : "Theo dõi lại"}
                   </button>
+                  {existingWatch.status !== "done" && (
+                    <button type="button" className={secondaryBtn} disabled={busy != null || isSaving} onClick={() => runStatus("done")}>
+                      Đã mua
+                    </button>
+                  )}
                   <button type="button" className={secondaryBtn} disabled={busy != null || isSaving} onClick={() => setConfirmDelete(true)}>
                     Xóa
                   </button>
