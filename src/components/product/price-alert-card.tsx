@@ -8,6 +8,9 @@ import { saveWatch } from "@/actions/watch";
 import type { WatchConfig } from "@/lib/watch/types";
 import { CheckIcon, TargetIcon } from "@/components/ui/icons";
 import { parseVndInput } from "@/components/watch/price-input";
+import type { DailyPriceRow } from "@/lib/pricing/price-history";
+import { targetEvidence, typicalTarget } from "@/lib/watch/target-evidence";
+import { targetEvidenceCopy } from "@/components/product/target-evidence-copy";
 
 interface PriceAlertCardProps {
   variantId: string;
@@ -18,6 +21,8 @@ interface PriceAlertCardProps {
   existingConfig?: WatchConfig | null;
   isLoggedIn: boolean;
   currentPath: string;
+  /** The variant's daily rollup (already on the page): grounds the target in real history. */
+  dailyPrices?: DailyPriceRow[];
 }
 
 const DEAL_SCORE_THRESHOLD = 75;
@@ -37,7 +42,10 @@ export function PriceAlertCard({
   existingConfig,
   isLoggedIn,
   currentPath,
+  dailyPrices,
 }: PriceAlertCardProps) {
+  // One clock per mount: evidence is per VN calendar day, so render-to-render drift does not matter.
+  const [now] = useState(() => new Date());
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -117,6 +125,12 @@ export function PriceAlertCard({
     });
   };
 
+  const evidence = dailyPrices && targetVal != null ? targetEvidence(dailyPrices, targetVal, now) : null;
+  const typical = dailyPrices ? typicalTarget(dailyPrices, now) : null;
+  const otherPresets = [cur != null ? roundTo10k(cur * 0.95) : null, cur != null ? roundTo10k(cur * 0.9) : null, low];
+  const showTypical = typical != null && !otherPresets.includes(typical);
+  const evidenceCopy = evidence ? targetEvidenceCopy(evidence, gapPct) : null;
+
   let note: string | null = null;
   if (gap != null && gapPct != null && targetVal != null) {
     if (gap <= 0) note = "Giá hiện tại đã thấp hơn hoặc bằng mức này. DealScore sẽ báo ở lần kiểm tra giá tới.";
@@ -161,7 +175,7 @@ export function PriceAlertCard({
       </div>
 
       {/* Presets: only from real numbers */}
-      {(cur != null || low != null) && (
+      {(cur != null || low != null || showTypical) && (
         <div className="flex flex-wrap gap-2">
           {cur != null && (
             <>
@@ -172,6 +186,11 @@ export function PriceAlertCard({
                 −10%
               </button>
             </>
+          )}
+          {showTypical && (
+            <button type="button" onClick={() => pick(typical)} className={`${PILL} flex-[1.2]`}>
+              Mức giá hay chạm
+            </button>
           )}
           {low != null && (
             <button type="button" onClick={() => pick(low)} className={`${PILL} flex-[1.4]`}>
@@ -208,7 +227,20 @@ export function PriceAlertCard({
             <div style={{ width: `${closePct}%` }} className="h-full rounded-full bg-primary transition-all duration-300" />
           </div>
 
-          {note && <span className="text-micro leading-relaxed text-ink-3">{note}</span>}
+          <div aria-live="polite" className="flex flex-col gap-1">
+            {evidenceCopy ? (
+              <>
+                <span className="text-micro leading-relaxed text-ink-2">
+                  {evidenceCopy.lead}
+                  {evidenceCopy.count && <strong className="num font-bold text-ink">{evidenceCopy.count}</strong>}
+                  {evidenceCopy.tail}
+                </span>
+                <span className="text-micro text-ink-3">Không tính giá flash sale.</span>
+              </>
+            ) : (
+              note && <span className="text-micro leading-relaxed text-ink-3">{note}</span>
+            )}
+          </div>
         </div>
       )}
 

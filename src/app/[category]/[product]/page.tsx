@@ -341,6 +341,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               isLoggedIn={Boolean(user)}
               variantId={selectedVariantId}
               currentPath={currentPath}
+              dailyPrices={dailyPrices}
             />
           </section>
 
