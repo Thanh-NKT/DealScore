@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "DealScore — lịch sử giá & Deal Score",
   "short_name": "DealScore",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Xem giá DealScore ghi nhận, Deal Score và kết luận Nên mua / Có thể chờ ngay trên trang Shopee. Đặt theo dõi giá chỉ với một chạm.",
   "permissions": ["storage"],
   "host_permissions": ["https://dealscore.vn/*", "http://localhost:3000/*", "http://127.0.0.1:3000/*"],
@@ -10,7 +10,7 @@
   "content_scripts": [
     {
       "matches": ["https://shopee.vn/*", "https://www.shopee.vn/*"],
-      "js": ["src/parse-shopee.js", "src/content.js"],
+      "js": ["src/parse-shopee.js", "src/panel-format.js", "src/content.js"],
       "run_at": "document_idle"
     }
   ],

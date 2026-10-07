@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import type { ProductPageData } from "@/lib/product/page-data";
-import type { Recommendation } from "@/lib/pricing/deal-score";
+import { MIN_DAYS_FOR_SCORE, type Recommendation } from "@/lib/pricing/deal-score";
 import { normalizeText } from "@/lib/matching/attributes";
 
 /** What the extension panel shows for a Shopee page. Only facts DealScore already shows on its own page. */
@@ -18,6 +18,13 @@ export interface ExtensionSummary {
   reasons: string[];
   updatedAt: string | null;
   isStale: boolean;
+  /** 90-day low / median of the daily low (historyStats) — the product page's StatsRow numbers. */
+  low90: number | null;
+  median90: number | null;
+  /** "Mới ghi nhận {days}/{minDays} ngày": only while the score is missing for lack of days. */
+  coverage: { days: number; minDays: number } | null;
+  /** Product page, scrolled to the seller list ("So sánh giá"). */
+  compareUrl: string;
 }
 
 /**
@@ -53,9 +60,11 @@ export async function findCatalogVariant(
 export function buildExtensionSummary(data: ProductPageData, siteUrl: string): ExtensionSummary {
   const h = data.pricing.headline;
   const variant = data.variants.find((v) => v.id === data.selectedVariantId);
+  const url = `${siteUrl}/${data.product.categorySlug}/${data.product.slug}?variant=${data.selectedVariantId}&ref=extension`;
+  const days = h?.stats.daysCovered ?? 0;
   return {
     name: data.product.canonicalName,
-    url: `${siteUrl}/${data.product.categorySlug}/${data.product.slug}?variant=${data.selectedVariantId}&ref=extension`,
+    url,
     variantId: data.selectedVariantId,
     variantKey: variant?.variantKey ?? null,
     price: data.pricing.cheapest?.price ?? data.pricing.lastKnown?.price ?? null,
@@ -64,5 +73,11 @@ export function buildExtensionSummary(data: ProductPageData, siteUrl: string): E
     reasons: (h?.reasons ?? []).slice(0, 2),
     updatedAt: data.pricing.updatedAt,
     isStale: data.pricing.isStale,
+    low90: data.pricing.stats.low,
+    median90: data.pricing.stats.median,
+    // Only when days are what is missing (not observations): the panel can then say how far along it is.
+    coverage: h && h.score == null && days < MIN_DAYS_FOR_SCORE ? { days, minDays: MIN_DAYS_FOR_SCORE } : null,
+    // Anchor of the OfferList heading on the product page.
+    compareUrl: `${url}#offers-heading`,
   };
 }

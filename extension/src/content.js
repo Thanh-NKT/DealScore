@@ -58,6 +58,12 @@
     ".done{display:flex;align-items:flex-start;justify-content:center;gap:6px;margin:4px 0 0;color:var(--buy);font-weight:600;font-size:13px}",
     ".done svg{flex:none;margin-top:2px}",
     ".msg{color:var(--ink2)}",
+    ".stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}",
+    ".stats div{display:flex;flex-direction:column;gap:2px}",
+    ".stats span{font-size:12px;color:var(--ink3)}",
+    ".stats b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums lining-nums}",
+    ".cov{margin-top:8px;font-size:12px;color:var(--ink2)}",
+    ".fresh{margin-top:8px;font-size:12px;color:var(--ink3)}",
   ].join("");
 
   var CHECK =
@@ -130,6 +136,21 @@
 
   function renderFound(res, item) {
     var s = res.body.summary;
+    var fmt = window.DealScorePanelFormat;
+    var stats =
+      s.low90 != null || s.median90 != null
+        ? '<div class="stats"><div><span>Thấp nhất 90 ngày</span><b>' + (s.low90 != null ? vnd(s.low90) : "—") + "</b></div>" +
+          '<div><span>Trung vị 90 ngày</span><b>' + (s.median90 != null ? vnd(s.median90) : "—") + "</b></div></div>"
+        : "";
+    var coverage =
+      s.coverage && fmt
+        ? '<p class="cov">' + esc(fmt.coverageText(s.coverage.days, s.coverage.minDays) + ". DealScore sẽ chấm điểm khi đủ lịch sử giá.") + "</p>"
+        : "";
+    var ago = fmt ? fmt.relativeVi(s.updatedAt, Date.now()) : null;
+    var fresh = ago ? '<p class="fresh">' + esc("Dữ liệu DealScore ghi nhận, cập nhật " + ago) + "</p>" : "";
+    var compare = s.compareUrl
+      ? '<a class="btn sec" target="_blank" rel="noopener" href="' + esc(s.compareUrl) + '">So sánh giá</a>'
+      : "";
     var target = suggestTarget(s.price);
     var watch = res.body.watch;
     var watchBlock = watch
@@ -145,9 +166,12 @@
         '<div class="price">' + vnd(s.price) + "</div>" +
         '<div class="row">' + tag(s.recommendation) +
         (s.score != null ? '<span class="score">Deal Score <b>' + s.score + "</b>/100</span>" : "") + "</div>" +
+        stats +
         (s.reasons.length ? "<ul>" + s.reasons.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>" : "") +
+        coverage +
+        fresh +
         (s.isStale ? '<p class="stale">Giá có thể đã khác, DealScore chưa cập nhật gần đây.</p>' : "") +
-        '<div class="act"><a class="btn pri" target="_blank" rel="noopener" href="' + esc(s.url) + '">Xem lịch sử giá trên DealScore</a>' + watchBlock + "</div>",
+        '<div class="act"><a class="btn pri" target="_blank" rel="noopener" href="' + esc(s.url) + '">Xem lịch sử giá trên DealScore</a>' + compare + watchBlock + "</div>",
       item,
     );
 

@@ -37,3 +37,9 @@ khi được xác nhận chéo (`src/lib/extension/corroborate.ts`).
 Service worker gọi DealScore với `credentials: "include"`; Chrome gửi cookie DealScore cho host có trong
 `host_permissions`. Nếu cookie phiên (SameSite=Lax) không được gửi trên bản Chrome đang dùng, panel sẽ luôn hiện
 "Đăng nhập DealScore…" — khi đó cần chuyển sang token riêng cho extension.
+
+## Phiên bản
+
+- **0.2.0** — khung trên Shopee hiện thêm thấp nhất / trung vị 90 ngày, "Mới ghi nhận N/14 ngày" khi chưa đủ lịch sử,
+  thời điểm cập nhật ("cập nhật 3 giờ trước", `src/panel-format.js`) và nút "So sánh giá" (mở danh sách nơi bán trên
+  DealScore). Không thêm quyền, không thêm host, không có link mua.
