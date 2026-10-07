@@ -38,6 +38,7 @@ export interface AccountExport {
     notify_low: boolean;
     min_deal_score: number | null;
     notify_back_in_stock: boolean;
+    notify_price_hike: boolean;
     channels: string[] | null;
     /** Legacy free-text folder. */
     folder: string | null;
@@ -48,6 +49,10 @@ export interface AccountExport {
     last_alerted_at: string | null;
     status: string;
     created_at: string;
+    /** "Đã mua" snapshot (migration 0040): price DealScore recorded when marked done, and the 30-day median. */
+    purchased_at: string | null;
+    purchased_price: number | null;
+    purchased_median_30d: number | null;
   }>;
   /** The user's named watch folders. */
   folders: Array<{ id: string; name: string; sort_order: number; created_at: string }>;
@@ -80,6 +85,8 @@ export interface AccountExport {
   }>;
   /** When each extension contribution was received (the hourly quota log). */
   extension_contributions: Array<{ created_at: string }>;
+  /** "Góp ý dữ liệu" the user sent while signed in. */
+  data_reports: Array<{ kind: string; message: string | null; created_at: string; status: string }>;
 }
 
 /**
@@ -111,6 +118,7 @@ export function buildAccountExport(input: {
     >
   >;
   extensionContributions?: Array<{ created_at: string }>;
+  dataReports?: Array<{ kind: string; message: string | null; created_at: string; status: string }>;
 }): AccountExport {
   const p = input.profile;
   const pref = input.preferences;
@@ -146,6 +154,7 @@ export function buildAccountExport(input: {
       notify_low: w.notify_low,
       min_deal_score: w.min_deal_score,
       notify_back_in_stock: w.notify_back_in_stock,
+      notify_price_hike: w.notify_price_hike ?? false,
       channels: w.channels,
       folder: w.folder,
       folder_id: w.folder_id ?? null,
@@ -154,6 +163,9 @@ export function buildAccountExport(input: {
       last_alerted_at: w.last_alerted_at,
       status: w.status,
       created_at: w.created_at,
+      purchased_at: w.purchased_at ?? null,
+      purchased_price: num(w.purchased_price),
+      purchased_median_30d: num(w.purchased_median_30d),
     })),
     folders: (input.folders ?? []).map((f) => ({ id: f.id, name: f.name, sort_order: f.sort_order, created_at: f.created_at })),
     alert_events: input.alertEvents.map((e) => ({
@@ -190,6 +202,7 @@ export function buildAccountExport(input: {
       created_at: o.created_at,
     })),
     extension_contributions: (input.extensionContributions ?? []).map((c) => ({ created_at: c.created_at })),
+    data_reports: (input.dataReports ?? []).map((r) => ({ kind: r.kind, message: r.message, created_at: r.created_at, status: r.status })),
   };
 }
 

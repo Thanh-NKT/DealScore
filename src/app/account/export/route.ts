@@ -107,6 +107,20 @@ export async function GET() {
     if (!data || data.length < 1000) break;
   }
 
+  // "Góp ý dữ liệu" is a service-only table (migration 0043); the user's own rows, paged.
+  const dataReports: Array<{ kind: string; message: string | null; created_at: string; status: string }> = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin
+      .from("data_reports")
+      .select("kind, message, created_at, status")
+      .eq("user_id", user.id)
+      .order("created_at")
+      .range(from, from + 999);
+    if (error) throw new Error(`Data export: failed to read data reports: ${error.message}`);
+    dataReports.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+
   const now = new Date();
   const exportData = buildAccountExport({
     activity,
@@ -123,6 +137,7 @@ export async function GET() {
     lookups: lookupsRes.data ?? [],
     extensionObservations,
     extensionContributions,
+    dataReports,
   });
 
   const filename = exportFileName(now);

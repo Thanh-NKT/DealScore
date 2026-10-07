@@ -486,6 +486,87 @@ export type Database = {
           },
         ]
       }
+      data_reports: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          message: string | null
+          offer_id: string | null
+          product_id: string
+          review_note: string | null
+          reviewed_at: string | null
+          seen_price: number | null
+          status: string
+          user_id: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          message?: string | null
+          offer_id?: string | null
+          product_id: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          seen_price?: number | null
+          status?: string
+          user_id?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          message?: string | null
+          offer_id?: string | null
+          product_id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          seen_price?: number | null
+          status?: string
+          user_id?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_reports_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_reports_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_reports_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_reports_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       extension_contributions: {
         Row: {
           contributor: string
@@ -1745,6 +1826,45 @@ export type Database = {
           schedule: string
         }[]
       }
+      admin_data_report_counts: { Args: never; Returns: Json }
+      admin_data_reports: {
+        Args: {
+          p_kind?: string
+          p_limit?: number
+          p_offset?: number
+          p_product_id?: string
+          p_status?: string
+        }
+        Returns: {
+          category_slug: string
+          created_at: string
+          current_observed_at: string
+          current_price: number
+          id: string
+          kind: string
+          listing_id: string
+          listing_status: string
+          listing_title: string
+          listing_url: string
+          marketplace: string
+          message: string
+          offer_id: string
+          product_id: string
+          product_name: string
+          product_slug: string
+          product_status: string
+          reporter: string
+          review_note: string
+          reviewed_at: string
+          same_open_count: number
+          seen_price: number
+          seller_name: string
+          status: string
+          total_count: number
+          variant_id: string
+          variant_key: string
+        }[]
+      }
       admin_freshness: {
         Args: { p_edges_minutes?: number[]; p_stale_hours?: number }
         Returns: Json
@@ -1794,6 +1914,10 @@ export type Database = {
       }
       admin_repoint_watches: {
         Args: { p_from_product_id: string; p_to_variant_id: string }
+        Returns: Json
+      }
+      admin_resolve_data_reports: {
+        Args: { p_ids: string[]; p_note?: string; p_status: string }
         Returns: Json
       }
       admin_review_match: {
@@ -2087,6 +2211,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      submit_data_report: { Args: { p: Json }; Returns: Json }
       trending_products: {
         Args: { p_category_id?: string; p_limit?: number; p_mode: string }
         Returns: {

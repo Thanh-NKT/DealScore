@@ -181,6 +181,18 @@ describe("buildAccountExport", () => {
     expect(bare.extension_observations).toEqual([]);
     expect(bare.extension_contributions).toEqual([]);
   });
+  it("data reports: only kind / message / created_at / status; none → empty list", () => {
+    const withReports = buildAccountExport({
+      ...input,
+      dataReports: [{ kind: "wrong_price", message: "giá sai", created_at: "2026-10-07T00:00:00Z", status: "open", user_id: "u1" } as never],
+    } as never);
+    expect(withReports.data_reports).toEqual([{ kind: "wrong_price", message: "giá sai", created_at: "2026-10-07T00:00:00Z", status: "open" }]);
+    expect(out.data_reports).toEqual([]);
+  });
+  it("watches carry the opt-in hike flag and the Đã mua snapshot, never the engine state", () => {
+    expect(out.watches[0]).toMatchObject({ notify_price_hike: false, purchased_at: null, purchased_price: null });
+    expect(out.watches[0]).not.toHaveProperty("hike_active");
+  });
   it("settings in NotificationSettings shape", () => {
     expect(out.notification_settings).toMatchObject({ emailEnabled: true, frequency: "instant" });
   });

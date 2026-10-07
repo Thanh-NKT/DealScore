@@ -41,6 +41,10 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_freshness", {}],
   ["admin_stale_offers", {}],
   ["admin_overview_counts", { p_stale_hours: 48 }],
+  ["submit_data_report", { p: {} }],
+  ["admin_data_reports", {}],
+  ["admin_data_report_counts", {}],
+  ["admin_resolve_data_reports", { p_ids: ["00000000-0000-4000-8000-000000000000"], p_status: "resolved" }],
 ];
 
 describe("service-role-only admin RPCs", () => {
