@@ -1,6 +1,8 @@
 import type { PricedOffer } from "@/lib/pricing/variant-pricing";
+import { offerPerks, type OfferPerk } from "@/lib/pricing/offer-perks";
+import type { Voucher } from "@/lib/vouchers/types";
 import { formatVnd } from "@/lib/format";
-import { CheckCircleIcon, ClockIcon } from "@/components/ui/icons";
+import { CheckCircleIcon, ClockIcon, TicketIcon, TruckIcon } from "@/components/ui/icons";
 import { BuyButton } from "./buy-button";
 import { marketplaceName, marketplaceStyle } from "./marketplace";
 
@@ -12,6 +14,46 @@ interface OfferListProps {
    * offers. Absent → the cheapest listed in-stock offer.
    */
   bestBuyId?: string | null;
+  /** offerId → active vouchers of its listing (page-data offerVouchers), for the perk chips. */
+  offerVouchers?: Record<string, Voucher[]>;
+  /** id of the voucher section the "Có mã giảm giá" chip links to; null = plain text. */
+  voucherAnchor?: string | null;
+}
+
+/** Product page voucher section (VoucherPicker), the target of the "Có mã giảm giá" chip. */
+export const VOUCHER_SECTION_ID = "ma-giam-gia";
+const PERK_NEUTRAL = "inline-flex items-center gap-1 rounded-sm bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2";
+const VOUCHER_TITLE = "Shop hoặc sàn đang có mã giảm giá — xem phần Mã giảm giá bên dưới";
+
+function PerkChip({ perk, voucherAnchor }: { perk: OfferPerk; voucherAnchor: string | null }) {
+  if (perk.kind === "flash") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-sm bg-wait-soft px-2 py-0.5 text-micro font-semibold text-wait">
+        <ClockIcon className="size-3.5" /> {perk.label}
+      </span>
+    );
+  }
+  if (perk.kind === "freeship") {
+    return (
+      <span className={PERK_NEUTRAL}>
+        <TruckIcon className="size-3.5" /> {perk.label}
+      </span>
+    );
+  }
+  const body = (
+    <>
+      <TicketIcon className="size-3.5" /> {perk.label}
+    </>
+  );
+  return voucherAnchor ? (
+    <a href={`#${voucherAnchor}`} title={VOUCHER_TITLE} className={`${PERK_NEUTRAL} hover:bg-surface-2/70 hover:text-ink hover:underline`}>
+      {body}
+    </a>
+  ) : (
+    <span title={VOUCHER_TITLE} className={PERK_NEUTRAL}>
+      {body}
+    </span>
+  );
 }
 
 const VISIBLE_ROWS = 8;
@@ -40,8 +82,12 @@ function OfferRow({
   cheapestPrice,
   showBest,
   primary,
+  perks,
+  voucherAnchor,
 }: {
   offer: PricedOffer;
+  perks: OfferPerk[];
+  voucherAnchor: string | null;
   cheapestPrice: number | null;
   /** Several in-stock offers: badge the primary one as "Giá tốt nhất". */
   showBest: boolean;
@@ -63,14 +109,14 @@ function OfferRow({
 
   return (
     <div
-      className={`grid grid-cols-1 items-center gap-3 rounded-tile border p-4 transition-colors min-[761px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_136px] min-[761px]:gap-4 ${
+      className={`grid grid-cols-2 items-center gap-3 rounded-tile border p-4 transition-colors min-[761px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_136px] min-[761px]:gap-4 ${
         primary
           ? "border-buy/40 bg-buy-soft/20"
           : "border-line bg-surface hover:border-line-strong"
       }`}
     >
-      {/* Col 1: Seller / Shop */}
-      <div className="flex min-w-0 flex-col gap-1">
+      {/* Col 1: Seller / Shop. Phone: full width; rating/stock and perks share the next row. */}
+      <div className="col-span-2 flex min-w-0 flex-col gap-1 min-[761px]:col-span-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className={`rounded-md px-2 py-0.5 text-nano font-bold ${mBadge}`}>
             {marketplaceName(offer.marketplace)}
@@ -113,12 +159,14 @@ function OfferRow({
         </span>
       </div>
 
-      {/* Col 3: Perks / Flash sale */}
+      {/* Col 3: Perks (flash sale, free shipping, voucher) — only from data */}
       <div className="text-label text-ink-2">
-        {offer.isFlashSale ? (
-          <span className="inline-flex items-center gap-1 rounded-sm bg-wait-soft px-2 py-0.5 text-micro font-semibold text-wait">
-            <ClockIcon className="size-3.5" /> Flash sale
-          </span>
+        {perks.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {perks.map((p) => (
+              <PerkChip key={p.kind} perk={p} voucherAnchor={voucherAnchor} />
+            ))}
+          </div>
         ) : offer.sellerIsOfficial ? (
           <span className="font-medium text-ink-2">Gian hàng chính hãng</span>
         ) : (
@@ -129,7 +177,7 @@ function OfferRow({
       </div>
 
       {/* Col 4: Price & Diff */}
-      <div className="flex flex-col items-start gap-0.5 min-[761px]:items-end">
+      <div className="col-span-2 flex flex-col items-start gap-0.5 min-[761px]:col-span-1 min-[761px]:items-end">
         {price != null ? (
           <span className="num display text-price-row font-extrabold tracking-tight text-ink">
             {formatVnd(price)}
@@ -155,7 +203,7 @@ function OfferRow({
       </div>
 
       {/* Col 5: CTA Button */}
-      <div>
+      <div className="col-span-2 min-[761px]:col-span-1">
         <BuyButton
           offerId={offer.offerId}
           marketplace={offer.marketplace}
@@ -171,7 +219,7 @@ function OfferRow({
   );
 }
 
-export function OfferList({ offers, bestBuyId }: OfferListProps) {
+export function OfferList({ offers, bestBuyId, offerVouchers, voucherAnchor = VOUCHER_SECTION_ID }: OfferListProps) {
   const list = offers ?? [];
 
   if (list.length === 0) {
@@ -235,6 +283,8 @@ export function OfferList({ offers, bestBuyId }: OfferListProps) {
               cheapestPrice={cheapestPrice}
               showBest={showBest}
               primary={offer.offerId === primaryId}
+              perks={offerPerks(offer, offerVouchers?.[offer.offerId] ?? [])}
+              voucherAnchor={voucherAnchor}
             />
           ))}
         </div>
@@ -253,6 +303,8 @@ export function OfferList({ offers, bestBuyId }: OfferListProps) {
                   cheapestPrice={cheapestPrice}
                   showBest={showBest}
                   primary={offer.offerId === primaryId}
+                  perks={offerPerks(offer, offerVouchers?.[offer.offerId] ?? [])}
+                  voucherAnchor={voucherAnchor}
                 />
               ))}
             </div>

@@ -140,7 +140,7 @@ export async function loadProductPageData(params: {
       supabase
         .from("offers")
         .select(`
-          id, match_status,
+          id, match_status, free_shipping, has_voucher,
           listings (
             id, seller_id, images, marketplace, url, title, status, last_observed_at,
             sellers ( name, rating, rating_count, is_official )
@@ -224,6 +224,8 @@ export async function loadProductPageData(params: {
         originalPrice: latest?.original_price != null ? Number(latest.original_price) : null,
         stock: latest?.stock != null ? Number(latest.stock) : null,
         isFlashSale: Boolean(latest?.is_flash_sale),
+        freeShipping: o.free_shipping ?? null,
+        hasVoucher: o.has_voucher ?? null,
         observedAt: latest?.observed_at || listing?.last_observed_at || null,
         effectivePrice:
           price != null && offerListing

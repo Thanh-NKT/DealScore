@@ -123,6 +123,11 @@ export const TrendDownIcon = (p: IconProps) => (
   <Icon {...p}><path d="m3 7 6 6 4-4 8 8" /><path d="M15 17h6v-6" /></Icon>
 );
 
+/** Delivery truck: free shipping. */
+export const TruckIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7" /><circle cx="7" cy="17.5" r="1.5" /><circle cx="17" cy="17.5" r="1.5" /></Icon>
+);
+
 /** Small bar chart: price history / price details. */
 export const ChartIcon = (p: IconProps) => (
   <Icon {...p}><path d="M4 20h16" /><path d="M7 16v-5M12 16V7M17 16v-8" /></Icon>

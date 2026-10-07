@@ -28,7 +28,7 @@ import { marketplaceName } from "@/components/product/marketplace";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { InteractivePriceChart } from "@/components/product/interactive-price-chart";
 import { DealScoreBreakdown } from "@/components/product/deal-score-breakdown";
-import { OfferList } from "@/components/product/offer-list";
+import { OfferList, VOUCHER_SECTION_ID } from "@/components/product/offer-list";
 import { PriceAlertCard } from "@/components/product/price-alert-card";
 import { VoucherPicker } from "@/components/product/voucher-picker";
 import { DiscountVerifyBanner } from "@/components/product/discount-verify-banner";
@@ -332,7 +332,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
           {/* Section 3: Marketplace Comparison & Price Alert */}
           <section className="grid grid-cols-1 items-start gap-6 min-[1121px]:grid-cols-[1fr_420px]">
-            <OfferList offers={pricing.offers} bestBuyId={buy?.offerId ?? null} />
+            <OfferList offers={pricing.offers} bestBuyId={buy?.offerId ?? null} offerVouchers={data.offerVouchers} />
 
             <PriceAlertCard
               currentPrice={currentPrice}
@@ -345,7 +345,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           </section>
 
           {/* Section 3b: Voucher Picker */}
-          <section id="ma-giam-gia" aria-labelledby="voucher-title">
+          <section id={VOUCHER_SECTION_ID} aria-labelledby="voucher-title">
             <VoucherPicker
               platform={voucherPlatform}
               productPrice={buyListedPrice}

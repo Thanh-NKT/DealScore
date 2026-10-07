@@ -31,6 +31,9 @@ export interface OfferRow {
   observedAt: string | null;
   /** Price after the best voucher combination (fresh and lower than `price`), else null/absent. */
   effectivePrice?: number | null;
+  /** offers.free_shipping / has_voucher — perk chips only (offerPerks); pricing and Deal Score never read them. */
+  freeShipping?: boolean | null;
+  hasVoucher?: boolean | null;
 }
 
 export interface PricedOffer extends OfferRow {
