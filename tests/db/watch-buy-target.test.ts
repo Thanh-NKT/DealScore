@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { addAffiliateDisclosure } from "@/lib/affiliate/disclosure";
 import { listMyWatches } from "@/lib/watch/queries";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
 
@@ -60,8 +61,11 @@ afterAll(async () => {
 
 describe("listMyWatches buy target", () => {
   it("returns the best offer's marketplace and affiliate flag when the target is reached", async () => {
-    const items = await listMyWatches(user.id, new Date(), user.client);
-    expect(items).toHaveLength(N);
+    const raw = await listMyWatches(user.id, new Date(), user.client);
+    expect(raw).toHaveLength(N);
+    // src/lib/watch never reads affiliate data: the flag is always false until the disclosure step.
+    expect(raw.some((i) => i.buy?.affiliate)).toBe(false);
+    const items = await addAffiliateDisclosure(user.client, raw);
     const byVariant = new Map(items.map((i) => [i.variant.id, i]));
     expect(byVariant.get(variants[0])!.buy).toEqual({ offerId: offers[0], marketplace: "shopee", affiliate: true });
     expect(byVariant.get(variants[1])!.buy).toEqual({ offerId: offers[1], marketplace: "tiktok", affiliate: false });

@@ -6,7 +6,11 @@ import type { WatchView } from "@/lib/watch/describe";
 export interface WatchBuyTarget {
   offerId: string;
   marketplace: string;
-  /** affiliate_offers.eligible of that offer — only drives the "Liên kết tiếp thị" disclosure. */
+  /**
+   * Whether the offer's link is an affiliate link — only drives the "Liên kết tiếp thị" disclosure. Always false
+   * from listMyWatches: src/lib/watch never reads affiliate data (no-bias guard); the page fills it in with
+   * withAffiliateDisclosure (src/lib/affiliate/disclosure.ts).
+   */
   affiliate: boolean;
 }
 

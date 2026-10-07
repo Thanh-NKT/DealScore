@@ -104,23 +104,20 @@ export async function listMyWatches(
   const variantIds = Array.from(new Set(watchRows.map((w) => w.variant_id)));
   const snapshotMap = await loadVariantSnapshots(supabase, variantIds, now);
 
-  // 3b. Marketplace + affiliate flag of each best offer, for "Đến {sàn}" (catalog tables are public-read;
-  // affiliate_offers exposes only offer_id / eligible). A read error is an error, not "no button".
+  // 3b. Marketplace of each best offer, for "Đến {sàn}" (catalog tables are public-read). A read error is an
+  // error, not "no button". The affiliate disclosure is added outside src/lib/watch (withAffiliateDisclosure).
   const offerIds = [...new Set([...snapshotMap.values()].map((s) => s.offerId).filter((id): id is string => !!id))];
   const offerInfo = new Map<string, { marketplace: string; affiliate: boolean }>();
   for (let i = 0; i < offerIds.length; i += BUY_OFFER_CHUNK) {
     const part = offerIds.slice(i, i + BUY_OFFER_CHUNK);
     const { data, error } = await supabase
       .from("offers")
-      .select("id, listings ( marketplace ), affiliate_offers ( eligible )")
+      .select("id, listings ( marketplace )")
       .in("id", part);
     if (error) throw new Error(`Failed to load offers for Watch list: ${error.message}`);
     for (const o of data ?? []) {
       const listing = (Array.isArray(o.listings) ? o.listings[0] : o.listings) as { marketplace: string } | null;
-      const aff = (Array.isArray(o.affiliate_offers) ? o.affiliate_offers[0] : o.affiliate_offers) as
-        | { eligible: boolean }
-        | null;
-      if (listing?.marketplace) offerInfo.set(o.id, { marketplace: listing.marketplace, affiliate: Boolean(aff?.eligible) });
+      if (listing?.marketplace) offerInfo.set(o.id, { marketplace: listing.marketplace, affiliate: false });
     }
   }
 
