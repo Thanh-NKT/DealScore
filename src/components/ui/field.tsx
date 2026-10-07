@@ -2,8 +2,9 @@ import type { ComponentProps, ReactNode } from "react";
 import { AlertIcon } from "@/components/ui/icons";
 
 /**
- * DESIGN.md "Inputs / Fields": line-strong outline, surface fill, 12px corners, primary border on
- * focus, a 2px avoid border + icon message when invalid (aria-invalid drives the style).
+ * DESIGN.md "Inputs / Fields": line-strong outline, surface fill, 12px corners, a 2px primary frame on
+ * focus (border + 1px ring, no outer outline: one frame only), a 2px avoid border + icon message when
+ * invalid (aria-invalid drives the style).
  *
  * Sizes: sm 40px (dense forms like folder names), md 44px (dialogs), lg 48px (auth, main forms).
  * `className` is layout-only (margins, flex); width, text size and padding are parameters so two
@@ -31,7 +32,7 @@ export function inputClass({
   className?: string;
 } = {}): string {
   return [
-    "min-w-0 rounded-md border border-line-strong bg-surface text-ink placeholder:text-ink-3 transition-colors duration-150 ease-out focus:border-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid",
+    "min-w-0 rounded-md border border-line-strong bg-surface text-ink placeholder:text-ink-3 transition-colors duration-150 ease-out focus:border-primary focus:ring-1 focus:ring-primary focus-visible:outline-none aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid",
     SIZE[size],
     TEXT[text],
     width === "full" ? "w-full" : "",

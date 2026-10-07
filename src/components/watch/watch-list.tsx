@@ -215,7 +215,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
 
           <form
             onSubmit={handlePasteSubmit}
-            className="flex w-full max-w-[500px] items-center gap-2.5 rounded-md border border-line-strong bg-surface p-1.5 pl-3.5 shadow-sm transition-colors focus-within:border-primary"
+            className="flex w-full max-w-[500px] items-center gap-2.5 rounded-md border border-line-strong bg-surface p-1.5 pl-3.5 shadow-sm transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary"
           >
             <svg
               width="18"

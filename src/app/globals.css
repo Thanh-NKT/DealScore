@@ -208,9 +208,13 @@ body {
   color: var(--on-primary);
 }
 
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+/* In the base layer so a utility can opt out (`focus-visible:outline-none` on an input whose frame shows
+   focus). Unlayered, this rule beat every Tailwind utility and drew a second ring inside those frames. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
 }
 
 input, select, textarea { caret-color: var(--primary); }

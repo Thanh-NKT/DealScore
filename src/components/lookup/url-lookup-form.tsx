@@ -79,8 +79,8 @@ export function UrlLookupForm({ autoFocus = false, variant = "inline" }: UrlLook
           aria-describedby={`${uid}-status`}
           className={
             hero
-              ? "min-h-13 min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none read-only:text-ink-2 max-[560px]:rounded-md max-[560px]:border max-[560px]:border-line-strong max-[560px]:px-3.5 max-[560px]:focus:border-primary max-[560px]:focus:outline-2 max-[560px]:focus:outline-offset-2 max-[560px]:focus:outline-(--focus) max-[560px]:aria-[invalid=true]:border-ink"
-              : "min-h-11 min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-3.5 text-body text-ink placeholder:text-ink-3 focus:border-primary focus:outline-2 focus:outline-offset-2 focus:outline-(--focus) read-only:text-ink-2 aria-[invalid=true]:border-ink"
+              ? "min-h-13 min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none read-only:text-ink-2 max-[560px]:rounded-md max-[560px]:border max-[560px]:border-line-strong max-[560px]:px-3.5 max-[560px]:focus:border-primary max-[560px]:focus:ring-1 max-[560px]:focus:ring-primary max-[560px]:aria-[invalid=true]:border-ink"
+              : "min-h-11 min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-3.5 text-body text-ink placeholder:text-ink-3 focus:border-primary focus:ring-1 focus:ring-primary focus-visible:outline-none read-only:text-ink-2 aria-[invalid=true]:border-ink"
           }
         />
         {lookup.loading ? (

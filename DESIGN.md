@@ -693,6 +693,8 @@ Mọi nút đi qua `src/components/ui/button.tsx`: `<Button>`, `<ButtonLink>` ho
 ### Ô nhập
 `src/components/ui/field.tsx`: `inputClass({ size, text, width })` (sm 40px `text-control`, md 44px, lg 48px `text-body`; `text: "title"` cho ô nhập số tiền lớn), `FieldMessage` (lỗi có biểu tượng, `role="alert"`, màu `avoid`; hoặc gợi ý) và `TextField` (nhãn 14px/600 + ô nhập + thông báo, tự nối `aria-invalid` / `aria-describedby`). Các ô đặc biệt (email có gợi ý sửa tên miền, mật khẩu có nút hiện/ẩn) dựng trên cùng `inputClass` và `FieldMessage`.
 
+Focus của ô nhập là **một khung**: viền đổi `primary` và dày lên 2px (viền 1px + vòng 1px), không thêm viền ngoài `--focus`. Ô nằm trong một khung lớn hơn (ô tìm kiếm, thanh dán link) thì khung đó nhận focus (`focus-within`) và ô bên trong tắt viền ngoài. Quy tắc `:focus-visible` chung nằm trong `@layer base` để các lớp tiện ích tắt được nó.
+
 ### Chips
 - **Nhãn sàn:** bo 8px (`rounded-md` trong code nhỏ), đệm 2px 10px, 11px/700, theo `marketplaceStyle().badge`.
 - **Chip thông tin:** viên thuốc `primary-soft`, chữ `primary` 12px/700: "Đã gom N nơi bán cùng mẫu"; chip "Rẻ nhất" `primary-soft` bo 8px 11px.

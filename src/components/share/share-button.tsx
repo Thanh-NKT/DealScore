@@ -96,7 +96,7 @@ export function ShareButton({
           value={url}
           aria-label="Liên kết chia sẻ"
           onFocus={(e) => e.currentTarget.select()}
-          className="mt-1.5 min-h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-label text-ink focus:border-primary"
+          className="mt-1.5 min-h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-label text-ink focus:border-primary focus:ring-1 focus:ring-primary focus-visible:outline-none"
         />
       )}
     </div>

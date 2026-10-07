@@ -34,7 +34,7 @@ async function submit(prev: Result, form: FormData): Promise<Result> {
 }
 
 const SELECT =
-  "min-h-11 rounded-md border border-line-strong bg-surface px-3 text-body text-ink transition-colors duration-150 ease-out focus:border-primary aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
+  "min-h-11 rounded-md border border-line-strong bg-surface px-3 text-body text-ink transition-colors duration-150 ease-out focus:border-primary focus:ring-1 focus:ring-primary focus-visible:outline-none aria-[invalid=true]:border-2 aria-[invalid=true]:border-avoid";
 
 type Form = {
   email: boolean;

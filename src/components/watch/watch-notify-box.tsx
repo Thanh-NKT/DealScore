@@ -165,7 +165,7 @@ export function WatchNotifyBox({ initialSettings }: { initialSettings: Notificat
               id={`${uid}-weekday`}
               value={settings.digestWeekday}
               onChange={(e) => save({ digestWeekday: Number(e.target.value) as IsoWeekday })}
-              className="h-10 rounded-md border border-line-strong bg-surface px-2 text-body-sm text-ink focus:border-primary"
+              className="h-10 rounded-md border border-line-strong bg-surface px-2 text-body-sm text-ink focus:border-primary focus:ring-1 focus:ring-primary focus-visible:outline-none"
             >
               {WEEKDAYS.map((d) => (
                 <option key={d} value={d}>

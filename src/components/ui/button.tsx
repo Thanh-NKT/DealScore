@@ -13,7 +13,7 @@ import { marketplaceStyle } from "@/components/product/marketplace";
  * - marketplace: the exit button to a marketplace, coloured by marketplaceStyle(code).
  *
  * Sizes: sm 40px (dense rows, dialogs), md 44px (default), lg 52px (the main action of a card or page).
- * Disabled and busy are built in; focus comes from the global :focus-visible ring.
+ * Disabled and busy are built in; focus comes from the global :focus-visible ring (base layer in globals.css).
  */
 export type ButtonVariant = "primary" | "secondary" | "ink" | "accent" | "danger" | "marketplace";
 export type ButtonSize = "sm" | "md" | "lg";
