@@ -8,6 +8,9 @@ import { formatVnd } from "@/lib/format";
 import { setWatchStatus, deleteWatch } from "@/actions/watch";
 import { WatchModal } from "@/components/watch/watch-modal";
 import type { MyWatchItem } from "@/lib/watch/queries";
+import { watchGoHref } from "@/lib/watch/links";
+import { changeLabel, countDropped7d } from "@/components/watch/change-label";
+import { marketplaceName } from "@/components/product/marketplace";
 import { variantLabel } from "@/components/product/variant-label";
 import { verdictText } from "@/components/product/verdict-tag";
 import { groupByFolder, type WatchFolder } from "@/lib/watch/folders";
@@ -19,12 +22,15 @@ import { segmentClass, segmentTrack } from "@/components/ui/segmented";
 import {
   BellIcon,
   BellOffIcon,
+  ChartIcon,
   CheckCircleIcon,
   CheckIcon,
   ClockIcon,
   DashIcon,
+  ExternalIcon,
   FolderIcon,
   HourglassIcon,
+  LinkIcon,
   PencilIcon,
   SearchIcon,
   TargetIcon,
@@ -164,10 +170,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
   // Overall statistics for top summary tiles
   const trackedItems = items.filter((i) => i.status !== "done");
   const reachedCount = trackedItems.filter((i) => i.view.target?.reached).length;
-  const droppedCount = trackedItems.filter((i) => {
-    const c = i.view.changeSinceStart;
-    return c != null && c.amount < 0;
-  }).length;
+  const droppedCount = countDropped7d(items);
   const goodDealsCount = trackedItems.filter(
     (i) => i.view.deal?.recommendation === "buy"
   ).length;
@@ -276,8 +279,8 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
               <span className="display text-h3 font-extrabold leading-none text-ink">
                 {droppedCount}
               </span>
-              <span className="truncate text-label font-medium text-ink-2">
-                Rẻ hơn lúc bắt đầu theo dõi
+              <span className="truncate text-label font-medium text-ink-2" title="sản phẩm giảm giá trong 7 ngày qua">
+                sản phẩm giảm giá trong 7 ngày qua
               </span>
             </div>
           </div>
@@ -382,20 +385,10 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                 const tintBg = getTint(product.slug || item.id);
 
                 const price = view.price != null && view.price > 0 ? view.price : null;
-                const change = view.changeSinceStart;
-                const chgAmount = change?.amount ?? 0;
-                const chgLabel =
-                  change == null
-                    ? "Chưa có giá để so"
-                    : chgAmount === 0
-                      ? "Không đổi từ lúc theo dõi"
-                      : `${chgAmount < 0 ? "↓ " : "↑ "}${formatVnd(Math.abs(chgAmount))} từ lúc theo dõi`;
-                const chgColor =
-                  change == null || chgAmount === 0
-                    ? "text-ink-3"
-                    : chgAmount < 0
-                      ? "text-buy"
-                      : "text-avoid";
+                const chg = changeLabel(view);
+                const chgColor = chg.tone === "buy" ? "text-buy" : chg.tone === "avoid" ? "text-avoid" : "text-ink-3";
+                const goHref = watchGoHref(item);
+                const buy = goHref ? item.buy : null;
 
                 // Deal Score visual gauge
                 const rawScore = view.deal?.score;
@@ -514,9 +507,13 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                       <span className="display whitespace-nowrap text-title font-bold text-ink">
                         {price != null ? formatVnd(price) : "—"}
                       </span>
-                      <span className={`whitespace-nowrap text-micro font-semibold ${chgColor}`}>
-                        {chgLabel}
+                      <span
+                        title={chg.title ?? undefined}
+                        className={`num whitespace-nowrap text-micro font-semibold ${chgColor}`}
+                      >
+                        {chg.text}
                       </span>
+                      {chg.sub && <span className="num whitespace-nowrap text-micro text-ink-3">{chg.sub}</span>}
                     </div>
 
                     {/* Col 3: Deal Score (Visual Progress Ring + Status Badge) */}
@@ -615,14 +612,50 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                       )}
                     </div>
 
-                    {/* Col 5: Unified CTA & Icon Actions ([Xem giá] [🔔] [✏️] [🗑️]) */}
-                    <div className="flex items-center gap-1.5">
-                      <Link
-                        href={href}
-                        className={buttonClass({ variant: reached ? "primary" : "secondary", size: "sm", className: "flex-1" })}
-                      >
-                        {reached ? "Xem giá mới" : "Xem giá"}
-                      </Link>
+                    {/* Col 5: CTA & icon actions. Target reached on a fresh, in-stock price → "Đến {sàn}" takes the
+                        whole first row and "Xem chi tiết giá" joins the icons; otherwise [Xem giá] [🔔] [✏️] [🗑️]. */}
+                    <div className="flex flex-col gap-1.5">
+                    {buy && goHref && (
+                      <div className="flex flex-col items-stretch gap-1">
+                        <a
+                          href={goHref}
+                          target="_blank"
+                          rel="nofollow sponsored noopener"
+                          className={buttonClass({ variant: "marketplace", marketplace: buy.marketplace, size: "sm", className: "flex-1" })}
+                        >
+                          <span>Đến {marketplaceName(buy.marketplace)}</span>
+                          <ExternalIcon className="size-4" strokeWidth={2} />
+                          <span className="sr-only">(mở trong thẻ mới{buy.affiliate ? ", liên kết tiếp thị" : ""})</span>
+                        </a>
+                        {buy.affiliate && (
+                          <span
+                            aria-hidden="true"
+                            className="inline-flex items-center justify-center gap-1 text-center text-micro font-semibold text-ink-3"
+                          >
+                            <LinkIcon className="size-3.5" />
+                            Liên kết tiếp thị
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className={`flex items-center gap-1.5 ${buy ? "justify-end" : ""}`}>
+                      {buy ? (
+                        <Link
+                          href={href}
+                          aria-label={`Xem chi tiết giá ${name}`}
+                          title="Xem chi tiết giá"
+                          className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-ink-2 transition-colors hover:bg-canvas hover:text-ink"
+                        >
+                          <ChartIcon className="size-4" />
+                        </Link>
+                      ) : (
+                        <Link
+                          href={href}
+                          className={buttonClass({ variant: reached ? "primary" : "secondary", size: "sm", className: "flex-1" })}
+                        >
+                          {reached ? "Xem giá mới" : "Xem giá"}
+                        </Link>
+                      )}
                       <button
                         type="button"
                         aria-pressed={alertOn}
@@ -672,6 +705,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                       >
                         <TrashIcon className="size-4" />
                       </button>
+                    </div>
                     </div>
                   </div>
                 );

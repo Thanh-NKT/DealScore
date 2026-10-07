@@ -123,6 +123,11 @@ export const TrendDownIcon = (p: IconProps) => (
   <Icon {...p}><path d="m3 7 6 6 4-4 8 8" /><path d="M15 17h6v-6" /></Icon>
 );
 
+/** Small bar chart: price history / price details. */
+export const ChartIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M4 20h16" /><path d="M7 16v-5M12 16V7M17 16v-8" /></Icon>
+);
+
 /** Trend line going up: rising interest (Trending). */
 export const TrendUpIcon = (p: IconProps) => (
   <Icon {...p}><path d="m3 17 6-6 4 4 8-8" /><path d="M15 7h6v6" /></Icon>
