@@ -23,6 +23,11 @@ export interface SynonymRule {
   match: readonly string[];
   /** What the phrase is expanded to. A typed phrase is never repeated after itself. */
   alternatives: readonly string[];
+  /**
+   * Context guard for shorthands that are also everyday Vietnamese words once folded: the rule fires
+   * only when this holds. `tokens` is the whole folded query, the phrase spans [start, end).
+   */
+  when?: (tokens: readonly string[], start: number, end: number) => boolean;
 }
 
 /** Interchangeable terms: typing any of them searches for all of them. */
@@ -31,9 +36,29 @@ function same(terms: string[], alsoMatch: string[] = []): SynonymRule {
 }
 
 /** One-way: typing an abbreviation / broader word adds the terms, never the other way round. */
-function oneWay(match: string[], alternatives: string[]): SynonymRule {
-  return { match, alternatives };
+function oneWay(match: string[], alternatives: string[], when?: SynonymRule["when"]): SynonymRule {
+  return { match, alternatives, when };
 }
+
+/**
+ * "lap" is also "lắp" (lắp đặt, lắp ráp, lắp camera): it means laptop only next to a laptop brand or line.
+ * "gaming" is not enough ("lắp pc gaming").
+ */
+const LAPTOP_CONTEXT = new Set([
+  "dell", "asus", "hp", "lenovo", "acer", "msi", "gigabyte", "macbook", "thinkpad", "ideapad", "legion",
+  "vivobook", "zenbook", "rog", "tuf", "xps", "inspiron", "vostro", "latitude", "pavilion", "victus", "omen",
+  "envy", "nitro", "aspire", "predator", "yoga", "surface",
+]);
+const nearLaptopBrand = (tokens: readonly string[], start: number, end: number) =>
+  tokens.some((t, i) => (i < start || i >= end) && LAPTOP_CONTEXT.has(t));
+
+/** "mi" is also "mi" / "mì" / "mí" (kẹp mi, mì tôm): Xiaomi only before a Xiaomi line or a model number. */
+const XIAOMI_NEXT_RE = /^(?:band|tv|box|pad|watch|buds|note|smart|robot|router|air|power|monitor|mix|max|\d+[a-z]*)$/;
+/** "ss" is also "so sánh": Samsung only before a Samsung line or model (s24, a55, z, t7, 990). */
+const SAMSUNG_NEXT_RE =
+  /^(?:galaxy|note\d*|tab|buds\d*[a-z]*|fold\d*|flip\d*|watch\d*|tv|odyssey|evo|z|[sazm]\d{1,3}[a-z]*|t\d{1,2}[a-z]*|\d{3,4}[a-z]*)$/;
+const nextMatches = (re: RegExp) => (tokens: readonly string[], _start: number, end: number) =>
+  end < tokens.length && re.test(tokens[end]);
 
 const PHONE = ["dien thoai", "phone", "smartphone"];
 const LAPTOP = ["laptop", "may tinh xach tay", "notebook"];
@@ -48,8 +73,8 @@ export const SYNONYM_RULES: readonly SynonymRule[] = [
   same(["tai nghe", "headphone", "earphone", "earbuds", "tws"], ["headphones", "earphones"]),
   same(PHONE),
   oneWay(["dt"], PHONE),
-  same(LAPTOP, ["laptops", "notebooks"]),
-  oneWay(["lap"], LAPTOP),
+  same(LAPTOP, ["laptops", "notebooks", "lap top"]),
+  oneWay(["lap"], LAPTOP, nearLaptopBrand),
   // "Ổ cứng" covers both kinds; "ssd" must not widen to hard disks.
   oneWay(["o cung"], ["ssd", "hdd"]),
   same(["sac du phong", "pin du phong", "powerbank", "power bank"]),
@@ -61,34 +86,51 @@ export const SYNONYM_RULES: readonly SynonymRule[] = [
   same(["tivi", "tv"]),
   same(["webcam", "web cam"]),
   // Brand shorthands.
-  oneWay(["ss"], ["samsung"]),
-  oneWay(["xm", "mi"], ["xiaomi"]),
+  oneWay(["ss"], ["samsung"], nextMatches(SAMSUNG_NEXT_RE)),
+  oneWay(["xm"], ["xiaomi"]),
+  oneWay(["mi"], ["xiaomi"], nextMatches(XIAOMI_NEXT_RE)),
   same(["wd", "western digital"]),
   oneWay(["logi"], ["logitech"]),
   // Model shorthands ("ip 15", "ip15pm" are handled by expandIphone below).
   oneWay(["pm"], ["pro max"]),
 ];
 
+interface LexiconEntry {
+  alternatives: readonly string[];
+  when?: SynonymRule["when"];
+}
+
 interface Lexicon {
-  byPhrase: Map<string, string[]>;
+  byPhrase: Map<string, LexiconEntry[]>;
   maxWords: number;
 }
 
 function buildLexicon(rules: readonly SynonymRule[]): Lexicon {
-  const byPhrase = new Map<string, string[]>();
+  const byPhrase = new Map<string, LexiconEntry[]>();
   let maxWords = 1;
   for (const rule of rules) {
     for (const phrase of rule.match) {
-      byPhrase.set(phrase, [...new Set([...(byPhrase.get(phrase) ?? []), ...rule.alternatives])]);
+      byPhrase.set(phrase, [...(byPhrase.get(phrase) ?? []), { alternatives: rule.alternatives, when: rule.when }]);
       maxWords = Math.max(maxWords, phrase.split(" ").length);
     }
   }
   return { byPhrase, maxWords };
 }
 
+/** Alternatives of the rules for `phrase` whose context guard holds here; empty when none fires. */
+function lookup(tokens: readonly string[], start: number, end: number): string[] {
+  const entries = LEXICON.byPhrase.get(tokens.slice(start, end).join(" ")) ?? [];
+  return [...new Set(entries.filter((e) => !e.when || e.when(tokens, start, end)).flatMap((e) => e.alternatives))];
+}
+
 const LEXICON = buildLexicon(SYNONYM_RULES);
 
-const IPHONE_GLUED_RE = /^(ipp?|iphone)(\d{1,2})(pm|promax|pro|plus|p)?$/;
+/*
+ * iPhone model numbers are 3–19. From 20 up a number after "ip" is an IP protection rating (ip54, ip65,
+ * ip67, ip68 on speakers, earbuds, watches), not an iPhone yet; ipx4 / ip6x carry no number to match.
+ * Widen both patterns when an iPhone 20 ships.
+ */
+const IPHONE_GLUED_RE = /^(ipp?|iphone)(1\d|[3-9])(pm|promax|pro|plus|p)?$/;
 const IPHONE_SUFFIX: Readonly<Record<string, string>> = {
   pm: "pro max",
   promax: "pro max",
@@ -96,7 +138,7 @@ const IPHONE_SUFFIX: Readonly<Record<string, string>> = {
   p: "pro",
   plus: "plus",
 };
-const MODEL_NUMBER_RE = /^\d{1,2}$/;
+const MODEL_NUMBER_RE = /^(?:1\d|[3-9])$/;
 const GLUED_CAPACITY_RE = /^(\d+)(tb|gb)$/;
 const NUMBER_RE = /^\d+$/;
 
@@ -175,10 +217,9 @@ export function expandQuery(text: string): TermGroup[] | undefined {
     // Longest lexicon phrase starting here.
     let matched = 0;
     for (let n = Math.min(LEXICON.maxWords, tokens.length - i); n >= 1; n--) {
-      const phrase = tokens.slice(i, i + n).join(" ");
-      const alternatives = LEXICON.byPhrase.get(phrase);
-      if (alternatives) {
-        groups.push(group(phrase, alternatives));
+      const alternatives = lookup(tokens, i, i + n);
+      if (alternatives.length > 0) {
+        groups.push(group(tokens.slice(i, i + n).join(" "), alternatives));
         expanded = true;
         matched = n;
         break;
