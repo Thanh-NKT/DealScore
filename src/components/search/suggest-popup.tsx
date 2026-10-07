@@ -3,6 +3,7 @@
 import { useEffect, type MouseEvent } from "react";
 import { formatVnd } from "@/lib/format";
 import { highlightParts } from "@/lib/search/highlight";
+import { RECENT_REMOVE_HINT, RECENT_REMOVE_KEYS } from "@/lib/search/suggest-keys";
 import type { SuggestRow, Suggestions } from "@/lib/search/suggest-rows";
 import { ClockIcon, FolderIcon, SearchIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
@@ -26,7 +27,17 @@ export function Highlight({ text, query }: { text: string; query: string }) {
 
 const keepFocus = (e: MouseEvent) => e.preventDefault(); // clicks in the list must not blur the input
 
-function RowBody({ row, query, onRemove }: { row: SuggestRow; query: string; onRemove: (q: string) => void }) {
+function RowBody({
+  row,
+  query,
+  active,
+  onRemove,
+}: {
+  row: SuggestRow;
+  query: string;
+  active: boolean;
+  onRemove: (q: string) => void;
+}) {
   switch (row.kind) {
     case "query":
       return (
@@ -69,10 +80,20 @@ function RowBody({ row, query, onRemove }: { row: SuggestRow; query: string; onR
         <>
           <ClockIcon className="size-4 shrink-0 text-ink-3" />
           <span className="min-w-0 flex-1 truncate text-body-sm text-ink">{row.q}</span>
-          <button
-            type="button"
-            tabIndex={-1} // keyboard: Delete on the active row
-            aria-label={`Xóa “${row.q}” khỏi lịch sử`}
+          {/* Visible twin of the option's description, for sighted keyboard users. */}
+          {active && (
+            <span aria-hidden="true" className="shrink-0 text-micro text-ink-3 max-sm:hidden">
+              Delete để xóa
+            </span>
+          )}
+          {/*
+            Pointer-only shortcut for Delete. Not a button: option children are presentational, so a
+            nested control would be unreachable or misreported (axe nested-interactive). Keyboard and
+            screen-reader users get Delete / Backspace on the active row, announced on the option.
+          */}
+          <span
+            aria-hidden="true"
+            title="Xóa khỏi lịch sử"
             onMouseDown={keepFocus}
             onClick={(e) => {
               e.stopPropagation();
@@ -80,12 +101,14 @@ function RowBody({ row, query, onRemove }: { row: SuggestRow; query: string; onR
             }}
             className="-mr-1.5 inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-sm text-ink-3 transition-colors duration-150 ease-out hover:bg-surface hover:text-ink motion-reduce:transition-none"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="size-3.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="size-3.5">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
-          </button>
+          </span>
         </>
       );
+    case "clear-recent":
+      return <span className="ml-auto text-label font-semibold text-primary">Xóa lịch sử</span>;
     case "product": {
       const s = row.item;
       const name = s.name?.trim() || "Sản phẩm chưa có tên";
@@ -126,7 +149,6 @@ export function SuggestPopup({
   onHover,
   onPick,
   onRemoveRecent,
-  onClearRecent,
 }: {
   listId: string;
   optionId: (i: number) => string;
@@ -138,7 +160,6 @@ export function SuggestPopup({
   onHover: (i: number) => void;
   onPick: (row: SuggestRow) => void;
   onRemoveRecent: (q: string) => void;
-  onClearRecent: () => void;
 }) {
   useEffect(() => {
     if (active >= 0) document.getElementById(optionId(active))?.scrollIntoView({ block: "nearest" });
@@ -150,7 +171,7 @@ export function SuggestPopup({
     if (!suggestions.empty) return null;
     return (
       <div className={shell}>
-        <p className="px-3.5 py-3 text-body-sm text-ink-2">
+        <p role="status" className="px-3.5 py-3 text-body-sm text-ink-2">
           Không có gợi ý — nhấn Enter để tìm “<span className="font-semibold text-ink">{query}</span>”
         </p>
       </div>
@@ -158,6 +179,7 @@ export function SuggestPopup({
   }
 
   let index = 0;
+  const hintId = `${listId}-remove-hint`;
   const hasRecent = suggestions.groups.some((g) => g.key === "recent");
 
   return (
@@ -173,25 +195,28 @@ export function SuggestPopup({
           const headingId = `${listId}-${g.key}`;
           const options = g.rows.map((row) => {
             const i = index++;
+            const recent = row.kind === "recent";
             return (
               <div
                 key={`${row.kind}-${row.href}`}
                 id={optionId(i)}
                 role="option"
                 aria-selected={i === active}
+                aria-describedby={recent ? hintId : undefined}
+                aria-keyshortcuts={recent ? RECENT_REMOVE_KEYS : undefined}
                 onMouseDown={keepFocus}
                 onClick={() => onPick(row)}
                 onMouseEnter={() => onHover(i)}
                 className={`flex min-h-11 cursor-pointer items-center gap-3 px-3.5 py-1.5 ${i === active ? "bg-surface-2" : ""}`}
               >
-                <RowBody row={row} query={query} onRemove={onRemoveRecent} />
+                <RowBody row={row} query={query} active={i === active} onRemove={onRemoveRecent} />
               </div>
             );
           });
           const dim = pending && g.key !== "query" ? "opacity-60" : "";
           if (!g.label) {
             return (
-              <div key={g.key} role="presentation" className={dim}>
+              <div key={g.key} role="presentation" className={`${dim} ${g.key === "clear" ? "mt-1.5 border-t border-line/80 pt-1" : ""}`}>
                 {options}
               </div>
             );
@@ -211,17 +236,11 @@ export function SuggestPopup({
           );
         })}
       </div>
+      {/* Description of every recent option (aria-describedby reads hidden text too). */}
       {hasRecent && (
-        <div className="flex justify-end border-t border-line/80 px-1.5 py-1">
-          <button
-            type="button"
-            onMouseDown={keepFocus}
-            onClick={onClearRecent}
-            className="inline-flex min-h-10 cursor-pointer items-center rounded-sm px-2.5 text-label font-semibold text-primary transition-colors duration-150 ease-out hover:text-primary-hover hover:underline hover:underline-offset-4 motion-reduce:transition-none"
-          >
-            Xóa lịch sử
-          </button>
-        </div>
+        <span id={hintId} hidden>
+          {RECENT_REMOVE_HINT}
+        </span>
       )}
     </div>
   );

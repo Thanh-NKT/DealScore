@@ -110,7 +110,7 @@ export function HeroSearchForm() {
             role="combobox"
             aria-autocomplete="list"
             aria-expanded={suggest.listVisible}
-            aria-controls={listId}
+            aria-controls={suggest.listVisible ? listId : undefined}
             aria-activedescendant={suggest.listVisible && suggest.active >= 0 ? optionId(suggest.active) : undefined}
             aria-describedby={`${uid}-status`}
             aria-keyshortcuts="/"
@@ -172,7 +172,6 @@ export function HeroSearchForm() {
             onHover={suggest.setActive}
             onPick={suggest.pick}
             onRemoveRecent={suggest.removeRecent}
-            onClearRecent={suggest.clearRecent}
           />
         )}
       </div>

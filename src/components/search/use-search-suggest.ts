@@ -3,26 +3,10 @@
 import { useCallback, useEffect, useState, useSyncExternalStore, type KeyboardEvent, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 import type { AutocompleteResponse } from "@/lib/search/autocomplete-types";
+import { fetchSuggestions } from "@/lib/search/fetch-suggestions";
 import { addRecent, clearRecent, readRecent, removeRecent } from "@/lib/search/recent-searches";
+import { activeAfterRemoval, listKeyAction } from "@/lib/search/suggest-keys";
 import { MIN_SUGGEST, buildSuggestions, flattenGroups, type ComparePick, type SuggestRow } from "@/lib/search/suggest-rows";
-
-/** Server caps the query at 100 characters too; longer is never sent. */
-const MAX_SENT = 100;
-
-/** Keeps only the fields the list renders, so a malformed answer cannot crash the box. */
-function parseAnswer(q: string, raw: unknown, limit: number): AutocompleteResponse | null {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw as Partial<AutocompleteResponse>;
-  if (!Array.isArray(r.products)) return null;
-  const list = <T,>(v: T[] | undefined) => (Array.isArray(v) ? v : []);
-  return {
-    q,
-    products: r.products.slice(0, limit),
-    brands: list(r.brands).slice(0, 3),
-    categories: list(r.categories).slice(0, 3),
-    intent: list(r.intent).filter((c) => typeof c?.label === "string" && c.label.trim() !== ""),
-  };
-}
 
 /**
  * State and behaviour of the suggestion list shared by the search box and the homepage hero:
@@ -67,15 +51,12 @@ export function useSearchSuggest({
     if (!wantsAnswer) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(query.slice(0, MAX_SENT))}`, { signal: controller.signal });
-        // Suggestions are a convenience: on failure show "no suggestions", Enter still searches.
-        const answer = res.ok ? parseAnswer(query, await res.json(), limit) : null;
-        setData(answer ?? { q: query, products: [], brands: [], categories: [], intent: [] });
-        setActive(-1);
-      } catch {
-        // Aborted (a newer query is on its way) or offline: keep what is shown.
-      }
+      // Suggestions are a convenience: a failed or offline request answers "no suggestions" (so the
+      // list leaves its loading state), Enter still searches. null = aborted, a newer query is coming.
+      const answer = await fetchSuggestions(query, { limit, signal: controller.signal });
+      if (!answer) return;
+      setData(answer);
+      setActive(-1);
     }, delay);
     return () => {
       window.clearTimeout(timer);
@@ -93,7 +74,16 @@ export function useSearchSuggest({
 
   const record = useCallback((q: string) => setRecent(addRecent(q)), []);
 
+  const clearAll = () => {
+    setRecent(clearRecent());
+    setActive(-1);
+  };
+
   const pick = (row: SuggestRow) => {
+    if (row.kind === "clear-recent") {
+      clearAll();
+      return;
+    }
     setOpen(false);
     setActive(-1);
     if (row.kind === "recent") {
@@ -107,45 +97,33 @@ export function useSearchSuggest({
     router.push(row.href);
   };
 
-  const removeOne = (q: string) => {
-    setRecent(removeRecent(q));
-    setActive(-1);
+  /** Removes a recent search; the keyboard stays on the row that took its place. */
+  const removeOne = (q: string, index = -1) => {
+    const left = removeRecent(q);
+    setRecent(left);
+    setActive(index >= 0 ? activeAfterRemoval(index, left.length) : -1);
   };
 
-  /** Arrow keys, Enter and Delete on the list. Returns true when the key was handled. */
+  /** Arrow keys, Enter, Delete / Backspace and Tab on the list (src/lib/search/suggest-keys.ts). Returns true when handled. */
   const onListKey = (e: KeyboardEvent<HTMLInputElement>): boolean => {
-    if (e.nativeEvent.isComposing) return false;
-    if (!listVisible) {
-      if (e.key === "ArrowDown" && rows.length > 0) {
-        e.preventDefault();
-        setOpen(true);
-        return true;
-      }
+    const action = listKeyAction({
+      key: e.key,
+      composing: e.nativeEvent.isComposing,
+      listVisible,
+      rows,
+      active: activeIndex,
+    });
+    if (!action) return false;
+    if (action.type === "close") {
+      setOpen(false);
       return false;
     }
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((activeIndex + 1) % rows.length);
-      return true;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive(activeIndex <= 0 ? rows.length - 1 : activeIndex - 1);
-      return true;
-    }
-    if (e.key === "Enter" && activeIndex >= 0) {
-      e.preventDefault();
-      pick(rows[activeIndex]);
-      return true;
-    }
-    const row = rows[activeIndex];
-    if (e.key === "Delete" && row?.kind === "recent") {
-      e.preventDefault();
-      removeOne(row.q);
-      return true;
-    }
-    if (e.key === "Tab") setOpen(false);
-    return false;
+    e.preventDefault();
+    if (action.type === "open") setOpen(true);
+    else if (action.type === "move") setActive(action.to);
+    else if (action.type === "pick") pick(action.row);
+    else removeOne(action.q, action.index);
+    return true;
   };
 
   return {
@@ -171,10 +149,7 @@ export function useSearchSuggest({
       setOpen(true);
     },
     removeRecent: removeOne,
-    clearRecent: () => {
-      setRecent(clearRecent());
-      setActive(-1);
-    },
+    clearRecent: clearAll,
   };
 }
 

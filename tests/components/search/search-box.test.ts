@@ -62,7 +62,6 @@ describe("SuggestPopup", () => {
         onHover: () => {},
         onPick: () => {},
         onRemoveRecent: () => {},
-        onClearRecent: () => {},
       }),
     );
 
@@ -84,12 +83,24 @@ describe("SuggestPopup", () => {
     const html = render("zzz", [], { ...data, q: "zzz", products: [], brands: [], categories: [], intent: [] });
     expect(html).not.toContain('role="listbox"');
     expect(html).toContain("Không có gợi ý — nhấn Enter để tìm “");
+    expect(html).toContain('<p role="status"');
   });
 
-  it("recent searches with a remove button each and a clear-all button", () => {
+  it("recent searches: no nested control inside an option; Delete is announced; clear-all is an option", () => {
     const html = render("", ["ssd", "tai nghe"]);
     expect(html).toContain("Tìm gần đây");
-    expect(html).toContain('aria-label="Xóa “ssd” khỏi lịch sử"');
-    expect(html).toContain("Xóa lịch sử");
+    // axe nested-interactive: an option holds no button, link or focusable element.
+    expect(html).not.toMatch(/<button|<a |tabindex=/i);
+    // Every recent option announces its keyboard removal.
+    expect(html.match(/aria-describedby="L-remove-hint"/g)).toHaveLength(2);
+    expect(html).toContain('<span id="L-remove-hint" hidden="">Nhấn Delete để xóa khỏi lịch sử</span>');
+    expect(html.match(/aria-keyshortcuts="Delete Backspace"/g)).toHaveLength(2);
+    // The × is pointer-only, hidden from assistive tech.
+    expect(html).toMatch(/<span aria-hidden="true" title="Xóa khỏi lịch sử"/);
+    // Active row (index 1) shows the visible hint too.
+    expect(html.match(/Delete để xóa</g)).toHaveLength(1);
+    // "Xóa lịch sử" is the third option (o-2) of the one listbox.
+    expect(html).toMatch(/id="o-2" role="option" aria-selected="false"[^>]*>(?:(?!role="option").)*Xóa lịch sử/);
+    expect(html.match(/role="listbox"/g)).toHaveLength(1);
   });
 });

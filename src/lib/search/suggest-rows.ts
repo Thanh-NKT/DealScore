@@ -1,6 +1,7 @@
 /**
  * Rows of the search suggestion list, in display (and arrow-key) order (spec 2026-10-07-search-quality-ui §2):
- * the "Tìm “q”" row, then categories, brands, products; an empty box shows recent searches instead.
+ * the "Tìm “q”" row, then categories, brands, products; an empty box shows recent searches instead,
+ * followed by a "Xóa lịch sử" row.
  * Pure, so the ordering is unit-tested; the component only renders what this returns.
  */
 import type { AutocompleteItem, AutocompleteResponse } from "@/lib/search/autocomplete-types";
@@ -17,11 +18,13 @@ export type SuggestRow =
   | { kind: "category"; name: string; href: string }
   | { kind: "brand"; name: string; href: string }
   | { kind: "product"; item: AutocompleteItem; href: string }
-  | { kind: "recent"; q: string; href: string };
+  | { kind: "recent"; q: string; href: string }
+  /** "Xóa lịch sử": an option of its own, so clearing the history works from the keyboard (Enter). */
+  | { kind: "clear-recent"; href: null };
 
 export interface SuggestGroup {
-  key: "query" | "category" | "brand" | "product" | "recent";
-  /** Section heading; null for the search row, which needs none. */
+  key: "query" | "category" | "brand" | "product" | "recent" | "clear";
+  /** Section heading; null for the search row and the clear-history row, which need none. */
   label: string | null;
   rows: SuggestRow[];
 }
@@ -75,7 +78,13 @@ export function buildSuggestions({
   if (q === "") {
     if (recent.length === 0) return { groups: [], empty: false };
     const rows: SuggestRow[] = recent.map((r) => ({ kind: "recent", q: r, href: queryHref(r, compare) }));
-    return { groups: [{ key: "recent", label: "Tìm gần đây", rows }], empty: false };
+    return {
+      groups: [
+        { key: "recent", label: "Tìm gần đây", rows },
+        { key: "clear", label: null, rows: [{ kind: "clear-recent", href: null }] },
+      ],
+      empty: false,
+    };
   }
   if (q.length < MIN_SUGGEST) return { groups: [], empty: false };
 

@@ -136,7 +136,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={suggest.listVisible}
-          aria-controls={listId}
+          aria-controls={suggest.listVisible ? listId : undefined}
           aria-activedescendant={suggest.listVisible && suggest.active >= 0 ? optionId(suggest.active) : undefined}
           aria-describedby={`${uid}-status`}
           aria-keyshortcuts="/"
@@ -209,7 +209,6 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           onHover={suggest.setActive}
           onPick={suggest.pick}
           onRemoveRecent={suggest.removeRecent}
-          onClearRecent={suggest.clearRecent}
         />
       )}
     </div>

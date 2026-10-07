@@ -61,10 +61,16 @@ describe("buildSuggestions", () => {
     expect(flattenGroups(groups).map((r) => r.kind)).toEqual(["query"]);
   });
 
-  it("shows recent searches (and only them) for an empty box", () => {
+  it("shows recent searches (and only them) for an empty box, then a clear-history row", () => {
     const { groups } = buildSuggestions({ q: "", data: full, recent: ["tai nghe", "ssd"] });
-    expect(groups.map((g) => [g.key, g.label])).toEqual([["recent", "Tìm gần đây"]]);
-    expect(flattenGroups(groups).map((r) => r.href)).toEqual(["/search?q=tai+nghe", "/search?q=ssd"]);
+    expect(groups.map((g) => [g.key, g.label])).toEqual([["recent", "Tìm gần đây"], ["clear", null]]);
+    expect(flattenGroups(groups).map((r) => r.href)).toEqual(["/search?q=tai+nghe", "/search?q=ssd", null]);
+    // "Xóa lịch sử" is the last option, so the arrow keys reach it and Enter clears.
+    expect(flattenGroups(groups).at(-1)).toEqual({ kind: "clear-recent", href: null });
+  });
+
+  it("no clear-history row when there is no history", () => {
+    expect(buildSuggestions({ q: "", data: full, recent: [] }).groups).toEqual([]);
   });
 
   it("shows nothing for one character or a pasted link", () => {
