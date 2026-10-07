@@ -1696,6 +1696,15 @@ export type Database = {
       }
     }
     Functions: {
+      admin_check_product_fields: {
+        Args: { p: Json; p_fn: string; p_self: string }
+        Returns: undefined
+      }
+      admin_check_product_variants: {
+        Args: { p_fn: string; p_product_id: string }
+        Returns: undefined
+      }
+      admin_create_product: { Args: { p: Json }; Returns: Json }
       admin_cron_status: {
         Args: never
         Returns: {
@@ -1709,6 +1718,23 @@ export type Database = {
           schedule: string
         }[]
       }
+      admin_freshness: {
+        Args: { p_edges_minutes?: number[]; p_stale_hours?: number }
+        Returns: Json
+      }
+      admin_list_products: {
+        Args: {
+          p_category_id?: string
+          p_limit?: number
+          p_marketplace?: string
+          p_offset?: number
+          p_q?: string
+          p_sort?: string
+          p_stale_hours?: number
+          p_tab?: string
+        }
+        Returns: Json
+      }
       admin_lock_product: { Args: { p_product_id: string }; Returns: string }
       admin_log: {
         Args: {
@@ -1721,11 +1747,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_marketplace_health: {
+        Args: { p_hours?: number; p_stale_hours?: number }
+        Returns: Json
+      }
       admin_move_offer: {
         Args: { p_offer_id: string; p_target_variant_id?: string }
         Returns: Json
       }
-      admin_overview_counts: { Args: never; Returns: Json }
+      admin_overview_counts: { Args: { p_stale_hours?: number }; Returns: Json }
+      admin_product_snapshot: { Args: { p_product_id: string }; Returns: Json }
       admin_promote_draft: {
         Args: { p: Json; p_product_id: string }
         Returns: Json
@@ -1753,6 +1784,47 @@ export type Database = {
       admin_set_listings_inactive: {
         Args: { p_listing_ids: string[]; p_note: string }
         Returns: number
+      }
+      admin_stale_offer_rows: {
+        Args: { p_stale_hours: number }
+        Returns: {
+          last_attempt_at: string
+          last_observed_at: string
+          listing_id: string
+          marketplace: string
+          offer_id: string
+          product_id: string
+          variant_id: string
+        }[]
+      }
+      admin_stale_offers: {
+        Args: {
+          p_limit?: number
+          p_marketplace?: string
+          p_offset?: number
+          p_stale_hours?: number
+        }
+        Returns: {
+          category_slug: string
+          failing: boolean
+          last_attempt_at: string
+          last_observed_at: string
+          listing_id: string
+          listing_title: string
+          marketplace: string
+          offer_id: string
+          product_id: string
+          product_name: string
+          product_slug: string
+          product_status: string
+          total_count: number
+          url: string
+          watched: boolean
+        }[]
+      }
+      admin_update_product: {
+        Args: { p: Json; p_product_id: string }
+        Returns: Json
       }
       claim_due_deliveries: {
         Args: { p_limit: number; p_now: string }
