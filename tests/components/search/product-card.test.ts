@@ -59,3 +59,23 @@ describe("ProductCard", () => {
     expect(html).toContain("Ước tính");
   });
 });
+
+describe("ProductCard — shop count and fake-sale note (roadmap P2)", () => {
+  it("names the shop count from 2 offers, next to the list price line", () => {
+    const html = render(item({ offerCount: 3 }));
+    expect(html).toContain("Rẻ nhất ở");
+    expect(html).toContain("nơi bán");
+    expect(html).toContain("Giá niêm yết");
+    expect(render(item({ offerCount: 1, originalPrice: null }))).toContain("Ghi nhận trên");
+  });
+
+  it("a fake-sale verdict replaces the −X% pill with the note", () => {
+    const plain = render(item());
+    expect(plain).toContain("−50%");
+    const html = render(item({ fakeSale: "list_inflated" }));
+    expect(html).not.toContain("−50%");
+    expect(html).toContain("Giảm giá chưa thực chất");
+    expect(html).toContain("giá niêm yết ghi giảm 50%");
+    expect(render(item({ fakeSale: "pre_sale_hike" }))).toContain("Giá vừa được nâng lên trước đợt giảm này.");
+  });
+});

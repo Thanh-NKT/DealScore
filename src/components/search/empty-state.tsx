@@ -26,6 +26,8 @@ interface EmptyStateProps {
   retryHref?: string;
   /** Marketplace name for source_unavailable. */
   source?: string;
+  /** Same search without "Chỉ hiện Nên mua" — set only while that filter is on. */
+  onlyBuyOffHref?: string;
 }
 
 const PRIMARY = buttonClass({ size: "md" });
@@ -40,7 +42,30 @@ function quoted(q: string): string {
  * Empty results matching Search.html mockup:
  * Calm, dashed border, rounded-20px card, clear message and primary reset action.
  */
-export function EmptyState({ kind, query, clearFiltersHref = "/search", firstPageHref = "/search", retryHref = "/search", source }: EmptyStateProps) {
+function OnlyBuyHint({ href }: { href: string }) {
+  return (
+    <p className="mt-3 flex max-w-[52ch] items-start gap-2 text-left text-body-sm leading-relaxed text-ink-2">
+      <InfoIcon className="mt-1 size-4 shrink-0 text-ink-2" />
+      <span>
+        Thử{" "}
+        <Link href={href} scroll={false} className="font-semibold text-primary underline-offset-4 hover:underline">
+          tắt “Chỉ hiện Nên mua”
+        </Link>{" "}
+        — có thể có sản phẩm tốt đang ở mức Có thể chờ.
+      </span>
+    </p>
+  );
+}
+
+export function EmptyState({
+  kind,
+  query,
+  clearFiltersHref = "/search",
+  firstPageHref = "/search",
+  retryHref = "/search",
+  source,
+  onlyBuyOffHref,
+}: EmptyStateProps) {
   const q = query?.trim();
 
   if (kind === "load_error" || kind === "source_unavailable") {
@@ -91,6 +116,7 @@ export function EmptyState({ kind, query, clearFiltersHref = "/search", firstPag
         <h2 className="display text-h3 font-bold text-balance text-ink [overflow-wrap:anywhere] max-sm:text-title">
           Chưa có sản phẩm khớp bộ lọc
         </h2>
+        {onlyBuyOffHref && <OnlyBuyHint href={onlyBuyOffHref} />}
         <p className="mt-1.5 max-w-[46ch] text-body leading-relaxed text-ink-2">
           {q ? `Không có sản phẩm nào cho ${quoted(q)} khớp với các bộ lọc đang chọn.` : 'Thử bỏ bớt thương hiệu hoặc tắt "Chỉ hiện Nên mua".'}
         </p>
@@ -108,6 +134,7 @@ export function EmptyState({ kind, query, clearFiltersHref = "/search", firstPag
         <h2 className="display text-h3 font-bold text-ink max-sm:text-title [overflow-wrap:anywhere]">
           {q ? `Chưa có sản phẩm nào cho ${quoted(q)}` : "Chưa có sản phẩm nào"}
         </h2>
+        {onlyBuyOffHref && <OnlyBuyHint href={onlyBuyOffHref} />}
         <p className="mt-1.5 text-body leading-relaxed text-ink-2">
           DealScore chỉ tìm trong những sản phẩm hệ thống đã theo dõi, nên có thể sản phẩm bạn cần chưa có ở đây.
         </p>

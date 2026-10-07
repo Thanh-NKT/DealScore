@@ -40,8 +40,7 @@ export interface SearchParams {
   onlyBuy?: boolean;
 }
 
-/** A card names its shop count ("N nơi bán") only from this many offers (UI spec §1). */
-export const OFFER_COUNT_MIN_SHOWN = 2;
+export { OFFER_COUNT_MIN_SHOWN } from "@/lib/search/card-constants";
 
 export const MIN_RATINGS = [4.5, 4.8] as const;
 export type MinRating = (typeof MIN_RATINGS)[number];

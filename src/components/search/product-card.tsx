@@ -6,7 +6,8 @@ import { discountPercent, formatVnd } from "@/lib/format";
 import { ScoreRing, VerdictTag } from "@/components/product/verdict-tag";
 import { ProductImage } from "@/components/ui/product-image";
 import { UpdatedAt } from "@/components/product/updated-at";
-import { ClockIcon } from "@/components/ui/icons";
+import { ClockIcon, InfoIcon } from "@/components/ui/icons";
+import { cardSourceLine, fakeSaleNote } from "@/components/search/card-lines";
 import { marketplaceName } from "@/components/product/marketplace";
 
 interface ProductCardProps {
@@ -65,6 +66,9 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
   const off = discountPercent(price, listed);
   const brandName = brand?.trim() || categoryName?.trim();
   const where = item.marketplace ? marketplaceName(item.marketplace) : null;
+  const source = cardSourceLine(item.offerCount ?? null, where);
+  // A cached fake-sale verdict for this exact price: the discount is the doubtful claim, so no "−X%" pill.
+  const fakeNote = item.fakeSale && price != null ? fakeSaleNote(item.fakeSale, off) : null;
 
   return (
     <Link
@@ -89,7 +93,7 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
         ) : null}
 
         {/* Top-right: the seller's list-price discount, neutral (not verified on a card) */}
-        {off != null && off > 0 && (
+        {off != null && off > 0 && !fakeNote && (
           <span
             className="num absolute right-2.5 top-2.5 rounded-full border border-line/80 bg-surface/92 px-2.5 py-1 text-micro font-bold text-ink-2 backdrop-blur-md shadow-2xs"
             title="Mức giảm so với giá niêm yết do người bán ghi"
@@ -111,6 +115,16 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
               {insight.icon}
             </span>
             <span className="truncate">{insight.text}</span>
+          </div>
+        )}
+
+        {fakeNote && (
+          <div title={fakeNote} className="flex flex-col gap-0.5 rounded-sm border border-wait/30 bg-wait-soft px-2.5 py-1.5">
+            <span className="flex items-center gap-1.5 text-micro font-semibold text-wait">
+              <InfoIcon className="size-3.5" />
+              Giảm giá chưa thực chất
+            </span>
+            <span className="line-clamp-2 text-micro text-ink-2">{fakeNote}</span>
           </div>
         )}
 
@@ -148,14 +162,19 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
                 </span>
               )}
 
-              {off != null && listed != null ? (
+              {off != null && listed != null && (
                 <span className="flex items-center gap-1.5 text-micro text-ink-3">
                   <span>Giá niêm yết</span>
                   <s className="num decoration-[1.5px]">{formatVnd(listed)}</s>
                 </span>
-              ) : where ? (
-                <span className="text-micro text-ink-3">Ghi nhận trên {where}</span>
-              ) : null}
+              )}
+              {source && (
+                <span className="truncate text-micro text-ink-3">
+                  {source.lead}
+                  {source.count != null && <span className="num">{source.count}</span>}
+                  {source.tail}
+                </span>
+              )}
             </div>
 
             <div className="flex shrink-0 flex-col items-center gap-0.5">

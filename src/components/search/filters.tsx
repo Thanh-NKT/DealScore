@@ -38,6 +38,7 @@ export function activeFilterCount(p: SearchParams): number {
     (p.minRating != null ? 1 : 0) +
     (p.freeShipping ? 1 : 0) +
     (p.hasVoucher ? 1 : 0) +
+    (p.onlyBuy ? 1 : 0) +
     (p.marketplaces?.length ?? 0)
   );
 }
@@ -50,19 +51,34 @@ function CrossIcon({ className = "size-3" }: { className?: string }) {
   );
 }
 
-function Option({ to, selected, children, multi = false }: { to: string; selected: boolean; children: React.ReactNode; multi?: boolean }) {
+function Option({
+  to,
+  selected,
+  children,
+  multi = false,
+  tone = "primary",
+}: {
+  to: string;
+  selected: boolean;
+  children: React.ReactNode;
+  multi?: boolean;
+  /** "buy": the "Chỉ hiện Nên mua" row uses the Nên mua green (DESIGN.md). */
+  tone?: "primary" | "buy";
+}) {
+  const on = tone === "buy" ? "font-semibold text-buy" : "font-semibold text-primary";
+  const box = tone === "buy" ? "border-buy bg-buy text-canvas" : "border-primary bg-primary text-on-primary";
   return (
     <Link
       href={to}
       scroll={false}
       aria-current={selected && !multi ? "true" : undefined}
       aria-pressed={multi ? selected : undefined}
-      className={`-mx-2 flex min-h-10 items-center gap-2.5 rounded-sm px-2 text-body-sm text-ink transition-colors duration-150 ease-out hover:bg-surface-2 ${selected ? "font-semibold text-primary" : ""}`}
+      className={`-mx-2 flex min-h-10 items-center gap-2.5 rounded-sm px-2 text-body-sm text-ink transition-colors duration-150 ease-out hover:bg-surface-2 ${selected ? on : ""}`}
     >
       {multi ? (
         <span
           aria-hidden="true"
-          className={`inline-grid size-4 shrink-0 place-items-center rounded-xs border-[1.5px] ${selected ? "border-primary bg-primary text-on-primary" : "border-line-strong bg-surface"}`}
+          className={`inline-grid size-4 shrink-0 place-items-center rounded-xs border-[1.5px] ${selected ? box : "border-line-strong bg-surface"}`}
         >
           {selected && <CheckIcon className="size-3" strokeWidth={3} />}
         </span>
@@ -148,6 +164,9 @@ function FilterBody({
           <span>Ưu tiên Deal Score cao</span>
         </Link>
         <div className="flex flex-col">
+          <Option to={href(params, { onlyBuy: params.onlyBuy ? undefined : true })} selected={Boolean(params.onlyBuy)} multi tone="buy">
+            Chỉ hiện Nên mua
+          </Option>
           <Option to={href(params, { hasVoucher: params.hasVoucher ? undefined : true })} selected={Boolean(params.hasVoucher)} multi>
             Có mã giảm giá (Voucher)
           </Option>
@@ -318,6 +337,7 @@ export function ActiveFilterChips({
   }
   if (params.freeShipping && !hidden.has("free_shipping")) chips.push({ key: "freeship", label: "Freeship", to: href(params, { freeShipping: undefined }) });
   if (params.hasVoucher && !hidden.has("voucher")) chips.push({ key: "voucher", label: "Có voucher", to: href(params, { hasVoucher: undefined }) });
+  if (params.onlyBuy) chips.push({ key: "buy", label: "Chỉ Nên mua", to: href(params, { onlyBuy: undefined }) });
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">

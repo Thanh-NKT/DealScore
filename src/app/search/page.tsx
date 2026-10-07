@@ -47,6 +47,7 @@ function hasFilterParams(params: SearchParams): boolean {
     params.minRating != null ||
     Boolean(params.freeShipping) ||
     Boolean(params.hasVoucher) ||
+    Boolean(params.onlyBuy) ||
     Boolean(params.marketplaces && params.marketplaces.length > 0)
   );
 }
@@ -270,6 +271,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               clearFiltersHref={raw.q ? `/search?${toSearchParams({ q: raw.q, intent: false }).toString()}` : "/search"}
               firstPageHref={pageHref(1)}
               retryHref={pageHref(raw.page ?? 1)}
+              onlyBuyOffHref={raw.onlyBuy ? `/search?${toSearchParams({ ...raw, onlyBuy: undefined, page: 1 }).toString()}` : undefined}
             />
           )}
 
