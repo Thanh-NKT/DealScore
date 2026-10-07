@@ -24,6 +24,8 @@ export function buildSitemap(
 ): MetadataRoute.Sitemap {
   return [
     { url: `${siteUrl}/`, changeFrequency: "daily", priority: 1 },
+    // Fixed pages.
+    { url: `${siteUrl}/deal-score`, changeFrequency: "weekly", priority: 0.5 },
     ...input.categories.map((c) => ({
       url: `${siteUrl}/${c.slug}`,
       changeFrequency: "daily" as const,

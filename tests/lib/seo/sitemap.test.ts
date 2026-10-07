@@ -17,6 +17,7 @@ describe("buildSitemap", () => {
   it("lists home, categories, brands and products with absolute URLs", () => {
     expect(urls).toEqual([
       `${SITE}/`,
+      `${SITE}/deal-score`,
       `${SITE}/ssd`,
       `${SITE}/brand/samsung`,
       `${SITE}/brand/western-digital`,
@@ -40,5 +41,14 @@ describe("brand slugs", () => {
   it("resolve back to the stored brand name", () => {
     expect(resolveBrandSlug("western-digital", ["Samsung", "Western Digital"])).toBe("Western Digital");
     expect(resolveBrandSlug("nope", ["Samsung"])).toBeNull();
+  });
+});
+
+describe("staticPageMetadata", () => {
+  it("canonical without query, title suffixed", async () => {
+    const { staticPageMetadata } = await import("@/lib/seo/static-page");
+    const m = staticPageMetadata({ path: "/deal-score", title: "Độ chính xác Deal Score", description: "d" }, "https://dealscore.vn");
+    expect(m.alternates?.canonical).toBe("https://dealscore.vn/deal-score");
+    expect(m.title).toBe("Độ chính xác Deal Score | DealScore");
   });
 });

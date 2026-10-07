@@ -11,6 +11,9 @@ export function SiteFooter() {
           </p>
         </div>
         <nav aria-label="Chân trang" className="flex flex-wrap gap-5 text-label font-medium text-ink-2">
+          <Link href="/deal-score" className="hover:text-ink transition-colors">
+            Độ chính xác Deal Score
+          </Link>
           <Link href="/privacy" className="hover:text-ink transition-colors">
             Chính sách bảo mật
           </Link>

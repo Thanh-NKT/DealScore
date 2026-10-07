@@ -26,5 +26,7 @@ describe("sitemap", () => {
     process.env.NEXT_PHASE = "phase-production-build";
     const out = await sitemap();
     expect(out.length).toBeGreaterThan(0);
+    // The transparency page is a fixed URL, listed even without catalog data.
+    expect(out.some((e) => e.url.endsWith("/deal-score"))).toBe(true);
   });
 });

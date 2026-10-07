@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CheckIcon, DashIcon, InfoIcon } from "@/components/ui/icons";
 import { ScoreRing, VerdictTag } from "@/components/product/verdict-tag";
 import { parseReasons } from "@/lib/pricing/verdict-copy";
@@ -133,6 +134,13 @@ export function DealScoreBreakdown({
           Giá flash sale không được tính vào lịch sử giá; nếu giá hiện tại là giá flash sale, điểm so nó với giá thường và lý do đầu tiên sẽ nói rõ. Hoa hồng tiếp thị không làm thay đổi điểm. Cần ít nhất {MIN_DAYS_FOR_SCORE} ngày và {MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá để chấm.
         </span>
       </div>
+
+      <Link
+        href="/deal-score"
+        className="inline-flex min-h-10 items-center self-start text-label font-semibold text-primary underline-offset-4 hover:underline"
+      >
+        Deal Score đúng tới đâu? →
+      </Link>
     </div>
   );
 }

@@ -2000,6 +2000,24 @@ export type Database = {
           watched: boolean
         }[]
       }
+      deal_score_accuracy: {
+        Args: { p_weeks?: number }
+        Returns: {
+          accuracy: number
+          avoid_correct: number
+          avoid_n: number
+          buy_correct: number
+          buy_n: number
+          drop_threshold: number
+          horizon_days: number
+          ran_at: string
+          samples: number
+          variants: number
+          version: string
+          wait_correct: number
+          wait_n: number
+        }[]
+      }
       extension_contribution_begin: {
         Args: { p_contributor: string; p_limit?: number }
         Returns: {

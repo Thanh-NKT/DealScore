@@ -14,7 +14,8 @@ const AUTHENTICATED_WRITABLE = [
   "watch_folders",
   "watches",
 ];
-const PUBLIC_DEFINER_FUNCTIONS = ["trending_products(text,integer,uuid)"];
+// deal_score_accuracy (0044): aggregates of backtest_runs only; the table itself stays closed.
+const PUBLIC_DEFINER_FUNCTIONS = ["deal_score_accuracy(integer)", "trending_products(text,integer,uuid)"];
 
 describe("privilege_report", () => {
   it("anon writes nothing; authenticated writes only RLS-protected user tables; definer RPCs are service-only", async () => {

@@ -76,7 +76,8 @@ Never mix these up; the choice encodes the security model.
   cookies. Server Components / Route Handlers / Server Actions.
 - `src/lib/supabase/public.ts` — **cookie-less** anon client (no session, RLS as anonymous). Only for
   public catalog reads inside `unstable_cache` (product page vouchers in `lib/product/page-data.ts`,
-  OG image data in `lib/product/og-data.ts`). Never for user-bound data. Pages stay `force-dynamic`
+  OG image data in `lib/product/og-data.ts`, `/deal-score` backtest aggregates via the `deal_score_accuracy` RPC in
+  `lib/transparency/load.ts`). Never for user-bound data. Pages stay `force-dynamic`
   (nonce CSP); only these data reads are shared. `/api/vouchers/refresh` expires tag `vouchers`.
 - `src/lib/supabase/admin.ts` — **service-role** client, **bypasses RLS**. Trusted server code
   only (collector, cron, admin). **Never import into a Client Component** (enforced by
