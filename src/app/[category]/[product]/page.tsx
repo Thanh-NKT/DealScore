@@ -30,6 +30,7 @@ import { InteractivePriceChart } from "@/components/product/interactive-price-ch
 import { DealScoreBreakdown } from "@/components/product/deal-score-breakdown";
 import { OfferList, VOUCHER_SECTION_ID } from "@/components/product/offer-list";
 import { PriceAlertCard } from "@/components/product/price-alert-card";
+import { DataReportDialog } from "@/components/product/data-report-dialog";
 import { VoucherPicker } from "@/components/product/voucher-picker";
 import { DiscountVerifyBanner } from "@/components/product/discount-verify-banner";
 import { ProductStickyBar } from "@/components/product/product-sticky-bar";
@@ -344,6 +345,21 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               dailyPrices={dailyPrices}
             />
           </section>
+
+          {/* "Góp ý dữ liệu": one entry point, under the seller list / price alert */}
+          <div className="-mt-2 flex justify-end">
+            <DataReportDialog
+              productId={product.id}
+              productName={product.canonicalName}
+              variantId={selectedVariantId}
+              offers={pricing.offers.map((o) => ({
+                offerId: o.offerId,
+                marketplace: o.marketplace,
+                sellerName: o.sellerName,
+                price: o.price,
+              }))}
+            />
+          </div>
 
           {/* Section 3b: Voucher Picker */}
           <section id={VOUCHER_SECTION_ID} aria-labelledby="voucher-title">

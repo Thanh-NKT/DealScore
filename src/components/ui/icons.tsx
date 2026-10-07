@@ -203,3 +203,8 @@ export const MoonIcon = (p: IconProps) => (
   </Icon>
 );
 
+
+/** Flag on a pole: "Góp ý dữ liệu" (report wrong data). */
+export const FlagIcon = (p: IconProps) => (
+  <Icon {...p}><path d="M5 21V4" /><path d="M5 4h11l-2 4 2 4H5" /></Icon>
+);
