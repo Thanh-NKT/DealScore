@@ -1,7 +1,8 @@
 /**
  * "Tìm gần đây": the last few queries, per device, in localStorage (spec 2026-10-07-search-quality-ui §2.4).
  * Nothing is stored on the server. Every storage access is wrapped: private mode, blocked site data or a
- * full quota must never break the search box, so a failed write still returns the list the UI should show.
+ * full quota must never break the search box: a failed write still returns the list the UI should show, and
+ * callers pass the list they show (`shown`), merged with storage, so later edits survive a failed write.
  */
 import { foldText } from "@/lib/search/highlight";
 
@@ -60,19 +61,27 @@ export function readRecent(storage: StorageLike | null = browserStorage()): stri
   }
 }
 
-/** Records a submitted query: newest first, deduped without accents or case, at most `RECENT_MAX`. */
-export function addRecent(q: string, storage: StorageLike | null = browserStorage()): string[] {
+/** What the box shows plus what storage holds: a write that failed earlier (quota) loses nothing on screen. */
+function merged(shown: readonly string[], storage: StorageLike | null): string[] {
+  return shown.length === 0 ? readRecent(storage) : sanitize([...shown, ...readRecent(storage)]);
+}
+
+/**
+ * Records a submitted query: newest first, deduped without accents or case, at most `RECENT_MAX`.
+ * `shown`: the list on screen, merged with storage (shown entries first).
+ */
+export function addRecent(q: string, storage: StorageLike | null = browserStorage(), shown: readonly string[] = []): string[] {
   const query = clean(q);
-  const current = readRecent(storage);
+  const current = merged(shown, storage);
   if (!query) return current;
   const key = foldText(query);
   return write(sanitize([query, ...current.filter((x) => foldText(x) !== key)]), storage);
 }
 
-export function removeRecent(q: string, storage: StorageLike | null = browserStorage()): string[] {
+export function removeRecent(q: string, storage: StorageLike | null = browserStorage(), shown: readonly string[] = []): string[] {
   const key = foldText(clean(q));
   return write(
-    readRecent(storage).filter((x) => foldText(x) !== key),
+    merged(shown, storage).filter((x) => foldText(x) !== key),
     storage,
   );
 }

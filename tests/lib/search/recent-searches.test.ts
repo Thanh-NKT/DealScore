@@ -76,4 +76,22 @@ describe("recent searches", () => {
     expect(readRecent(null)).toEqual([]);
     expect(addRecent("ssd", null)).toEqual(["ssd"]);
   });
+
+  it("a full quota (setItem throws, getItem works) loses nothing on screen when the shown list is passed", () => {
+    const s = memory('["old"]');
+    s.setItem = () => {
+      throw new Error("QuotaExceededError");
+    };
+    let shown = readRecent(s);
+    shown = addRecent("ssd", s, shown);
+    shown = addRecent("tai nghe", s, shown);
+    expect(shown).toEqual(["tai nghe", "ssd", "old"]);
+    expect(removeRecent("ssd", s, shown)).toEqual(["tai nghe", "old"]);
+  });
+
+  it("an empty shown list falls back to storage (never wipes the stored history)", () => {
+    const s = memory('["old", "ssd"]');
+    expect(addRecent("loa", s, [])).toEqual(["loa", "old", "ssd"]);
+    expect(removeRecent("old", s, [])).toEqual(["loa", "ssd"]);
+  });
 });

@@ -72,7 +72,7 @@ export function useSearchSuggest({
     return () => document.removeEventListener("mousedown", onDown);
   }, [wrapperRef]);
 
-  const record = useCallback((q: string) => setRecent(addRecent(q)), []);
+  const record = useCallback((q: string) => setRecent(addRecent(q, undefined, recent)), [recent]);
 
   const clearAll = () => {
     setRecent(clearRecent());
@@ -99,7 +99,7 @@ export function useSearchSuggest({
 
   /** Removes a recent search; the keyboard stays on the row that took its place. */
   const removeOne = (q: string, index = -1) => {
-    const left = removeRecent(q);
+    const left = removeRecent(q, undefined, recent);
     setRecent(left);
     setActive(index >= 0 ? activeAfterRemoval(index, left.length) : -1);
   };
