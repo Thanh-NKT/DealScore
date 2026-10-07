@@ -334,6 +334,62 @@ describe("admin_update_product", () => {
   });
 });
 
+// 0036: an unchanged stored image / GTIN is not re-validated, so legacy data never blocks an unrelated edit.
+describe("admin_update_product with legacy values", () => {
+  const legacyGtin = `${gtinBase}900`;
+  beforeAll(async () => {
+    // Inserted directly: older data predates the https / format / uniqueness rules.
+    await product("legacyImg", { canonical_name: `Quạt ${tag} legacy`, brand: "Asia", status: "verified", image: "http://old.vn/q.jpg" });
+    await product("dupA", { canonical_name: `Đèn ${tag} dupA`, brand: "Rạng Đông", status: "verified", gtin: legacyGtin });
+    await product("dupB", { canonical_name: `Đèn ${tag} dupB`, brand: "Rạng Đông", status: "verified", gtin: legacyGtin });
+    await product("badGtin", { canonical_name: `Bàn ủi ${tag} bad`, brand: "Philips", status: "verified", gtin: "893-1234 5" });
+  });
+  const update = (key: string, p: Record<string, unknown>) => rpc("admin_update_product", { p_product_id: ids[key], p });
+  const full = (key: string, row: { image?: string | null; gtin?: string | null }, name: string) =>
+    update(key, { canonical_name: name, brand: "X", category_id: categoryA, model: null, image: row.image ?? null,
+                  gtin: row.gtin ?? null, variants: [{ id: variantIds[key], variant_key: "Đen" }] });
+
+  it("saves a name change on a product whose stored image is http://", async () => {
+    const r = await full("legacyImg", { image: " http://old.vn/q.jpg " }, `Quạt ${tag} legacy mới`);
+    expect(r.error).toBeNull();
+    const { data } = await admin.from("products").select("canonical_name, image").eq("id", ids.legacyImg).single();
+    expect(data).toEqual({ canonical_name: `Quạt ${tag} legacy mới`, image: "http://old.vn/q.jpg" });
+  });
+
+  it("still rejects a new non-https image on that product", async () => {
+    const r = await update("legacyImg", { image: "http://old.vn/other.jpg" });
+    expect(r.error?.message).toContain("admin_update_product: ảnh phải là đường dẫn https");
+  });
+
+  it("renames each of two products sharing a legacy GTIN", async () => {
+    expect((await full("dupA", { gtin: legacyGtin }, `Đèn ${tag} dupA mới`)).error).toBeNull();
+    expect((await full("dupB", { gtin: legacyGtin }, `Đèn ${tag} dupB mới`)).error).toBeNull();
+    const { data } = await admin.from("products").select("gtin").in("id", [ids.dupA, ids.dupB]);
+    expect(data!.map((r) => r.gtin)).toEqual([legacyGtin, legacyGtin]);
+  });
+
+  it("still rejects setting a new duplicate GTIN", async () => {
+    const r = await update("badGtin", { gtin: legacyGtin });
+    expect(r.error?.message).toContain("admin_update_product: GTIN đã dùng cho sản phẩm khác");
+    const bare = await update("bare", { gtin: legacyGtin });
+    expect(bare.error?.message).toContain("GTIN đã dùng cho sản phẩm khác");
+  });
+
+  it("keeps a malformed legacy GTIN but rejects a new malformed one", async () => {
+    expect((await full("badGtin", { gtin: "893-1234 5" }, `Bàn ủi ${tag} bad mới`)).error).toBeNull();
+    const r = await update("badGtin", { gtin: "893-1234" });
+    expect(r.error?.message).toContain("GTIN phải gồm 8–14 chữ số");
+    expect((await admin.from("products").select("gtin").eq("id", ids.badGtin).single()).data!.gtin).toBe("893-1234 5");
+  });
+
+  it("create still validates every value", async () => {
+    const r = await rpc("admin_create_product", {
+      p: { canonical_name: `Dup ${tag}`, brand: "X", category_id: categoryA, gtin: legacyGtin, variants: [{ variant_key: "a" }] },
+    });
+    expect(r.error?.message).toContain("admin_create_product: GTIN đã dùng cho sản phẩm khác");
+  });
+});
+
 describe("admin catalog privileges", () => {
   it("anon / authenticated cannot call the catalog RPCs", async () => {
     for (const [fn, args] of [
