@@ -1,4 +1,10 @@
-import { detectFakeSale, FLASH_SALE_REASON, type DealScoreResult } from "@/lib/pricing/deal-score";
+import {
+  classifyFakeSale,
+  FAKE_SALE_MESSAGE,
+  FLASH_SALE_REASON,
+  type DealScoreResult,
+  type FakeSaleKind,
+} from "@/lib/pricing/deal-score";
 import { scoreDeal } from "@/lib/pricing/score";
 import { discountPercent } from "@/lib/format";
 import { pickBestBuy } from "@/lib/pricing/best-buy";
@@ -101,6 +107,47 @@ export function isOfferVisible(offer: OfferRow, isDraftProduct: boolean): boolea
   return false;
 }
 
+/** History-check minimums (tune with real data): heuristic #1 needs this many days in the last 30… */
+const FAKE_SALE_MIN_DAYS_30 = 14;
+/** …heuristic #2 this many days in the last 14 and in the 60 days before them. */
+const FAKE_SALE_MIN_DAYS_14 = 10;
+const FAKE_SALE_MIN_DAYS_60 = 30;
+
+/**
+ * Fake-sale verdict for ONE price + list price against a variant's daily rollup. `checked` = the history
+ * check could run (≥ 14 days in the last 30); only then can a list-price discount be called real.
+ * Shared by the product page (per offer) and the search cache (best offer), so the two never disagree.
+ */
+export function fakeSaleForPrice(i: {
+  price: number;
+  originalPrice: number | null;
+  rows: DailyPriceRow[];
+  now: Date;
+}): { checked: boolean; kind: FakeSaleKind | null } {
+  const { price, originalPrice, rows, now } = i;
+  const m30 = medianWindow(rows, 30, 0, now);
+  // Heuristic #1 only runs when m30.dayCount >= 14
+  if (!(price > 0) || m30.dayCount < FAKE_SALE_MIN_DAYS_30) return { checked: false, kind: null };
+  const m14 = medianWindow(rows, 14, 0, now);
+  const m60 = medianWindow(rows, 74, 14, now);
+  // Heuristic #2 ("price hike before the sale") only makes sense when a sale IS
+  // running: a struck-through list price, or a current price below the 14-day
+  // median. Otherwise a product that merely raised its price gets labelled — a
+  // claim about the seller that "better to miss" (design §13) does not allow.
+  const onSale = discountPercent(price, originalPrice) != null || (m14.value != null && price < m14.value);
+  const priceHikeCheckable = onSale && m14.dayCount >= FAKE_SALE_MIN_DAYS_14 && m60.dayCount >= FAKE_SALE_MIN_DAYS_60;
+  return {
+    checked: true,
+    kind: classifyFakeSale({
+      currentPrice: price,
+      listedPrice: originalPrice ?? 0,
+      median30d: m30.value ?? 0,
+      median14dBeforeSale: priceHikeCheckable ? m14.value ?? undefined : undefined,
+      median60dBefore: priceHikeCheckable ? m60.value ?? undefined : undefined,
+    }),
+  };
+}
+
 export function buildVariantPricing(input: {
   offers: OfferRow[];
   history: DailyPriceRow[];
@@ -167,27 +214,12 @@ export function buildVariantPricing(input: {
 
   // 6. Fake Sale Detection, per offer: the page shows one offer's price and list price (bestBuy),
   // so its discount chip must be judged on that offer — not on another seller's list price.
-  const m30 = medianWindow(history, 30, 0, now);
-  const m14 = medianWindow(history, 14, 0, now);
-  const m60 = medianWindow(history, 74, 14, now);
+  // Same function as the search cache (recomputeDealScores), so page and card never disagree.
   for (const offer of mappedOffers) {
     if (offer.price == null || offer.price <= 0) continue;
-    // Heuristic #1 only runs when m30.dayCount >= 14
-    if (m30.dayCount < 14) continue;
-    // Heuristic #2 ("price hike before the sale") only makes sense when a sale IS
-    // running: a struck-through list price, or a current price below the 14-day
-    // median. Otherwise a product that merely raised its price gets labelled — a
-    // claim about the seller that "better to miss" (design §13) does not allow.
-    const onSale = offer.discountPercent != null || (m14.value != null && offer.price < m14.value);
-    const priceHikeCheckable = onSale && m14.dayCount >= 10 && m60.dayCount >= 30;
-    offer.discountChecked = true;
-    offer.fakeSaleMessage = detectFakeSale({
-      currentPrice: offer.price,
-      listedPrice: offer.originalPrice ?? 0,
-      median30d: m30.value ?? 0,
-      median14dBeforeSale: priceHikeCheckable ? m14.value ?? undefined : undefined,
-      median60dBefore: priceHikeCheckable ? m60.value ?? undefined : undefined,
-    });
+    const verdict = fakeSaleForPrice({ price: offer.price, originalPrice: offer.originalPrice, rows: history, now });
+    offer.discountChecked = verdict.checked;
+    offer.fakeSaleMessage = verdict.kind ? FAKE_SALE_MESSAGE[verdict.kind] : null;
   }
 
   // 7. Update time & stale-data warning (> 48h)

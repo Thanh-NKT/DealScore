@@ -355,3 +355,45 @@ describe("searchProducts — synonym groups (0030)", () => {
     expect(args().p_term_groups).toBeUndefined();
   });
 });
+
+describe("Chỉ hiện Nên mua (?buy=1) and card flags", () => {
+  it("parses ?buy=1 only", () => {
+    expect(parseSearchParams({ buy: "1" }).onlyBuy).toBe(true);
+    expect(parseSearchParams({ buy: "0" }).onlyBuy).toBeUndefined();
+    expect(parseSearchParams({}).onlyBuy).toBeUndefined();
+  });
+
+  it("round-trips through toSearchParams", () => {
+    const sp = toSearchParams(parseSearchParams({ q: "ssd", buy: "1" }));
+    expect(sp.get("buy")).toBe("1");
+    expect(parseSearchParams(sp).onlyBuy).toBe(true);
+    expect(toSearchParams({ q: "ssd" }).has("buy")).toBe(false);
+  });
+
+  it("passes p_only_buy and maps offer_count / fake_sale", async () => {
+    rpc.mockReset();
+    rpc.mockResolvedValue({
+      data: [
+        {
+          product_id: "p1", slug: "a", canonical_name: "A", brand: null, image: null, category_slug: "c",
+          best_price: 100, original_price: 200, score: 80, recommendation: "buy", last_observed_at: null,
+          relevance: 1, total_count: 2, effective_price: null, offer_count: 3, fake_sale: "list_inflated",
+        },
+        {
+          product_id: "p2", slug: "b", canonical_name: "B", brand: null, image: null, category_slug: "c",
+          best_price: 100, original_price: null, score: 80, recommendation: "buy", last_observed_at: null,
+          relevance: 1, total_count: 2, effective_price: null, offer_count: null, fake_sale: "weird",
+        },
+      ],
+      error: null,
+    });
+    const res = await searchProducts({ q: "ssd", onlyBuy: true });
+    expect((rpc.mock.calls.at(-1)![1] as Record<string, unknown>).p_only_buy).toBe(true);
+    expect(res.items.map((i) => [i.offerCount, i.fakeSale])).toEqual([
+      [3, "list_inflated"],
+      [null, null],
+    ]);
+    await searchProducts({ q: "ssd" });
+    expect((rpc.mock.calls.at(-1)![1] as Record<string, unknown>).p_only_buy).toBeUndefined();
+  });
+});

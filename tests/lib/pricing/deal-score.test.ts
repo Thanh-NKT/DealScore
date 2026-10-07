@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { computeDealScore, detectFakeSale, FLASH_SALE_REASON, type PriceObservation } from "@/lib/pricing/deal-score";
+import {
+  classifyFakeSale,
+  computeDealScore,
+  detectFakeSale,
+  FAKE_SALE_MESSAGE,
+  FLASH_SALE_REASON,
+  type PriceObservation,
+} from "@/lib/pricing/deal-score";
 import { computeDealScoreV1 } from "@/lib/pricing/deal-score-v1";
 
 const NOW = new Date("2026-06-15T03:00:00Z"); // 10:00 Vietnam time
@@ -122,5 +129,32 @@ describe("computeDealScore — input and coverage copy", () => {
     const hist = daily(40, (i) => 1000 + (i % 10) * 20);
     const r = computeDealScore({ price: 900, history: hist, now: NOW, windowDays: 60 });
     expect(r.reasons.join(" ")).toContain("giá trung vị 60 ngày");
+  });
+});
+
+describe("classifyFakeSale", () => {
+  it("names the heuristic that fired", () => {
+    expect(classifyFakeSale({ currentPrice: 1000, listedPrice: 1400, median30d: 1000 })).toBe("list_inflated");
+    expect(
+      classifyFakeSale({
+        currentPrice: 1000,
+        listedPrice: 0,
+        median30d: 1000,
+        median14dBeforeSale: 1200,
+        median60dBefore: 1000,
+      }),
+    ).toBe("pre_sale_hike");
+  });
+
+  it("null when there is no sign", () => {
+    expect(classifyFakeSale({ currentPrice: 800, listedPrice: 1400, median30d: 1000 })).toBeNull();
+    expect(
+      classifyFakeSale({ currentPrice: 1000, listedPrice: 0, median30d: 1000, median14dBeforeSale: 1100, median60dBefore: 1000 }),
+    ).toBeNull();
+  });
+
+  it("detectFakeSale is the message of the kind", () => {
+    const p = { currentPrice: 1000, listedPrice: 1400, median30d: 1000 };
+    expect(detectFakeSale(p)).toBe(FAKE_SALE_MESSAGE.list_inflated);
   });
 });

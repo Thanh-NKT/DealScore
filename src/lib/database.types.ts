@@ -1356,6 +1356,7 @@ export type Database = {
       variant_deal_scores: {
         Row: {
           computed_at: string
+          fake_sale: string | null
           price_at_compute: number | null
           recommendation: string
           score: number | null
@@ -1363,6 +1364,7 @@ export type Database = {
         }
         Insert: {
           computed_at?: string
+          fake_sale?: string | null
           price_at_compute?: number | null
           recommendation: string
           score?: number | null
@@ -1370,6 +1372,7 @@ export type Database = {
         }
         Update: {
           computed_at?: string
+          fake_sale?: string | null
           price_at_compute?: number | null
           recommendation?: string
           score?: number | null
@@ -2031,6 +2034,7 @@ export type Database = {
           p_min_price?: number
           p_min_rating?: number
           p_offset?: number
+          p_only_buy?: boolean
           p_q?: string
           p_sort?: string
           p_term_groups?: Json
@@ -2041,10 +2045,12 @@ export type Database = {
           canonical_name: string
           category_slug: string
           effective_price: number
+          fake_sale: string
           image: string
           is_flash_sale: boolean
           last_observed_at: string
           marketplace: string
+          offer_count: number
           original_price: number
           product_id: string
           recommendation: string

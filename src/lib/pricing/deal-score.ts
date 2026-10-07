@@ -273,24 +273,40 @@ export const RECOMMENDATION_LABEL: Record<Recommendation, string> = {
   avoid: "🔴 Chưa nên mua",
 };
 
-/**
- * Fake Sale Detector v0 (section C6).
- * @returns a warning message, or null if there is no sign of a fake sale.
- */
-export function detectFakeSale(params: {
+/** Heuristic #1: a list-price discount of at least this share… */
+export const FAKE_SALE_LIST_DISCOUNT = 0.2;
+/** …while the price is still at least this share of the 30-day median → "list_inflated". */
+export const FAKE_SALE_MEDIAN_FLOOR = 0.95;
+/** Heuristic #2 (and the price-hike alert): 14-day median above the prior 60-day median × this. */
+export const FAKE_SALE_HIKE_RATIO = 1.15;
+
+export type FakeSaleKind = "list_inflated" | "pre_sale_hike";
+
+export const FAKE_SALE_MESSAGE: Record<FakeSaleKind, string> = {
+  list_inflated: "Mức giảm so với giá niêm yết chưa phản ánh giá thực tế thường ghi nhận.",
+  pre_sale_hike: "Giá tăng gần đây trước đợt giảm.",
+};
+
+export interface FakeSaleParams {
   currentPrice: number;
   listedPrice: number; // list price (original_price)
   median30d: number;
   median14dBeforeSale?: number;
   median60dBefore?: number;
-}): string | null {
+}
+
+/**
+ * Fake Sale Detector v0 (section C6), as a kind: which heuristic fired, or null when there is no sign.
+ * The search cache (`variant_deal_scores.fake_sale`) stores this kind; messages come from FAKE_SALE_MESSAGE.
+ */
+export function classifyFakeSale(params: FakeSaleParams): FakeSaleKind | null {
   const { currentPrice, listedPrice, median30d } = params;
 
   // List discount ≥ 20% yet the price is still ≥ median_30d × 0.95.
   if (listedPrice > 0) {
     const discount = 1 - currentPrice / listedPrice;
-    if (discount >= 0.2 && currentPrice >= median30d * 0.95) {
-      return "Mức giảm so với giá niêm yết chưa phản ánh giá thực tế thường ghi nhận.";
+    if (discount >= FAKE_SALE_LIST_DISCOUNT && currentPrice >= median30d * FAKE_SALE_MEDIAN_FLOOR) {
+      return "list_inflated";
     }
   }
 
@@ -298,10 +314,19 @@ export function detectFakeSale(params: {
   if (
     params.median14dBeforeSale &&
     params.median60dBefore &&
-    params.median14dBeforeSale > params.median60dBefore * 1.15
+    params.median14dBeforeSale > params.median60dBefore * FAKE_SALE_HIKE_RATIO
   ) {
-    return "Giá tăng gần đây trước đợt giảm.";
+    return "pre_sale_hike";
   }
 
   return null;
+}
+
+/**
+ * Fake Sale Detector v0 (section C6).
+ * @returns a warning message, or null if there is no sign of a fake sale.
+ */
+export function detectFakeSale(params: FakeSaleParams): string | null {
+  const kind = classifyFakeSale(params);
+  return kind ? FAKE_SALE_MESSAGE[kind] : null;
 }

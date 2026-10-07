@@ -3,6 +3,7 @@ import type { Database } from "@/lib/database.types";
 import { MARKETPLACES, type MarketplaceId } from "@/lib/marketplaces";
 import { expandQuery } from "@/lib/search/synonyms";
 import type { AutocompleteItem } from "@/lib/search/autocomplete-types";
+import type { FakeSaleKind } from "@/lib/pricing/deal-score";
 
 export type { AutocompleteItem } from "@/lib/search/autocomplete-types";
 
@@ -35,7 +36,12 @@ export interface SearchParams {
   prefs?: boolean;
   /** True only when the URL's `sort` param was itself a valid sort value (set by parseSearchParams). */
   sortExplicit?: boolean;
+  /** "Chỉ hiện Nên mua" (`?buy=1`): only cards whose cached verdict for the shown price is `buy`. */
+  onlyBuy?: boolean;
 }
+
+/** A card names its shop count ("N nơi bán") only from this many offers (UI spec §1). */
+export const OFFER_COUNT_MIN_SHOWN = 2;
 
 export const MIN_RATINGS = [4.5, 4.8] as const;
 export type MinRating = (typeof MIN_RATINGS)[number];
@@ -63,6 +69,10 @@ export interface SearchItem {
   marketplace: string | null;
   /** The card price is a flash-sale price (variant_current_price.is_flash_sale). */
   isFlashSale: boolean;
+  /** In-stock-or-not offers of the representative variant (variant_current_price.offer_count). Null = unknown. */
+  offerCount: number | null;
+  /** Cached fake-sale kind for the card's price (variant_deal_scores.fake_sale, same price guard as score). */
+  fakeSale: FakeSaleKind | null;
 }
 
 /**
@@ -188,6 +198,7 @@ export function parseSearchParams(
   // check `!== false`).
   const intent = getParam("intent") === "0" ? false : undefined;
   const prefs = getParam("prefs") === "1" ? true : undefined;
+  const onlyBuy = getParam("buy") === "1" ? true : undefined;
 
   return {
     q,
@@ -206,6 +217,7 @@ export function parseSearchParams(
     capacityGb,
     intent,
     prefs,
+    onlyBuy,
   };
 }
 
@@ -224,6 +236,7 @@ export function toSearchParams(p: SearchParams): URLSearchParams {
   if (p.minRating != null) sp.set("rating", String(p.minRating));
   if (p.freeShipping) sp.set("freeship", "1");
   if (p.hasVoucher) sp.set("voucher", "1");
+  if (p.onlyBuy) sp.set("buy", "1");
   const markets = parseMarketplaces(p.marketplaces ?? []);
   if (markets) sp.set("market", markets.join(","));
   if (p.capacityGb != null) sp.set("cap", p.capacityGb.toString());
@@ -293,6 +306,7 @@ async function runSearchRpc(
     p_boost_terms: sanitizeBoostTerms(params.boostTerms),
     // Synonyms / abbreviations (spec 2026-10-07 §2): OR-groups next to the plain text; none → plain search.
     p_term_groups: params.q ? expandQuery(params.q) : undefined,
+    p_only_buy: params.onlyBuy ? true : undefined,
   });
 
   // Do NOT swallow errors and do NOT return made-up data. For a price-lookup product, showing
@@ -302,6 +316,11 @@ async function runSearchRpc(
     throw new Error(`Search failed: ${error.message}`);
   }
   return data ?? [];
+}
+
+/** Only the two known kinds pass; anything else (null, a future value) shows no warning. */
+export function toFakeSaleKind(v: string | null | undefined): FakeSaleKind | null {
+  return v === "list_inflated" || v === "pre_sale_hike" ? v : null;
 }
 
 export async function searchProducts(params: SearchParams): Promise<SearchResult> {
@@ -336,6 +355,8 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     variantId: d.variant_id ?? null,
     marketplace: d.marketplace ?? null,
     isFlashSale: d.is_flash_sale === true,
+    offerCount: d.offer_count != null ? Number(d.offer_count) : null,
+    fakeSale: toFakeSaleKind(d.fake_sale),
   }));
 
   return { items, total, page, pageSize: PAGE_SIZE };

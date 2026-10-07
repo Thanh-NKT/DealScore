@@ -60,6 +60,9 @@ function toCard(r: CardRow): SearchItem {
     variantId: null,
     marketplace: r.marketplace ?? null,
     isFlashSale: r.is_flash_sale === true,
+    // Radar / trending RPCs carry no shop count or fake-sale flag (spec Q3).
+    offerCount: null,
+    fakeSale: null,
   };
 }
 

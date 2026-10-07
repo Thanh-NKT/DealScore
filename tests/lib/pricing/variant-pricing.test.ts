@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { computeDealScore } from "@/lib/pricing/deal-score";
+import { computeDealScore, FAKE_SALE_MESSAGE } from "@/lib/pricing/deal-score";
 import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 import {
   buildVariantPricing,
+  fakeSaleForPrice,
   FLASH_SALE_REASON,
   isDiscountVerified,
   isOfferVisible,
@@ -394,5 +395,51 @@ describe("buildVariantPricing — pre-sale price hike heuristic", () => {
   it("price rose then 'dropped' back to the old level → labelled", () => {
     const out = buildVariantPricing({ ...base, offers: [offer({ price: 1150 })] });
     expect(out.fakeSaleMessage).toBe("Giá tăng gần đây trước đợt giảm.");
+  });
+});
+
+describe("fakeSaleForPrice — the per-offer check shared with the search cache", () => {
+  const raised = history(75, (i) => (i >= 60 ? 1300 : 1000));
+
+  it("< 14 days in the last 30 → not checked", () => {
+    expect(fakeSaleForPrice({ price: 1000, originalPrice: 1400, rows: history(13, () => 1000), now: NOW })).toEqual({
+      checked: false,
+      kind: null,
+    });
+  });
+
+  it("inflated list price → list_inflated", () => {
+    expect(fakeSaleForPrice({ price: 1050, originalPrice: 1500, rows: HIST, now: NOW })).toEqual({
+      checked: true,
+      kind: "list_inflated",
+    });
+  });
+
+  it("price hike without a sale (no list price, price ≥ 14-day median) → null", () => {
+    expect(fakeSaleForPrice({ price: 1300, originalPrice: null, rows: raised, now: NOW })).toEqual({
+      checked: true,
+      kind: null,
+    });
+  });
+
+  it("price hike followed by a sale → pre_sale_hike", () => {
+    expect(fakeSaleForPrice({ price: 1150, originalPrice: null, rows: raised, now: NOW }).kind).toBe("pre_sale_hike");
+  });
+
+  it("buildVariantPricing's per-offer message is exactly the shared verdict", () => {
+    const offers = [
+      offer({ offerId: "a", price: 1050, originalPrice: 1500 }),
+      offer({ offerId: "b", price: 1150, originalPrice: null }),
+      offer({ offerId: "c", price: 900, originalPrice: 1400 }),
+      offer({ offerId: "d", price: 1300, originalPrice: 1350 }),
+    ];
+    for (const rows of [HIST, raised, history(13, () => 1000)]) {
+      const out = buildVariantPricing({ offers, history: rows, trackingSince: null, isDraftProduct: false, now: NOW });
+      for (const o of out.offers) {
+        const shared = fakeSaleForPrice({ price: o.price!, originalPrice: o.originalPrice, rows, now: NOW });
+        expect(o.discountChecked).toBe(shared.checked);
+        expect(o.fakeSaleMessage).toBe(shared.kind ? FAKE_SALE_MESSAGE[shared.kind] : null);
+      }
+    }
   });
 });

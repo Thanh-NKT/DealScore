@@ -21,6 +21,8 @@ function item(over: Partial<SearchItem> = {}): SearchItem {
     variantId: null,
     marketplace: "tiktok",
     isFlashSale: false,
+    offerCount: null,
+    fakeSale: null,
     ...over,
   };
 }

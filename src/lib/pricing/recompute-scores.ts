@@ -4,6 +4,7 @@ import type { Recommendation } from "@/lib/pricing/deal-score";
 import { scoreDeal } from "@/lib/pricing/score";
 import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
+import { fakeSaleForPrice } from "@/lib/pricing/variant-pricing";
 
 /**
  * Write the Deal Score cache used to sort search listings (decision Đ5).
@@ -16,6 +17,9 @@ import { toVnDate } from "@/lib/format";
  *
  * A variant whose current price is out of stock everywhere gets NO cached verdict (its row is deleted),
  * like the detail page, which shows no headline when every offer is out of stock.
+ *
+ * The same pass caches the fake-sale kind of the BEST offer (`fake_sale`), from fakeSaleForPrice() — the
+ * check the product page runs per offer — on the price + list price the card's "−X%" is computed from.
  *
  * Every read is chunked: PostgREST silently truncates at 1000 rows.
  */
@@ -34,12 +38,19 @@ export async function recomputeDealScores(
   const now = opts.now ?? new Date();
   const since = toVnDate(new Date(now.getTime() - WINDOW_DAYS * 86_400_000));
 
-  const current: Array<{ variant_id: string; price: number | null; in_stock: boolean; is_flash_sale: boolean }> = [];
+  type CurrentRow = {
+    variant_id: string;
+    price: number | null;
+    original_price: number | null;
+    in_stock: boolean;
+    is_flash_sale: boolean;
+  };
+  const current: CurrentRow[] = [];
   if (opts.variantIds) {
     for (let i = 0; i < opts.variantIds.length; i += PAGE) {
       const { data, error } = await client
         .from("variant_current_price")
-        .select("variant_id, price, in_stock, is_flash_sale")
+        .select("variant_id, price, original_price, in_stock, is_flash_sale")
         .in("variant_id", opts.variantIds.slice(i, i + PAGE));
       if (error) throw new Error(`Failed to read current prices: ${error.message}`);
       current.push(...(data ?? []));
@@ -48,7 +59,7 @@ export async function recomputeDealScores(
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await client
         .from("variant_current_price")
-        .select("variant_id, price, in_stock, is_flash_sale")
+        .select("variant_id, price, original_price, in_stock, is_flash_sale")
         .order("variant_id")
         .range(from, from + PAGE - 1);
       if (error) throw new Error(`Failed to read current prices: ${error.message}`);
@@ -58,7 +69,7 @@ export async function recomputeDealScores(
   }
 
   const priced = current.filter(
-    (c): c is { variant_id: string; price: number; in_stock: true; is_flash_sale: boolean } => c.price != null && c.in_stock,
+    (c): c is CurrentRow & { price: number; in_stock: true } => c.price != null && c.in_stock,
   );
   const outOfStock = current.filter((c) => c.price != null && !c.in_stock).map((c) => c.variant_id);
   for (let i = 0; i < outOfStock.length; i += DELETE_BATCH) {
@@ -89,9 +100,10 @@ export async function recomputeDealScores(
     }
 
     for (const v of chunk) {
+      const daily = byVariant.get(v.variant_id) ?? [];
       const result = scoreDeal({
         price: Number(v.price),
-        history: expandRollup(byVariant.get(v.variant_id) ?? []),
+        history: expandRollup(daily),
         now,
         // Same flag as the product page header, so the cached verdict and reasons match it.
         isFlashSale: v.is_flash_sale,
@@ -103,6 +115,12 @@ export async function recomputeDealScores(
         recommendation: result.recommendation,
         price_at_compute: Number(v.price),
         computed_at: now.toISOString(),
+        fake_sale: fakeSaleForPrice({
+          price: Number(v.price),
+          originalPrice: v.original_price == null ? null : Number(v.original_price),
+          rows: daily,
+          now,
+        }).kind,
       });
     }
   }
