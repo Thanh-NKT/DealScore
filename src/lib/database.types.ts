@@ -1935,6 +1935,16 @@ export type Database = {
         Args: { p_daily_cap: number; p_marketplaces: string[]; p_value: string }
         Returns: number
       }
+      search_index_report: {
+        Args: { p_q: string; p_term_groups?: Json }
+        Returns: {
+          fts_index_scans: number
+          other_index_scans: number
+          products_seq_scans: number
+          result_rows: number
+          trgm_index_scans: number
+        }[]
+      }
       search_products: {
         Args: {
           p_boost_terms?: string[]
@@ -1951,6 +1961,7 @@ export type Database = {
           p_offset?: number
           p_q?: string
           p_sort?: string
+          p_term_groups?: Json
         }
         Returns: {
           best_price: number
