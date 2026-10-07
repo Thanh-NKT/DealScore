@@ -331,3 +331,27 @@ describe("searchProducts — card marketplace and flash flag (0026)", () => {
     expect(old).toMatchObject({ marketplace: null, isFlashSale: false });
   });
 });
+
+describe("searchProducts — synonym groups (0030)", () => {
+  beforeEach(() => {
+    category.result = { data: null, error: null };
+    rpc.mockReset();
+    rpc.mockResolvedValue({ data: [], error: null });
+  });
+  const args = () => rpc.mock.calls.at(-1)![1] as Record<string, unknown>;
+
+  it("sends the keyword's OR-groups as p_term_groups, p_q unchanged", async () => {
+    await searchProducts({ q: "tai nghe sony" });
+    expect(args().p_q).toBe("tai nghe sony");
+    const groups = args().p_term_groups as string[][];
+    expect(groups[0]).toEqual(expect.arrayContaining(["tai nghe", "headphone"]));
+    expect(groups[1]).toEqual(["sony"]);
+  });
+
+  it("omits p_term_groups when nothing expands or there is no keyword", async () => {
+    await searchProducts({ q: "sony" });
+    expect(args().p_term_groups).toBeUndefined();
+    await searchProducts({ brands: ["Sony"] });
+    expect(args().p_term_groups).toBeUndefined();
+  });
+});

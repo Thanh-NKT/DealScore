@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/database.types";
 import { MARKETPLACES, type MarketplaceId } from "@/lib/marketplaces";
+import { expandQuery } from "@/lib/search/synonyms";
+import type { AutocompleteItem } from "@/lib/search/autocomplete-types";
+
+export type { AutocompleteItem } from "@/lib/search/autocomplete-types";
 
 export interface SearchParams {
   q?: string;
@@ -81,7 +86,6 @@ export interface SearchResult {
 }
 
 const PAGE_SIZE = 24;
-const AUTOCOMPLETE_LIMIT = 8;
 
 /**
  * `?market=shopee,lazada` (repeated `market=` also accepted) → known marketplace ids, deduped and in
@@ -243,26 +247,35 @@ export function sanitizeBoostTerms(terms: readonly string[] | undefined): string
   return clean.length > 0 ? [...new Set(clean)] : undefined;
 }
 
-export async function searchProducts(params: SearchParams): Promise<SearchResult> {
-  const page = params.page || 1;
-  const offset = (page - 1) * PAGE_SIZE;
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
+type SearchRpcRow = Database["public"]["Functions"]["search_products"]["Returns"][number];
 
-  const supabase = await createClient();
+/**
+ * `?cat=` slug → category id. Same rule as discovery: an unknown slug is `null` (an empty result, never
+ * the unfiltered catalog), a failed lookup throws. No slug → the URL's categoryId (or undefined).
+ */
+async function resolveCategoryId(supabase: SupabaseServer, params: SearchParams): Promise<string | undefined | null> {
+  if (params.categoryId || !params.categorySlug) return params.categoryId;
+  const { data: cat, error: catError } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", params.categorySlug)
+    .maybeSingle();
+  if (catError) throw new Error(`Failed to read category: ${catError.message}`);
+  return cat ? cat.id : null;
+}
 
-  // Same rule as discovery: an unknown slug is an empty result, a failed lookup is an error. Dropping
-  // the filter instead would show the whole catalog under a category chip.
-  let catId = params.categoryId;
-  if (!catId && params.categorySlug) {
-    const { data: cat, error: catError } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("slug", params.categorySlug)
-      .maybeSingle();
-    if (catError) throw new Error(`Failed to read category: ${catError.message}`);
-    if (!cat) return { items: [], total: 0, page, pageSize: PAGE_SIZE };
-    catId = cat.id;
-  }
-
+/**
+ * search_products arguments for already-merged params (URL + intent + preferences). Shared by /search
+ * and the autocomplete so both search exactly the same way, synonym groups included.
+ */
+async function runSearchRpc(
+  supabase: SupabaseServer,
+  params: SearchParams,
+  catId: string | undefined,
+  limit: number,
+  offset: number,
+): Promise<SearchRpcRow[]> {
   const { data, error } = await supabase.rpc("search_products", {
     p_q: params.q ?? undefined,
     p_category_id: catId ?? undefined,
@@ -270,7 +283,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     p_min_price: params.minPrice ?? undefined,
     p_max_price: params.maxPrice ?? undefined,
     p_sort: params.sort || "relevance",
-    p_limit: PAGE_SIZE,
+    p_limit: limit,
     p_offset: offset,
     p_min_rating: params.minRating ?? undefined,
     p_free_shipping: params.freeShipping ?? undefined,
@@ -278,6 +291,8 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     p_marketplaces: parseMarketplaces(params.marketplaces ?? []),
     p_capacity_gb: params.capacityGb ?? undefined,
     p_boost_terms: sanitizeBoostTerms(params.boostTerms),
+    // Synonyms / abbreviations (spec 2026-10-07 §2): OR-groups next to the plain text; none → plain search.
+    p_term_groups: params.q ? expandQuery(params.q) : undefined,
   });
 
   // Do NOT swallow errors and do NOT return made-up data. For a price-lookup product, showing
@@ -286,8 +301,20 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   if (error) {
     throw new Error(`Search failed: ${error.message}`);
   }
+  return data ?? [];
+}
 
-  const rows = data ?? [];
+export async function searchProducts(params: SearchParams): Promise<SearchResult> {
+  const page = params.page || 1;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  const supabase = await createClient();
+
+  // Dropping an unknown category instead would show the whole catalog under a category chip.
+  const catId = await resolveCategoryId(supabase, params);
+  if (catId === null) return { items: [], total: 0, page, pageSize: PAGE_SIZE };
+
+  const rows = await runSearchRpc(supabase, params, catId, PAGE_SIZE, offset);
 
   // No results is a VALID state (1.1.b AC#6) — the results page suggests
   // removing filters and invites pasting a Shopee URL.
@@ -367,30 +394,16 @@ export async function getFilterFacets(): Promise<FilterFacets> {
   return { categories: catRes.data ?? [], brands, advanced, marketplaces };
 }
 
-export interface AutocompleteItem {
-  productId: string;
-  slug: string;
-  categorySlug: string;
-  name: string;
-  brand: string | null;
-  image: string | null;
-  bestPrice: number | null;
-}
-
-/** Typeahead suggestions: fetch exactly the rows to display (spec §12), no filters. */
-export async function autocompleteProducts(q: string): Promise<AutocompleteItem[]> {
+/**
+ * Typeahead products for already-merged params (spec 2026-10-07 §1): the same RPC call as /search,
+ * only fewer rows. An unknown category slug → no suggestions.
+ */
+export async function suggestProducts(params: SearchParams, limit: number): Promise<AutocompleteItem[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("search_products", {
-    p_q: q,
-    p_sort: "relevance",
-    p_limit: AUTOCOMPLETE_LIMIT,
-    p_offset: 0,
-    // Suggestions are unfiltered (spec §12): no marketplace restriction.
-    p_marketplaces: undefined,
-  });
-  if (error) throw new Error(`Search suggestions failed: ${error.message}`);
-
-  return (data ?? []).map((d) => ({
+  const catId = await resolveCategoryId(supabase, params);
+  if (catId === null) return [];
+  const rows = await runSearchRpc(supabase, params, catId, limit, 0);
+  return rows.map((d) => ({
     productId: d.product_id,
     slug: d.slug,
     categorySlug: d.category_slug || "san-pham",

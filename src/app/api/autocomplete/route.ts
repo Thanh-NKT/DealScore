@@ -1,23 +1,29 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { autocompleteProducts } from "@/lib/search";
+import {
+  AUTOCOMPLETE_MIN_CHARS,
+  autocomplete,
+  normalizeAutocompleteQuery,
+} from "@/lib/search/autocomplete";
+import { emptyAutocomplete, type AutocompleteResponse } from "@/lib/search/autocomplete-types";
 
+/** Search-box suggestions: `AutocompleteResponse` (src/lib/search/autocomplete-types.ts). */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get("q")?.trim();
+  const q = normalizeAutocompleteQuery(searchParams.get("q"));
 
-  if (!q || q.length < 2) {
-    return NextResponse.json([]);
+  if (q.length < AUTOCOMPLETE_MIN_CHARS) {
+    return NextResponse.json<AutocompleteResponse>(emptyAutocomplete(q));
   }
 
   try {
-    const suggestions = await autocompleteProducts(q);
-    return NextResponse.json(suggestions, {
+    const suggestions = await autocomplete(q);
+    return NextResponse.json<AutocompleteResponse>(suggestions, {
       headers: {
         "Cache-Control": "public, max-age=60",
       },
     });
   } catch (err) {
     console.error("api/autocomplete error:", err);
-    return NextResponse.json([], { status: 500 });
+    return NextResponse.json<AutocompleteResponse>(emptyAutocomplete(q), { status: 500 });
   }
 }

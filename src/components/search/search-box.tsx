@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import type { AutocompleteResponse } from "@/lib/search/autocomplete-types";
 import { formatVnd } from "@/lib/format";
 import { ClockIcon, SearchIcon } from "@/components/ui/icons";
 import { ProductImage } from "@/components/ui/product-image";
@@ -79,8 +80,9 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
         const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(trimmed.slice(0, 100))}`, { signal: controller.signal });
         if (!res.ok) return; // suggestions are a convenience: fail quietly, search still works
         const data: unknown = await res.json();
-        if (!Array.isArray(data)) return;
-        setResults({ q: trimmed, items: (data as Suggestion[]).slice(0, 8) });
+        const products = (data as Partial<AutocompleteResponse> | null)?.products;
+        if (!Array.isArray(products)) return;
+        setResults({ q: trimmed, items: (products as Suggestion[]).slice(0, 8) });
         setActive(-1);
       } catch {
         // aborted or offline: keep whatever was shown, the search button still works
