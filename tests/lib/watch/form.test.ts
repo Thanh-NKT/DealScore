@@ -22,8 +22,15 @@ describe("parseWatchForm", () => {
         minDealScore: null,
         notifyBackInStock: false,
         channels: null,
+        notifyPriceHike: false,
       },
     });
+  });
+
+  it("notifyPriceHike=on alone is a valid condition", () => {
+    const r = parseWatchForm({ variantId: V, notifyPriceHike: "on" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.config.notifyPriceHike).toBe(true);
   });
 
   it("repeated channel → subset", () => {

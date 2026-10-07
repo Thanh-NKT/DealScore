@@ -4,10 +4,24 @@ import type { TriggerType } from "@/lib/watch/types";
 const pctDown = (from: number | null, to: number) =>
   from != null && from > 0 ? Math.floor(((from - to) / from) * 100) : 0;
 
+const pctUp = (from: number | null, to: number) =>
+  from != null && from > 0 ? Math.max(Math.floor(((to - from) / from) * 100), 0) : 0;
+
+/** True when every trigger is "price_hike": the message is "don't buy now", not a deal. */
+export const isPriceHikeOnly = (types: readonly TriggerType[]) => types.length > 0 && types.every((t) => t === "price_hike");
+
 /** ctx comes from the alert_events row ITSELF (baseline_price, previous_alert_price) — watches has since been overwritten. */
 export function describeTriggers(
   types: TriggerType[],
-  ctx: { price: number; targetPrice: number | null; baselinePrice: number | null; lastAlertPrice: number | null; dealScore: number | null },
+  ctx: {
+    price: number;
+    targetPrice: number | null;
+    baselinePrice: number | null;
+    lastAlertPrice: number | null;
+    dealScore: number | null;
+    /** price_hike only: the prior 60-day median (alert_events.reference_price). */
+    referencePrice?: number | null;
+  },
 ): string[] {
   return types.map((t) => {
     switch (t) {
@@ -23,6 +37,8 @@ export function describeTriggers(
         return "Đã có hàng trở lại";
       case "deeper_drop":
         return `Giảm thêm ${pctDown(ctx.lastAlertPrice, ctx.price)}% so với lần báo trước`;
+      case "price_hike":
+        return `Giá đang cao hơn ${pctUp(ctx.referencePrice ?? null, ctx.price)}% so với 60 ngày trước — chưa nên mua lúc này`;
     }
   });
 }

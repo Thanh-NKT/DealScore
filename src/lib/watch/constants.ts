@@ -11,3 +11,9 @@ export const RETRY_DELAYS_MINUTES = [5, 30, 120] as const;
 // latest earlier day within the lookback when day −7 has no price. Tune with real data (collector gaps).
 export const CHANGE_WINDOW_DAYS = 7;
 export const CHANGE_REF_LOOKBACK_DAYS = 3;
+// Pre-sale price-hike alert (roadmap P2 item C). The ratio itself is FAKE_SALE_HIKE_RATIO (deal-score.ts).
+// Tune with real data: how often regular prices drift up by 15% outside a pre-sale push.
+export const PRICE_HIKE_MIN_RECENT_DAYS = 10; // days with a price in the last 14
+export const PRICE_HIKE_MIN_PRIOR_DAYS = 30; // days with a price in the 60 before them
+export const PRICE_HIKE_REARM_RATIO = 1.1; // once active, stays active while the ratio is ≥ this (hysteresis)
+export const PRICE_HIKE_COOLDOWN_HOURS = 168; // own cooldown, independent of COOLDOWN_HOURS

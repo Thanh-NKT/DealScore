@@ -63,8 +63,8 @@ export async function listMyWatches(
     .select(
       `
       id, status, variant_id, target_price, drop_pct, notify_low, min_deal_score,
-      notify_back_in_stock, channels, baseline_price, cond_state, last_alert_price,
-      last_alerted_at, last_in_stock, created_at, folder_id,
+      notify_back_in_stock, notify_price_hike, channels, baseline_price, cond_state, last_alert_price,
+      last_alerted_at, last_in_stock, hike_active, last_hike_alerted_at, created_at, folder_id,
       product_variants!inner (
         id,
         variant_key,
@@ -169,6 +169,7 @@ export async function listMyWatches(
       minDealScore: row.min_deal_score,
       notifyBackInStock: Boolean(row.notify_back_in_stock),
       channels: (row.channels as Channel[]) ?? null,
+      notifyPriceHike: row.notify_price_hike === true,
     };
 
     const state: WatchState = {
@@ -177,6 +178,8 @@ export async function listMyWatches(
       lastAlertPrice: row.last_alert_price ? Number(row.last_alert_price) : null,
       lastAlertedAt: row.last_alerted_at,
       lastInStock: row.last_in_stock,
+      hikeActive: row.hike_active ?? null,
+      lastHikeAlertedAt: row.last_hike_alerted_at ?? null,
     };
 
     const snap = snapshotMap.get(row.variant_id) ?? {
@@ -253,7 +256,7 @@ export async function getMyWatchForVariant(
   const { data, error } = await supabase
     .from("watches")
     .select(
-      "id, status, target_price, drop_pct, notify_low, min_deal_score, notify_back_in_stock, channels",
+      "id, status, target_price, drop_pct, notify_low, min_deal_score, notify_back_in_stock, notify_price_hike, channels",
     )
     .eq("user_id", userId)
     .eq("variant_id", variantId)
@@ -274,6 +277,7 @@ export async function getMyWatchForVariant(
       minDealScore: data.min_deal_score,
       notifyBackInStock: Boolean(data.notify_back_in_stock),
       channels: (data.channels as Channel[]) ?? null,
+      notifyPriceHike: data.notify_price_hike === true,
     },
   };
 }
@@ -309,6 +313,7 @@ export async function saveWatchForUser(
         notify_low: config.notifyLow,
         min_deal_score: config.minDealScore,
         notify_back_in_stock: config.notifyBackInStock,
+        notify_price_hike: config.notifyPriceHike === true,
         channels: config.channels,
         // If it was paused/done, editing may keep it as is or reactivate it when requested
       })
@@ -338,6 +343,7 @@ export async function saveWatchForUser(
         notify_low: config.notifyLow,
         min_deal_score: config.minDealScore,
         notify_back_in_stock: config.notifyBackInStock,
+        notify_price_hike: config.notifyPriceHike === true,
         channels: config.channels,
         status: "active",
       })
@@ -374,6 +380,7 @@ export async function saveWatchForUser(
     config.notifyLow,
     config.minDealScore != null,
     config.notifyBackInStock,
+    config.notifyPriceHike === true,
   ].filter(Boolean).length;
   return { status: "saved", watchId, created: !existing, variantId, conditionCount };
 }

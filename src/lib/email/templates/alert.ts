@@ -14,6 +14,11 @@ export interface AlertEmailItem {
   recommendation: Recommendation | null;
   triggerTexts: string[];
   scoreReasons: string[]; // at most 2
+  /**
+   * Every trigger is price_hike ("chưa nên mua lúc này"): no baseline / saving line, and the CTA is
+   * "Xem giá trên DealScore" to the product page (buyUrl), never a marketplace button.
+   */
+  priceHikeOnly?: boolean;
   buyUrl: string;
   manageUrl: string;
   pauseUrl: string;
@@ -35,7 +40,9 @@ export function renderAlertEmail(input: { items: AlertEmailItem[]; unsubscribeAl
   const { items } = input;
   const subject =
     items.length === 1
-      ? `${items[0].productName} còn ${formatVnd(items[0].price)}`
+      ? items[0].priceHikeOnly
+        ? `${items[0].productName} đang cao hơn mức thường thấy`
+        : `${items[0].productName} còn ${formatVnd(items[0].price)}`
       : `${items.length} sản phẩm bạn theo dõi vừa có tin mới`;
 
   const e = escapeHtml;
@@ -49,7 +56,7 @@ export function renderAlertEmail(input: { items: AlertEmailItem[]; unsubscribeAl
         .map((r) => `<li>${e(r)}</li>`)
         .join("");
       const baseline =
-        it.baselinePrice != null
+        it.baselinePrice != null && !it.priceHikeOnly
           ? ` <span style="color:#5E6168">(lúc bắt đầu theo dõi: ${e(formatVnd(it.baselinePrice))})</span>`
           : "";
       const eff = voucherLine(it);
@@ -58,7 +65,7 @@ export function renderAlertEmail(input: { items: AlertEmailItem[]; unsubscribeAl
 <h3 style="margin:0 0 4px">${e(it.productName)} <span style="color:#5E6168;font-weight:normal">— ${e(it.variantKey)}</span></h3>
 <p style="margin:4px 0;font-size:20px"><strong>${e(formatVnd(it.price))}</strong>${baseline}</p>
 ${effHtml}${score}<ul style="margin:8px 0;padding-left:20px">${reasons}</ul>
-<p style="margin:12px 0 4px"><a href="${e(it.buyUrl)}" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Mua trên Shopee</a></p>
+<p style="margin:12px 0 4px"><a href="${e(it.buyUrl)}" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">${it.priceHikeOnly ? "Xem giá trên DealScore" : "Mua trên Shopee"}</a></p>
 <p style="margin:4px 0;font-size:13px"><a href="${e(it.manageUrl)}">Xem sản phẩm đang theo dõi</a> · <a href="${e(it.pauseUrl)}">Tạm dừng thông báo sản phẩm này</a></p>
 </div>`;
     })
@@ -74,13 +81,13 @@ ${htmlItems}
     ...items.map((it) =>
       [
         `${it.productName} — ${it.variantKey}`,
-        `Giá: ${formatVnd(it.price)}${it.baselinePrice != null ? ` (lúc bắt đầu theo dõi: ${formatVnd(it.baselinePrice)})` : ""}`,
+        `Giá: ${formatVnd(it.price)}${it.baselinePrice != null && !it.priceHikeOnly ? ` (lúc bắt đầu theo dõi: ${formatVnd(it.baselinePrice)})` : ""}`,
         ...[voucherLine(it)].filter((l): l is string => l != null),
         ...(it.dealScore != null && it.recommendation
           ? [`Deal Score ${it.dealScore}/100 · ${RECOMMENDATION_LABEL[it.recommendation]}`]
           : []),
         ...[...it.triggerTexts, ...it.scoreReasons.slice(0, 2)].map((r) => `- ${r}`),
-        `Đến Shopee: ${it.buyUrl}`,
+        it.priceHikeOnly ? `Xem giá trên DealScore: ${it.buyUrl}` : `Đến Shopee: ${it.buyUrl}`,
         `Xem sản phẩm đang theo dõi: ${it.manageUrl}`,
         `Tạm dừng thông báo sản phẩm này: ${it.pauseUrl}`,
         "",

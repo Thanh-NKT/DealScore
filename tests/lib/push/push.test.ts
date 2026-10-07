@@ -33,6 +33,12 @@ beforeEach(() => {
 });
 
 describe("buildPushPayload", () => {
+  it("a price-hike-only item → 'đang cao hơn mức thường thấy' title", () => {
+    expect(
+      buildPushPayload([{ productName: "SSD", price: 1_000_000, url: "https://k/ssd/a", priceHikeOnly: true }], "https://k").title,
+    ).toBe("SSD đang cao hơn mức thường thấy");
+  });
+
   it("1 item → product page; n items → Watch list", () => {
     expect(buildPushPayload([{ productName: "SSD", price: 1_000_000, url: "https://k/ssd/a?variant=v" }], "https://k")).toEqual({
       title: "SSD",

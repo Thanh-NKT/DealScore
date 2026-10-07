@@ -3,6 +3,7 @@ import type { Database } from "@/lib/database.types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_NOTIFICATION_SETTINGS, fromRow, resolveChannels } from "@/lib/account/notification-settings";
 import { decideAlert } from "@/lib/watch/decide";
+import { decideHikeAlert } from "@/lib/watch/price-hike";
 import { configFromRow, stateFromRow, toRpcState, type WatchRow } from "@/lib/watch/rows";
 import { loadVariantSnapshots } from "@/lib/watch/snapshot";
 import { computeDeliverAfter } from "@/lib/alerts/schedule";
@@ -48,6 +49,8 @@ export async function evaluateWatches(
 
       const snap = snaps.get(w.variant_id)!;
       const d = decideAlert(config, state, snap, opts.now);
+      // Separate alert kind with its own state and cooldown; a price-drop alert in this run wins.
+      const h = decideHikeAlert(config, state, snap, opts.now, d);
       stats.evaluated++;
 
       let pState: Record<string, unknown> = {};
@@ -56,7 +59,7 @@ export async function evaluateWatches(
       if (d.kind === "skip_stale") {
         stats.skippedStale++; // only bump last_evaluated_at so watches rotate
       } else {
-        pState = toRpcState(d.nextState!);
+        pState = toRpcState(d.nextState!, h.next);
         if (d.kind === "suppressed_cooldown") stats.suppressed++;
         if (d.kind === "alert") {
           pEvent = {
@@ -65,6 +68,21 @@ export async function evaluateWatches(
             offer_id: snap.offerId,
             baseline_price: state.baselinePrice, // baseline BEFORE it is moved
             previous_alert_price: state.lastAlertPrice,
+            deal_score: snap.deal?.score ?? null,
+            recommendation: snap.deal?.recommendation ?? null,
+            score_reasons: (snap.deal?.reasons ?? []).filter((r) => !isCoverageReason(r)),
+            deliver_after: computeDeliverAfter(settings, opts.now).toISOString(),
+            channels,
+          };
+        } else if (h.fire) {
+          pEvent = {
+            trigger_types: ["price_hike"],
+            price: snap.price,
+            offer_id: snap.offerId,
+            baseline_price: state.baselinePrice,
+            previous_alert_price: state.lastAlertPrice,
+            // The prior 60-day median the hike was measured against (trigger text).
+            reference_price: snap.hike?.priorMedian ?? null,
             deal_score: snap.deal?.score ?? null,
             recommendation: snap.deal?.recommendation ?? null,
             score_reasons: (snap.deal?.reasons ?? []).filter((r) => !isCoverageReason(r)),

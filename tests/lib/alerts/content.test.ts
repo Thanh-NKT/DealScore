@@ -18,6 +18,21 @@ describe("describeTriggers", () => {
   });
 });
 
+describe("describeTriggers — price_hike", () => {
+  it("floors the % above the prior 60-day median", () => {
+    expect(
+      describeTriggers(["price_hike"], {
+        price: 1_239_000,
+        targetPrice: null,
+        baselinePrice: null,
+        lastAlertPrice: null,
+        dealScore: null,
+        referencePrice: 1_000_000,
+      }),
+    ).toEqual(["Giá đang cao hơn 23% so với 60 ngày trước — chưa nên mua lúc này"]);
+  });
+});
+
 describe("unsubscribe token", () => {
   const S = "secret";
   it("sign then verify round trip", () => {
@@ -58,6 +73,17 @@ describe("renderAlertEmail", () => {
     items,
     unsubscribeAllUrl: "https://dealscore.vn/unsubscribe?t=all",
     siteUrl: "https://dealscore.vn",
+  });
+
+  it("a price-hike-only item: its own subject, no baseline line, CTA to DealScore", () => {
+    const e = renderAlertEmail(
+      input([item({ priceHikeOnly: true, baselinePrice: 2_000_000, buyUrl: "https://dealscore.vn/o-cung/ssd?variant=v" })]),
+    );
+    expect(e.subject).toBe("SSD Samsung 990 đang cao hơn mức thường thấy");
+    expect(e.html).toContain("Xem giá trên DealScore");
+    expect(e.html).not.toContain("Mua trên Shopee");
+    expect(e.html).not.toContain("lúc bắt đầu theo dõi");
+    expect(e.text).toContain("Xem giá trên DealScore: https://dealscore.vn/o-cung/ssd?variant=v");
   });
 
   it("1 item → name + price subject; 3 items → count", () => {

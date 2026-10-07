@@ -77,6 +77,7 @@ export function decideAlert(
 export function applyNextState(state: WatchState, next: NextState | null): WatchState {
   if (!next) return state;
   return {
+    ...state, // keeps the price-hike keys, which this decision never writes
     baselinePrice: next.baselinePrice ?? state.baselinePrice,
     condState: next.condState,
     lastInStock: next.lastInStock ?? state.lastInStock,

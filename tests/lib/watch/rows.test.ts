@@ -35,7 +35,9 @@ describe("rows", () => {
       minDealScore: null,
       notifyBackInStock: false,
       channels: ["email"],
+      notifyPriceHike: false,
     });
+    expect(configFromRow({ ...row, notify_price_hike: true } as never).notifyPriceHike).toBe(true);
   });
   it("stateFromRow keeps only valid boolean keys of cond_state", () => {
     expect(stateFromRow(row as never).condState).toEqual({ target_price: true });
@@ -45,5 +47,18 @@ describe("rows", () => {
       toRpcState({ condState: { low: false }, lastInStock: true, baselinePrice: 5, alerted: { price: 4, at: "t" } }),
     ).toEqual({ cond_state: { low: false }, last_in_stock: true, baseline_price: 5, alerted: { price: 4, at: "t" } });
     expect(toRpcState({ condState: {}, lastInStock: null })).toEqual({ cond_state: {} });
+    expect(toRpcState({ condState: {}, lastInStock: null }, { hikeActive: true, hikeAlertedAt: "t" })).toEqual({
+      cond_state: {},
+      hike_active: true,
+      hike_alerted_at: "t",
+    });
+    expect(toRpcState({ condState: {}, lastInStock: null }, { hikeActive: false })).toEqual({ cond_state: {}, hike_active: false });
+  });
+  it("stateFromRow maps the price-hike state", () => {
+    expect(stateFromRow({ ...row, hike_active: true, last_hike_alerted_at: "2026-09-02T00:00:00Z" } as never)).toMatchObject({
+      hikeActive: true,
+      lastHikeAlertedAt: "2026-09-02T00:00:00Z",
+    });
+    expect(stateFromRow(row as never)).toMatchObject({ hikeActive: null, lastHikeAlertedAt: null });
   });
 });

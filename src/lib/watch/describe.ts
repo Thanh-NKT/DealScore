@@ -43,6 +43,8 @@ export interface WatchView {
   /** Current price vs the rollup price CHANGE_WINDOW_DAYS ago; null = not enough history yet. */
   change7d: PriceChange | null;
   conditions: Array<{ key: ConditionKey; state: Tri }>;
+  /** "Báo khi giá bị đẩy lên" — null when the watch did not opt in. `active` only from state.hikeActive. */
+  priceHike?: { active: boolean } | null;
   alertStatus:
     | { kind: "none" }
     | { kind: "sent"; at: string; channels: Channel[] }
@@ -194,6 +196,7 @@ export function describeWatch(input: {
     changeSinceStart,
     change7d: priceChange(price, snapshot.price7dAgo ?? null, CHANGE_WINDOW_DAYS),
     conditions,
+    priceHike: config.notifyPriceHike ? { active: state.hikeActive === true } : null,
     alertStatus,
     sortKey,
   };

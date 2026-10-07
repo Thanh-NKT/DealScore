@@ -94,6 +94,7 @@ export function PriceAlertCard({
       if (existingConfig.dropPct != null) form.set("dropPct", String(existingConfig.dropPct));
       if (existingConfig.notifyLow) form.set("notifyLow", "true");
       if (existingConfig.notifyBackInStock) form.set("notifyBackInStock", "true");
+      if (existingConfig.notifyPriceHike) form.set("notifyPriceHike", "true");
       if (!withDealScore && existingConfig.minDealScore != null && existingConfig.minDealScore !== DEAL_SCORE_THRESHOLD) {
         form.set("minDealScore", String(existingConfig.minDealScore));
       }

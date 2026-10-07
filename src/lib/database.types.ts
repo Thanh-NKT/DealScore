@@ -141,6 +141,7 @@ export type Database = {
           previous_alert_price: number | null
           price: number | null
           recommendation: string | null
+          reference_price: number | null
           score_reasons: string[]
           trigger_types: string[]
           watch_id: string
@@ -155,6 +156,7 @@ export type Database = {
           previous_alert_price?: number | null
           price?: number | null
           recommendation?: string | null
+          reference_price?: number | null
           score_reasons?: string[]
           trigger_types?: string[]
           watch_id: string
@@ -169,6 +171,7 @@ export type Database = {
           previous_alert_price?: number | null
           price?: number | null
           recommendation?: string | null
+          reference_price?: number | null
           score_reasons?: string[]
           trigger_types?: string[]
           watch_id?: string
@@ -1502,15 +1505,18 @@ export type Database = {
           drop_pct: number | null
           folder: string | null
           folder_id: string | null
+          hike_active: boolean | null
           id: string
           last_alert_price: number | null
           last_alerted_at: string | null
           last_evaluated_at: string | null
+          last_hike_alerted_at: string | null
           last_in_stock: boolean | null
           min_deal_score: number | null
           note: string | null
           notify_back_in_stock: boolean
           notify_low: boolean
+          notify_price_hike: boolean
           product_id: string | null
           status: string
           target_price: number | null
@@ -1527,15 +1533,18 @@ export type Database = {
           drop_pct?: number | null
           folder?: string | null
           folder_id?: string | null
+          hike_active?: boolean | null
           id?: string
           last_alert_price?: number | null
           last_alerted_at?: string | null
           last_evaluated_at?: string | null
+          last_hike_alerted_at?: string | null
           last_in_stock?: boolean | null
           min_deal_score?: number | null
           note?: string | null
           notify_back_in_stock?: boolean
           notify_low?: boolean
+          notify_price_hike?: boolean
           product_id?: string | null
           status?: string
           target_price?: number | null
@@ -1552,15 +1561,18 @@ export type Database = {
           drop_pct?: number | null
           folder?: string | null
           folder_id?: string | null
+          hike_active?: boolean | null
           id?: string
           last_alert_price?: number | null
           last_alerted_at?: string | null
           last_evaluated_at?: string | null
+          last_hike_alerted_at?: string | null
           last_in_stock?: boolean | null
           min_deal_score?: number | null
           note?: string | null
           notify_back_in_stock?: boolean
           notify_low?: boolean
+          notify_price_hike?: boolean
           product_id?: string | null
           status?: string
           target_price?: number | null

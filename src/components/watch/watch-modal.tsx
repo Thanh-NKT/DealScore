@@ -131,6 +131,7 @@ export function WatchModal({
   const [enableScore, setEnableScore] = useState(initial ? initial.minDealScore !== null : false);
   const [minDealScore, setMinDealScore] = useState(initial?.minDealScore ? String(initial.minDealScore) : "80");
   const [notifyBackInStock, setNotifyBackInStock] = useState(initial?.notifyBackInStock ?? false);
+  const [notifyPriceHike, setNotifyPriceHike] = useState(initial?.notifyPriceHike ?? false);
   const [channelMode, setChannelMode] = useState<ChannelMode>(initialChannel(initial));
 
   const [dirty, setDirty] = useState(false);
@@ -432,6 +433,17 @@ export function WatchModal({
                 <span>
                   <span className="block text-control font-medium">Có hàng trở lại</span>
                   <span className="block text-label text-ink-3">Báo khi sản phẩm chuyển từ hết hàng sang còn hàng.</span>
+                </span>
+              </label>
+
+              {/* 6. Price pushed up (pre-sale hike) — opt-in */}
+              <label className={`flex cursor-pointer items-start gap-3 ${conditionBox}`}>
+                <input type="checkbox" name="notifyPriceHike" checked={notifyPriceHike} onChange={(e) => setNotifyPriceHike(e.target.checked)} className="mt-0.5 size-5 accent-primary" />
+                <span>
+                  <span className="block text-control font-medium">Giá bị đẩy lên bất thường</span>
+                  <span className="block text-label text-ink-3">
+                    Báo khi giá 2 tuần gần đây cao hơn hẳn 2 tháng trước — lúc đó chưa nên mua. Tối đa 1 lần mỗi tuần.
+                  </span>
                 </span>
               </label>
             </fieldset>

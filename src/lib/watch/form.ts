@@ -100,13 +100,18 @@ export function parseWatchForm(
   const notifyBackInStock =
     notifyBackInStockVal === "on" || notifyBackInStockVal === "true";
 
+  // 6b. notifyPriceHike ("Giá bị đẩy lên bất thường", opt-in)
+  const notifyPriceHikeVal = getSingle("notifyPriceHike");
+  const notifyPriceHike = notifyPriceHikeVal === "on" || notifyPriceHikeVal === "true";
+
   // Require at least one condition
   const hasCondition =
     targetPrice !== null ||
     dropPct !== null ||
     notifyLow ||
     minDealScore !== null ||
-    notifyBackInStock;
+    notifyBackInStock ||
+    notifyPriceHike;
 
   if (!hasCondition) {
     errors._form = "Chọn ít nhất một điều kiện để DealScore biết khi nào cần báo.";
@@ -147,6 +152,7 @@ export function parseWatchForm(
       minDealScore,
       notifyBackInStock,
       channels,
+      notifyPriceHike,
     },
   };
 }

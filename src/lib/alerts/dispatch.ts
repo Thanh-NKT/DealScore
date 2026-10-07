@@ -7,7 +7,7 @@ import type { Recommendation } from "@/lib/pricing/deal-score";
 import { EmailSendError, sendEmail } from "@/lib/email";
 import { reportError } from "@/lib/observability";
 import { listUnsubscribeHeaders, renderAlertEmail, type AlertEmailItem } from "@/lib/email/templates/alert";
-import { describeTriggers } from "@/lib/alerts/triggers-text";
+import { describeTriggers, isPriceHikeOnly } from "@/lib/alerts/triggers-text";
 import { signUnsubscribeToken } from "@/lib/alerts/unsubscribe-token";
 import { groupDeliveries, latestPerWatch, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
 import type { TriggerType } from "@/lib/watch/types";
@@ -48,6 +48,8 @@ interface EventDetail {
   marketplace: string | null;
   baselinePrice: number | null;
   previousAlertPrice: number | null;
+  /** price_hike: the prior 60-day median (alert_events.reference_price). */
+  referencePrice: number | null;
   dealScore: number | null;
   recommendation: Recommendation | null;
   scoreReasons: string[];
@@ -60,7 +62,7 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
   const { data, error } = await client
     .from("alert_events")
     .select(
-      `id, created_at, watch_id, trigger_types, price, offer_id, baseline_price, previous_alert_price, deal_score, recommendation, score_reasons,
+      `id, created_at, watch_id, trigger_types, price, offer_id, baseline_price, previous_alert_price, reference_price, deal_score, recommendation, score_reasons,
        offers(effective_price, effective_price_at, effective_price_until, listings(marketplace)),
        watches!inner(status, channels, target_price, variant_id,
          product_variants!inner(variant_key, products!inner(slug, canonical_name, image, categories(slug))),
@@ -94,6 +96,7 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
       current: null,
       baselinePrice: n(r.baseline_price),
       previousAlertPrice: n(r.previous_alert_price),
+      referencePrice: n(r.reference_price),
       dealScore: r.deal_score,
       recommendation: r.recommendation as Recommendation | null,
       scoreReasons: r.score_reasons ?? [],
@@ -238,7 +241,11 @@ export async function dispatchDueDeliveries(
           continue;
         }
         const allToken = signUnsubscribeToken({ kind: "email", userId: group.userId }, secret);
-        const emailItems: AlertEmailItem[] = items.map((e) => ({
+        const emailItems: AlertEmailItem[] = items.map((e) => {
+          const triggers = mergedTriggers.get(e.id) ?? e.triggerTypes;
+          // "Chưa nên mua lúc này": no marketplace button, the CTA opens DealScore (UI spec §3).
+          const hikeOnly = isPriceHikeOnly(triggers);
+          return {
           productName: e.product.name,
           variantKey: e.product.variantKey,
           imageUrl: e.product.image,
@@ -247,22 +254,25 @@ export async function dispatchDueDeliveries(
           baselinePrice: e.baselinePrice,
           dealScore: e.dealScore,
           recommendation: e.recommendation,
-          triggerTexts: describeTriggers(mergedTriggers.get(e.id) ?? e.triggerTypes, {
+          triggerTexts: describeTriggers(triggers, {
             price: e.price,
             targetPrice: e.watch.targetPrice,
             baselinePrice: e.baselinePrice,
             lastAlertPrice: e.previousAlertPrice,
             dealScore: e.dealScore,
+            referencePrice: e.referencePrice,
           }),
+          priceHikeOnly: hikeOnly,
           scoreReasons: e.scoreReasons.slice(0, 2),
           buyUrl:
-            e.offerId && e.marketplace
+            !hikeOnly && e.offerId && e.marketplace
               ? `${site}/go/${e.marketplace}/${e.offerId}?src=email&watch=${e.watchId}&alert=${e.id}`
               : productUrl(site, e),
           // No /account/watch/[id] detail page yet — point at the list, scrolled to that Watch.
           manageUrl: `${site}/account/watch#${e.watchId}`,
           pauseUrl: `${site}/unsubscribe?t=${signUnsubscribeToken({ kind: "watch", userId: group.userId, watchId: e.watchId }, secret)}`,
-        }));
+          };
+        });
         const mail = renderAlertEmail({
           items: emailItems,
           unsubscribeAllUrl: `${site}/unsubscribe?t=${allToken}`,
@@ -292,7 +302,12 @@ export async function dispatchDueDeliveries(
       } else {
         // Push has no idempotency key: a reclaimed delivery may notify a device twice.
         const payload = buildPushPayload(
-          items.map((e) => ({ productName: e.product.name, price: e.price, url: productUrl(site, e) })),
+          items.map((e) => ({
+            productName: e.product.name,
+            price: e.price,
+            url: productUrl(site, e),
+            priceHikeOnly: isPriceHikeOnly(mergedTriggers.get(e.id) ?? e.triggerTypes),
+          })),
           site,
         );
         const r = await push(group.userId, payload);
