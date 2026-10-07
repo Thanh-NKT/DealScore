@@ -11,6 +11,7 @@ export type WatchActionResult =
   | { status: "error"; errors: Partial<Record<WatchField, string>> };
 import { fromRow, DEFAULT_NOTIFICATION_SETTINGS, type Channel } from "@/lib/account/notification-settings";
 import { describeWatch, type LatestAlert, type WatchView } from "@/lib/watch/describe";
+import { watchBuyTarget, type WatchBuyTarget } from "@/lib/watch/links";
 import { loadVariantSnapshots } from "@/lib/watch/snapshot";
 import type { ConditionKey, WatchConfig, WatchState } from "@/lib/watch/types";
 import {
@@ -20,6 +21,11 @@ import {
   validateFolderName,
   type WatchFolder,
 } from "@/lib/watch/folders";
+
+export { watchBuyTarget, type WatchBuyTarget } from "@/lib/watch/links";
+
+/** Offer ids per read of the "Đến {sàn}" lookup: far below PostgREST's 1,000-row cap. */
+const BUY_OFFER_CHUNK = 200;
 
 export interface MyWatchItem {
   id: string;
@@ -39,6 +45,8 @@ export interface MyWatchItem {
   createdAt: string;
   /** null = not filed in any folder. */
   folderId: string | null;
+  /** "Đến {sàn}" target (watchBuyTarget); null = keep the "Xem giá" button. */
+  buy: WatchBuyTarget | null;
 }
 
 /** `client` is injectable so tests can use a real DB; defaults to the server client (RLS). */
@@ -95,6 +103,26 @@ export async function listMyWatches(
   // 3. Load snapshots for the variantIds
   const variantIds = Array.from(new Set(watchRows.map((w) => w.variant_id)));
   const snapshotMap = await loadVariantSnapshots(supabase, variantIds, now);
+
+  // 3b. Marketplace + affiliate flag of each best offer, for "Đến {sàn}" (catalog tables are public-read;
+  // affiliate_offers exposes only offer_id / eligible). A read error is an error, not "no button".
+  const offerIds = [...new Set([...snapshotMap.values()].map((s) => s.offerId).filter((id): id is string => !!id))];
+  const offerInfo = new Map<string, { marketplace: string; affiliate: boolean }>();
+  for (let i = 0; i < offerIds.length; i += BUY_OFFER_CHUNK) {
+    const part = offerIds.slice(i, i + BUY_OFFER_CHUNK);
+    const { data, error } = await supabase
+      .from("offers")
+      .select("id, listings ( marketplace ), affiliate_offers ( eligible )")
+      .in("id", part);
+    if (error) throw new Error(`Failed to load offers for Watch list: ${error.message}`);
+    for (const o of data ?? []) {
+      const listing = (Array.isArray(o.listings) ? o.listings[0] : o.listings) as { marketplace: string } | null;
+      const aff = (Array.isArray(o.affiliate_offers) ? o.affiliate_offers[0] : o.affiliate_offers) as
+        | { eligible: boolean }
+        | null;
+      if (listing?.marketplace) offerInfo.set(o.id, { marketplace: listing.marketplace, affiliate: Boolean(aff?.eligible) });
+    }
+  }
 
   // 4. Load the latest alert per watch (with deliveries). One row per watch from the RPC: reading every
   // alert would hit PostgREST's silent 1,000-row cap after a few weeks of alerts.
@@ -192,6 +220,7 @@ export async function listMyWatches(
       view,
       createdAt: row.created_at,
       folderId: row.folder_id,
+      buy: watchBuyTarget(view, snap.offerId ? offerInfo.get(snap.offerId) : undefined, snap.offerId),
     });
   }
 
