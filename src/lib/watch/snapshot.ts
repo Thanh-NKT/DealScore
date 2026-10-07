@@ -3,7 +3,8 @@ import type { Database } from "@/lib/database.types";
 import { scoreDeal } from "@/lib/pricing/score";
 import { expandRollup, type DailyPriceRow } from "@/lib/pricing/price-history";
 import { toVnDate } from "@/lib/format";
-import { STALE_HOURS } from "@/lib/watch/constants";
+import { referencePrice } from "@/lib/watch/change";
+import { CHANGE_WINDOW_DAYS, STALE_HOURS } from "@/lib/watch/constants";
 import type { VariantSnapshot } from "@/lib/watch/types";
 
 /** PostgREST silently truncates at 1,000 rows. 10 variants × 91 days ≤ 910 rows. */
@@ -63,7 +64,7 @@ export async function loadVariantSnapshots(
   for (const id of ids) {
     const c = current.get(id);
     if (!c) {
-      result.set(id, { variantId: id, price: null, inStock: false, offerId: null, observedAt: null, isStale: true, deal: null });
+      result.set(id, { variantId: id, price: null, inStock: false, offerId: null, observedAt: null, isStale: true, deal: null, price7dAgo: null });
       continue;
     }
     const price = n(c.price);
@@ -75,6 +76,7 @@ export async function loadVariantSnapshots(
       offerId: c.best_offer_id,
       observedAt: c.observed_at,
       isStale,
+      price7dAgo: referencePrice(history.get(id) ?? [], CHANGE_WINDOW_DAYS, now),
       // NO bestOffer (Đ7): the numbers in an alert must match the product page header score.
       deal: price != null && price > 0 ? scoreDeal({ price, history: expandRollup(history.get(id) ?? []), now, isFlashSale: c.is_flash_sale }) : null,
     });

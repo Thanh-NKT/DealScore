@@ -5,7 +5,9 @@ import {
   type NotificationSettings,
 } from "@/lib/account/notification-settings";
 import type { DealScoreResult } from "@/lib/pricing/deal-score";
+import { priceChange, type PriceChange } from "@/lib/watch/change";
 import { evaluateConditions } from "@/lib/watch/conditions";
+import { CHANGE_WINDOW_DAYS } from "@/lib/watch/constants";
 import type {
   ConditionKey,
   Tri,
@@ -38,6 +40,8 @@ export interface WatchView {
     pct: number;
     since: string;
   } | null;
+  /** Current price vs the rollup price CHANGE_WINDOW_DAYS ago; null = not enough history yet. */
+  change7d: PriceChange | null;
   conditions: Array<{ key: ConditionKey; state: Tri }>;
   alertStatus:
     | { kind: "none" }
@@ -188,6 +192,7 @@ export function describeWatch(input: {
     deal: snapshot.deal,
     target: targetInfo,
     changeSinceStart,
+    change7d: priceChange(price, snapshot.price7dAgo ?? null, CHANGE_WINDOW_DAYS),
     conditions,
     alertStatus,
     sortKey,

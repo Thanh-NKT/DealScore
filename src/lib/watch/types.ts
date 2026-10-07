@@ -37,4 +37,6 @@ export interface VariantSnapshot {
   observedAt: string | null;
   isStale: boolean;
   deal: DealScoreResult | null;
+  /** Rollup reference price CHANGE_WINDOW_DAYS ago (referencePrice). Display only: decideAlert never reads it. */
+  price7dAgo?: number | null;
 }

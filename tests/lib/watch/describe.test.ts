@@ -33,6 +33,22 @@ const input = (o: Partial<Parameters<typeof describeWatch>[0]> = {}) => ({
 });
 
 describe("describeWatch", () => {
+  it("change7d from snapshot.price7dAgo; changeSinceStart unchanged", () => {
+    const v = describeWatch(input({ snapshot: snap({ price: 800, price7dAgo: 1000 }) }));
+    expect(v.change7d).toEqual({ amount: -200, pct: -0.2, refPrice: 1000, days: 7 });
+    expect(v.changeSinceStart).toEqual({ amount: -400, pct: -400 / 1200, since: "2026-09-12T00:00:00Z" });
+    expect(describeWatch(input()).change7d).toBeNull();
+    expect(describeWatch(input({ snapshot: snap({ price7dAgo: null }) })).change7d).toBeNull();
+  });
+
+  it("change7d from snapshot.price7dAgo; changeSinceStart unchanged", () => {
+    const v = describeWatch(input({ snapshot: snap({ price: 800, price7dAgo: 1000 }) }));
+    expect(v.change7d).toEqual({ amount: -200, pct: -0.2, refPrice: 1000, days: 7 });
+    expect(v.changeSinceStart).toEqual({ amount: -400, pct: -400 / 1200, since: "2026-09-12T00:00:00Z" });
+    expect(describeWatch(input()).change7d).toBeNull();
+    expect(describeWatch(input({ snapshot: snap({ price7dAgo: null }) })).change7d).toBeNull();
+  });
+
   it("distance to target and change since tracking started", () => {
     const v = describeWatch(input());
     expect(v.target).toEqual({ amount: 900, gap: 100, gapPct: 0.1, reached: false });

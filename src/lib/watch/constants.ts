@@ -7,3 +7,7 @@ export const DEAL_SCORE_HYSTERESIS = 2; // points
 export const STALE_HOURS = 48; // same as the isStale threshold from 1.2
 export const MAX_DELIVERY_ATTEMPTS = 3;
 export const RETRY_DELAYS_MINUTES = [5, 30, 120] as const;
+// "Thay đổi 7 ngày" on the watch list (roadmap P1 item 4): current price vs the rollup min_price of day −7, or the
+// latest earlier day within the lookback when day −7 has no price. Tune with real data (collector gaps).
+export const CHANGE_WINDOW_DAYS = 7;
+export const CHANGE_REF_LOOKBACK_DAYS = 3;
