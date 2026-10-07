@@ -341,6 +341,7 @@ describe("other admin RPCs", () => {
     const { data: counts, error: cErr } = await admin.rpc("admin_overview_counts");
     expect(cErr).toBeNull();
     expect(counts).toHaveProperty("drafts_multi_shop");
+    expect(counts).toHaveProperty("stale_listings");
     const { data: drafts, error: dErr } = await admin.from("admin_drafts").select("id, listing_count").limit(5);
     expect(dErr).toBeNull();
     for (const d of drafts ?? []) expect(typeof d.listing_count).toBe("number");

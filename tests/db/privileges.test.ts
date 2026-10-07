@@ -37,6 +37,10 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_list_products", {}],
   ["admin_create_product", { p: {} }],
   ["admin_update_product", { p_product_id: "00000000-0000-4000-8000-000000000000", p: {} }],
+  ["admin_marketplace_health", {}],
+  ["admin_freshness", {}],
+  ["admin_stale_offers", {}],
+  ["admin_overview_counts", { p_stale_hours: 48 }],
 ];
 
 describe("service-role-only admin RPCs", () => {
