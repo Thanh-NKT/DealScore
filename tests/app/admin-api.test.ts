@@ -62,6 +62,20 @@ describe("GET /api/admin/status", () => {
     expect(body.marketplaces.find((m: { id: string }) => m.id === "tiktok")).toMatchObject({ configured: false, affiliateLinks: false });
     expect(JSON.stringify(body)).not.toContain("topsecret");
   });
+
+  it("exposes the collector refresh cadence from the DealScore constants", async () => {
+    const { REFRESH_INTERVAL_HOURS } = await import("@/lib/collector/schedule");
+    const { STALE_HOURS } = await import("@/lib/watch/constants");
+    const body = await (await status.GET(req("/api/admin/status") as never)).json();
+    expect(body.collector).toEqual({
+      refreshIntervalHours: { "1": REFRESH_INTERVAL_HOURS[1], "2": REFRESH_INTERVAL_HOURS[2], "3": REFRESH_INTERVAL_HOURS[3] },
+      watchedPriority: 1,
+      staleHours: STALE_HOURS,
+    });
+    expect(body.collector.refreshIntervalHours).toEqual({ "1": 2, "2": 6, "3": 24 });
+    // Older keys stay (backward compatible).
+    expect(Object.keys(body)).toEqual(expect.arrayContaining(["marketplaces", "cronSecretSet", "siteUrl", "collector"]));
+  });
 });
 
 describe("POST /api/admin/tiktok/authorize-url", () => {
