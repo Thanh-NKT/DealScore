@@ -39,11 +39,12 @@ describe("GET /api/autocomplete", () => {
     expect((autocomplete.mock.calls[0][0] as string).length).toBe(100);
   });
 
-  it("a failed search answers 500 with the empty shape", async () => {
+  it("a failed search answers 500 with the empty shape, never cached", async () => {
     autocomplete.mockRejectedValue(new Error("boom"));
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await call("sony");
     expect(res.status).toBe(500);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(await res.json()).toEqual({ ...EMPTY, q: "sony" });
     spy.mockRestore();
   });

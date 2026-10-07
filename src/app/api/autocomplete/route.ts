@@ -24,6 +24,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("api/autocomplete error:", err);
-    return NextResponse.json<AutocompleteResponse>(emptyAutocomplete(q), { status: 500 });
+    // no-store: a transient failure must never be cached as "no suggestions".
+    return NextResponse.json<AutocompleteResponse>(emptyAutocomplete(q), {
+      status: 500,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 }
