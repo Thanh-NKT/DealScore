@@ -1518,6 +1518,10 @@ export type Database = {
           notify_low: boolean
           notify_price_hike: boolean
           product_id: string | null
+          purchased_at: string | null
+          purchased_median_30d: number | null
+          purchased_median_days: number | null
+          purchased_price: number | null
           status: string
           target_price: number | null
           updated_at: string
@@ -1546,6 +1550,10 @@ export type Database = {
           notify_low?: boolean
           notify_price_hike?: boolean
           product_id?: string | null
+          purchased_at?: string | null
+          purchased_median_30d?: number | null
+          purchased_median_days?: number | null
+          purchased_price?: number | null
           status?: string
           target_price?: number | null
           updated_at?: string
@@ -1574,6 +1582,10 @@ export type Database = {
           notify_low?: boolean
           notify_price_hike?: boolean
           product_id?: string | null
+          purchased_at?: string | null
+          purchased_median_30d?: number | null
+          purchased_median_days?: number | null
+          purchased_price?: number | null
           status?: string
           target_price?: number | null
           updated_at?: string

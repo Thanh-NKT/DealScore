@@ -13,6 +13,7 @@ import { fromRow, DEFAULT_NOTIFICATION_SETTINGS, type Channel } from "@/lib/acco
 import { describeWatch, type LatestAlert, type WatchView } from "@/lib/watch/describe";
 import { watchBuyTarget, type WatchBuyTarget } from "@/lib/watch/links";
 import { loadVariantSnapshots } from "@/lib/watch/snapshot";
+import { savingsFor, type SavingsLine } from "@/lib/watch/savings";
 import type { ConditionKey, WatchConfig, WatchState } from "@/lib/watch/types";
 import {
   MAX_FOLDERS,
@@ -47,6 +48,8 @@ export interface MyWatchItem {
   folderId: string | null;
   /** "Đến {sàn}" target (watchBuyTarget); null = keep the "Xem giá" button. */
   buy: WatchBuyTarget | null;
+  /** "Đã mua" only: the purchase snapshot (migration 0040) compared with the 30-day median. */
+  purchase?: SavingsLine & { purchasedAt: string; purchasedPrice: number | null };
 }
 
 /** `client` is injectable so tests can use a real DB; defaults to the server client (RLS). */
@@ -65,6 +68,7 @@ export async function listMyWatches(
       id, status, variant_id, target_price, drop_pct, notify_low, min_deal_score,
       notify_back_in_stock, notify_price_hike, channels, baseline_price, cond_state, last_alert_price,
       last_alerted_at, last_in_stock, hike_active, last_hike_alerted_at, created_at, folder_id,
+      purchased_at, purchased_price, purchased_median_30d, purchased_median_days,
       product_variants!inner (
         id,
         variant_key,
@@ -221,6 +225,21 @@ export async function listMyWatches(
       createdAt: row.created_at,
       folderId: row.folder_id,
       buy: watchBuyTarget(view, snap.offerId ? offerInfo.get(snap.offerId) : undefined, snap.offerId),
+      ...(row.status === "done" && row.purchased_at
+        ? {
+            purchase: {
+              ...savingsFor({
+                purchasedAt: row.purchased_at,
+                purchasedPrice: row.purchased_price != null ? Number(row.purchased_price) : null,
+                median30d: row.purchased_median_30d != null ? Number(row.purchased_median_30d) : null,
+                medianDays: row.purchased_median_days,
+                baselinePrice: state.baselinePrice,
+              }),
+              purchasedAt: row.purchased_at,
+              purchasedPrice: row.purchased_price != null ? Number(row.purchased_price) : null,
+            },
+          }
+        : {}),
     });
   }
 
