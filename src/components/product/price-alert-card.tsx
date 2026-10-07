@@ -143,7 +143,7 @@ export function PriceAlertCard({
       </div>
 
       {/* Target Price Input */}
-      <div className="flex h-[58px] items-center rounded-md border border-line-strong bg-surface-2/45 px-4.5 text-ink transition-all focus-within:border-primary focus-within:bg-surface focus-within:ring-2 focus-within:ring-primary/20">
+      <div className="flex h-[58px] items-center rounded-md border border-line-strong bg-surface-2/45 px-4.5 text-ink transition-all focus-within:border-primary focus-within:bg-surface focus-within:ring-1 focus-within:ring-primary">
         <label htmlFor="target-price-input" className="sr-only">
           Giá mong muốn
         </label>
