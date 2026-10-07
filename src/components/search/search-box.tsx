@@ -1,24 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useCallback, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import type { AutocompleteResponse } from "@/lib/search/autocomplete-types";
-import { formatVnd } from "@/lib/format";
 import { ClockIcon, SearchIcon } from "@/components/ui/icons";
-import { ProductImage } from "@/components/ui/product-image";
 import { LookupProblem } from "@/components/lookup/lookup-problem";
 import { isLookupable, looksLikeLink, marketOf, slowMessage, useLookup } from "@/components/lookup/use-lookup";
 import { buttonClass } from "@/components/ui/button";
-
-interface Suggestion {
-  productId: string;
-  slug: string;
-  categorySlug: string;
-  name: string;
-  brand: string | null;
-  image: string | null;
-  bestPrice: number | null;
-}
+import { SuggestPopup } from "@/components/search/suggest-popup";
+import { useNarrow, useSearchSuggest, useSlashFocus } from "@/components/search/use-search-suggest";
+import type { ComparePick } from "@/lib/search/suggest-rows";
 
 interface SearchBoxProps {
   initialQuery?: string;
@@ -29,111 +19,64 @@ interface SearchBoxProps {
    * submitting searches inside /compare (its no-JS result list). The side already chosen is kept;
    * the pick fills the other one (A first when neither is chosen).
    */
-  compare?: { a?: string; b?: string };
-}
-
-function compareHref(keep: { a?: string; b?: string }, picked: string): string {
-  const q = new URLSearchParams();
-  if (keep.a) {
-    q.set("a", keep.a);
-    q.set("b", picked);
-  } else {
-    q.set("a", picked);
-    if (keep.b) q.set("b", keep.b);
-  }
-  return `/compare?${q.toString()}`;
+  compare?: ComparePick;
 }
 
 /** Longer than this is a pasted paragraph, not a query; the server trims and sanitises anyway. */
 const MAX_QUERY = 200;
-const MIN_SUGGEST = 2;
+
+export const SEARCH_PLACEHOLDER = "Tìm sản phẩm, hãng, hoặc dán link Shopee — vd: SSD 2TB dưới 3 triệu";
+export const SEARCH_PLACEHOLDER_SHORT = "Tìm sản phẩm hoặc dán link";
 
 /**
- * Keyword search with autocomplete, which also accepts a pasted Shopee link (handed to the shared
- * lookup flow). Hardened for: very long input (capped), punctuation and emoji (sent as typed; the
- * server sanitises the tsquery), no-diacritics typing (the server matches unaccented text), links from
- * other marketplaces (explained instead of searched as text), stale or failed suggestion requests.
+ * Keyword search with sectioned suggestions (search row, categories, brands, products; recent searches
+ * on an empty box), which also accepts a pasted Shopee link (handed to the shared lookup flow).
+ * Hardened for: very long input (capped), punctuation and emoji (sent as typed; the server sanitises the
+ * tsquery), no-diacritics typing (the server matches unaccented text), links from other marketplaces
+ * (explained instead of searched as text), stale or failed suggestion requests, broken localStorage.
+ * Keyboard: "/" focuses it (desktop), arrows walk every row, Esc closes the list then clears the text.
  * Without JavaScript it is a plain GET form to /search.
  */
 export function SearchBox({ initialQuery = "", secondary = false, compare }: SearchBoxProps) {
   const router = useRouter();
   const uid = useId();
-  const [query, setQuery] = useState(initialQuery.slice(0, MAX_QUERY));
-  const [results, setResults] = useState<{ q: string; items: Suggestion[] }>({ q: "", items: [] });
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState(initialQuery.slice(0, MAX_QUERY));
   const lookup = useLookup();
+  const narrow = useNarrow();
 
   const trimmed = query.trim().replace(/\s+/g, " ");
   const isLink = looksLikeLink(trimmed);
   const canLookup = isLink && isLookupable(trimmed);
-  // Only show suggestions that belong to what is in the box right now (no stale results).
-  const suggestions = !isLink && trimmed.length >= MIN_SUGGEST && results.q === trimmed ? results.items : [];
-  const showList = open && suggestions.length > 0;
-
-  useEffect(() => {
-    if (isLink || trimmed.length < MIN_SUGGEST) return;
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(trimmed.slice(0, 100))}`, { signal: controller.signal });
-        if (!res.ok) return; // suggestions are a convenience: fail quietly, search still works
-        const data: unknown = await res.json();
-        const products = (data as Partial<AutocompleteResponse> | null)?.products;
-        if (!Array.isArray(products)) return;
-        setResults({ q: trimmed, items: (products as Suggestion[]).slice(0, 8) });
-        setActive(-1);
-      } catch {
-        // aborted or offline: keep whatever was shown, the search button still works
-      }
-    }, 250);
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [trimmed, isLink]);
-
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, []);
-
-  const go = (s: Suggestion) => {
-    setOpen(false);
-    router.push(compare ? compareHref(compare, s.slug) : `/${s.categorySlug}/${s.slug}`);
-  };
+  const suggest = useSearchSuggest({ query: trimmed, link: isLink, compare, setQuery, wrapperRef });
+  const listId = `${uid}-list`;
+  const optionId = useCallback((i: number) => `${uid}-opt-${i}`, [uid]);
+  useSlashFocus(inputRef);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
-      setOpen(false);
+      // First Esc closes the list, the second clears the text (preventDefault: the browser's own
+      // search-field Esc would clear both at once).
+      if (suggest.popupVisible) {
+        e.preventDefault();
+        suggest.setOpen(false);
+      } else if (query) {
+        e.preventDefault();
+        setQuery("");
+        lookup.clearProblem();
+      }
       return;
     }
-    if (!showList) {
-      if (e.key === "ArrowDown" && suggestions.length > 0) setOpen(true);
-      return;
-    }
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((i) => (i + 1) % suggestions.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
-    } else if (e.key === "Enter" && active >= 0) {
-      e.preventDefault();
-      go(suggestions[active]);
-    } else if (e.key === "Tab") {
-      setOpen(false);
-    }
+    suggest.onListKey(e);
   };
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    suggest.setOpen(false);
     if (compare) {
       // Picker: the native GET to /compare?q=… lists matches to choose from (also the no-JS path).
       if (!trimmed) e.preventDefault();
+      else suggest.record(trimmed);
       return;
     }
     if (canLookup) {
@@ -150,8 +93,10 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
     if (!trimmed) {
       e.preventDefault();
       router.push("/search");
+      return;
     }
-    // Otherwise the native GET to /search?q=… runs (also the no-JS path).
+    suggest.record(trimmed);
+    // The native GET to /search?q=… runs (also the no-JS path).
   };
 
   return (
@@ -162,7 +107,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
         method="get"
         role="search"
         onSubmit={onSubmit}
-        className={`flex items-center gap-2.5 rounded-frame border-2 bg-surface p-1.5 pl-4 transition-colors duration-150 ease-out focus-within:border-primary max-sm:pl-3.5 ${
+        className={`flex items-center gap-2.5 rounded-frame border-2 bg-surface p-1.5 pl-4 transition-colors duration-150 ease-out focus-within:border-primary motion-reduce:transition-none max-sm:pl-3.5 ${
           secondary ? "border-line" : "border-line-strong"
         }`}
       >
@@ -173,6 +118,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           {compare ? "Tìm sản phẩm để so sánh" : "Tìm sản phẩm hoặc dán link Shopee"}
         </label>
         <input
+          ref={inputRef}
           id={`${uid}-q`}
           type="search"
           name="q"
@@ -182,19 +128,20 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           enterKeyHint="search"
           onChange={(e) => {
             setQuery(e.target.value.slice(0, MAX_QUERY));
-            setOpen(true);
+            suggest.onInput();
             lookup.clearProblem();
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={suggest.onFocus}
           onKeyDown={onKeyDown}
           role="combobox"
           aria-autocomplete="list"
-          aria-expanded={showList}
-          aria-controls={`${uid}-list`}
-          aria-activedescendant={showList && active >= 0 ? `${uid}-opt-${active}` : undefined}
+          aria-expanded={suggest.listVisible}
+          aria-controls={listId}
+          aria-activedescendant={suggest.listVisible && suggest.active >= 0 ? optionId(suggest.active) : undefined}
           aria-describedby={`${uid}-status`}
+          aria-keyshortcuts="/"
           readOnly={lookup.loading}
-          placeholder={compare ? "Tên, hãng hoặc model sản phẩm…" : "Ví dụ: SSD 2TB dưới 3 triệu"}
+          placeholder={compare ? "Tên, hãng hoặc model sản phẩm…" : narrow ? SEARCH_PLACEHOLDER_SHORT : SEARCH_PLACEHOLDER}
           className="h-11 w-full min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
 
@@ -211,9 +158,9 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
             onClick={() => {
               setQuery("");
               lookup.clearProblem();
-              document.getElementById(`${uid}-q`)?.focus();
+              inputRef.current?.focus();
             }}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-sm text-ink-3 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink cursor-pointer"
+            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-sm text-ink-3 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink motion-reduce:transition-none"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="size-4">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -251,40 +198,19 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
         {query.length >= MAX_QUERY && <p className="text-label text-ink-3">Từ khóa đã dài tối đa {MAX_QUERY} ký tự.</p>}
       </div>
 
-      {showList && (
-        <ul id={`${uid}-list`} role="listbox" aria-label="Gợi ý sản phẩm" className="absolute z-50 mt-2 max-h-96 w-full overflow-auto rounded-md border border-line bg-surface py-1.5 shadow-lift">
-          {suggestions.map((s, i) => {
-            const name = s.name?.trim() || "Sản phẩm chưa có tên";
-            const price = s.bestPrice != null && s.bestPrice > 0 ? s.bestPrice : null;
-            return (
-              <li
-                key={s.productId}
-                id={`${uid}-opt-${i}`}
-                role="option"
-                aria-selected={i === active}
-                onMouseDown={(e) => e.preventDefault()} // keep focus in the input
-                onClick={() => go(s)}
-                onMouseEnter={() => setActive(i)}
-                className={`grid cursor-pointer grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 ${i === active ? "bg-surface-2" : ""}`}
-              >
-                <div className="overflow-hidden rounded-sm bg-surface-2">
-                  <ProductImage src={s.image} className="bg-surface-2! p-0.5" iconClassName="size-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-body-sm font-medium text-ink" title={name}>
-                    {name}
-                  </p>
-                  {s.brand?.trim() && <p className="truncate text-micro text-ink-3">{s.brand.trim()}</p>}
-                </div>
-                {price != null ? (
-                  <span className="num shrink-0 text-body-sm font-bold text-ink">{formatVnd(price)}</span>
-                ) : (
-                  <span className="shrink-0 text-micro text-ink-3">Chưa có giá</span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+      {suggest.popupVisible && (
+        <SuggestPopup
+          listId={listId}
+          optionId={optionId}
+          suggestions={suggest.suggestions}
+          query={trimmed}
+          active={suggest.active}
+          pending={suggest.pending}
+          onHover={suggest.setActive}
+          onPick={suggest.pick}
+          onRemoveRecent={suggest.removeRecent}
+          onClearRecent={suggest.clearRecent}
+        />
       )}
     </div>
   );

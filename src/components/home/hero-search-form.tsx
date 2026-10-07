@@ -1,28 +1,17 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useCallback, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { AutocompleteResponse } from "@/lib/search/autocomplete-types";
-import { formatVnd } from "@/lib/format";
 import { ClockIcon, SearchIcon } from "@/components/ui/icons";
-import { ProductImage } from "@/components/ui/product-image";
 import { LookupProblem } from "@/components/lookup/lookup-problem";
 import { isLookupable, looksLikeLink, marketOf, slowMessage, useLookup } from "@/components/lookup/use-lookup";
 import { buttonClass } from "@/components/ui/button";
-
-interface Suggestion {
-  productId: string;
-  slug: string;
-  categorySlug: string;
-  name: string;
-  brand: string | null;
-  image: string | null;
-  bestPrice: number | null;
-}
+import { SuggestPopup } from "@/components/search/suggest-popup";
+import { useNarrow, useSearchSuggest, useSlashFocus } from "@/components/search/use-search-suggest";
+import { SEARCH_PLACEHOLDER, SEARCH_PLACEHOLDER_SHORT } from "@/components/search/search-box";
 
 const MAX_QUERY = 200;
-const MIN_SUGGEST = 2;
 
 const QUICK_QUERIES = [
   "nồi chiên không dầu dưới 2 triệu",
@@ -34,101 +23,58 @@ const QUICK_QUERIES = [
  * Homepage Hero search & Shopee link lookup bar.
  * - Automatically detects pasted Shopee links (shopee.vn / shope.ee) and runs `/api/lookup` directly.
  * - Explains unsupported marketplace links (TikTok Shop, Lazada, Tiki) instead of running a dead text search.
- * - Provides live autocomplete dropdown for keyword queries.
+ * - Same sectioned suggestions, recent searches and keyboard behaviour as `SearchBox` (shared hook + popup).
  */
 export function HeroSearchForm() {
   const router = useRouter();
   const uid = useId();
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ q: string; items: Suggestion[] }>({ q: "", items: [] });
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
   const lookup = useLookup();
+  const narrow = useNarrow();
 
   const trimmed = query.trim().replace(/\s+/g, " ");
   const isLink = looksLikeLink(trimmed);
   const canLookup = isLink && isLookupable(trimmed);
-  const suggestions = !isLink && trimmed.length >= MIN_SUGGEST && results.q === trimmed ? results.items : [];
-  const showList = open && suggestions.length > 0;
-
-  useEffect(() => {
-    if (isLink || trimmed.length < MIN_SUGGEST) return;
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(trimmed.slice(0, 100))}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) return;
-        const data: unknown = await res.json();
-        const products = (data as Partial<AutocompleteResponse> | null)?.products;
-        if (!Array.isArray(products)) return;
-        setResults({ q: trimmed, items: (products as Suggestion[]).slice(0, 6) });
-        setActive(-1);
-      } catch {
-        // Ignore aborted or offline autocomplete errors
-      }
-    }, 220);
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [trimmed, isLink]);
-
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, []);
-
-  const go = (s: Suggestion) => {
-    setOpen(false);
-    router.push(`/${s.categorySlug}/${s.slug}`);
-  };
+  const suggest = useSearchSuggest({ query: trimmed, link: isLink, limit: 6, delay: 220, setQuery, wrapperRef });
+  const listId = `${uid}-list`;
+  const optionId = useCallback((i: number) => `${uid}-opt-${i}`, [uid]);
+  useSlashFocus(inputRef);
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
-      setOpen(false);
+      if (suggest.popupVisible) {
+        e.preventDefault();
+        suggest.setOpen(false);
+      } else if (query) {
+        e.preventDefault();
+        setQuery("");
+        lookup.clearProblem();
+      }
       return;
     }
-    if (!showList) {
-      if (e.key === "ArrowDown" && suggestions.length > 0) setOpen(true);
-      return;
-    }
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActive((i) => (i + 1) % suggestions.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
-    } else if (e.key === "Enter" && active >= 0) {
-      e.preventDefault();
-      go(suggestions[active]);
-    } else if (e.key === "Tab") {
-      setOpen(false);
-    }
+    suggest.onListKey(e);
   };
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    suggest.setOpen(false);
     if (canLookup) {
       e.preventDefault();
-      setOpen(false);
       void lookup.run(trimmed);
       return;
     }
     if (isLink) {
       e.preventDefault();
-      setOpen(false);
       lookup.showProblem({ code: "not_shopee", market: marketOf(trimmed) });
       return;
     }
     if (!trimmed) {
       e.preventDefault();
       router.push("/search");
+      return;
     }
+    suggest.record(trimmed);
   };
 
   return (
@@ -139,13 +85,14 @@ export function HeroSearchForm() {
           method="get"
           role="search"
           onSubmit={onSubmit}
-          className="flex items-center gap-2.5 rounded-lg border-2 border-line-strong bg-surface p-2 pl-4 transition-colors focus-within:border-primary sm:pl-5"
+          className="flex items-center gap-2.5 rounded-lg border-2 border-line-strong bg-surface p-2 pl-4 transition-colors focus-within:border-primary motion-reduce:transition-none sm:pl-5"
         >
           <SearchIcon className="size-[22px] shrink-0 text-ink-2 max-[380px]:hidden" />
           <label htmlFor={`${uid}-home-q`} className="sr-only">
             Tìm sản phẩm hoặc dán link Shopee
           </label>
           <input
+            ref={inputRef}
             id={`${uid}-home-q`}
             type="search"
             name="q"
@@ -155,19 +102,20 @@ export function HeroSearchForm() {
             enterKeyHint="search"
             onChange={(e) => {
               setQuery(e.target.value.slice(0, MAX_QUERY));
-              setOpen(true);
+              suggest.onInput();
               lookup.clearProblem();
             }}
-            onFocus={() => setOpen(true)}
+            onFocus={suggest.onFocus}
             onKeyDown={onKeyDown}
             role="combobox"
             aria-autocomplete="list"
-            aria-expanded={showList}
-            aria-controls={`${uid}-list`}
-            aria-activedescendant={showList && active >= 0 ? `${uid}-opt-${active}` : undefined}
+            aria-expanded={suggest.listVisible}
+            aria-controls={listId}
+            aria-activedescendant={suggest.listVisible && suggest.active >= 0 ? optionId(suggest.active) : undefined}
             aria-describedby={`${uid}-status`}
+            aria-keyshortcuts="/"
             readOnly={lookup.loading}
-            placeholder="Gõ tên sản phẩm, nhu cầu, hoặc dán link Shopee…"
+            placeholder={narrow ? SEARCH_PLACEHOLDER_SHORT : SEARCH_PLACEHOLDER}
             className="h-13 min-w-0 flex-1 border-none bg-transparent text-body text-ink outline-none placeholder:text-ink-3 focus:outline-none focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
           />
 
@@ -184,9 +132,9 @@ export function HeroSearchForm() {
               onClick={() => {
                 setQuery("");
                 lookup.clearProblem();
-                document.getElementById(`${uid}-home-q`)?.focus();
+                inputRef.current?.focus();
               }}
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-sm text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink"
+              className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-sm text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink motion-reduce:transition-none"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="size-4">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -213,47 +161,19 @@ export function HeroSearchForm() {
           )}
         </form>
 
-        {showList && (
-          <ul
-            id={`${uid}-list`}
-            role="listbox"
-            aria-label="Gợi ý sản phẩm"
-            className="absolute z-50 mt-2 max-h-80 w-full overflow-auto rounded-md border border-line bg-surface py-1.5 shadow-lift"
-          >
-            {suggestions.map((s, i) => {
-              const name = s.name?.trim() || "Sản phẩm chưa có tên";
-              const price = s.bestPrice != null && s.bestPrice > 0 ? s.bestPrice : null;
-              return (
-                <li
-                  key={s.productId}
-                  id={`${uid}-opt-${i}`}
-                  role="option"
-                  aria-selected={i === active}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => go(s)}
-                  onMouseEnter={() => setActive(i)}
-                  className={`grid cursor-pointer grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-2 ${
-                    i === active ? "bg-surface-2" : ""
-                  }`}
-                >
-                  <div className="size-9 overflow-hidden rounded-sm bg-surface-2">
-                    <ProductImage src={s.image} className="bg-surface-2! p-0.5" iconClassName="size-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-body-sm font-medium text-ink" title={name}>
-                      {name}
-                    </p>
-                    {s.brand?.trim() && <p className="truncate text-micro text-ink-3">{s.brand.trim()}</p>}
-                  </div>
-                  {price != null ? (
-                    <span className="num shrink-0 text-body-sm font-bold text-ink">{formatVnd(price)}</span>
-                  ) : (
-                    <span className="shrink-0 text-micro text-ink-3">Chưa có giá</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+        {suggest.popupVisible && (
+          <SuggestPopup
+            listId={listId}
+            optionId={optionId}
+            suggestions={suggest.suggestions}
+            query={trimmed}
+            active={suggest.active}
+            pending={suggest.pending}
+            onHover={suggest.setActive}
+            onPick={suggest.pick}
+            onRemoveRecent={suggest.removeRecent}
+            onClearRecent={suggest.clearRecent}
+          />
         )}
       </div>
 
