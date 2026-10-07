@@ -15,6 +15,7 @@ import { MIN_SUGGEST, buildSuggestions, flattenGroups, type ComparePick, type Su
  */
 export function useSearchSuggest({
   query,
+  boxEmpty,
   link,
   compare,
   limit = 8,
@@ -24,6 +25,8 @@ export function useSearchSuggest({
 }: {
   /** Trimmed, single-spaced text in the box. */
   query: string;
+  /** The raw box is empty, not just spaces (defaults to `query === ""`). */
+  boxEmpty?: boolean;
   /** The box holds a link (the lookup flow owns it). */
   link: boolean;
   compare?: ComparePick;
@@ -39,7 +42,7 @@ export function useSearchSuggest({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
 
-  const suggestions = buildSuggestions({ q: query, data, recent, compare, link });
+  const suggestions = buildSuggestions({ q: query, boxEmpty, data, recent, compare, link });
   const rows = flattenGroups(suggestions.groups);
   const activeIndex = active < rows.length ? active : -1;
   const wantsAnswer = !link && query.length >= MIN_SUGGEST;

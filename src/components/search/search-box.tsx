@@ -49,7 +49,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
   const trimmed = query.trim().replace(/\s+/g, " ");
   const isLink = looksLikeLink(trimmed);
   const canLookup = isLink && isLookupable(trimmed);
-  const suggest = useSearchSuggest({ query: trimmed, link: isLink, compare, setQuery, wrapperRef });
+  const suggest = useSearchSuggest({ query: trimmed, boxEmpty: query === "", link: isLink, compare, setQuery, wrapperRef });
   const listId = `${uid}-list`;
   const optionId = useCallback((i: number) => `${uid}-opt-${i}`, [uid]);
   useSlashFocus(inputRef);

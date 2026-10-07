@@ -63,9 +63,15 @@ export function buildSuggestions({
   recent,
   compare,
   link = false,
+  boxEmpty = q === "",
 }: {
   /** What is in the box now (trimmed, single spaces). */
   q: string;
+  /**
+   * The raw box is empty. Recent searches show only then: a box holding just spaces trims to "",
+   * but Backspace/Delete there must edit the text, not remove a recent row.
+   */
+  boxEmpty?: boolean;
   /** The latest answer, possibly for an earlier query while the next one loads; null before the first. */
   data: AutocompleteResponse | null;
   recent: string[];
@@ -76,7 +82,7 @@ export function buildSuggestions({
   if (link) return { groups: [], empty: false };
 
   if (q === "") {
-    if (recent.length === 0) return { groups: [], empty: false };
+    if (!boxEmpty || recent.length === 0) return { groups: [], empty: false };
     const rows: SuggestRow[] = recent.map((r) => ({ kind: "recent", q: r, href: queryHref(r, compare) }));
     return {
       groups: [

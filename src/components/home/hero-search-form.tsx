@@ -37,7 +37,7 @@ export function HeroSearchForm() {
   const trimmed = query.trim().replace(/\s+/g, " ");
   const isLink = looksLikeLink(trimmed);
   const canLookup = isLink && isLookupable(trimmed);
-  const suggest = useSearchSuggest({ query: trimmed, link: isLink, limit: 6, delay: 220, setQuery, wrapperRef });
+  const suggest = useSearchSuggest({ query: trimmed, boxEmpty: query === "", link: isLink, limit: 6, delay: 220, setQuery, wrapperRef });
   const listId = `${uid}-list`;
   const optionId = useCallback((i: number) => `${uid}-opt-${i}`, [uid]);
   useSlashFocus(inputRef);

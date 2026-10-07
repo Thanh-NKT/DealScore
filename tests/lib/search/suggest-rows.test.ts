@@ -103,3 +103,15 @@ describe("compareHref", () => {
     expect(compareHref({ b: "y" }, "p")).toBe("/compare?a=p&b=y");
   });
 });
+
+describe("buildSuggestions — whitespace-only box", () => {
+  it("shows no recent searches while the box holds only spaces", () => {
+    const out = buildSuggestions({ q: "", boxEmpty: false, data: null, recent: ["ssd 1tb"] });
+    expect(out.groups).toEqual([]);
+  });
+
+  it("still shows recent searches when the box is truly empty", () => {
+    const out = buildSuggestions({ q: "", boxEmpty: true, data: null, recent: ["ssd 1tb"] });
+    expect(out.groups[0]?.key).toBe("recent");
+  });
+});
