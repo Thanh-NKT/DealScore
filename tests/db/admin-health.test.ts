@@ -7,6 +7,7 @@ import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers"
 const tag = `hl${randomUUID().replace(/-/g, "").slice(0, 8)}`;
 const mk = `t${tag}`;
 const mkListingsOnly = `u${tag}`;
+const mkBad = `b${tag}`;
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 const iso = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
@@ -81,6 +82,9 @@ beforeAll(async () => {
   await run(hourStart + 30 * MIN, { [mk]: { ok: 1, failed: 0, aborted: false } }, null);
   await run(hourStart + 40 * MIN, null, "no per_marketplace");
   await run(hourStart + 45 * MIN, { [mk]: 5 }, "not an object");
+  // 0037: malformed counters in one entry must not break the whole RPC.
+  await run(hourStart + 50 * MIN, { [mkBad]: { ok: "x", failed: 2.7, aborted: "nope" } }, null);
+  await run(hourStart + 51 * MIN, { [mkBad]: { ok: 1e12, failed: -3, aborted: true } }, null);
   await run(Date.now() - 30 * HOUR, { [mk]: { ok: 100, failed: 100, aborted: true } }, "outside the window");
 });
 
@@ -103,6 +107,14 @@ describe("admin_marketplace_health", () => {
       last_run_at: expect.any(String),
     });
     expect(Date.parse((row as unknown as { last_run_at: string }).last_run_at)).toBe(hourStart + 32 * MIN);
+  });
+
+  it("survives malformed counters: non-numbers / out of range → 0, fractions truncated, non-boolean aborted → false", async () => {
+    const r = await rpc("admin_marketplace_health", {});
+    expect(r.error).toBeNull();
+    expect((r.data.marketplaces as { marketplace: string }[]).find((m) => m.marketplace === mkBad)).toMatchObject({
+      items_ok: 0, items_failed: 2, runs: 2, aborted_runs: 1,
+    });
   });
 
   it("lists a marketplace that only has listings", async () => {
