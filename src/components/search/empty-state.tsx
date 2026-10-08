@@ -118,7 +118,7 @@ export function EmptyState({
         </h2>
         {onlyBuyOffHref && <OnlyBuyHint href={onlyBuyOffHref} />}
         <p className="mt-1.5 max-w-[46ch] text-body leading-relaxed text-ink-2">
-          {q ? `Không có sản phẩm nào cho ${quoted(q)} khớp với các bộ lọc đang chọn.` : 'Thử bỏ bớt thương hiệu hoặc tắt "Chỉ hiện Nên mua".'}
+          {q ? `Không có sản phẩm nào cho ${quoted(q)} khớp với các bộ lọc đang chọn.` : "Thử bỏ bớt thương hiệu."}
         </p>
         <Link href={clearFiltersHref} className={`${SECONDARY} mt-5`}>
           Xóa lọc

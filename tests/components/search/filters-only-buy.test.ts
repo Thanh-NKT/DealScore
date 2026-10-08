@@ -32,4 +32,13 @@ describe("Chỉ hiện Nên mua", () => {
     expect(html).toContain("tắt “Chỉ hiện Nên mua”");
     expect(html).toContain("Có thể chờ");
   });
+
+  it("no query + filter on: one hint to turn it off, not two", () => {
+    const html = renderToStaticMarkup(createElement(EmptyState, { kind: "too_strict", query: "", onlyBuyOffHref: "/search" }));
+    expect(html.match(/Chỉ hiện Nên mua/g)).toHaveLength(1);
+    expect(html).toContain("Thử bỏ bớt thương hiệu.");
+    const off = renderToStaticMarkup(createElement(EmptyState, { kind: "too_strict", query: "" }));
+    expect(off).toContain("Thử bỏ bớt thương hiệu.");
+    expect(off).not.toContain("Chỉ hiện Nên mua");
+  });
 });
