@@ -9,6 +9,8 @@ import { toGroups } from "@/lib/vouchers/select";
 import { collectedAt as vouchersCollectedAt } from "@/lib/vouchers/store";
 import { PriceSummary } from "@/components/product/price-summary";
 import { UnitPriceNote } from "@/components/product/unit-price";
+import { SeasonCalendar } from "@/components/product/season-calendar";
+import { productVoucherLine } from "@/lib/vouchers/patterns";
 import { unitPrice } from "@/lib/pricing/unit-price";
 import { VariantPicker } from "@/components/product/variant-picker";
 import { variantVerdict } from "@/lib/pricing/variant-verdict";
@@ -340,6 +342,9 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             />
           </section>
 
+          {/* P4 A: price-season calendar (recorded history + next event date), after the chart, before offers */}
+          {data.season ? <SeasonCalendar season={data.season} /> : null}
+
           {/* Cross-marketplace comparison: renders only with ≥ 2 real marketplaces (never simulated) */}
           {marketplaceComparison && <MarketplaceCompare comparison={marketplaceComparison} offers={pricing.offers} />}
 
@@ -389,6 +394,15 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               goHref={goHref}
               refreshOfferId={buy && canRefreshVouchers(buy.marketplace) ? buy.offerId : null}
             />
+            {/* P4 K: the best-buy seller's recorded voucher pattern, only when there is one */}
+            {data.bestBuyVouchers && productVoucherLine(data.bestBuyVouchers.sellerName, data.bestBuyVouchers.summary) ? (
+              <p className="mt-3 text-body-sm text-ink-2">
+                {productVoucherLine(data.bestBuyVouchers.sellerName, data.bestBuyVouchers.summary)}{" "}
+                <Link href={`/seller/${data.bestBuyVouchers.sellerId}`} className="font-semibold text-primary underline underline-offset-2 hover:text-primary-hover">
+                  Xem hồ sơ shop
+                </Link>
+              </p>
+            ) : null}
           </section>
 
           {/* Section 4: Discount Verification Banner */}

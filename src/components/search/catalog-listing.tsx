@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { SearchResult } from "@/lib/search";
 import { ProductCard } from "@/components/search/product-card";
 import { EmptyState } from "@/components/search/empty-state";
@@ -11,6 +12,8 @@ interface CatalogListingProps {
   /** Same listing on /search, where the full filters live. */
   searchHref: string;
   loadError: boolean;
+  /** Rendered under the heading (category season strip, P4 A). */
+  aside?: ReactNode;
 }
 
 const PAGE_LINK =
@@ -20,7 +23,7 @@ const PAGE_LINK =
  * SSR listing for the SEO landing pages (/{category}, /brand/{brand}), 1.7. Same cards and
  * pagination as /search; works without JavaScript.
  */
-export function CatalogListing({ title, result, basePath, searchHref, loadError }: CatalogListingProps) {
+export function CatalogListing({ title, result, basePath, searchHref, loadError, aside }: CatalogListingProps) {
   const totalPages = Math.ceil(result.total / result.pageSize);
   const page = result.page;
   const pageHref = (n: number) => (n <= 1 ? basePath : `${basePath}?page=${n}`);
@@ -42,6 +45,7 @@ export function CatalogListing({ title, result, basePath, searchHref, loadError 
           <span aria-hidden="true">→</span>
         </Link>
       </header>
+      {aside}
 
       {result.items.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">

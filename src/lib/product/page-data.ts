@@ -1,4 +1,8 @@
 import { unstable_cache } from "next/cache";
+import { productSeason, type ProductSeason } from "@/lib/seasons/calendar";
+import { loadSeasonRows } from "@/lib/seasons/rows";
+import { loadVoucherPatterns } from "@/lib/sellers/queries";
+import type { VoucherPatternSummary } from "@/lib/vouchers/patterns";
 import { unitPrice, variantUnitQuantity, type UnitPrice, type UnitQuantity } from "@/lib/pricing/unit-price";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -63,6 +67,10 @@ export interface ProductPageData {
    * prices are computed from these, so the VoucherPicker fed the same list shows the same estimate.
    */
   offerVouchers?: Record<string, Voucher[]>;
+  /** Price-season calendar of the selected variant (P4 A): recorded history + the next event date. */
+  season?: ProductSeason;
+  /** Shop voucher patterns of the best-buy offer's seller (P4 K); null when unknown or unreadable. */
+  bestBuyVouchers?: { sellerId: string; sellerName: string; summary: VoucherPatternSummary } | null;
 }
 
 export async function loadProductPageData(params: {
@@ -149,7 +157,7 @@ export async function loadProductPageData(params: {
     const ninetyDaysAgoStr = toVnDate(ninetyDaysAgo);
 
     // 2-5. Run 4 queries in parallel
-    const [offersRes, historyRes, latestPricesRes, trackingSinceRes] = await Promise.all([
+    const [offersRes, historyRes, latestPricesRes, trackingSinceRes, seasonRows] = await Promise.all([
       supabase
         .from("offers")
         .select(`
@@ -172,6 +180,13 @@ export async function loadProductPageData(params: {
       supabase.rpc("latest_price_per_offer", { p_variant_id: targetVariantId }),
 
       supabase.rpc("variant_tracking_since", { p_variant_id: targetVariantId }),
+
+      // P4 A: 400 rollup days for the season calendar (≤ 400 rows). A display extra: a failure shows the
+      // "Chưa đủ dữ liệu" state, it never takes the page down.
+      loadSeasonRows(supabase, targetVariantId, now).catch((err) => {
+        console.error("loadProductPageData: season rows failed", err);
+        return [];
+      }),
     ]);
 
     // Any failing query fails the whole page. Swallowing errors here makes the page show
@@ -267,6 +282,21 @@ export async function loadProductPageData(params: {
       isDraftProduct: product.status === "draft",
     }));
 
+    // P4 K: one RPC for the best-buy offer's seller only; skipped when that seller is unknown.
+    let bestBuyVouchers: ProductPageData["bestBuyVouchers"] = null;
+    const bestSeller = pricing.bestBuy ? offerListings[pricing.bestBuy.offerId]?.sellerId : null;
+    if (pricing.bestBuy && bestSeller) {
+      try {
+        bestBuyVouchers = {
+          sellerId: bestSeller,
+          sellerName: pricing.bestBuy.sellerName?.trim() || "Shop",
+          summary: await loadVoucherPatterns(supabase, bestSeller, now),
+        };
+      } catch (err) {
+        console.error("loadProductPageData: voucher patterns failed", err);
+      }
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cat = (Array.isArray(productAny.categories) ? productAny.categories[0] : productAny.categories) as any;
 
@@ -294,6 +324,8 @@ export async function loadProductPageData(params: {
       galleryImages: productGallery(product.image, galleryListings),
       offerListings,
       offerVouchers,
+      season: productSeason(seasonRows, now),
+      bestBuyVouchers,
     };
   } catch (err) {
     // Infrastructure errors must surface, never disguised as "not found".
