@@ -205,6 +205,7 @@ export async function listMyWatches(
       createdAt: row.created_at,
       latestAlert,
       settings,
+      status: row.status as "active" | "paused" | "done",
     });
 
     items.push({

@@ -84,6 +84,8 @@ export function describeWatch(input: {
   createdAt: string;
   latestAlert: LatestAlert | null;
   settings: NotificationSettings;
+  /** Omitted = active. Paused / done watches are not evaluated, so their hike state is not shown. */
+  status?: "active" | "paused" | "done";
 }): WatchView {
   const { config, state, snapshot, createdAt, latestAlert, settings } = input;
   const { price, inStock, isStale } = snapshot;
@@ -196,7 +198,7 @@ export function describeWatch(input: {
     changeSinceStart,
     change7d: priceChange(price, snapshot.price7dAgo ?? null, CHANGE_WINDOW_DAYS),
     conditions,
-    priceHike: config.notifyPriceHike ? { active: state.hikeActive === true } : null,
+    priceHike: config.notifyPriceHike && (input.status ?? "active") === "active" ? { active: state.hikeActive === true } : null,
     alertStatus,
     sortKey,
   };

@@ -33,6 +33,14 @@ const input = (o: Partial<Parameters<typeof describeWatch>[0]> = {}) => ({
 });
 
 describe("describeWatch", () => {
+  it("priceHike only for an active watch (paused / done are not evaluated, the hike state is stale)", () => {
+    const hike = { config: { ...config, notifyPriceHike: true }, state: { ...state, hikeActive: true } };
+    expect(describeWatch(input(hike)).priceHike).toEqual({ active: true });
+    expect(describeWatch(input({ ...hike, status: "active" })).priceHike).toEqual({ active: true });
+    expect(describeWatch(input({ ...hike, status: "paused" })).priceHike).toBeNull();
+    expect(describeWatch(input({ ...hike, status: "done" })).priceHike).toBeNull();
+  });
+
   it("change7d from snapshot.price7dAgo; changeSinceStart unchanged", () => {
     const v = describeWatch(input({ snapshot: snap({ price: 800, price7dAgo: 1000 }) }));
     expect(v.change7d).toEqual({ amount: -200, pct: -0.2, refPrice: 1000, days: 7 });
