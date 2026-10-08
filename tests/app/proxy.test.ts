@@ -31,3 +31,20 @@ describe("proxy CSP", () => {
     expect(seen.at(-1)!.get("content-security-policy")).toBeNull();
   });
 });
+
+describe("proxy /shared/[token] (P4 J)", () => {
+  it("a malformed token is a 404 without rendering", async () => {
+    const before = seen.length;
+    const r = await proxy(new NextRequest("http://localhost/shared/short"));
+    expect(r.status).toBe(404);
+    expect(r.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(seen.length).toBe(before);
+  });
+  it("a well-formed token renders with noindex, no-referrer and no-store headers", async () => {
+    const r = await proxy(new NextRequest(`http://localhost/shared/${"a".repeat(43)}`));
+    expect(r.status).toBe(200);
+    expect(r.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(r.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+    expect(r.headers.get("cache-control")).toBe("private, no-store");
+  });
+});

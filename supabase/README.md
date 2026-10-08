@@ -41,6 +41,9 @@ Ba giá trị in ra chép thẳng vào `.env.local`. Cách này cho phép chạy
 `seed-dev` và toàn bộ test tích hợp mà không cần project trên cloud và không
 đụng vào dữ liệu thật.
 
+`corepack pnpm seed:p4` thêm dữ liệu giả cho roadmap P4 (giá theo đơn vị, lịch mùa giá, hồ sơ shop, mẫu voucher, tìm kiếm
+đã lưu, chờ sản phẩm, thư mục chia sẻ) — chỉ thêm, không xóa gì, chạy lại được, và từ chối chạy nếu URL không phải local.
+
 ## Sinh lại type từ DB
 
 **Bắt buộc sau mỗi lần đổi schema.** `src/lib/database.types.ts` được sinh từ DB
