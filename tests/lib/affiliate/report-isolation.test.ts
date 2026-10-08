@@ -8,7 +8,8 @@ import { describe, expect, it } from "vitest";
  * see commission). Companion to no-bias.test.ts — don't "fix" this test to make it green.
  */
 const MIGRATIONS = "supabase/migrations";
-const FORBIDDEN = /affiliate_offers|conversions|commission/i;
+// Decision 10: click-level affiliate tables count too (a price function weighting by clicks would leak).
+const FORBIDDEN = /affiliate_offers|conversions|commission|click_events|affiliate_daily|affiliate_by_alert/i;
 const P3_PRICE_FUNCTIONS = [
   "refresh_variant_current_price",
   "admin_rebuild_variant_rollup",
