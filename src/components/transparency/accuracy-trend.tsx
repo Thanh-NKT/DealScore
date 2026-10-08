@@ -2,7 +2,8 @@ import type { AccuracySummary } from "@/lib/transparency/accuracy";
 
 const W = 640;
 const H = 200;
-const PAD = { top: 16, right: 16, bottom: 32, left: 44 };
+// No text inside the SVG: it scales with the width (≈ 0.5× at 375px), so labels are HTML at text-micro instead.
+const PAD = { top: 12, right: 8, bottom: 12, left: 8 };
 const MAX_POINTS = 12;
 
 const vnDay = (iso: string) =>
@@ -24,25 +25,29 @@ export function AccuracyTrend({ trend }: { trend: AccuracySummary["trend"] }) {
   const label = `Tỉ lệ kết luận đúng qua ${pts.length} lần kiểm tra, từ ${pct(first.overall)} (${vnDay(first.ranAt)}) đến ${pct(last.overall)} (${vnDay(last.ranAt)}).`;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} className="h-auto w-full">
-      {[0, 0.5, 1].map((g) => (
-        <g key={g}>
-          <line x1={PAD.left} x2={W - PAD.right} y1={y(g)} y2={y(g)} stroke="var(--line)" strokeWidth={1} />
-          <text x={PAD.left - 8} y={y(g) + 4} textAnchor="end" fontSize={12} fill="var(--ink-3)">
-            {pct(g)}
-          </text>
-        </g>
-      ))}
-      <path d={path} fill="none" stroke="var(--primary)" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-      {pts.map((p, i) => (
-        <circle key={p.ranAt} cx={x(i)} cy={y(p.overall)} r={3.5} fill="var(--surface)" stroke="var(--primary)" strokeWidth={2} />
-      ))}
-      <text x={x(0)} y={H - 8} textAnchor="start" fontSize={12} fill="var(--ink-3)">
-        {vnDay(first.ranAt)}
-      </text>
-      <text x={x(pts.length - 1)} y={H - 8} textAnchor="end" fontSize={12} fill="var(--ink-3)">
-        {vnDay(last.ranAt)}
-      </text>
-    </svg>
+    <figure role="img" aria-label={label} className="m-0">
+      <div className="flex gap-2">
+        <div aria-hidden="true" className="relative w-9 shrink-0 text-micro text-ink-3">
+          {[0, 0.5, 1].map((g) => (
+            <span key={g} className="num absolute right-0 -translate-y-1/2" style={{ top: `${(y(g) / H) * 100}%` }}>
+              {pct(g)}
+            </span>
+          ))}
+        </div>
+        <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true" className="h-auto min-w-0 flex-1">
+          {[0, 0.5, 1].map((g) => (
+            <line key={g} x1={PAD.left} x2={W - PAD.right} y1={y(g)} y2={y(g)} stroke="var(--line)" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          ))}
+          <path d={path} fill="none" stroke="var(--primary)" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          {pts.map((p, i) => (
+            <circle key={p.ranAt} cx={x(i)} cy={y(p.overall)} r={3.5} fill="var(--surface)" stroke="var(--primary)" strokeWidth={2} />
+          ))}
+        </svg>
+      </div>
+      <div aria-hidden="true" className="num mt-1 flex justify-between pl-11 text-micro text-ink-3">
+        <span>{vnDay(first.ranAt)}</span>
+        <span>{vnDay(last.ranAt)}</span>
+      </div>
+    </figure>
   );
 }
