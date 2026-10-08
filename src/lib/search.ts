@@ -5,7 +5,7 @@ import { MARKETPLACES, type MarketplaceId } from "@/lib/marketplaces";
 import { expandQuery } from "@/lib/search/synonyms";
 import type { AutocompleteItem } from "@/lib/search/autocomplete-types";
 import type { FakeSaleKind } from "@/lib/pricing/deal-score";
-import { unitPrice, variantUnitQuantity, type UnitPrice } from "@/lib/pricing/unit-price";
+import { isUnitPriceCategory, unitPrice, variantUnitQuantity, type UnitPrice } from "@/lib/pricing/unit-price";
 
 export type { AutocompleteItem } from "@/lib/search/autocomplete-types";
 
@@ -327,7 +327,12 @@ async function runSearchRpc(
  * read leaves unitPrice null — a display extra never takes the search down.
  */
 async function attachUnitPrices(supabase: SupabaseServer, items: SearchItem[]): Promise<void> {
-  const productIds = [...new Set(items.filter((i) => i.variantId && i.bestPrice != null).map((i) => i.productId))];
+  // Consumable categories only (P4 review I3): the read is skipped for every other card.
+  const productIds = [
+    ...new Set(
+      items.filter((i) => i.variantId && i.bestPrice != null && isUnitPriceCategory(i.categorySlug)).map((i) => i.productId),
+    ),
+  ];
   if (productIds.length === 0) return;
   let data: Array<{ id: string; product_id: string; variant_key: string; specs: unknown }> | null;
   try {
@@ -350,7 +355,7 @@ async function attachUnitPrices(supabase: SupabaseServer, items: SearchItem[]): 
     if (!v) continue;
     const q = variantUnitQuantity(
       { variantKey: v.variant_key, specs: (v.specs ?? null) as Record<string, unknown> | null },
-      { canonicalName: item.canonicalName, variantCount: counts.get(item.productId) ?? 0 },
+      { categorySlug: item.categorySlug, canonicalName: item.canonicalName, variantCount: counts.get(item.productId) ?? 0 },
     );
     item.unitPrice = unitPrice(item.bestPrice, q);
   }

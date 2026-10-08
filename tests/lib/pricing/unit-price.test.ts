@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { comparableUnitPrices, parseUnitQuantity, unitPrice, variantUnitQuantity } from "@/lib/pricing/unit-price";
+import {
+  comparableUnitPrices,
+  isUnitPriceCategory,
+  parseUnitQuantity,
+  UNIT_PRICE_CATEGORY_SLUGS,
+  unitPrice,
+  variantUnitQuantity,
+} from "@/lib/pricing/unit-price";
 
 describe("parseUnitQuantity", () => {
   it.each([
@@ -13,11 +20,22 @@ describe("parseUnitQuantity", () => {
     ["1kg", { kind: "mass", total: 1000, perPack: 1000, packs: 1 }],
     ["10 gói 20g", { kind: "mass", total: 200, perPack: 20, packs: 10 }],
     ["Lốc 4 hộp 110ml", { kind: "volume", total: 440, perPack: 110, packs: 4 }],
+    // m4: a dot before exactly three digits is a thousands separator.
+    ["Can 3.000ml", { kind: "volume", total: 3000, perPack: 3000, packs: 1 }],
+    // A small mass next to a pack count is still a sachet, not a network generation.
+    ["10 gói 5g", { kind: "mass", total: 50, perPack: 5, packs: 10 }],
   ])("%s", (text, q) => {
     expect(parseUnitQuantity(text)).toEqual(q);
   });
 
-  it.each(["2TB", "16GB", "20000mAh", "Bàn phím 104 phím", "1 chiếc", "180ml / 110ml", "Sữa 180ml x 49", "500g 1L", "", "Màu đen"])(
+  it.each([
+    "2TB", "16GB", "20000mAh", "Bàn phím 104 phím", "1 chiếc", "180ml / 110ml", "Sữa 180ml x 49", "500g 1L", "", "Màu đen",
+    // P4 review I3: network generations are not grams.
+    "Galaxy A55 5G", "Samsung Galaxy A55 5G 8GB/128GB", "Router 4G LTE", "Bộ phát wifi 4G", "iPhone 3G", "5G",
+    // Appliance capacities are not consumable quantities.
+    "Nồi chiên không dầu Philips 4.1L", "Nồi cơm điện 1.8L", "Ấm siêu tốc 1.7L", "Máy xay sinh tố 1.5L",
+    "Máy hút bụi 2.5kg", "Bình giữ nhiệt 500ml", "Máy giặt 9kg", "Tủ lạnh 180L",
+  ])(
     "%s → null",
     (text) => {
       expect(parseUnitQuantity(text)).toBeNull();
@@ -36,11 +54,24 @@ describe("unitPrice", () => {
 });
 
 describe("variantUnitQuantity", () => {
+  const sua = (canonicalName: string, variantCount: number) => ({ categorySlug: "sua", canonicalName, variantCount });
   it("reads variant key + specs; product name only for a single-variant product", () => {
-    expect(variantUnitQuantity({ variantKey: "Size L", specs: { "Số lượng": "48 miếng" } })?.total).toBe(48);
-    expect(variantUnitQuantity({ variantKey: "Mặc định" }, { canonicalName: "Sữa tươi 180ml x 48", variantCount: 1 })?.total).toBe(8640);
-    expect(variantUnitQuantity({ variantKey: "Mặc định" }, { canonicalName: "Sữa tươi 180ml x 48", variantCount: 2 })).toBeNull();
-    expect(variantUnitQuantity({ variantKey: "2TB" }, { canonicalName: "SSD 2TB 500g", variantCount: 1 })).toBeNull();
+    expect(variantUnitQuantity({ variantKey: "Size L", specs: { "Số lượng": "48 miếng" } }, { categorySlug: "ta-bim" })?.total).toBe(48);
+    expect(variantUnitQuantity({ variantKey: "Mặc định" }, sua("Sữa tươi 180ml x 48", 1))?.total).toBe(8640);
+    expect(variantUnitQuantity({ variantKey: "Mặc định" }, sua("Sữa tươi 180ml x 48", 2))).toBeNull();
+    expect(variantUnitQuantity({ variantKey: "2TB" }, sua("SSD 2TB 500g", 1))).toBeNull();
+  });
+  it("P4 review I3: only consumable categories (allow-list) get a quantity", () => {
+    expect(UNIT_PRICE_CATEGORY_SLUGS).toEqual(expect.arrayContaining(["ta-bim", "sua"]));
+    expect(isUnitPriceCategory("sua")).toBe(true);
+    expect(isUnitPriceCategory("ssd")).toBe(false);
+    expect(isUnitPriceCategory(null)).toBe(false);
+    // Multi-variant air fryer whose variant keys are capacities: no name to look at, the category decides.
+    expect(variantUnitQuantity({ variantKey: "4.1L" }, { categorySlug: "noi-chien", canonicalName: "Nồi chiên", variantCount: 2 })).toBeNull();
+    expect(variantUnitQuantity({ variantKey: "Mặc định" }, { categorySlug: "dien-thoai", canonicalName: "Galaxy A55 5G", variantCount: 1 })).toBeNull();
+    expect(variantUnitQuantity({ variantKey: "48 miếng" }, { categorySlug: "san-pham" })).toBeNull();
+    expect(variantUnitQuantity({ variantKey: "48 miếng" }, { categorySlug: undefined })).toBeNull();
+    expect(variantUnitQuantity({ variantKey: "48 miếng" }, { categorySlug: "ta-bim" })?.total).toBe(48);
   });
 });
 

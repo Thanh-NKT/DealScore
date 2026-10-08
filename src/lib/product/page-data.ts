@@ -110,6 +110,9 @@ export async function loadProductPageData(params: {
     }
 
     const variantCount = variantsRaw.length;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const categorySlugOf = (pr: any): string | null =>
+      ((Array.isArray(pr.categories) ? pr.categories[0] : pr.categories) as { slug?: string } | null)?.slug ?? null;
     const variants = variantsRaw.map((v) => {
       const vcp = (Array.isArray(v.variant_current_price)
         ? v.variant_current_price[0]
@@ -125,7 +128,7 @@ export async function loadProductPageData(params: {
         ...((q) => ({ unitQuantity: q, unitPrice: unitPrice(price, q) }))(
           variantUnitQuantity(
             { variantKey: (v.variant_key as string) || "", specs },
-            { canonicalName: productAny.canonical_name as string, variantCount },
+            { categorySlug: categorySlugOf(productAny), canonicalName: productAny.canonical_name as string, variantCount },
           ),
         ),
         price,

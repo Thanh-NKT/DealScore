@@ -29,6 +29,17 @@ export const UNIT_LIMITS: Record<UnitKind, { min: number; max: number }> = {
 /** Volume / mass shown per 100 from this total up, per 1 below. */
 export const UNIT_PER_100_FROM = 100; // tune with real data
 
+/**
+ * Consumable categories (P4 review I3): the only ones whose cards / pages show a unit price. A capacity on a
+ * durable good ("Nồi chiên 4.1L", "Máy hút bụi 2.5kg") or a phone's "5G" is not a quantity to divide by.
+ * Category slugs from the `categories` table — add one here when a consumable category is created.
+ */
+export const UNIT_PRICE_CATEGORY_SLUGS: readonly string[] = ["ta-bim", "sua"];
+
+export function isUnitPriceCategory(slug: string | null | undefined): boolean {
+  return slug != null && UNIT_PRICE_CATEGORY_SLUGS.includes(slug);
+}
+
 const fold = (s: string) =>
   s
     .normalize("NFD")
@@ -46,7 +57,17 @@ const PACK_BEFORE_RE = new RegExp(String.raw`(\d+)\s*[x×*]\s*${QTY}`, "gu");
 const PACK_AFTER_RE = new RegExp(String.raw`${QTY}\s*[x×*]\s*(\d+)(?![\p{L}\d])`, "gu");
 const PACK_WORD_RE = /(?:^|[^\p{L}])(loc|thung|hop|combo|set|bo)\s*(\d+)(?![\p{L}\d])/gu;
 
-const toNumber = (s: string) => Number(s.replace(",", "."));
+/** "1,5" / "1.5" are decimals; a dot before exactly three digits is a thousands separator ("3.000ml"). */
+const toNumber = (s: string) => (/^\d{1,3}(?:\.\d{3})+$/.test(s) ? Number(s.replace(/\./g, "")) : Number(s.replace(",", ".")));
+
+/**
+ * Text that names a durable good or a network: its volume / mass is a capacity or a generation, never a pack
+ * quantity (folded, P4 review I3). Second line of defence behind UNIT_PRICE_CATEGORY_SLUGS.
+ */
+const NOT_A_QUANTITY_RE =
+  /(?:^|[^\p{L}\d])(?:noi|may|am sieu toc|am dun|binh giu nhiet|binh dun|lo vi song|lo nuong|tu lanh|quat|chao|lte|wifi|wi-fi|router|dien thoai|iphone|galaxy)(?![\p{L}\d])/u;
+/** "5g" / "4G" written without a space and without any pack count: a network generation, not 5 grams. */
+const NETWORK_G_RE = /(?:^|[^\p{L}\d])[2-6]g(?![\p{L}\d])/u;
 
 function amounts(text: string, re: RegExp, factor: (unit: string) => number): number[] {
   return [...text.matchAll(re)].map((m) => Math.round(toNumber(m[1]) * factor(m[2]) * 1000) / 1000);
@@ -55,9 +76,11 @@ function amounts(text: string, re: RegExp, factor: (unit: string) => number): nu
 export function parseUnitQuantity(text: string): UnitQuantity | null {
   if (!text) return null;
   const t = fold(text);
+  if (NOT_A_QUANTITY_RE.test(t)) return null;
   const volumes = amounts(t, VOLUME_RE, (u) => (u === "ml" ? 1 : 1000));
-  const masses = amounts(t, MASS_RE, (u) => (u === "kg" ? 1000 : 1));
   const counts = [...t.matchAll(COUNT_RE)].map((m) => Number(m[1]));
+  if (counts.length === 0 && NETWORK_G_RE.test(t)) return null;
+  const masses = amounts(t, MASS_RE, (u) => (u === "kg" ? 1000 : 1));
 
   const packNums = [
     ...[...t.matchAll(PACK_BEFORE_RE)].map((m) => Number(m[1])),
@@ -100,19 +123,21 @@ export function parseUnitQuantity(text: string): UnitQuantity | null {
 /**
  * Source text: the variant key + string values of its specs; only when that yields nothing AND the product has
  * exactly one variant, the product name. Never the listing title (an offer of another pack size would be a
- * matching problem upstream, not a number to show).
+ * matching problem upstream, not a number to show). Only for a consumable category (isUnitPriceCategory):
+ * the category is required so no caller can forget the gate.
  */
 export function variantUnitQuantity(
   v: { variantKey: string; specs?: Record<string, unknown> | null },
-  product?: { canonicalName: string; variantCount: number },
+  product: { categorySlug: string | null | undefined; canonicalName?: string; variantCount?: number },
 ): UnitQuantity | null {
+  if (!isUnitPriceCategory(product.categorySlug)) return null;
   const specText = Object.values(v.specs ?? {})
     .filter((x): x is string => typeof x === "string")
     .join(" ; ");
   const own = parseUnitQuantity([v.variantKey, specText].filter(Boolean).join(" ; "));
   if (own) return own;
   const hasOwnText = /\d/.test(v.variantKey + specText) && parseUnitQuantity(v.variantKey + " " + specText) === null;
-  if (product && product.variantCount === 1 && !hasOwnText) return parseUnitQuantity(product.canonicalName);
+  if (product.canonicalName && product.variantCount === 1 && !hasOwnText) return parseUnitQuantity(product.canonicalName);
   return null;
 }
 
