@@ -8,7 +8,7 @@ import { ChevronDownIcon } from "@/components/ui/icons";
 
 // Phones: the nav sits on its own scrollable row under the logo, so full labels fit; desktop: inline.
 const NAV_LINK =
-  "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md px-3.5 text-body-sm transition-colors duration-150 ease-out max-[760px]:h-10 max-[760px]:px-3";
+  "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md px-3.5 text-body-sm transition-colors duration-150 ease-out max-[1023px]:h-10 max-[1023px]:px-3";
 
 /** Primary navigation matching UI mockup. The current section is marked (aria-current) with surface-2. */
 export function HeaderNav({ signedIn }: { signedIn: boolean }) {
@@ -20,7 +20,7 @@ export function HeaderNav({ signedIn }: { signedIn: boolean }) {
     { href: "/account/watch", label: "Đang theo dõi", active: path.startsWith("/account/watch") },
   ];
   return (
-    <nav aria-label="Điều hướng chính" className="flex items-center gap-1 max-[760px]:w-max">
+    <nav aria-label="Điều hướng chính" className="flex items-center gap-1 max-[1023px]:w-max">
       {links.map(({ href, label, active }) => (
         <Link
           key={href}
