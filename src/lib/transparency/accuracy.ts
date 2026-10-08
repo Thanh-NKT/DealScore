@@ -74,7 +74,8 @@ export function summarizeAccuracy(rows: AccuracyRow[], liveVersion: DealScoreVer
       wait: rate(last.waitN, last.waitCorrect),
       avoid: rate(last.avoidN, last.avoidCorrect),
     },
-    trend: live.map((r) => ({ ranAt: r.ranAt, overall: overallOf(r) })),
+    // Runs under the minimum are not published in the trend either (the headline hides them too).
+    trend: live.map((r) => ({ ranAt: r.ranAt, overall: r.samples >= ACCURACY_MIN_SAMPLES ? overallOf(r) : null })),
     enough: last.samples >= ACCURACY_MIN_SAMPLES,
   };
 }

@@ -46,4 +46,9 @@ describe("summarizeAccuracy", () => {
     expect(s.trend[1].overall).toBeNull();
     expect(s.latest!.ranAt).toBe("2026-10-08T00:00:00Z");
   });
+
+  it("a run under ACCURACY_MIN_SAMPLES is not plotted (overall null), like the hidden headline", () => {
+    const s = summarizeAccuracy([row({ ranAt: "2026-09-24T00:00:00Z", samples: 199 }), row({ samples: 200 })], "v1");
+    expect(s.trend.map((t) => t.overall)).toEqual([null, 190 / 200]);
+  });
 });
