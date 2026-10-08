@@ -441,8 +441,9 @@ export async function listMyFolders(userId: string, client?: Client): Promise<Wa
     .from("watch_folder_shares")
     .select("folder_id, token, title, display_name, show_prices, show_target, show_notes, include_done")
     .eq("user_id", userId);
-  if (shareError) throw new Error(`Failed to load folder shares: ${shareError.message}`);
-  const byFolder = new Map((shares ?? []).map((s) => [s.folder_id, s]));
+  // An extra: a failed read shows the folders without their links instead of failing the watch page (m8).
+  if (shareError) console.error("listMyFolders: failed to load folder shares:", shareError.message);
+  const byFolder = new Map((shareError ? [] : (shares ?? [])).map((s) => [s.folder_id, s]));
   for (const f of folders) {
     const s = byFolder.get(f.id);
     f.share = s ? { url: shareFolderUrl(siteUrl(), s.token), settings: shareSettingsFromRow(s) } : null;

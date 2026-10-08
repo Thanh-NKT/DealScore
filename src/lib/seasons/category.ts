@@ -50,5 +50,6 @@ export function categorySeasonView(rows: CategorySeasonRow[]): CategorySeasonVie
 /** "11.11: trung bình thấp hơn 8% · 60% sản phẩm giảm ≥ 5% (12 sản phẩm)". Pure. */
 export function categorySeasonRowCopy(r: CategorySeasonRow): string {
   const pct = Math.round(Math.abs(1 - r.medianRatio) * 100);
-  return `${SEASON_LABEL[r.key]}: trung bình ${r.medianRatio < 1 ? "thấp hơn" : "cao hơn"} ${pct}% · ${Math.round(r.shareLower * 100)}% sản phẩm giảm ≥ 5% (${r.variantsCounted} sản phẩm)`;
+  const vs = pct === 0 ? "bằng trung vị" : `${r.medianRatio < 1 ? "thấp hơn" : "cao hơn"} ${pct}%`;
+  return `${SEASON_LABEL[r.key]}: trung bình ${vs} · ${Math.round(r.shareLower * 100)}% sản phẩm giảm ≥ 5% (${r.variantsCounted} sản phẩm)`;
 }

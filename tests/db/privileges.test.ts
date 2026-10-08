@@ -101,3 +101,20 @@ describe("service-role-only admin RPCs", () => {
     expect(error?.code).toBe("42501");
   });
 });
+
+// P4 review m14: alert_events.user_id defaults to auth.uid() (0061), which must never read as "clients may insert".
+describe("alert_events stays service-role-only for writes", () => {
+  let user: TestUser;
+  beforeAll(async () => {
+    user = await createTestUser();
+  });
+  afterAll(async () => {
+    await deleteTestUser(user.id);
+  });
+  it("a signed-in user cannot insert an alert event, not even for themselves", async () => {
+    const { error } = await user.client
+      .from("alert_events")
+      .insert({ user_id: user.id, trigger_types: ["saved_search"], items: [], items_total: 1 } as never);
+    expect(error?.code).toBe("42501");
+  });
+});

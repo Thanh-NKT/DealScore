@@ -89,4 +89,14 @@ describe("category", () => {
     expect(categorySeasonRowCopy(rows[0])).toBe("11.11: trung bình thấp hơn 10% · 75% sản phẩm giảm ≥ 5% (8 sản phẩm)");
     expect(categorySeasonView([])).toBeNull();
   });
+
+  it("m13: a ratio that rounds to 0% reads \"bằng trung vị\", never \"cao hơn 0%\"", () => {
+    const occ = { year: 2025, eventLow: 100_000, ratio: 1 } as unknown as SeasonOccurrence;
+    const e = { key: "11.11" as const, label: "11.11", occurrences: [occ], medianRatio: 1 };
+    expect(seasonRowCopy(e).text).toBe("2025: thấp nhất 100.000đ, bằng trung vị 30 ngày trước đợt");
+    expect(seasonRowCopy({ ...e, occurrences: [{ ...occ, ratio: 1.004 }] }).text).toContain("bằng trung vị");
+    expect(categorySeasonRowCopy({ key: "11.11", variantsCounted: 8, occurrences: 8, medianRatio: 0.998, shareLower: 0 })).toBe(
+      "11.11: trung bình bằng trung vị · 0% sản phẩm giảm ≥ 5% (8 sản phẩm)",
+    );
+  });
 });

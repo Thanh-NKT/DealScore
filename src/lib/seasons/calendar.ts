@@ -111,7 +111,8 @@ export function seasonRowCopy(e: SeasonEventStat): { label: string; text: string
   const dir = last.ratio < 1 ? "thấp hơn" : "cao hơn";
   return {
     label: e.label,
-    text: `${last.year}: thấp nhất ${formatVnd(last.eventLow)}, ${dir} ${pct}% so với trung vị 30 ngày trước đợt`,
+    // m13: a ratio that rounds to 0% is "bằng", never "cao hơn 0%".
+    text: `${last.year}: thấp nhất ${formatVnd(last.eventLow)}, ${pct === 0 ? "bằng trung vị" : `${dir} ${pct}% so với trung vị`} 30 ngày trước đợt`,
     lower: last.ratio <= SEASON_LOWER_RATIO,
     neutral: last.ratio >= 1,
     count: `${e.occurrences.length} lần ghi nhận`,
