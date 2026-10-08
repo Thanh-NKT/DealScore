@@ -67,7 +67,9 @@ export function DataReportDialog({ productId, productName, variantId, offers }: 
     setError(null);
     setDone(null);
   };
+  // Not while a submit is pending: its result would land in the next opening ("Cảm ơn bạn!" or an error).
   const close = () => {
+    if (pending) return;
     setOpen(false);
     reset();
   };
@@ -79,6 +81,7 @@ export function DataReportDialog({ productId, productName, variantId, offers }: 
     e.preventDefault();
     if (!kind) {
       setError("Chọn điều bạn thấy chưa đúng.");
+      dialogRef.current?.querySelector<HTMLInputElement>('input[name="kind"]')?.focus();
       return;
     }
     if (messageRequired && trimmed === "") {
@@ -151,7 +154,10 @@ export function DataReportDialog({ productId, productName, variantId, offers }: 
               </div>
             ) : (
               <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-                <fieldset>
+                <fieldset
+                  aria-invalid={error != null && !kind ? true : undefined}
+                  aria-describedby={error != null && !kind ? `${uid}-error` : undefined}
+                >
                   <legend className="mb-2 text-control font-bold text-ink">Điều chưa đúng</legend>
                   <div className="flex flex-col gap-1">
                     {REPORT_KINDS.map((k) => (
@@ -218,14 +224,14 @@ export function DataReportDialog({ productId, productName, variantId, offers }: 
                 </div>
 
                 {error && (
-                  <p role="alert" className="flex items-start gap-1.5 text-body-sm font-semibold text-avoid">
+                  <p id={`${uid}-error`} role="alert" className="flex items-start gap-1.5 text-body-sm font-semibold text-avoid">
                     <AlertIcon className="mt-0.5 size-4" />
                     <span>{error}</span>
                   </p>
                 )}
 
                 <div className="flex flex-wrap justify-end gap-2 max-[420px]:[&>*]:flex-1">
-                  <Button variant="secondary" size="md" onClick={close}>
+                  <Button variant="secondary" size="md" onClick={close} disabled={pending}>
                     Hủy
                   </Button>
                   <Button type="submit" size="md" busy={pending}>
