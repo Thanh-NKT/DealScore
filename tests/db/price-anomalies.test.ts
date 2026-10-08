@@ -292,3 +292,32 @@ describe("admin_price_anomalies / counts", () => {
     }
   });
 });
+
+// Migration 0055 (review P3 I2): the "price after voucher" cache was computed from the bad price, so a
+// review that changes an observation clears it; the next collector pass recomputes it from valid prices.
+describe("admin_review_price_anomalies clears offers.effective_price*", () => {
+  it("invalidating a drop nulls the offer's effective price; other offers keep theirs; a skipped id changes nothing", async () => {
+    const t = await seedOffer({ obs: [...stable(10), { msAgo: H, price: 300_000 }] });
+    const other = await seedOffer({ obs: stable(3) });
+    expect((await detect([t.offerId])).data).toBe(1);
+    const [a] = await anomaliesOf(t.offerId);
+    const eff = { effective_price: 280_000, effective_price_at: at(H / 2), effective_price_until: at(-D) };
+    await admin.from("offers").update(eff).in("id", [t.offerId, other.offerId]);
+    const read = async (id: string) =>
+      (await admin.from("offers").select("effective_price, effective_price_at, effective_price_until").eq("id", id).single()).data!;
+
+    // Repeating a decision the row already has (open → reopen) is a no-op and keeps the cache.
+    await admin.rpc("admin_review_price_anomalies", { p_ids: [a.id], p_decision: "reopen" });
+    expect((await read(t.offerId)).effective_price).toBe(280_000);
+
+    const { error } = await admin.rpc("admin_review_price_anomalies", { p_ids: [a.id], p_decision: "invalidate" });
+    expect(error).toBeNull();
+    expect(await read(t.offerId)).toEqual({ effective_price: null, effective_price_at: null, effective_price_until: null });
+    expect((await read(other.offerId)).effective_price).toBe(280_000);
+
+    // Restoring the price (keep) also clears a cache computed meanwhile without it.
+    await admin.from("offers").update(eff).eq("id", t.offerId);
+    await admin.rpc("admin_review_price_anomalies", { p_ids: [a.id], p_decision: "keep" });
+    expect((await read(t.offerId)).effective_price).toBeNull();
+  });
+});
