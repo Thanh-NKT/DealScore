@@ -24,6 +24,11 @@ import { getPreferenceCategories, getPreferencesForUser } from "@/lib/preference
 import { PrefsToggle } from "@/components/search/prefs-toggle";
 import { trackAfter } from "@/lib/analytics/track";
 import { recordSearchDemand } from "@/lib/sourcing/record-demand";
+import { SaveSearchButton } from "@/components/search/save-search-dialog";
+import { DemandFollowBox } from "@/components/search/demand-follow-box";
+import { defaultSavedSearchName, savedSearchParts, toSavedParams } from "@/lib/saved-search/params";
+import { demandFollowOffer } from "@/lib/demand-follow/offer";
+import { findMyDemandFollow } from "@/lib/demand-follow/queries";
 
 interface SearchPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -149,6 +154,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     }
   }
 
+  // P4 E: "Lưu tìm kiếm" when the searched params have a scope (q / category / brand). The action recomputes
+  // the params from the raw query string the same way, so what is saved is what the page searched.
+  const savedParams = toSavedParams(intentParams);
+  const canOfferSave = !loadError && Boolean(savedParams.q || savedParams.categorySlug || savedParams.brands?.length);
+  const rawQuery = toSearchParams(raw).toString();
+  // P4 F: the opt-in appears exactly where demand is recorded (< 3 results, page 1, valid keyword).
+  const demandOffer = loadError ? null : demandFollowOffer({ q: raw.q, total: result.total, page: result.page, intent: demandIntent });
+  const existingFollow =
+    demandOffer && user ? await findMyDemandFollow(user.id, demandOffer.keyword).catch(() => null) : null;
+
   const totalPages = Math.ceil(result.total / result.pageSize);
   const currentPage = result.page;
   const categoryNames = Object.fromEntries(facets.categories.map((c) => [c.slug, c.name]));
@@ -217,11 +232,34 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               )}
             </div>
 
-            <SortSelect
-              params={params}
-              baseQuery={toSearchParams({ ...params, sort: undefined, page: 1 }).toString()}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              {canOfferSave ? (
+                <SaveSearchButton
+                  query={rawQuery}
+                  signedIn={Boolean(user)}
+                  parts={savedSearchParts(savedParams, savedParams.categorySlug ? categoryNames[savedParams.categorySlug] : undefined)}
+                  defaultName={defaultSavedSearchName(savedParams, savedParams.categorySlug ? categoryNames[savedParams.categorySlug] : undefined)}
+                  maxPrice={savedParams.maxPrice ?? null}
+                  onlyBuy={savedParams.onlyBuy === true}
+                />
+              ) : null}
+              <SortSelect
+                params={params}
+                baseQuery={toSearchParams({ ...params, sort: undefined, page: 1 }).toString()}
+              />
+            </div>
           </div>
+
+          {demandOffer && raw.q ? (
+            <DemandFollowBox
+              keyword={demandOffer.keyword}
+              q={raw.q}
+              intent={raw.intent !== false}
+              signedIn={Boolean(user)}
+              loginHref={`/login?next=${encodeURIComponent(`/search?${rawQuery}`)}`}
+              existing={existingFollow}
+            />
+          ) : null}
 
           {/* Product list */}
           {result.items.length > 0 ? (

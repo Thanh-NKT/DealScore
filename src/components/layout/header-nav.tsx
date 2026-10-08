@@ -107,6 +107,9 @@ export function AccountMenu({ email }: { email: string | null }) {
           <Link role="menuitem" href="/account/watch" className={item}>
             Sản phẩm đang theo dõi
           </Link>
+          <Link role="menuitem" href="/account/searches" className={item}>
+            Tìm kiếm đã lưu
+          </Link>
           <Link role="menuitem" href="/account/notifications" className={item}>
             Cài đặt thông báo
           </Link>

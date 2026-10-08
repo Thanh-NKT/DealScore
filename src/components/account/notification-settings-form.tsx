@@ -163,6 +163,7 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
 
       <fieldset className="space-y-3">
         <legend className="display mb-3 text-h4 font-bold leading-tight text-ink">Tần suất</legend>
+        <p className="text-body-sm text-ink-3">Tần suất này áp dụng cho cả theo dõi giá và tìm kiếm đã lưu.</p>
         <div className="divide-y divide-line rounded-md border border-line bg-surface">
           {(
             [

@@ -117,6 +117,18 @@ export default async function AccountPage() {
         </section>
 
         <section className={`${CARD} flex flex-col justify-between gap-6 sm:col-span-2 sm:flex-row sm:items-center`}>
+          <div>
+            <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Tìm kiếm đã lưu</h2>
+            <p className="mt-1.5 text-control leading-relaxed text-ink-2">
+              Nhận báo khi có sản phẩm mới khớp tìm kiếm của bạn, và khi DealScore đã có sản phẩm bạn từng tìm không thấy.
+            </p>
+          </div>
+          <Link href="/account/searches" className={`${SECONDARY} max-sm:w-full`}>
+            Xem tìm kiếm đã lưu
+          </Link>
+        </section>
+
+        <section className={`${CARD} flex flex-col justify-between gap-6 sm:col-span-2 sm:flex-row sm:items-center`}>
           <div className="flex items-start gap-4">
             <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink">
               <HeartIcon className="size-5" />
