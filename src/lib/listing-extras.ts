@@ -65,6 +65,20 @@ export async function saveListingExtras(
     reporter: extras.source === "extension" ? (extras.reporter ?? null) : null,
   });
 
+  // Voucher coverage (P4 K, 0063): a non-extension source answered with a voucher list (possibly empty) for a
+  // known seller → "DealScore looked at this shop today". Absence of a voucher means nothing without it.
+  if (extras.source !== "extension" && Array.isArray(extras.vouchers) && listing.seller_id) {
+    try {
+      const { error: cErr } = await client.rpc("record_voucher_check", {
+        p_seller_id: listing.seller_id,
+        p_vouchers_seen: inputs.filter((v) => v.kind === "shop").length,
+      });
+      if (cErr) throw new Error(cErr.message);
+    } catch (err) {
+      reportError(err, { where: "saveListingExtras.recordVoucherCheck", listingId: listing.id });
+    }
+  }
+
   // The effective price is derived data: a failure here never fails the save.
   if (opts.refreshEffective !== false) {
     try {
