@@ -108,9 +108,11 @@ async function countRows(productIds: string[]) {
   return { products: p.count, variants: ids.length, offers: o.count, watches: w.count, reports: r.count, audit: a.count };
 }
 
+// Own category (P4 review I4): an arbitrary existing one changes which verified variants auto-match.
 beforeAll(async () => {
-  const { data: c } = await admin.from("categories").select("id").limit(1).single();
-  categoryId = c!.id;
+  const { data: c, error } = await admin.from("categories").insert({ slug: `test-${tag}-cat`, name: `Test ${tag}` }).select("id").single();
+  if (error) throw error;
+  categoryId = c.id;
 });
 
 afterAll(async () => {
@@ -119,6 +121,7 @@ afterAll(async () => {
   await admin.from("product_slug_redirects").delete().like("old_slug", `test-${tag}%`);
   await admin.from("products").delete().like("slug", `test-${tag}%`);
   await admin.from("sellers").delete().like("external_seller_id", `seller-${tag}%`);
+  await admin.from("categories").delete().eq("id", categoryId);
 });
 
 describe("admin_merge_preview", () => {

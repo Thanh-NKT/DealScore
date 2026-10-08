@@ -22,7 +22,7 @@ async function user(): Promise<TestUser> {
 
 let variantId = "";
 beforeAll(async () => {
-  const { data } = await admin.from("variant_current_price").select("variant_id").limit(1);
+  const { data } = await admin.from("variant_current_price").select("variant_id").order("variant_id").limit(1);
   variantId = data![0].variant_id;
 });
 

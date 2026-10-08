@@ -24,8 +24,8 @@ describe("purgeDeletedAccounts", () => {
     const old = await userDeletedDaysAgo(31);
     const recent = await userDeletedDaysAgo(29);
 
-    const { data: variant } = await admin.from("product_variants").select("id, product_id").limit(1).single();
-    const { data: offer } = await admin.from("offers").select("id").limit(1).single();
+    const { data: variant } = await admin.from("product_variants").select("id, product_id").order("id").limit(1).single();
+    const { data: offer } = await admin.from("offers").select("id").order("id").limit(1).single();
     await admin.from("watches").insert({
       user_id: old.id,
       product_id: variant!.product_id,
@@ -38,7 +38,7 @@ describe("purgeDeletedAccounts", () => {
       .select("id")
       .single();
 
-    const r1 = await purgeDeletedAccounts({ now: new Date() }, admin);
+    const r1 = await purgeDeletedAccounts({ now: new Date(), userIds: [old.id, recent.id] }, admin);
     expect(r1.failed).toEqual([]);
     expect(r1.purged).toContain(old.id);
     expect(r1.purged).not.toContain(recent.id);
@@ -54,23 +54,28 @@ describe("purgeDeletedAccounts", () => {
     expect(keptClick?.user_id).toBeNull();
 
     // Second run: nothing of the old user left to delete.
-    const r2 = await purgeDeletedAccounts({ now: new Date() }, admin);
+    const r2 = await purgeDeletedAccounts({ now: new Date(), userIds: [old.id, recent.id] }, admin);
     expect(r2.purged).not.toContain(old.id);
   });
 
   it("works in batches until the backlog is empty", async () => {
     const a = await userDeletedDaysAgo(40);
     const b = await userDeletedDaysAgo(35);
-    const r = await purgeDeletedAccounts({ now: new Date(), limit: 1 }, admin);
+    const r = await purgeDeletedAccounts({ now: new Date(), limit: 1, userIds: [a.id, b.id] }, admin);
     expect(r.purged).toEqual(expect.arrayContaining([a.id, b.id]));
     expect(r.remaining).toBe(0);
+    // Scoped: an account outside userIds is neither purged nor counted.
+    const c = await userDeletedDaysAgo(40);
+    const scoped = await purgeDeletedAccounts({ now: new Date(), userIds: [a.id] }, admin);
+    expect(scoped).toMatchObject({ purged: [], remaining: 0 });
+    expect((await admin.from("users").select("id").eq("id", c.id)).data).toHaveLength(1);
   });
 
   it("out of time → stops and reports the due accounts still remaining", async () => {
     const a = await userDeletedDaysAgo(40);
-    const r = await purgeDeletedAccounts({ now: new Date(), deadline: Date.now() - 1 }, admin);
+    const r = await purgeDeletedAccounts({ now: new Date(), deadline: Date.now() - 1, userIds: [a.id] }, admin);
     expect(r.purged).toEqual([]);
-    expect(r.remaining).toBeGreaterThanOrEqual(1);
+    expect(r.remaining).toBe(1);
     const { data } = await admin.from("users").select("id").eq("id", a.id);
     expect(data).toHaveLength(1);
   });

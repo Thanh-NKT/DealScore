@@ -1,12 +1,18 @@
 import { randomBytes } from "node:crypto";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
+import { createFixtureCatalog, type FixtureCatalog } from "./fixtures";
 import { purgeDeletedAccounts } from "@/lib/account/purge";
 
 // Roadmap P4 F (0060): demand_follows, record_demand_follow_check, admin_demand_follow_counts, prune.
 const created: TestUser[] = [];
+let cat: FixtureCatalog;
+beforeAll(async () => {
+  cat = await createFixtureCatalog("dfollow");
+});
 afterAll(async () => {
   while (created.length) await deleteTestUser(created.pop()!.id);
+  await cat.cleanup();
 });
 async function user() {
   const u = await createTestUser();
@@ -139,17 +145,17 @@ describe("prune and erasure", () => {
     const u = await user();
     const f = await follow(u);
     const { data: ss } = await u.client.from("saved_searches").insert({ name: "x", params: { q: "y", maxPrice: 1 } }).select("id").single();
-    const { data: p } = await admin.from("products").select("id").limit(1).single();
+    const p = { id: (await cat.product({ price: 1_000 })).productId };
     const now = new Date();
     const { data: ev } = await admin.rpc("record_saved_search_evaluation", {
       p_id: ss!.id, p_params_version: 1, p_now: now.toISOString(),
-      p_hits: [{ product_id: p!.id, in_set: true, alerted: true, price: 1 }],
+      p_hits: [{ product_id: p.id, in_set: true, alerted: true, price: 1 }],
       p_event: { items: [], items_total: 1, deliver_after: now.toISOString(), channels: [] },
     });
     const { data: folder } = await u.client.from("watch_folders").insert({ user_id: u.id, name: "Quà" }).select("id").single();
     await admin.from("watch_folder_shares").insert({ folder_id: folder!.id, user_id: u.id, token: randomBytes(32).toString("base64url") });
     await admin.from("users").update({ deleted_at: new Date(Date.now() - 31 * DAY).toISOString() }).eq("id", u.id);
-    const r = await purgeDeletedAccounts({ now: new Date() }, admin);
+    const r = await purgeDeletedAccounts({ now: new Date(), userIds: [u.id] }, admin);
     expect(r.purged).toContain(u.id);
     expect((await admin.from("demand_follows").select("id").eq("id", f.id)).data).toEqual([]);
     expect((await admin.from("saved_searches").select("id").eq("id", ss!.id)).data).toEqual([]);

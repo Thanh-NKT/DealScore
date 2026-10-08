@@ -16,10 +16,10 @@ afterEach(async () => {
 let variants: string[] = [];
 let offerId: string;
 beforeAll(async () => {
-  const { data } = await admin.from("variant_current_price").select("variant_id").limit(60);
+  const { data } = await admin.from("variant_current_price").select("variant_id").order("variant_id").limit(60);
   variants = (data ?? []).map((v) => v.variant_id);
   if (variants.length < 52) throw new Error("Need ≥ 52 priced variants — run pnpm seed:dev");
-  const { data: o } = await admin.from("offers").select("id").limit(1).single();
+  const { data: o } = await admin.from("offers").select("id").order("id").limit(1).single();
   offerId = o!.id;
 });
 
@@ -40,7 +40,7 @@ describe("extension contributions and account erasure", () => {
     const { data: q } = await admin.rpc("extension_contribution_begin", { p_contributor: contributor });
     expect(q![0].allowed).toBe(true);
 
-    const r = await purgeDeletedAccounts({ now: new Date() }, admin);
+    const r = await purgeDeletedAccounts({ now: new Date(), userIds: [u.id] }, admin);
     expect(r.purged).toContain(u.id);
     const { count: obsLeft } = await admin.from("extension_observations")
       .select("id", { count: "exact", head: true }).eq("contributor", contributor);

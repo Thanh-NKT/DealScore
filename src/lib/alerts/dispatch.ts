@@ -317,17 +317,19 @@ function productUrl(site: string, e: EventDetail) {
 }
 
 export async function dispatchDueDeliveries(
-  opts: { now: Date; limit?: number; deadline?: number },
+  /** `userIds`: claim only those users' deliveries (claim_due_deliveries_for_users, 0068) — tests, targeted re-sends. */
+  opts: { now: Date; limit?: number; deadline?: number; userIds?: string[] },
   client: Client = createAdminClient(),
   push: PushSender = pushNotInstalled,
 ): Promise<{ sent: number; failed: number; retried: number; skipped: number }> {
   const stats = { sent: 0, failed: 0, retried: 0, skipped: 0 };
   const nowIso = opts.now.toISOString();
+  if (opts.userIds && opts.userIds.length === 0) return stats;
 
-  const { data: claimedRaw, error } = await client.rpc("claim_due_deliveries", {
-    p_now: nowIso,
-    p_limit: Math.min(opts.limit ?? 200, 999),
-  });
+  const p_limit = Math.min(opts.limit ?? 200, 999);
+  const { data: claimedRaw, error } = opts.userIds
+    ? await client.rpc("claim_due_deliveries_for_users", { p_now: nowIso, p_limit, p_user_ids: opts.userIds })
+    : await client.rpc("claim_due_deliveries", { p_now: nowIso, p_limit });
   if (error) throw new Error(`claim_due_deliveries failed: ${error.message}`);
   const claimed: ClaimedDelivery[] = (claimedRaw ?? []).map((r) => ({
     deliveryId: r.delivery_id,
@@ -378,12 +380,18 @@ export async function dispatchDueDeliveries(
   // carrying the triggers of the older ones of the same kind (mergeDigestTriggers), and mark those as superseded.
   const mergedTriggers = new Map<string, TriggerType[]>();
   const mergedDiscoveries = new Map<string, DiscoveryEventDetail>();
+  /**
+   * Discovery only (P4 review m1): the older deliveries folded into a kept one. They follow the kept delivery's
+   * outcome — superseded once it is sent, back to pending with it on a retry — so a failed send never loses
+   * the folded products (their hits are already marked alerted).
+   */
+  const folded = new Map<string, string[]>();
   const latest: ClaimedDelivery[] = [];
   for (const { keep, older } of latestPerWatch(ready, createdAt)) {
     latest.push(keep);
     if (older.length === 0) continue;
-    skips.set("superseded", [...(skips.get("superseded") ?? []), ...older.map((d) => d.deliveryId)]);
     if (!keep.watchId) {
+      folded.set(keep.deliveryId, older.map((d) => d.deliveryId));
       // Same source in one digest: one block, with the older events' products folded in.
       mergedDiscoveries.set(
         keep.alertEventId,
@@ -391,6 +399,7 @@ export async function dispatchDueDeliveries(
       );
       continue;
     }
+    skips.set("superseded", [...(skips.get("superseded") ?? []), ...older.map((d) => d.deliveryId)]);
     mergedTriggers.set(
       keep.alertEventId,
       mergeDigestTriggers(events.get(keep.alertEventId)!.triggerTypes, older.map((d) => events.get(d.alertEventId)!.triggerTypes)),
@@ -406,9 +415,10 @@ export async function dispatchDueDeliveries(
   const secret = process.env.UNSUBSCRIBE_SECRET;
 
   for (const group of groupDeliveries(latest)) {
+    const held = group.deliveries.flatMap((d) => folded.get(d.deliveryId) ?? []);
     if (opts.deadline && Date.now() > opts.deadline) {
       // Return unfinished work to pending so the next run picks it up immediately.
-      await update(group.deliveries.map((d) => d.deliveryId), { status: "pending", claimed_at: null });
+      await update([...group.deliveries.map((d) => d.deliveryId), ...held], { status: "pending", claimed_at: null });
       continue;
     }
     const ids = group.deliveries.map((d) => d.deliveryId);
@@ -423,8 +433,8 @@ export async function dispatchDueDeliveries(
         if (!secret) throw new Error("Missing UNSUBSCRIBE_SECRET");
         const to = items[0]?.user.email ?? discs[0]?.user.email ?? null;
         if (!to) {
-          await update(ids, { status: "skipped", skip_reason: "no_email" });
-          stats.skipped += ids.length;
+          await update([...ids, ...held], { status: "skipped", skip_reason: "no_email" });
+          stats.skipped += ids.length + held.length;
           continue;
         }
         const allToken = signUnsubscribeToken({ kind: "email", userId: group.userId }, secret);
@@ -514,8 +524,8 @@ export async function dispatchDueDeliveries(
         );
         const r = await push(group.userId, payload);
         if (r.delivered === 0 && r.failed === 0) {
-          await update(ids, { status: "skipped", skip_reason: "no_device" });
-          stats.skipped += ids.length;
+          await update([...ids, ...held], { status: "skipped", skip_reason: "no_device" });
+          stats.skipped += ids.length + held.length;
           continue;
         }
         if (r.delivered === 0) throw new Error(`Push failed on ${r.failed} device(s)`);
@@ -527,7 +537,8 @@ export async function dispatchDueDeliveries(
         for (const d of group.deliveries) {
           await update([d.deliveryId], { status: "failed", attempts: d.attempts + 1, last_error: message });
         }
-        stats.failed += ids.length;
+        await update(held, { status: "failed", last_error: message });
+        stats.failed += ids.length + held.length;
         continue;
       }
       for (const d of group.deliveries) {
@@ -538,6 +549,11 @@ export async function dispatchDueDeliveries(
           : { status: "failed", attempts, last_error: message });
         if (retry) stats.retried++;
         else stats.failed++;
+        // Folded deliveries were not attempted: they wait with their kept delivery and are folded in again.
+        const mine = folded.get(d.deliveryId) ?? [];
+        await update(mine, retry
+          ? { status: "pending", claimed_at: null, next_attempt_at: retry.toISOString() }
+          : { status: "failed", last_error: message });
       }
       continue;
     }
@@ -552,6 +568,15 @@ export async function dispatchDueDeliveries(
       reportError(err, { where: "alert_dispatch_mark_sent", channel: group.channel, deliveries: ids.length });
     }
     stats.sent += ids.length;
+    if (held.length > 0) {
+      try {
+        await update(held, { status: "skipped", skip_reason: "superseded" });
+        stats.skipped += held.length;
+      } catch (err) {
+        // Still 'sending': reclaimed after 15 min and folded into nothing new — at worst re-announced once.
+        reportError(err, { where: "alert_dispatch_mark_superseded", channel: group.channel, deliveries: held.length });
+      }
+    }
   }
   return stats;
 }

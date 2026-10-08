@@ -110,7 +110,8 @@ describe("recordContribution", () => {
     const want = effectivePriceFor(price, await listVouchersForListing(admin, { ...scope, now }), { ...scope, now });
     expect(want).not.toBeNull();
     expect(Number(o!.effective_price)).toBe(want);
-    expect(Date.parse(o!.effective_price_at!)).toBeGreaterThanOrEqual(Date.parse(cur.observed_at!));
+    // observed_at is the client-supplied observedAt (Node clock), effective_price_at the DB clock: allow ±1 s skew.
+    expect(Date.parse(o!.effective_price_at!)).toBeGreaterThanOrEqual(Date.parse(cur.observed_at!) - 1_000);
   });
 
   it("the same offer is not promoted again within the hour", async () => {

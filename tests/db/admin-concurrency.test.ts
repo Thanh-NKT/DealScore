@@ -37,7 +37,7 @@ async function offerOf(ext: string) {
 }
 
 beforeAll(async () => {
-  const { data: c } = await admin.from("categories").select("id").limit(1).single();
+  const { data: c } = await admin.from("categories").select("id").order("slug").limit(1).single();
   categoryId = c!.id;
   const { data: p } = await admin.from("products")
     .insert({ canonical_name: `Verified ${tag}`, brand: "Sony", status: "verified", slug: `test-${tag}-verified`, category_id: categoryId })

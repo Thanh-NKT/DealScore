@@ -11,7 +11,7 @@ afterAll(async () => {
 
 describe("loadVariantSnapshots", () => {
   it("reads the full 90-day rollup for 25 variants (over the 1000-row cap without batching)", async () => {
-    const { data } = await admin.from("variant_current_price").select("variant_id").not("price", "is", null).limit(25);
+    const { data } = await admin.from("variant_current_price").select("variant_id").not("price", "is", null).order("variant_id").limit(25);
     const ids = (data ?? []).map((r) => r.variant_id);
     const now = new Date();
     const snaps = await loadVariantSnapshots(admin, ids, now);

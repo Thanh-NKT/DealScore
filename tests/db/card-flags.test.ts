@@ -19,7 +19,7 @@ const SEEDS: Seed[] = [
 ];
 
 beforeAll(async () => {
-  const { data: c } = await admin.from("categories").select("id").limit(1).single();
+  const { data: c } = await admin.from("categories").select("id").order("slug").limit(1).single();
   for (const s of SEEDS) {
     const { data: p, error } = await admin
       .from("products")

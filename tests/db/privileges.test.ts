@@ -69,6 +69,8 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_retention_cohorts", {}],
   // 0060–0065 (roadmap P4).
   ["record_saved_search_evaluation", { p_id: Z, p_params_version: 1, p_now: "2026-10-01T00:00:00Z", p_hits: [], p_event: null }],
+  // 0068 scoped claim.
+  ["claim_due_deliveries_for_users", { p_now: "2026-10-01T00:00:00Z", p_limit: 1, p_user_ids: [Z] }],
   ["record_demand_follow_check", { p_id: Z, p_now: "2026-10-01T00:00:00Z", p_status: "waiting", p_event: null }],
   ["admin_demand_follow_counts", { p_keywords: ["ssd"] }],
   ["admin_folder_shares", {}],

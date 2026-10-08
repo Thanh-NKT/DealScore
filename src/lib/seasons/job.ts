@@ -15,14 +15,18 @@ type Client = SupabaseClient<Database>;
  * A category interrupted by the deadline is not written (it stays stale and is redone next run).
  */
 export async function recomputeCategorySeasons(
-  opts: { now: Date; deadline?: number },
+  /** `categoryIds`: only those categories (tests: never recompute another file's or the owner's caches). */
+  opts: { now: Date; deadline?: number; categoryIds?: string[] },
   client: Client = createAdminClient(),
 ): Promise<{ categories: number; written: number; errors: number; done: boolean }> {
   const stats = { categories: 0, written: 0, errors: 0, done: false };
-  const [catRes, statRes] = await Promise.all([
-    client.from("categories").select("id").order("id").limit(1000),
-    client.from("category_season_stats").select("category_id, computed_at").limit(10_000),
-  ]);
+  let catQuery = client.from("categories").select("id").order("id").limit(1000);
+  let statQuery = client.from("category_season_stats").select("category_id, computed_at").limit(10_000);
+  if (opts.categoryIds) {
+    catQuery = catQuery.in("id", opts.categoryIds);
+    statQuery = statQuery.in("category_id", opts.categoryIds);
+  }
+  const [catRes, statRes] = await Promise.all([catQuery, statQuery]);
   if (catRes.error) throw new Error(`Failed to read categories: ${catRes.error.message}`);
   if (statRes.error) throw new Error(`Failed to read season stats: ${statRes.error.message}`);
   const staleBefore = opts.now.getTime() - SEASON_STATS_REFRESH_DAYS * 86_400_000;

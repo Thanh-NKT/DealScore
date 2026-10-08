@@ -75,7 +75,7 @@ let rejected: Awaited<ReturnType<typeof seedOffer>>;
 let spike4: Awaited<ReturnType<typeof seedOffer>>;
 
 beforeAll(async () => {
-  const { data: c } = await admin.from("categories").select("id").limit(1).single();
+  const { data: c } = await admin.from("categories").select("id").order("slug").limit(1).single();
   categoryId = c!.id;
   user = await createTestUser();
   spike = await seedOffer({ obs: [...stable(10), { msAgo: H, price: 10_000_000 }] });

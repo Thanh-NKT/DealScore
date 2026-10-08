@@ -56,7 +56,7 @@ describe("season_variant_ids", () => {
 
 describe("recomputeCategorySeasons + category_season_stats", () => {
   it("writes the category rows (flat prices → ratio 1), public read, anon cannot write", async () => {
-    const r = await recomputeCategorySeasons({ now: new Date() }, admin);
+    const r = await recomputeCategorySeasons({ now: new Date(), categoryIds: [categoryId] }, admin);
     expect(r.errors).toBe(0);
     const { data } = await admin.from("category_season_stats").select("event_key, variants_counted, median_ratio").eq("category_id", categoryId);
     expect((data ?? []).length).toBeGreaterThan(0);
@@ -65,7 +65,8 @@ describe("recomputeCategorySeasons + category_season_stats", () => {
     expect((await anon.from("category_season_stats").select("event_key").eq("category_id", categoryId)).data!.length).toBe(data!.length);
     expect((await anon.from("category_season_stats").delete().eq("category_id", categoryId)).error?.code).toBe("42501");
     // fresh now: a second run skips it
-    const r2 = await recomputeCategorySeasons({ now: new Date() }, admin);
-    expect(r2.written).toBeLessThanOrEqual(r.written);
+    const r2 = await recomputeCategorySeasons({ now: new Date(), categoryIds: [categoryId] }, admin);
+    expect(r2.written).toBe(0);
+    expect(r.categories).toBe(1);
   });
 });

@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { EmailMessage } from "@/lib/email";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
+import { createFixtureCatalog, type FixtureCatalog } from "./fixtures";
 
 // Roadmap P4 T1: alert_events with more than one source (0061) + dispatch of discovery alerts.
 const sentMessages: EmailMessage[] = [];
@@ -25,18 +26,15 @@ vi.mock("@/lib/observability", () => ({ reportError: vi.fn() }));
 const { evaluateWatches } = await import("@/lib/alerts/evaluate");
 const { dispatchDueDeliveries, deliveryIdempotencyKey } = await import("@/lib/alerts/dispatch");
 
-let products: Array<{ id: string; price: number }> = [];
+// Own fixture catalog (P4 review I4): never a pre-existing catalog row.
+let cat: FixtureCatalog;
+const products: Array<{ id: string; variantId: string; price: number }> = [];
 beforeAll(async () => {
-  const { data } = await admin
-    .from("variant_current_price")
-    .select("price, product_variants!inner(product_id)")
-    .not("price", "is", null)
-    .limit(4);
-  products = (data ?? []).map((r) => ({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    id: (r.product_variants as any).product_id,
-    price: Number(r.price),
-  }));
+  cat = await createFixtureCatalog("alsrc");
+  for (const price of [1_000_000, 1_100_000, 1_200_000, 1_300_000]) {
+    const p = await cat.product({ price });
+    products.push({ id: p.productId, variantId: p.variantId, price });
+  }
 });
 
 const created: TestUser[] = [];
@@ -46,6 +44,7 @@ afterEach(async () => {
 });
 afterAll(async () => {
   while (created.length) await deleteTestUser(created.pop()!.id);
+  await cat.cleanup();
 });
 async function user() {
   const u = await createTestUser();
@@ -86,8 +85,7 @@ async function fireSavedSearch(id: string, now = new Date()) {
 describe("alert_events sources (0061)", () => {
   it("a watch alert inserted without user_id gets the watch owner", async () => {
     const u = await user();
-    const { data: v } = await admin.from("product_variants").select("id").limit(1).single();
-    const { data: w } = await u.client.from("watches").insert({ variant_id: v!.id, target_price: 1 }).select("id").single();
+    const { data: w } = await u.client.from("watches").insert({ variant_id: products[0].variantId, target_price: 1 }).select("id").single();
     const { data: e, error } = await admin
       .from("alert_events")
       .insert({ watch_id: w!.id, trigger_types: ["target_price"], price: 1 })
@@ -100,8 +98,7 @@ describe("alert_events sources (0061)", () => {
   it("rejects two sources, a watch row with a discovery trigger, a discovery row with a watch trigger", async () => {
     const u = await user();
     const ss = await savedSearch(u);
-    const { data: v } = await admin.from("product_variants").select("id").limit(1).single();
-    const { data: w } = await u.client.from("watches").insert({ variant_id: v!.id, target_price: 1 }).select("id").single();
+    const { data: w } = await u.client.from("watches").insert({ variant_id: products[0].variantId, target_price: 1 }).select("id").single();
     const two = await admin.from("alert_events").insert({ watch_id: w!.id, saved_search_id: ss, trigger_types: ["saved_search"] });
     expect(two.error?.code).toBe("23514");
     const watchDisc = await admin.from("alert_events").insert({ watch_id: w!.id, trigger_types: ["saved_search"] });
@@ -116,7 +113,12 @@ describe("alert_events sources (0061)", () => {
     const u = await user();
     const ev = await fireSavedSearch(await savedSearch(u));
     const { data: d } = await admin.from("alert_deliveries").select("id").eq("alert_event_id", ev).single();
-    const { data: claimed } = await admin.rpc("claim_due_deliveries", { p_now: new Date().toISOString(), p_limit: 999 });
+    // Scoped claim (0068): never claims another user's deliveries.
+    const { data: claimed } = await admin.rpc("claim_due_deliveries_for_users", {
+      p_now: new Date().toISOString(),
+      p_limit: 999,
+      p_user_ids: [u.id],
+    });
     const row = (claimed ?? []).find((r) => r.delivery_id === d!.id);
     expect(row).toMatchObject({ watch_id: null, user_id: u.id, alert_event_id: ev });
     // put it back so other tests are not affected
@@ -144,19 +146,12 @@ describe("dispatchDueDeliveries with discovery alerts", () => {
   it("one email holds a watch item and a saved-search block", async () => {
     vi.stubEnv("UNSUBSCRIBE_SECRET", "test-secret");
     const u = await user();
-    const { data: v } = await admin
-      .from("variant_current_price")
-      .select("variant_id, price")
-      .eq("in_stock", true)
-      .not("price", "is", null)
-      .limit(1)
-      .single();
-    await admin.from("variant_current_price").update({ observed_at: new Date().toISOString() }).eq("variant_id", v!.variant_id);
-    await u.client.from("watches").insert({ variant_id: v!.variant_id, target_price: Number(v!.price) + 1000 });
-    await evaluateWatches({ now: new Date(), variantIds: [v!.variant_id] }, admin);
+    const v = products[1];
+    await u.client.from("watches").insert({ variant_id: v.variantId, target_price: v.price + 1000 });
+    await evaluateWatches({ now: new Date(), variantIds: [v.variantId] }, admin);
     const ev = await fireSavedSearch(await savedSearch(u));
 
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     const mine = sentMessages.filter((m) => m.to === u.email);
     expect(mine).toHaveLength(1);
     expect(mine[0].subject).toBe("2 tin mới từ DealScore");
@@ -171,8 +166,45 @@ describe("dispatchDueDeliveries with discovery alerts", () => {
     const ss = await savedSearch(u);
     const ev = await fireSavedSearch(ss);
     await u.client.from("saved_searches").update({ status: "paused" }).eq("id", ss);
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     expect(await statuses([ev])).toMatchObject([{ status: "skipped", skip_reason: "source_inactive" }]);
+  });
+
+  it("m1: two events of one saved search folded into one block; a failed send loses neither, a later send has both", async () => {
+    vi.stubEnv("UNSUBSCRIBE_SECRET", "test-secret");
+    const u = await user();
+    const ss = await savedSearch(u);
+    const past = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+    const ev = async (p: { id: string; price: number }, createdMinAgo: number) => {
+      const { data: e, error } = await admin
+        .from("alert_events")
+        .insert({
+          user_id: u.id, saved_search_id: ss, trigger_types: ["saved_search"],
+          items: [{ product_id: p.id, variant_id: null, price: p.price, recommendation: "buy", score: 80 }],
+          items_total: 1, price: p.price, deliver_after: past(createdMinAgo), created_at: past(createdMinAgo),
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      await admin.from("alert_deliveries").insert({ alert_event_id: e.id, channel: "email", next_attempt_at: past(createdMinAgo) });
+      return e.id;
+    };
+    const older = await ev(products[2], 10);
+    const newer = await ev(products[3], 5);
+    failFor = u.email;
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
+    // The failed send leaves BOTH pending (the older one is not marked superseded before a send succeeded).
+    expect((await statuses([older, newer])).map((s) => s.status).sort()).toEqual(["pending", "pending"]);
+    await admin.from("alert_deliveries").update({ next_attempt_at: new Date().toISOString() }).in("alert_event_id", [older, newer]);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
+    const mine = sentMessages.filter((m) => m.to === u.email);
+    expect(mine).toHaveLength(2);
+    // Both products are in the email that went out.
+    const { data: names } = await admin.from("products").select("canonical_name").in("id", [products[2].id, products[3].id]);
+    for (const n of names!) expect(mine[1].html).toContain(n.canonical_name);
+    const st = await statuses([older, newer]);
+    expect(st.find((s) => s.alert_event_id === newer)!.status).toBe("sent");
+    expect(st.find((s) => s.alert_event_id === older)).toMatchObject({ status: "skipped", skip_reason: "superseded" });
   });
 
   it("provider failure → retried with the same idempotency key", async () => {
@@ -181,11 +213,11 @@ describe("dispatchDueDeliveries with discovery alerts", () => {
     const ev = await fireSavedSearch(await savedSearch(u));
     const { data: d } = await admin.from("alert_deliveries").select("id").eq("alert_event_id", ev).single();
     failFor = u.email;
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     const [st] = await statuses([ev]);
     expect(st).toMatchObject({ status: "pending", attempts: 1 });
     await admin.from("alert_deliveries").update({ next_attempt_at: new Date().toISOString() }).eq("id", d!.id);
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     const mine = sentMessages.filter((m) => m.to === u.email);
     expect(mine).toHaveLength(2);
     expect(mine[1].idempotencyKey).toBe(mine[0].idempotencyKey);

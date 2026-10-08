@@ -2592,6 +2592,17 @@ export type Database = {
           watch_id: string
         }[]
       }
+      claim_due_deliveries_for_users: {
+        Args: { p_limit: number; p_now: string; p_user_ids: string[] }
+        Returns: {
+          alert_event_id: string
+          attempts: number
+          channel: string
+          delivery_id: string
+          user_id: string
+          watch_id: string
+        }[]
+      }
       collector_candidates: {
         Args: { p_limit: number; p_marketplaces?: string[] }
         Returns: {

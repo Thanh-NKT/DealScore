@@ -47,7 +47,7 @@ async function productOfVariant(variantId: string) {
 
 beforeAll(async () => {
   user = await createTestUser();
-  const { data: c } = await admin.from("categories").select("id").limit(1).single();
+  const { data: c } = await admin.from("categories").select("id").order("slug").limit(1).single();
   categoryId = c!.id;
   const { data: p } = await admin.from("products")
     .insert({ canonical_name: `Verified ${tag}`, brand: "Sony", model: "X", status: "verified", slug: `test-${tag}-verified`, category_id: categoryId })
@@ -342,7 +342,7 @@ describe("other admin RPCs", () => {
     expect(cErr).toBeNull();
     expect(counts).toHaveProperty("drafts_multi_shop");
     expect(counts).toHaveProperty("stale_listings");
-    const { data: drafts, error: dErr } = await admin.from("admin_drafts").select("id, listing_count").limit(5);
+    const { data: drafts, error: dErr } = await admin.from("admin_drafts").select("id, listing_count").order("id").limit(5);
     expect(dErr).toBeNull();
     for (const d of drafts ?? []) expect(typeof d.listing_count).toBe("number");
   });

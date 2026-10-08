@@ -1,6 +1,7 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { MAX_ACTIVE_WATCHES } from "@/lib/watch/constants";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
+import { createFixtureCatalog, type FixtureCatalog } from "./fixtures";
 
 const created: TestUser[] = [];
 async function user() {
@@ -12,16 +13,18 @@ afterEach(async () => {
   while (created.length) await deleteTestUser(created.pop()!.id);
 });
 
-let variants: Array<{ variant_id: string; price: number }> = [];
+// Own 52 fixture variants (P4 review I4): no arbitrary catalog rows, and the run no longer needs seed:dev.
+let cat: FixtureCatalog;
+const variants: Array<{ variant_id: string; price: number }> = [];
 beforeAll(async () => {
-  const { data } = await admin
-    .from("variant_current_price")
-    .select("variant_id, price")
-    .eq("in_stock", true)
-    .not("price", "is", null)
-    .limit(60);
-  variants = (data ?? []).map((v) => ({ variant_id: v.variant_id, price: Number(v.price) }));
-  if (variants.length < 52) throw new Error("Need ≥ 52 priced variants — run pnpm seed:dev");
+  cat = await createFixtureCatalog("walert");
+  for (let i = 0; i < 52; i++) {
+    const p = await cat.product({ price: 500_000 + i * 1_000 });
+    variants.push({ variant_id: p.variantId, price: p.price });
+  }
+}, 120_000);
+afterAll(async () => {
+  await cat.cleanup();
 });
 
 describe("watches — trigger and privileges", () => {
@@ -192,17 +195,16 @@ describe("claim_due_deliveries + job lock", () => {
     }
 
     const now = new Date().toISOString();
-    const [a, b] = await Promise.all([
-      admin.rpc("claim_due_deliveries", { p_now: now, p_limit: 1000 }),
-      admin.rpc("claim_due_deliveries", { p_now: now, p_limit: 1000 }),
-    ]);
+    // Scoped variant (0068, same body as claim_due_deliveries): never claims anyone else's deliveries.
+    const claim = (at: string) => admin.rpc("claim_due_deliveries_for_users", { p_now: at, p_limit: 1000, p_user_ids: [u.id] });
+    const [a, b] = await Promise.all([claim(now), claim(now)]);
     const mine = (rows: typeof a.data) => (rows ?? []).filter((r) => r.watch_id === w!.id).map((r) => r.delivery_id);
     const ids = [...mine(a.data), ...mine(b.data)];
     expect(ids.length).toBe(3);
     expect(new Set(ids).size).toBe(3);
 
     const later = new Date(Date.now() + 16 * 60_000).toISOString();
-    const { data: again } = await admin.rpc("claim_due_deliveries", { p_now: later, p_limit: 1000 });
+    const { data: again } = await claim(later);
     expect(mine(again).length).toBe(3);
   });
 

@@ -25,7 +25,8 @@ export { PURGE_AFTER_DAYS, purgeCutoff, purgeDate } from "@/lib/account/purge-da
  * promised 30 days, so the caller must alert on it.
  */
 export async function purgeDeletedAccounts(
-  opts: { now: Date; limit?: number; deadline?: number },
+  /** `userIds`: only those accounts (tests: never purge another file's or the owner's local accounts). */
+  opts: { now: Date; limit?: number; deadline?: number; userIds?: string[] },
   client: SupabaseClient<Database> = createAdminClient(),
 ): Promise<{ purged: string[]; failed: Array<{ userId: string; error: string }>; remaining: number }> {
   const cutoff = purgeCutoff(opts.now).toISOString();
@@ -40,7 +41,9 @@ export async function purgeDeletedAccounts(
       .select("id")
       .lt("deleted_at", cutoff)
       .order("deleted_at", { ascending: true })
+      .order("id")
       .limit(batchSize);
+    if (opts.userIds) query = query.in("id", opts.userIds);
     // Accounts that failed in this run are not retried until the next run.
     if (failed.length > 0) query = query.not("id", "in", `(${failed.map((f) => f.userId).join(",")})`);
     const { data, error } = await query;
@@ -56,10 +59,9 @@ export async function purgeDeletedAccounts(
     if (data.length < batchSize) break;
   }
 
-  const { count, error: countError } = await client
-    .from("users")
-    .select("id", { count: "exact", head: true })
-    .lt("deleted_at", cutoff);
+  let remainingQuery = client.from("users").select("id", { count: "exact", head: true }).lt("deleted_at", cutoff);
+  if (opts.userIds) remainingQuery = remainingQuery.in("id", opts.userIds);
+  const { count, error: countError } = await remainingQuery;
   if (countError) throw new Error(`Failed to count pending deletions: ${countError.message}`);
   return { purged, failed, remaining: count ?? 0 };
 }

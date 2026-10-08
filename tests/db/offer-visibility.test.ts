@@ -60,7 +60,7 @@ const today = () => toVnDate(new Date());
 
 beforeAll(async () => {
   user = await createTestUser();
-  const { data: c } = await admin.from("categories").select("id").limit(1).single();
+  const { data: c } = await admin.from("categories").select("id").order("slug").limit(1).single();
   categoryId = c!.id;
 });
 
@@ -206,7 +206,7 @@ describe("refresh_variant_daily_prices", () => {
   });
 
   it("parallel refreshes over overlapping variants finish without lock errors", async () => {
-    const { data } = await admin.from("variant_current_price").select("variant_id").limit(40);
+    const { data } = await admin.from("variant_current_price").select("variant_id").order("variant_id").limit(40);
     const ids = (data ?? []).map((r) => r.variant_id);
     const calls = Array.from({ length: 8 }, (_, i) =>
       admin.rpc("refresh_variant_daily_prices", {

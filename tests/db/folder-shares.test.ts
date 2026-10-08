@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "@/lib/database.types";
 import { admin, createTestUser, deleteTestUser, SUPABASE_URL, type TestUser } from "./helpers";
+import { createFixtureCatalog, type FixtureCatalog } from "./fixtures";
 
 // Roadmap P4 J (0062): watch_folder_shares, shared_folder_view, admin share RPCs.
 const anon = createClient<Database>(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
@@ -11,12 +12,15 @@ const anon = createClient<Database>(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABA
 const created: TestUser[] = [];
 afterAll(async () => {
   while (created.length) await deleteTestUser(created.pop()!.id);
+  await cat.cleanup();
 });
 const token = () => randomBytes(32).toString("base64url");
-let variants: string[] = [];
+// Own fixture products (P4 review I4).
+let cat: FixtureCatalog;
+const variants: string[] = [];
 beforeAll(async () => {
-  const { data } = await admin.from("variant_current_price").select("variant_id").not("price", "is", null).limit(3);
-  variants = (data ?? []).map((r) => r.variant_id);
+  cat = await createFixtureCatalog("fshare");
+  for (let i = 0; i < 3; i++) variants.push((await cat.product({ price: 200_000 + i * 1_000 })).variantId);
 });
 
 async function sharedFolder(o: Record<string, unknown> = {}) {

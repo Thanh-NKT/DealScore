@@ -1,23 +1,24 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { evaluateWatches } from "@/lib/alerts/evaluate";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
+import { createFixtureCatalog, type FixtureCatalog } from "./fixtures";
 
 const created: TestUser[] = [];
 afterEach(async () => {
   while (created.length) await deleteTestUser(created.pop()!.id);
 });
 
+// A fresh fixture variant per test (P4 review I4): never edits a pre-existing catalog row.
+let cat: FixtureCatalog;
+beforeAll(async () => {
+  cat = await createFixtureCatalog("evaluate");
+});
+afterAll(async () => {
+  await cat.cleanup();
+});
 async function freshVariant() {
-  const { data } = await admin
-    .from("variant_current_price")
-    .select("variant_id, price")
-    .eq("in_stock", true)
-    .not("price", "is", null)
-    .limit(1)
-    .single();
-  // Seed data may be older than 48 hours — refresh it so it isn't treated as stale.
-  await admin.from("variant_current_price").update({ observed_at: new Date().toISOString() }).eq("variant_id", data!.variant_id);
-  return { variantId: data!.variant_id, price: Number(data!.price) };
+  const p = await cat.product({ price: 1_000_000 });
+  return { variantId: p.variantId, price: p.price };
 }
 
 describe("evaluateWatches", () => {

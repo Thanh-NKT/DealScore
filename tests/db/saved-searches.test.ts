@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
+import { createFixtureCatalog, type FixtureCatalog } from "./fixtures";
 import { SAVED_PARAMS_FIXTURES } from "../lib/saved-search/fixtures";
 import { parseSavedParams } from "@/lib/saved-search/params";
 import { searchProducts, searchProductsWith } from "@/lib/search";
@@ -8,16 +9,19 @@ import { searchProducts, searchProductsWith } from "@/lib/search";
 const created: TestUser[] = [];
 afterAll(async () => {
   while (created.length) await deleteTestUser(created.pop()!.id);
+  await cat.cleanup();
 });
 async function user() {
   const u = await createTestUser();
   created.push(u);
   return u;
 }
-let productIds: string[] = [];
+// Own fixture products (P4 review I4).
+let cat: FixtureCatalog;
+const productIds: string[] = [];
 beforeAll(async () => {
-  const { data } = await admin.from("products").select("id").limit(3);
-  productIds = (data ?? []).map((p) => p.id);
+  cat = await createFixtureCatalog("ssearch");
+  for (let i = 0; i < 3; i++) productIds.push((await cat.product({ price: 1_000 + i })).productId);
 });
 
 async function insert(u: TestUser, params: Record<string, unknown>, name = "SSD") {

@@ -46,7 +46,7 @@ async function conversion(o: { order: string; item: string; status: string; at: 
 }
 
 beforeAll(async () => {
-  const { data: c } = await admin.from("categories").select("id, slug").limit(1).single();
+  const { data: c } = await admin.from("categories").select("id, slug").order("slug").limit(1).single();
   const { data: p } = await admin.from("products")
     .insert({ canonical_name: `Aff ${tag}`, brand: "Test", status: "verified", slug: `test-${tag}`, category_id: c!.id })
     .select("id").single();

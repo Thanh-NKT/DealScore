@@ -10,7 +10,7 @@ let variantId: string;
 let listingId: string;
 
 beforeAll(async () => {
-  const { data: c } = await admin.from("categories").select("id").limit(1).single();
+  const { data: c } = await admin.from("categories").select("id").order("slug").limit(1).single();
   const { data: p, error } = await admin
     .from("products")
     .insert({ canonical_name: `Loa card ${tag}`, brand: "Sony", status: "verified", slug: `test-${tag}`, category_id: c!.id })

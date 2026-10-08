@@ -31,7 +31,7 @@ function row(o: Record<string, unknown> = {}) {
 }
 
 beforeAll(async () => {
-  const { data: offer } = await admin.from("offers").select("id").limit(1).single();
+  const { data: offer } = await admin.from("offers").select("id").order("id").limit(1).single();
   offerId = offer!.id;
   const { data: click } = await admin.from("click_events").insert({ offer_id: offerId, source: "web" }).select("id").single();
   clickId = click!.id;

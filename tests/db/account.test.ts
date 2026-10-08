@@ -87,7 +87,7 @@ describe("0005 — RLS and column privileges", () => {
 describe("0005 — watches.channels", () => {
   it("rejects unknown channels", async () => {
     const u = await user();
-    const { data: variant } = await admin.from("product_variants").select("id, product_id").limit(1).single();
+    const { data: variant } = await admin.from("product_variants").select("id, product_id").order("id").limit(1).single();
     const { error } = await admin.from("watches").insert({
       user_id: u.id,
       product_id: variant!.product_id,

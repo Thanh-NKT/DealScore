@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { EmailMessage } from "@/lib/email";
 import { admin, createTestUser, deleteTestUser, type TestUser } from "./helpers";
+import { createFixtureCatalog, type FixtureCatalog } from "./fixtures";
 
 const sentMessages: EmailMessage[] = [];
 /** Resend error code the next send fails with (once). */
@@ -26,6 +27,15 @@ vi.mock("@/lib/observability", () => ({ reportError: (...a: unknown[]) => report
 const { evaluateWatches } = await import("@/lib/alerts/evaluate");
 const { dispatchDueDeliveries, deliveryIdempotencyKey } = await import("@/lib/alerts/dispatch");
 
+// Own fixture products (P4 review I4); every dispatch / claim is scoped to the test's user.
+let cat: FixtureCatalog;
+beforeAll(async () => {
+  cat = await createFixtureCatalog("dispatch");
+});
+afterAll(async () => {
+  await cat.cleanup();
+});
+
 const created: TestUser[] = [];
 afterEach(async () => {
   vi.unstubAllEnvs();
@@ -38,16 +48,9 @@ afterEach(async () => {
 async function userWithAlert() {
   const u = await createTestUser();
   created.push(u);
-  const { data: v } = await admin
-    .from("variant_current_price")
-    .select("variant_id, price")
-    .eq("in_stock", true)
-    .not("price", "is", null)
-    .limit(1)
-    .single();
-  await admin.from("variant_current_price").update({ observed_at: new Date().toISOString() }).eq("variant_id", v!.variant_id);
-  await u.client.from("watches").insert({ variant_id: v!.variant_id, target_price: Number(v!.price) + 1000 });
-  await evaluateWatches({ now: new Date(), variantIds: [v!.variant_id] }, admin);
+  const v = await cat.product({ price: 1_000_000 });
+  await u.client.from("watches").insert({ variant_id: v.variantId, target_price: v.price + 1000 });
+  await evaluateWatches({ now: new Date(), variantIds: [v.variantId] }, admin);
   return u;
 }
 
@@ -65,7 +68,7 @@ describe("dispatchDueDeliveries (email)", () => {
     vi.stubEnv("UNSUBSCRIBE_SECRET", "test-secret");
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     const u = await userWithAlert();
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     expect(await statusesOf(u.id)).toEqual([["sent", null]]);
   });
 
@@ -73,7 +76,7 @@ describe("dispatchDueDeliveries (email)", () => {
     vi.stubEnv("UNSUBSCRIBE_SECRET", "test-secret");
     const u = await userWithAlert();
     await admin.from("watches").update({ status: "paused" }).eq("user_id", u.id);
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     expect(await statusesOf(u.id)).toEqual([["skipped", "watch_inactive"]]);
   });
 });
@@ -116,7 +119,7 @@ describe("dispatchDueDeliveries: send, then bookkeeping (at-least-once)", () => 
     const u = await userWithAlert();
     const [before] = await deliveriesOf(u.id);
 
-    const stats = await dispatchDueDeliveries({ now: new Date() }, clientFailingMarkSent());
+    const stats = await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, clientFailingMarkSent());
     expect(stats).toMatchObject({ sent: 1, retried: 0, failed: 0 });
     expect(sentMessages).toHaveLength(1);
     expect(sentMessages[0].idempotencyKey).toBe(deliveryIdempotencyKey([before.id]));
@@ -124,7 +127,7 @@ describe("dispatchDueDeliveries: send, then bookkeeping (at-least-once)", () => 
     // Still 'sending' (not 'pending'): an immediate next run does not send it again.
     const [row] = await deliveriesOf(u.id);
     expect(row.status).toBe("sending");
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     expect(sentMessages).toHaveLength(1);
   });
 
@@ -137,12 +140,16 @@ describe("dispatchDueDeliveries: send, then bookkeeping (at-least-once)", () => 
     const stale = new Date(Date.now() - 16 * 60_000).toISOString();
     await admin.from("alert_deliveries").update({ status: "sending", claimed_at: stale, attempts: 0 }).eq("id", d.id);
 
-    const { data: claimed } = await admin.rpc("claim_due_deliveries", { p_now: new Date().toISOString(), p_limit: 999 });
+    const { data: claimed } = await admin.rpc("claim_due_deliveries_for_users", {
+      p_now: new Date().toISOString(),
+      p_limit: 999,
+      p_user_ids: [u.id],
+    });
     const mine = (claimed ?? []).find((c) => c.delivery_id === d.id);
     expect(mine?.attempts).toBe(1);
     // Released again for the dispatcher run below.
     await admin.from("alert_deliveries").update({ status: "sending", claimed_at: stale }).eq("id", d.id);
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     const [row] = await deliveriesOf(u.id);
     expect(row).toMatchObject({ status: "sent", attempts: 3 });
     expect(sentMessages.at(-1)?.idempotencyKey).toBe(deliveryIdempotencyKey([d.id]));
@@ -155,7 +162,7 @@ describe("dispatchDueDeliveries: send, then bookkeeping (at-least-once)", () => 
     const stale = new Date(Date.now() - 16 * 60_000).toISOString();
     await admin.from("alert_deliveries").update({ status: "sending", claimed_at: stale, attempts: 2 }).eq("id", d.id);
 
-    await dispatchDueDeliveries({ now: new Date() }, admin);
+    await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     const [row] = await deliveriesOf(u.id);
     expect(row).toMatchObject({ status: "failed", attempts: 3 });
     expect(sentMessages).toHaveLength(0);
@@ -168,7 +175,7 @@ describe("dispatchDueDeliveries: invalid_idempotent_request", () => {
     vi.stubEnv("UNSUBSCRIBE_SECRET", "test-secret");
     const u = await userWithAlert();
     nextSendErrorCode = "invalid_idempotent_request";
-    const stats = await dispatchDueDeliveries({ now: new Date() }, admin);
+    const stats = await dispatchDueDeliveries({ now: new Date(), userIds: [u.id] }, admin);
     expect(stats).toMatchObject({ sent: 0, failed: 1, retried: 0 });
     const [row] = await deliveriesOf(u.id);
     expect(row).toMatchObject({ status: "failed", attempts: 1 });

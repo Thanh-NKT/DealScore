@@ -9,7 +9,7 @@ afterEach(async () => {
 
 let variantIds: string[] = [];
 beforeAll(async () => {
-  const { data } = await admin.from("variant_current_price").select("variant_id").eq("in_stock", true).limit(3);
+  const { data } = await admin.from("variant_current_price").select("variant_id").eq("in_stock", true).order("variant_id").limit(3);
   variantIds = (data ?? []).map((r) => r.variant_id);
 });
 
