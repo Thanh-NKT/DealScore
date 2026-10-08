@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Database } from "@/lib/database.types";
-import { admin, SUPABASE_URL } from "./helpers";
+import { admin, createTestUser, deleteTestUser, SUPABASE_URL, type TestUser } from "./helpers";
 
 // Catalog-wide privilege guard (review-db M17). privilege_report() lists every public table anon /
 // authenticated can write and every SECURITY DEFINER function they can execute. A new entry must be added
@@ -52,8 +52,19 @@ describe("service-role-only admin RPCs", () => {
   const anon = createClient<Database>(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  let user: TestUser;
+  beforeAll(async () => {
+    user = await createTestUser();
+  });
+  afterAll(async () => {
+    await deleteTestUser(user.id);
+  });
   it.each(SERVICE_ONLY_RPCS)("%s refuses anon", async (fn, args) => {
     const { error } = await anon.rpc(fn as never, args as never);
+    expect(error?.code).toBe("42501");
+  });
+  it.each(SERVICE_ONLY_RPCS)("%s refuses a signed-in user", async (fn, args) => {
+    const { error } = await user.client.rpc(fn as never, args as never);
     expect(error?.code).toBe("42501");
   });
 });
