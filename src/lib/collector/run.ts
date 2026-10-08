@@ -16,11 +16,13 @@ import {
 import { saveListingExtras } from "@/lib/listing-extras";
 import { refreshEffectivePrices } from "@/lib/vouchers/refresh-effective";
 import { reportError } from "@/lib/observability";
+import { detectPriceAnomalies } from "@/lib/anomalies/detect";
 
 /**
  * One collector run (1.10): Collector → Price DB → Deal Engine → Alert Engine.
  *
  *   pick due listings → fetch each from its marketplace source (one marketplace down never stops the others) → record_observations (one transaction per listing)
+ *   → queue price anomalies of this run's observations (src/lib/anomalies, never fails the run)
  *   → refresh today's rollup → recompute Deal Scores → evaluate Watches of the touched variants.
  *
  * Follows the §6 contract of the Watch & Alert spec. Per-item failures are counted, never thrown;
@@ -38,6 +40,7 @@ export interface CollectorDeps {
   configured: () => boolean;
   evaluate: typeof evaluateWatches;
   loadCandidates: (client: SupabaseClient<Database>, poolSize: number) => Promise<CollectorListing[]>;
+  detect: typeof detectPriceAnomalies;
 }
 
 async function loadCandidates(client: SupabaseClient<Database>, poolSize: number): Promise<CollectorListing[]> {
@@ -69,6 +72,7 @@ const defaultDeps: CollectorDeps = {
   configured: () => configuredMarketplaces().length > 0,
   evaluate: evaluateWatches,
   loadCandidates,
+  detect: detectPriceAnomalies,
 };
 
 export interface MarketplaceRunStats {
@@ -155,7 +159,7 @@ export async function runCollector(
   client: SupabaseClient<Database> = createAdminClient(),
   deps: Partial<CollectorDeps> = {},
 ): Promise<CollectorResult> {
-  const { fetchItem, configured, evaluate, loadCandidates: load } = { ...defaultDeps, ...deps };
+  const { fetchItem, configured, evaluate, loadCandidates: load, detect } = { ...defaultDeps, ...deps };
   if (!configured()) return { skipped: "not_configured" };
 
   const now = opts.now ?? new Date();
@@ -285,6 +289,15 @@ export async function runCollector(
   if (variantIds.length > 0) {
     const { error } = await client.from("collector_runs").update({ pending_variant_ids: variantIds }).eq("id", run.id);
     if (error && errors.length < MAX_ERROR_MESSAGES) errors.push(`pending variants: ${error.message}`);
+  }
+  // Price anomalies among this run's observations (all observed after the run started). Queue only — the
+  // admin decides; a failure is reported, never an error of the run (not a marketplace error).
+  if (collected.length > 0) {
+    try {
+      await detect(client, { since: now });
+    } catch (err) {
+      reportError(err, { where: "runCollector.detectPriceAnomalies", runId: run.id });
+    }
   }
   let scored = variantIds.length === 0;
   // New prices (and vouchers) → new effective prices, before scores and alerts. Derived data:

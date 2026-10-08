@@ -27,6 +27,7 @@ vi.mock("@/lib/pricing/recompute-scores", () => ({ recomputeDealScores }));
 const status = await import("@/app/api/admin/status/route");
 const authorize = await import("@/app/api/admin/tiktok/authorize-url/route");
 const recompute = await import("@/app/api/admin/deal-scores/recompute/route");
+const scan = await import("@/app/api/admin/price-anomalies/scan/route");
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
@@ -168,5 +169,58 @@ describe("authorize-url audit failure", () => {
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
     expect(res.status).toBe(200);
     expect((await res.json()).url).toContain("svc");
+  });
+});
+
+describe("GET /api/admin/status anomalies", () => {
+  it("exposes the detection thresholds from the DealScore constants", async () => {
+    const c = await import("@/lib/anomalies/constants");
+    const body = await (await status.GET(req("/api/admin/status") as never)).json();
+    expect(body.anomalies).toEqual({
+      spikeRatio: c.ANOMALY_SPIKE_RATIO, dropRatio: c.ANOMALY_DROP_RATIO, baselineDays: c.ANOMALY_BASELINE_DAYS,
+      minBaselineObs: c.ANOMALY_MIN_BASELINE_OBS, scanMaxHours: c.ANOMALY_SCAN_MAX_HOURS,
+    });
+  });
+});
+
+describe("POST /api/admin/price-anomalies/scan", () => {
+  const post = (body: unknown, auth?: string) =>
+    scan.POST(req("/api/admin/price-anomalies/scan", { method: "POST", body: JSON.stringify(body) }, auth) as never);
+
+  it("401 without the right secret, and no RPC", async () => {
+    expect((await post({ hours: 24 }, "Bearer x")).status).toBe(401);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("400 for hours 0, 169, a string or a fraction", async () => {
+    for (const hours of [0, 169, "24", 1.5, null]) {
+      const res = await post({ hours });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "bad_request" });
+    }
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("scans the last N hours with the thresholds and returns { inserted }", async () => {
+    rpc.mockImplementation(async (name: string) => ({ data: name === "detect_price_anomalies" ? 3 : null, error: null }) as never);
+    const before = Date.now();
+    const res = await post({ hours: 24 });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(await res.json()).toEqual({ inserted: 3 });
+    const [name, args] = rpc.mock.calls[0] as unknown as [string, Record<string, unknown>];
+    expect(name).toBe("detect_price_anomalies");
+    expect(args).toMatchObject({ p_baseline_days: 30, p_spike_ratio: 3, p_drop_ratio: 0.4, p_min_baseline_obs: 5 });
+    expect(args).not.toHaveProperty("p_offer_ids");
+    const since = Date.parse(args.p_since as string);
+    expect(before - since).toBeGreaterThanOrEqual(24 * 3_600_000 - 5_000);
+    expect(before - since).toBeLessThanOrEqual(24 * 3_600_000 + 5_000);
+  });
+
+  it("500 internal when the RPC fails", async () => {
+    rpc.mockImplementation(async () => ({ data: null, error: { message: "boom" } }) as never);
+    const res = await post({ hours: 1 });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "internal" });
   });
 });

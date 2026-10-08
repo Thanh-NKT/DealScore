@@ -12,6 +12,9 @@ import { effectivePriceFor } from "@/lib/vouchers/effective";
 import { listVouchersForListing } from "@/lib/vouchers/store";
 import { admin } from "./helpers";
 
+const reportError = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/observability", async (orig) => ({ ...(await orig<typeof import("@/lib/observability")>()), reportError }));
+
 const tag = randomUUID().slice(0, 8);
 const extIds: string[] = [];
 const runIds: string[] = [];
@@ -312,5 +315,54 @@ describe("runCollector", () => {
     expect(l!.status).toBe("active");
     expect(l!.last_attempt_at).not.toBeNull();
     expect(new Date(l!.last_attempt_at!).getTime()).toBeGreaterThanOrEqual(before - 5_000);
+  });
+
+  it("queues a price anomaly among this run's observations (after record_observations, before the rollup)", async () => {
+    const l = await makeListing(2_000_000);
+    const { data: offer } = await admin.from("offers").select("id").eq("listing_id", l.id).eq("external_model_id", "m1").single();
+    // Ten days of a stable price for the offer: the baseline.
+    await admin.from("price_observations").insert(
+      Array.from({ length: 10 }, (_, i) => ({
+        offer_id: offer!.id, price: 2_000_000, observed_at: new Date(Date.now() - (i + 1) * 86_400_000).toISOString(), source: "api",
+      })),
+    );
+    const r = await runCollector({}, admin, deps([l], async () => detail(20_000_000)));
+    if ("skipped" in r) throw new Error("unexpected skip");
+    runIds.push(r.runId);
+    const { data: obs } = await admin.from("price_observations").select("id").eq("collector_run_id", r.runId).eq("offer_id", offer!.id).single();
+    const { data: anomalies } = await admin.from("price_anomalies").select("kind, observation_id, status").eq("offer_id", offer!.id);
+    expect(anomalies).toEqual([{ kind: "spike", observation_id: obs!.id, status: "open" }]);
+  });
+
+  it("a detection failure is reported and never fails or pollutes the run", async () => {
+    const l = await makeListing(2_000_000);
+    const order: string[] = [];
+    const detect = vi.fn(async () => {
+      order.push("detect");
+      throw new Error("detector down");
+    });
+    const d = { ...deps([l], async () => detail(1_900_000)), detect };
+    reportError.mockClear();
+    const r = await runCollector({}, admin, d);
+    if ("skipped" in r) throw new Error("unexpected skip");
+    runIds.push(r.runId);
+    expect(detect).toHaveBeenCalledTimes(1);
+    expect((detect.mock.calls[0] as unknown[])[0]).toBe(admin);
+    expect(r).toMatchObject({ ok: 1, failed: 0 });
+    const { data: run } = await admin.from("collector_runs").select("finished_at, error_summary, started_at").eq("id", r.runId).single();
+    expect(run!.finished_at).not.toBeNull();
+    expect(run!.error_summary).toBeNull();
+    expect(reportError).toHaveBeenCalledWith(expect.objectContaining({ message: "detector down" }), expect.objectContaining({ where: "runCollector.detectPriceAnomalies", runId: r.runId }));
+    const since = ((detect.mock.calls[0] as unknown[])[1] as { since: Date }).since;
+    expect(since.getTime()).toBe(new Date(run!.started_at).getTime());
+  });
+
+  it("does not run detection when nothing was collected", async () => {
+    const l = await makeListing(2_000_000);
+    const detect = vi.fn(async () => 0);
+    const r = await runCollector({}, admin, { ...deps([l], async () => { throw new MarketplaceItemNotFoundError("nope"); }), detect });
+    if ("skipped" in r) throw new Error("unexpected skip");
+    runIds.push(r.runId);
+    expect(detect).not.toHaveBeenCalled();
   });
 });

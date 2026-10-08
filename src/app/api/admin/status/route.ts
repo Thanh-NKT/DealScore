@@ -5,6 +5,7 @@ import { MARKETPLACES } from "@/lib/marketplaces";
 import { getSource } from "@/lib/marketplaces/sources";
 import { siteUrl } from "@/lib/site-url";
 import { STALE_HOURS } from "@/lib/watch/constants";
+import { ANOMALY_SCAN_MAX_HOURS, ANOMALY_THRESHOLDS } from "@/lib/anomalies/constants";
 
 /**
  * Collector cadence for the admin "Chất lượng dữ liệu" page, read from the constants (never copied there).
@@ -15,6 +16,9 @@ const COLLECTOR_STATUS = {
   watchedPriority: 1,
   staleHours: STALE_HOURS,
 };
+
+/** Price-anomaly detection thresholds (0051): the admin "/prices" page shows them read-only. */
+const ANOMALY_STATUS = { ...ANOMALY_THRESHOLDS, scanMaxHours: ANOMALY_SCAN_MAX_HOURS };
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +37,7 @@ export async function GET(request: NextRequest) {
     };
   });
   return NextResponse.json(
-    { marketplaces, cronSecretSet: Boolean(process.env.CRON_SECRET), siteUrl: siteUrl(), collector: COLLECTOR_STATUS },
+    { marketplaces, cronSecretSet: Boolean(process.env.CRON_SECRET), siteUrl: siteUrl(), collector: COLLECTOR_STATUS, anomalies: ANOMALY_STATUS },
     { headers: NO_STORE },
   );
 }

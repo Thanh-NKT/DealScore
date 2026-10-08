@@ -51,6 +51,11 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_merge_preview", { p_source_id: Z, p_target_id: Z }],
   ["admin_merge_products", { p_source_id: Z, p_target_id: Z, p: {} }],
   ["admin_repoint_variant_watches", { p_from_variant_ids: [Z], p_to_variant_id: Z }],
+  // 0051 price anomalies.
+  ["detect_price_anomalies", { p_since: "2026-10-01T00:00:00Z", p_baseline_days: 30, p_spike_ratio: 3, p_drop_ratio: 0.4, p_min_baseline_obs: 5 }],
+  ["admin_price_anomalies", {}],
+  ["admin_price_anomaly_counts", {}],
+  ["admin_review_price_anomalies", { p_ids: [Z], p_decision: "keep" }],
 ];
 
 describe("service-role-only admin RPCs", () => {

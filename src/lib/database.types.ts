@@ -944,6 +944,69 @@ export type Database = {
           },
         ]
       }
+      price_anomalies: {
+        Row: {
+          baseline_obs: number
+          baseline_price: number
+          detected_at: string
+          id: string
+          kind: string
+          observation_id: number
+          observed_at: string
+          offer_id: string
+          price: number
+          ratio: number
+          review_note: string | null
+          reviewed_at: string | null
+          status: string
+        }
+        Insert: {
+          baseline_obs: number
+          baseline_price: number
+          detected_at?: string
+          id?: string
+          kind: string
+          observation_id: number
+          observed_at: string
+          offer_id: string
+          price: number
+          ratio: number
+          review_note?: string | null
+          reviewed_at?: string | null
+          status?: string
+        }
+        Update: {
+          baseline_obs?: number
+          baseline_price?: number
+          detected_at?: string
+          id?: string
+          kind?: string
+          observation_id?: number
+          observed_at?: string
+          offer_id?: string
+          price?: number
+          ratio?: number
+          review_note?: string | null
+          reviewed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_anomalies_observation_id_observed_at_fkey"
+            columns: ["observation_id", "observed_at"]
+            isOneToOne: true
+            referencedRelation: "price_observations"
+            referencedColumns: ["id", "observed_at"]
+          },
+          {
+            foreignKeyName: "price_anomalies_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_observations: {
         Row: {
           collector_run_id: string | null
@@ -1947,6 +2010,49 @@ export type Database = {
         Returns: Json
       }
       admin_overview_counts: { Args: { p_stale_hours?: number }; Returns: Json }
+      admin_price_anomalies: {
+        Args: {
+          p_kind?: string
+          p_limit?: number
+          p_marketplace?: string
+          p_offer_id?: string
+          p_offset?: number
+          p_status?: string
+        }
+        Returns: {
+          baseline_obs: number
+          baseline_price: number
+          category_slug: string
+          current_price: number
+          detected_at: string
+          id: string
+          kind: string
+          listing_id: string
+          listing_status: string
+          listing_title: string
+          listing_url: string
+          marketplace: string
+          observation_id: number
+          observation_valid: boolean
+          observed_at: string
+          offer_id: string
+          price: number
+          product_id: string
+          product_name: string
+          product_slug: string
+          product_status: string
+          ratio: number
+          review_note: string
+          reviewed_at: string
+          seller_name: string
+          status: string
+          total_count: number
+          variant_id: string
+          variant_key: string
+          watched: boolean
+        }[]
+      }
+      admin_price_anomaly_counts: { Args: never; Returns: Json }
       admin_product_snapshot: { Args: { p_product_id: string }; Returns: Json }
       admin_promote_draft: {
         Args: { p: Json; p_product_id: string }
@@ -1974,6 +2080,10 @@ export type Database = {
           p_decision: string
           p_variant_id?: string
         }
+        Returns: Json
+      }
+      admin_review_price_anomalies: {
+        Args: { p_decision: string; p_ids: string[]; p_note?: string }
         Returns: Json
       }
       admin_run_counter: { Args: { p: Json }; Returns: number }
@@ -2066,6 +2176,17 @@ export type Database = {
           wait_correct: number
           wait_n: number
         }[]
+      }
+      detect_price_anomalies: {
+        Args: {
+          p_baseline_days: number
+          p_drop_ratio: number
+          p_min_baseline_obs: number
+          p_offer_ids?: string[]
+          p_since: string
+          p_spike_ratio: number
+        }
+        Returns: number
       }
       extension_contribution_begin: {
         Args: { p_contributor: string; p_limit?: number }
