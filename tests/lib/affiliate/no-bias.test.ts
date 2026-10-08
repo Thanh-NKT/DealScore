@@ -16,7 +16,15 @@ const GUARDED = [
 ];
 
 /** SQL functions that rank or pick products; their LATEST definition must not read affiliate data either. */
-const RANKING_FUNCTIONS = ["search_products", "price_drop_radar", "trending_products", "refresh_variant_current_price"];
+const RANKING_FUNCTIONS = [
+  "search_products",
+  "price_drop_radar",
+  "trending_products",
+  "refresh_variant_current_price",
+  // P4 discovery alerts: what is recorded / announced.
+  "record_saved_search_evaluation",
+  "record_demand_follow_check",
+];
 const MIGRATIONS = "supabase/migrations";
 const FORBIDDEN = /affiliate_offers|conversions|commission/i;
 
