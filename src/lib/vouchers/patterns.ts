@@ -142,7 +142,11 @@ export function voucherPatterns(h: SellerVoucherHistory, now: Date): VoucherPatt
   return {
     status: "patterns",
     checkDays: h.checkDays,
-    patterns: patterns.slice(0, VOUCHER_PATTERN_MAX_SHOWN).map(({ value: _value, ...p }) => p),
+    patterns: patterns.slice(0, VOUCHER_PATTERN_MAX_SHOWN).map((p) => {
+      const out: VoucherPattern & { value?: number } = { ...p };
+      delete out.value;
+      return out;
+    }),
   };
 }
 

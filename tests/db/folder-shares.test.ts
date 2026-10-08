@@ -44,7 +44,12 @@ async function sharedFolder(o: Record<string, unknown> = {}) {
 
 function keysDeep(v: unknown, out = new Set<string>()): Set<string> {
   if (Array.isArray(v)) v.forEach((x) => keysDeep(x, out));
-  else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) (out.add(k), keysDeep(x, out));
+  else if (v && typeof v === "object") {
+    for (const [k, x] of Object.entries(v)) {
+      out.add(k);
+      keysDeep(x, out);
+    }
+  }
   return out;
 }
 
