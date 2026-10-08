@@ -19,6 +19,10 @@ type Client = SupabaseClient<Database>;
 /**
  * Demand-follow pass of the discovery cron (spec §3.2): re-run each waiting keyword the way the user searched it
  * (intent on, never preferences); one alert when it now finds a product it did not have, then the follow is done.
+ *
+ * A follow whose search or record RPC throws still moves its last_checked_at (retried after
+ * DEMAND_FOLLOW_CHECK_INTERVAL_HOURS): a row that never moves would head the queue every run and starve the others
+ * (same rule as the saved-search evaluator).
  */
 export async function checkDemandFollows(
   opts: { now: Date; deadline?: number; limit?: number },
@@ -33,6 +37,7 @@ export async function checkDemandFollows(
     .is("users.deleted_at", null)
     .or(`last_checked_at.is.null,last_checked_at.lt.${dueBefore}`)
     .order("last_checked_at", { ascending: true, nullsFirst: true })
+    .order("id")
     .limit(Math.min(opts.limit ?? DEMAND_FOLLOW_CHECK_BATCH, DEMAND_FOLLOW_CHECK_BATCH));
   if (error) throw new Error(`Failed to read demand follows: ${error.message}`);
 
@@ -87,6 +92,13 @@ export async function checkDemandFollows(
     } catch (err) {
       stats.errors++;
       console.error(`checkDemandFollows: error on follow ${f.id}:`, err instanceof Error ? err.message : err);
+      // Back off. Only a still-waiting follow moves (a concurrent found/expired/unfollow wins).
+      const { error: tErr } = await client
+        .from("demand_follows")
+        .update({ last_checked_at: opts.now.toISOString() })
+        .eq("id", f.id)
+        .eq("status", "waiting");
+      if (tErr) console.error(`checkDemandFollows: could not move follow ${f.id}:`, tErr.message);
     }
   }
   return stats;
