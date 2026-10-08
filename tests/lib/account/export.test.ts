@@ -190,7 +190,9 @@ describe("buildAccountExport", () => {
     expect(out.data_reports).toEqual([]);
   });
   it("watches carry the opt-in hike flag and the Đã mua snapshot, never the engine state", () => {
-    expect(out.watches[0]).toMatchObject({ notify_price_hike: false, purchased_at: null, purchased_price: null });
+    expect(out.watches[0]).toMatchObject({ notify_price_hike: false, purchased_at: null, purchased_price: null, purchased_median_days: null });
+    const done = buildAccountExport({ ...input, watches: [{ ...input.watches[0], purchased_median_days: 27 }] } as never);
+    expect(done.watches[0].purchased_median_days).toBe(27);
     expect(out.watches[0]).not.toHaveProperty("hike_active");
   });
   it("settings in NotificationSettings shape", () => {

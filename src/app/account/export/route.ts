@@ -115,6 +115,7 @@ export async function GET() {
       .select("kind, message, created_at, status")
       .eq("user_id", user.id)
       .order("created_at")
+      .order("id") // unique tie-break: paging must not skip or repeat rows with the same created_at
       .range(from, from + 999);
     if (error) throw new Error(`Data export: failed to read data reports: ${error.message}`);
     dataReports.push(...(data ?? []));

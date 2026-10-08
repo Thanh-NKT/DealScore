@@ -53,6 +53,8 @@ export interface AccountExport {
     purchased_at: string | null;
     purchased_price: number | null;
     purchased_median_30d: number | null;
+    /** Days of history behind purchased_median_30d (null = no median). */
+    purchased_median_days: number | null;
   }>;
   /** The user's named watch folders. */
   folders: Array<{ id: string; name: string; sort_order: number; created_at: string }>;
@@ -166,6 +168,7 @@ export function buildAccountExport(input: {
       purchased_at: w.purchased_at ?? null,
       purchased_price: num(w.purchased_price),
       purchased_median_30d: num(w.purchased_median_30d),
+      purchased_median_days: w.purchased_median_days ?? null,
     })),
     folders: (input.folders ?? []).map((f) => ({ id: f.id, name: f.name, sort_order: f.sort_order, created_at: f.created_at })),
     alert_events: input.alertEvents.map((e) => ({
