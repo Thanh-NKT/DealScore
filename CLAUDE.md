@@ -77,7 +77,8 @@ Never mix these up; the choice encodes the security model.
 - `src/lib/supabase/public.ts` — **cookie-less** anon client (no session, RLS as anonymous). Only for
   public catalog reads inside `unstable_cache` (product page vouchers in `lib/product/page-data.ts`,
   OG image data in `lib/product/og-data.ts`, `/deal-score` backtest aggregates via the `deal_score_accuracy` RPC in
-  `lib/transparency/load.ts`). Never for user-bound data. Pages stay `force-dynamic`
+  `lib/transparency/load.ts`), and the merged-slug redirect table read by `src/proxy.ts` (a per-process
+  stale-while-revalidate cache, `src/lib/product/slug-redirect-proxy.ts`, not `unstable_cache`). Never for user-bound data. Pages stay `force-dynamic`
   (nonce CSP); only these data reads are shared. `/api/vouchers/refresh` expires tag `vouchers`.
 - `src/lib/supabase/admin.ts` — **service-role** client, **bypasses RLS**. Trusted server code
   only (collector, cron, admin). **Never import into a Client Component** (enforced by
@@ -96,7 +97,7 @@ Never mix these up; the choice encodes the security model.
   `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`, `scripts/tiktok-authorize.ts`, `src/app/api/admin/*/route.ts`,
   `src/actions/report.ts` (`rate_hit` + `submit_data_report`, "Góp ý dữ liệu"),
   P4: `src/lib/saved-search/evaluate.ts`, `src/lib/demand-follow/check.ts`, `src/app/api/cron/discovery-alerts/route.ts`,
-  `scripts/run-discovery-alerts.ts`, `src/actions/saved-search.ts` (baseline ngay sau khi lưu, `evaluateSavedSearches({ ids: [id] })` trong `after()`), `src/actions/demand-follow.ts` (upsert `demand_follows`), `src/actions/share-folder.ts`
+  `scripts/run-discovery-alerts.ts`, `src/actions/saved-search.ts` (baseline ngay sau khi lưu **và** sau khi sửa điều kiện, `evaluateSavedSearches({ ids: [id] })` trong `after()`), `src/actions/demand-follow.ts` (upsert `demand_follows`), `src/actions/share-folder.ts`
   (insert / rotate `watch_folder_shares`, token from the server only), `src/lib/sellers/profile-job.ts`, `src/lib/seasons/job.ts`,
   `src/app/api/cron/insights/route.ts`, `scripts/run-insights.ts`, `scripts/seed-roadmap-p4.ts`.
   **Admin:** app riêng `Admin-DealScore` (một người dùng) gọi RPC `admin_*` (migration 0021, ghi `admin_audit`) và `/api/admin/*` (bảo vệ bằng `ADMIN_API_SECRET`).
@@ -112,6 +113,16 @@ Never mix these up; the choice encodes the security model.
   không; `tests/lib/alerts/scenarios.test.ts` là cam kết "không spam" — đừng sửa kỳ vọng ở đó để test xanh.
   Ngưỡng nằm ở `src/lib/watch/constants.ts` (và `50` trong trigger `watches_enforce_limit`). Truy vấn có thể
   vượt 1.000 dòng phải chia lô — PostgREST cắt âm thầm (xem `src/lib/watch/snapshot.ts`).
+- **Discovery alerts (roadmap P4):** hai nguồn alert ngoài Watch — tìm kiếm đã lưu (`saved_searches` + `saved_search_hits`,
+  `src/lib/saved-search/`, hàm thuần `decideSavedSearch()`) và theo dõi nhu cầu (`demand_follows`, `src/lib/demand-follow/`,
+  `decideDemandFollow()`). Job `dealscore-discovery-alerts` (`/api/cron/discovery-alerts`) chỉ **ghi** `alert_events` (đúng một nguồn:
+  `watch_id` / `saved_search_id` / `demand_follow_id`, 0061) + `alert_deliveries` qua RPC `record_saved_search_evaluation` /
+  `record_demand_follow_check`; gửi đi vẫn là dispatch chung của `dealscore-alerts` (`claim_due_deliveries`; bản giới hạn theo user
+  `claim_due_deliveries_for_users` 0068 cho test / gửi lại có chủ đích), cùng retry, giờ yên lặng, digest, hủy đăng ký. Không bao giờ ghi
+  `watches` hay gọi `decideAlert()`. Baseline không bao giờ báo: lưu mới hoặc sửa `params` (trigger reset `initialized_at` +
+  `last_evaluated_at`, 0070) → baseline ngay. Dòng lỗi vẫn dời con trỏ (không chặn hàng đợi). Gộp sản phẩm mang hits / `known_product_ids`
+  sang sản phẩm đích (0073). Ngưỡng ở `constants.ts` của từng thư mục. Hợp đồng: `no-bias` (không đọc affiliate) và
+  `tests/lib/insights/no-feed.test.ts` (engine alert không đọc module / bảng insight A/G/H/K).
 - **Affiliate (1.5):** `/go` ghi click rồi redirect link `an_redir` với `sub_id = {clickHex}-{source}`
   (`src/lib/affiliate/link.ts`). Đơn hàng vào `conversions` qua RPC `upsert_conversions` từ API
   (`/api/cron/conversions`) hoặc CSV (`pnpm conversions:import`). Mọi hiểu biết về Shopee Affiliate API là
@@ -138,7 +149,8 @@ Never mix these up; the choice encodes the security model.
   `recomputeDealScores()` → `evaluateWatches()`. Chạy mọi sàn có nguồn (`configuredMarketplaces()` trong `src/lib/marketplaces/sources.ts`); một sàn sập chỉ dừng sàn đó.
   Backtest hằng tuần: `src/lib/pricing/backtest.ts` (thuần) → `backtest_runs`. `/api/health` cho uptime; Sentry chỉ
   bật khi có `SENTRY_DSN`; lỗi đã bắt trong cron gửi qua `reportError()`. Job pg_cron tên `dealscore-*` (đổi từ `kairo-*`
-  ở 0029: alerts, conversions, collector, backtest, sourcing, sourcing-demand, retention), đọc Vault `dealscore_app_url` /
+  ở 0029: alerts, conversions, collector, backtest, sourcing, sourcing-demand, retention; roadmap P4 thêm `discovery-alerts` 0060
+  và `insights` 0065 — lịch / route / lệnh chạy tay ở `supabase/README.md`), đọc Vault `dealscore_app_url` /
   `dealscore_cron_secret`; `admin_cron_status()` chỉ liệt kê `dealscore-*`.
 - **SEO (1.7):** `src/lib/seo/` (metadata, JSON-LD, sitemap — thuần). Canonical sản phẩm là `/{category}/{slug}`
   không query; draft là `noindex`. Trang danh mục `/{category}` và `/brand/{slug}`.
@@ -165,6 +177,11 @@ Never mix these up; the choice encodes the security model.
 - `src/lib/supabase/proxy.ts` — `updateSession()`, called from `src/proxy.ts` on every
   request to refresh the auth token. Do not insert logic between `createServerClient` and the
   `getUser()` call there.
+- **Proxy (`src/proxy.ts`):** thứ tự cố định — `/shared/{token}` sai định dạng → 404 ngay (không gọi DB) → GET/HEAD
+  `/{category}/{slug}` của sản phẩm đã gộp → HTTP 308 từ cache `product_slug_redirects` (không render, nên không cần nonce) →
+  đặt CSP lên request → `updateSession()` → CSP (+ header noindex / no-referrer / no-store cho `/shared`) lên response.
+  Đoạn đầu không phải danh mục: `RESERVED_FIRST_SEGMENTS` (`src/lib/product/slug-redirect-proxy.ts`); thêm route cấp cao nhất mới
+  thì thêm vào đó **và** vào `categories_slug_reserved` (migration mới) — `tests/lib/product/reserved-category-slugs.test.ts` kiểm cả hai.
 - **Security headers:** `src/lib/security/headers.ts`. HSTS / X-Frame-Options / … via `next.config.ts` `headers()`;
   the CSP (per-request nonce, `frame-ancestors 'none'`) only in `src/proxy.ts`, not on `/api/*`. A new inline
   `<script>` needs its sha256 in `script-src` (like `THEME_INIT_SCRIPT_HASH`); JSON-LD data blocks need nothing.
