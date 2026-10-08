@@ -23,6 +23,8 @@ interface PriceAlertCardProps {
   currentPath: string;
   /** The variant's daily rollup (already on the page): grounds the target in real history. */
   dailyPrices?: DailyPriceRow[];
+  /** The server's clock (ISO): server and client then compute the same evidence copy (no hydration mismatch). */
+  nowIso?: string;
 }
 
 const DEAL_SCORE_THRESHOLD = 75;
@@ -43,9 +45,11 @@ export function PriceAlertCard({
   isLoggedIn,
   currentPath,
   dailyPrices,
+  nowIso,
 }: PriceAlertCardProps) {
-  // One clock per mount: evidence is per VN calendar day, so render-to-render drift does not matter.
-  const [now] = useState(() => new Date());
+  // One clock per mount, taken from the server render: evidence is per VN calendar day, and a client clock read
+  // around VN midnight would render different copy than the server did.
+  const [now] = useState(() => (nowIso ? new Date(nowIso) : new Date()));
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 

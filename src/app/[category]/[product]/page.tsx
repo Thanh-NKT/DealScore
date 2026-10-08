@@ -343,6 +343,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               variantId={selectedVariantId}
               currentPath={currentPath}
               dailyPrices={dailyPrices}
+              nowIso={nowIso}
             />
           </section>
 
