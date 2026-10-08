@@ -74,6 +74,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   if (!data) {
     // A merged product's old slug (migration 0050): one 308 hop to the product it was merged into.
+    // src/proxy.ts answers the real HTTP 308 from its cached table; this per-slug lookup is the fallback for
+    // a merge newer than that cache (it streams, so it is a client-side redirect).
     const redirect = await loadSlugRedirect(await createClient(), productSlug);
     if (redirect) permanentRedirect(slugRedirectPath(redirect, query));
     notFound();

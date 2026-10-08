@@ -12,10 +12,15 @@ describe("slugRedirectPath", () => {
   it("keeps a variant id that is not in the map (it moved with its id)", () => {
     expect(slugRedirectPath(row, { variant: "kept" })).toBe("/dien-thoai/galaxy-s24?variant=kept");
   });
-  it("drops unknown parameters and empty values; no query → bare path", () => {
-    expect(slugRedirectPath(row, { range: "7", utm: "x" } as never)).toBe("/dien-thoai/galaxy-s24?range=7");
+  it("keeps every other parameter (utm_*, …) and drops an empty variant; no query → bare path", () => {
+    expect(slugRedirectPath(row, { range: "7", utm_source: "email" })).toBe("/dien-thoai/galaxy-s24?range=7&utm_source=email");
     expect(slugRedirectPath(row, {})).toBe("/dien-thoai/galaxy-s24");
     expect(slugRedirectPath(row, { variant: "" })).toBe("/dien-thoai/galaxy-s24");
+  });
+  it("accepts URLSearchParams (the proxy) and keeps repeated non-variant values", () => {
+    expect(slugRedirectPath(row, new URLSearchParams("variant=old1&tag=a&tag=b&variant=x"))).toBe(
+      "/dien-thoai/galaxy-s24?variant=new1&tag=a&tag=b",
+    );
   });
   it("takes the first value of a repeated parameter", () => {
     expect(slugRedirectPath(row, { variant: ["old1", "x"] } as never)).toBe("/dien-thoai/galaxy-s24?variant=new1");
