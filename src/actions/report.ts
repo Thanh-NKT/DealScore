@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { clientIp, networkPrefix, rateKeyHash } from "@/lib/rate-limit";
+import { clientIp, ipSaltConfigured, networkPrefix, rateKeyHash } from "@/lib/rate-limit";
 import { reportError } from "@/lib/observability";
 import {
   REPORT_DEDUP_HOURS,
@@ -21,7 +21,8 @@ export type ReportResult =
  * "Góp ý dữ liệu" from the product page — signed in or not. The reporter's id comes from the session only,
  * never from the input. Throttled per user (or per hashed client network for guests) and globally; a
  * throttle FAILURE refuses the report ("unavailable") rather than storing it unthrottled. No IP is stored:
- * the hashed network key lives only in rate_counters.
+ * the hashed network key lives only in rate_counters. The global key is hit only after the per-user / network
+ * hit passed — rate_hit counts every call, so a client over its own limit must not keep spending the global cap.
  */
 export async function submitDataReport(input: ReportInput): Promise<ReportResult> {
   const parsed = validateReport(input);
@@ -31,16 +32,22 @@ export async function submitDataReport(input: ReportInput): Promise<ReportResult
   const user = await getCurrentUser().catch(() => null);
   const supabase = createAdminClient();
 
+  if (!user && !ipSaltConfigured()) {
+    reportError(new Error("Missing LOOKUP_IP_SALT: report throttle keys use the public dev salt"), { where: "data_report_throttle_config" });
+  }
   try {
     const who = user
       ? { key: `report:u:${user.id}`, limit: REPORTS_PER_HOUR_USER }
       : { key: `report:ip:${rateKeyHash(networkPrefix(clientIp(await headers())))}`, limit: REPORTS_PER_HOUR_GUEST };
-    const hits = await Promise.all([
-      supabase.rpc("rate_hit", { p_key: who.key, p_window_seconds: 3600, p_limit: who.limit }),
-      supabase.rpc("rate_hit", { p_key: "report:all", p_window_seconds: 86_400, p_limit: REPORTS_PER_DAY_GLOBAL }),
-    ]);
-    for (const { error } of hits) if (error) throw new Error(`rate_hit: ${error.message}`);
-    if (hits.some(({ data }) => data === false)) return { ok: false, error: "rate_limited" };
+    // true = under the limit; false = over it; anything else (null, …) is a throttle failure — fail closed.
+    const hit = async (key: string, windowSeconds: number, limit: number): Promise<boolean> => {
+      const { data, error } = await supabase.rpc("rate_hit", { p_key: key, p_window_seconds: windowSeconds, p_limit: limit });
+      if (error) throw new Error(`rate_hit: ${error.message}`);
+      if (typeof data !== "boolean") throw new Error(`rate_hit: unexpected result ${JSON.stringify(data)}`);
+      return data;
+    };
+    if (!(await hit(who.key, 3600, who.limit))) return { ok: false, error: "rate_limited" };
+    if (!(await hit("report:all", 86_400, REPORTS_PER_DAY_GLOBAL))) return { ok: false, error: "rate_limited" };
   } catch (err) {
     reportError(err, { where: "data_report_throttle" });
     return { ok: false, error: "unavailable" };

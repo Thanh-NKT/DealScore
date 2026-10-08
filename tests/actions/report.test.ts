@@ -4,7 +4,8 @@ let currentUser: { id: string } | null = null;
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: async () => currentUser }));
 const rpc = vi.fn();
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc }) }));
-vi.mock("@/lib/observability", () => ({ reportError: vi.fn() }));
+const reportError = vi.fn();
+vi.mock("@/lib/observability", () => ({ reportError: (...a: unknown[]) => reportError(...a) }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-real-ip": "198.51.100.4" }) }));
 
 const { submitDataReport } = await import("@/actions/report");
@@ -54,6 +55,42 @@ describe("submitDataReport", () => {
     rpcOk({ underLimit: (k) => k !== "report:all" });
     expect(await submitDataReport(input)).toEqual({ ok: false, error: "rate_limited" });
     expect(submitted()).toBeUndefined();
+  });
+
+  it("over the per-user / network limit → the global key is never hit (one client cannot burn the global cap)", async () => {
+    rpcOk({ underLimit: (k) => k === "report:all" });
+    expect(await submitDataReport(input)).toEqual({ ok: false, error: "rate_limited" });
+    expect(keys().map((k) => k.p_key)).not.toContain("report:all");
+    expect(submitted()).toBeUndefined();
+    currentUser = { id: "u1" };
+    rpc.mockClear();
+    expect(await submitDataReport(input)).toEqual({ ok: false, error: "rate_limited" });
+    expect(keys().map((k) => k.p_key)).toEqual(["report:u:u1"]);
+  });
+
+  it("non-boolean rate_hit data (null) is a refusal, never a pass", async () => {
+    rpc.mockImplementation(async (fn: string, args: Record<string, unknown>) => {
+      if (fn === "rate_hit") return { data: args.p_key === "report:all" ? null : true, error: null };
+      return { data: { id: "r1", duplicate: false }, error: null };
+    });
+    expect(await submitDataReport(input)).toMatchObject({ ok: false });
+    expect(submitted()).toBeUndefined();
+    rpc.mockClear();
+    rpc.mockImplementation(async (fn: string) => (fn === "rate_hit" ? { data: null, error: null } : { data: {}, error: null }));
+    expect(await submitDataReport(input)).toMatchObject({ ok: false });
+    expect(keys().map((k) => k.p_key)).not.toContain("report:all");
+    expect(submitted()).toBeUndefined();
+  });
+
+  it("a missing LOOKUP_IP_SALT in production is reported; the report still goes through", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("LOOKUP_IP_SALT", "");
+    try {
+      expect(await submitDataReport(input)).toEqual({ ok: true, duplicate: false });
+      expect(reportError).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ where: "data_report_throttle_config" }));
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("throttle error → unavailable and no RPC insert", async () => {
