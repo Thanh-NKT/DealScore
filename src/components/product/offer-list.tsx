@@ -45,8 +45,14 @@ function PerkChip({ perk, voucherAnchor }: { perk: OfferPerk; voucherAnchor: str
       <TicketIcon className="size-3.5" /> {perk.label}
     </>
   );
+  // The chip is ~20px tall; an invisible ::before extends the tap target to 40px (10px above and below)
+  // without changing the chip. It is the last perk in its wrap, so the extra area covers nothing interactive.
   return voucherAnchor ? (
-    <a href={`#${voucherAnchor}`} title={VOUCHER_TITLE} className={`${PERK_NEUTRAL} hover:bg-surface-2/70 hover:text-ink hover:underline`}>
+    <a
+      href={`#${voucherAnchor}`}
+      title={VOUCHER_TITLE}
+      className={`${PERK_NEUTRAL} relative before:absolute before:-inset-x-1 before:-inset-y-2.5 before:content-[''] hover:bg-surface-2/70 hover:text-ink hover:underline`}
+    >
       {body}
     </a>
   ) : (

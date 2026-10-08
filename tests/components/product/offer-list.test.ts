@@ -50,6 +50,15 @@ describe("OfferList perks", () => {
     expect(html).not.toContain("10.000đ");
   });
 
+  it("the voucher chip link has a ≥ 40px hit area without changing the chip", () => {
+    const html = render([offer()], null, { o1: [shopVoucher] });
+    const cls = /<a href="#ma-giam-gia"[^>]*class="([^"]+)"/.exec(html)?.[1] ?? "";
+    // chip look unchanged (same classes as the Freeship chip) …
+    expect(cls).toContain("rounded-sm bg-surface-2 px-2 py-0.5 text-micro");
+    // … while an invisible ::before extends the target 10px above and below (≈20px chip → 40px).
+    for (const c of ["relative", "before:absolute", "before:-inset-y-2.5", "before:-inset-x-1"]) expect(cls.split(" ")).toContain(c);
+  });
+
   it("flash sale first; no perk keeps the fallback", () => {
     const flash = render([offer({ isFlashSale: true, hasVoucher: true })]);
     expect(flash.indexOf("Flash sale")).toBeLessThan(flash.indexOf("Có mã giảm giá"));
