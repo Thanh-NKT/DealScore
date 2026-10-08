@@ -200,6 +200,34 @@ describe("buildAccountExport", () => {
   });
 });
 
+describe("buildAccountExport — roadmap P4 sections", () => {
+  it("saved searches, demand follows (no known_product_ids), folder shares (no token); alert source", () => {
+    const out = buildAccountExport({
+      ...input,
+      alertEvents: [
+        { watch_id: null, saved_search_id: "s1", demand_follow_id: null, trigger_types: ["saved_search"], price: 1, deal_score: null, created_at: "2026-10-01T00:00:00Z", alert_deliveries: [] },
+        { watch_id: null, saved_search_id: null, demand_follow_id: "f1", trigger_types: ["demand_found"], price: 1, deal_score: null, created_at: "2026-10-01T00:00:00Z", alert_deliveries: [] },
+      ],
+      savedSearches: [{ name: "SSD", params: { q: "ssd", maxPrice: 1 }, status: "active", created_at: "c", last_alerted_at: null, params_version: 3, initialized_at: "x" } as never],
+      demandFollows: [{ keyword: "g10", status: "waiting", created_at: "c", expires_at: "e", found_at: null, known_product_ids: ["p1"] } as never],
+      folderShares: [{ folder_id: "f1", title: null, display_name: "An", show_prices: true, show_target: false, show_notes: false, include_done: false, created_at: "c", token: "secret-token" } as never],
+    } as never);
+    expect(out.alert_events.map((e) => e.source)).toEqual(["saved_search", "demand_found"]);
+    expect(out.saved_searches).toEqual([{ name: "SSD", params: { q: "ssd", maxPrice: 1 }, status: "active", created_at: "c", last_alerted_at: null }]);
+    expect(out.demand_follows).toEqual([{ keyword: "g10", status: "waiting", created_at: "c", expires_at: "e", found_at: null }]);
+    expect(JSON.stringify(out)).not.toContain("secret-token");
+    expect(JSON.stringify(out)).not.toContain("known_product_ids");
+    expect(out.folder_shares[0]).toMatchObject({ folder_id: "f1", display_name: "An" });
+  });
+  it("a watch alert says source watch; no P4 data → empty lists", () => {
+    const out = buildAccountExport(input as never);
+    expect(out.saved_searches).toEqual([]);
+    expect(out.demand_follows).toEqual([]);
+    expect(out.folder_shares).toEqual([]);
+    expect(out.alert_events.every((e) => e.source === "watch")).toBe(true);
+  });
+});
+
 describe("exportFileName", () => {
   it("dated in Vietnam time", () => {
     // 20:00Z on the 23rd = 03:00 Vietnam time on the 24th

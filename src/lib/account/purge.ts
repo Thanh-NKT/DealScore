@@ -13,6 +13,9 @@ export { PURGE_AFTER_DAYS, purgeCutoff, purgeDate } from "@/lib/account/purge-da
  * click_events.user_id, lookup_requests.user_id and data_reports.user_id → null (migration 0043: a "Góp ý dữ
  * liệu" report is kept anonymised — its kind and free-text message stay for the admin queue, unlinked from the
  * person; the form asks not to write personal data).
+ * Roadmap P4 (0060–0062), all cascading from users: saved_searches (→ saved_search_hits, their alert_events),
+ * demand_follows (→ their alert_events), watch_folder_shares; alert_events.user_id cascades for every source
+ * (tests/db/demand-follows.test.ts "purging the account…").
  * A new table holding user data must reference users(id) the same way (cascade, or set null when the row is kept
  * anonymised on purpose) — erasure relies on it.
  * One user failing does not stop the run. Safe to re-run.
