@@ -172,6 +172,8 @@ async function seedCatalog(db: Db, now: number, sellerIds: Record<string, string
                 title: `${p.name} ${v.key}`,
                 url: `https://shopee.vn/product/0/${Math.abs(hash(ext))}`,
                 status: "active",
+                // Not 3: priority-3 listings first seen today count as sourced and would eat the sourcing cap.
+                refresh_priority: 1,
                 last_observed_at: new Date(now).toISOString(),
               })
               .select("id")
