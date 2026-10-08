@@ -1,3 +1,6 @@
+import { shareFolderUrl } from "@/lib/share-folder/token";
+import { shareSettingsFromRow } from "@/lib/share-folder/validate";
+import { siteUrl } from "@/lib/site-url";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -432,7 +435,19 @@ export async function listMyFolders(userId: string, client?: Client): Promise<Wa
     .eq("user_id", userId)
     .order("sort_order", { ascending: true });
   if (error) throw new Error(`Failed to load Watch folders: ${error.message}`);
-  return sortFolders((data ?? []).map(toFolder));
+  const folders = (data ?? []).map(toFolder);
+  // Public links of the ≤ 20 folders (RLS: own rows only).
+  const { data: shares, error: shareError } = await supabase
+    .from("watch_folder_shares")
+    .select("folder_id, token, title, display_name, show_prices, show_target, show_notes, include_done")
+    .eq("user_id", userId);
+  if (shareError) throw new Error(`Failed to load folder shares: ${shareError.message}`);
+  const byFolder = new Map((shares ?? []).map((s) => [s.folder_id, s]));
+  for (const f of folders) {
+    const s = byFolder.get(f.id);
+    f.share = s ? { url: shareFolderUrl(siteUrl(), s.token), settings: shareSettingsFromRow(s) } : null;
+  }
+  return sortFolders(folders);
 }
 
 /** Core of createFolder. `supabase` is the user's OWN client (RLS). */

@@ -4,7 +4,8 @@ import { useEffect, useId, useRef, useState, useTransition, type FormEvent } fro
 import { unstable_rethrow } from "next/navigation";
 import { createFolder, deleteFolder, renameFolder } from "@/actions/watch";
 import { MAX_FOLDERS, MAX_FOLDER_NAME_LENGTH, validateFolderName, type WatchFolder } from "@/lib/watch/folders";
-import { FolderIcon } from "@/components/ui/icons";
+import { FolderIcon, LinkIcon } from "@/components/ui/icons";
+import { ShareFolderDialog } from "@/components/watch/share-folder-dialog";
 import { buttonClass } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 
@@ -38,6 +39,8 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
   const uid = useId();
   const [mode, setMode] = useState<null | { kind: "create" } | { kind: "rename"; id: string } | { kind: "delete"; id: string }>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [shareFor, setShareFor] = useState<string | null>(null);
+  const shareFolderRow = folders.find((f) => f.id === shareFor) ?? null;
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -162,7 +165,12 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
             count={counts.byFolder[f.id] ?? 0}
             selected={selected === f.id}
             onSelect={() => onSelect(f.id)}
+            shared={Boolean(f.share)}
             menu={{
+              onShare: () => {
+                setMenuFor(null);
+                setShareFor(f.id);
+              },
               open: menuFor === f.id,
               setOpen: (open) => setMenuFor(open ? f.id : null),
               onRename: () => {
@@ -207,6 +215,9 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
           <span>{folders.length >= MAX_FOLDERS ? `Đã đủ ${MAX_FOLDERS} thư mục` : "Tạo thư mục"}</span>
         </button>
       )}
+      {shareFolderRow ? (
+        <ShareFolderDialog key={shareFolderRow.id} folder={shareFolderRow} open onClose={() => setShareFor(null)} />
+      ) : null}
     </nav>
   );
 }
@@ -217,12 +228,14 @@ function FolderRow({
   selected,
   onSelect,
   menu,
+  shared = false,
 }: {
   label: string;
   count: number;
   selected: boolean;
   onSelect: () => void;
-  menu?: { open: boolean; setOpen: (open: boolean) => void; onRename: () => void; onDelete: () => void };
+  shared?: boolean;
+  menu?: { open: boolean; setOpen: (open: boolean) => void; onRename: () => void; onDelete: () => void; onShare?: () => void };
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const menuOpen = menu?.open ?? false;
@@ -250,6 +263,12 @@ function FolderRow({
       <button type="button" onClick={onSelect} aria-pressed={selected} className={rowClass(selected)}>
         <FolderIcon className="size-[18px] shrink-0 text-ink-2" />
         <span className="flex-1 truncate">{label}</span>
+        {shared ? (
+          <>
+            <LinkIcon className="size-4 shrink-0 text-ink-3" aria-hidden="true" />
+            <span className="sr-only">đang chia sẻ</span>
+          </>
+        ) : null}
         <span className="text-label text-ink-3">{count}</span>
       </button>
       {menu && (
@@ -269,10 +288,15 @@ function FolderRow({
             </svg>
           </button>
           {menu.open && (
-            <div role="menu" className="absolute right-0 top-11 z-20 flex w-40 flex-col rounded-md border border-line bg-surface p-1 shadow-lift">
+            <div role="menu" className="absolute right-0 top-11 z-20 flex w-48 flex-col rounded-md border border-line bg-surface p-1 shadow-lift">
               <button role="menuitem" type="button" autoFocus onClick={menu.onRename} className="h-10 rounded-sm px-3 text-left text-body-sm font-medium text-ink hover:bg-surface-2">
                 Đổi tên
               </button>
+              {menu.onShare ? (
+                <button role="menuitem" type="button" onClick={menu.onShare} className="h-10 rounded-sm px-3 text-left text-body-sm font-medium text-ink hover:bg-surface-2">
+                  Chia sẻ thư mục…
+                </button>
+              ) : null}
               <button role="menuitem" type="button" onClick={menu.onDelete} className="h-10 rounded-sm px-3 text-left text-body-sm font-medium text-avoid hover:bg-avoid-soft">
                 Xóa thư mục
               </button>

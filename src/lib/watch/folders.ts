@@ -7,6 +7,8 @@ export interface WatchFolder {
   id: string;
   name: string;
   sortOrder: number;
+  /** Public link of the folder (roadmap P4 J), set by listMyFolders; null = not shared. */
+  share?: { url: string; settings: import("@/lib/share-folder/validate").ShareSettings } | null;
 }
 
 export type FolderNameResult = { ok: true; value: string } | { ok: false; error: string };

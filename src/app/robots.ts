@@ -20,6 +20,8 @@ export default function robots(): MetadataRoute.Robots {
         "/login",
         "/register",
         "/search",
+        // P4: secret-link folder pages (also noindex + no-referrer).
+        "/shared/",
       ],
     },
     sitemap: `${base}/sitemap.xml`,
