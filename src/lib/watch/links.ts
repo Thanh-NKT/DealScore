@@ -16,13 +16,16 @@ export interface WatchBuyTarget {
 
 /**
  * The "Đến {sàn}" target, or null unless all hold: a target price that is reached, in stock, a fresh price,
- * and a known best offer on a marketplace with an adapter (otherwise /go answers 404).
+ * and a known best offer on a marketplace with an adapter (otherwise /go answers 404). Never for a watch marked
+ * Đã mua (`done`): the item is already bought.
  */
 export function watchBuyTarget(
   view: WatchView,
   offer: { marketplace: string; affiliate: boolean } | undefined,
   offerId: string | null,
+  status?: "active" | "paused" | "done",
 ): WatchBuyTarget | null {
+  if (status === "done") return null;
   if (!view.target?.reached || !view.inStock || view.isStale || !offerId || !offer) return null;
   if (!getAdapter(offer.marketplace)) return null;
   return { offerId, marketplace: offer.marketplace, affiliate: offer.affiliate };

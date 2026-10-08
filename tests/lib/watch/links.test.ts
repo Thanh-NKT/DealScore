@@ -34,6 +34,12 @@ describe("watchBuyTarget", () => {
     expect(watchBuyTarget(view(), undefined, "o1")).toBeNull();
     expect(watchBuyTarget(view(), { marketplace: "amazon", affiliate: true }, "o1")).toBeNull();
   });
+
+  it("no buy CTA on a watch marked Đã mua (done); active and paused keep it", () => {
+    expect(watchBuyTarget(view(), shopee, "o1", "done")).toBeNull();
+    expect(watchBuyTarget(view(), shopee, "o1", "paused")).not.toBeNull();
+    expect(watchBuyTarget(view(), shopee, "o1", "active")).not.toBeNull();
+  });
 });
 
 describe("watchGoHref", () => {

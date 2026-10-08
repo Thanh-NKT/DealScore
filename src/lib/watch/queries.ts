@@ -224,7 +224,7 @@ export async function listMyWatches(
       view,
       createdAt: row.created_at,
       folderId: row.folder_id,
-      buy: watchBuyTarget(view, snap.offerId ? offerInfo.get(snap.offerId) : undefined, snap.offerId),
+      buy: watchBuyTarget(view, snap.offerId ? offerInfo.get(snap.offerId) : undefined, snap.offerId, row.status as "active" | "paused" | "done"),
       ...(row.status === "done" && row.purchased_at
         ? {
             purchase: {
