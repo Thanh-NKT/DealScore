@@ -1928,6 +1928,7 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_run_counter: { Args: { p: Json }; Returns: number }
       admin_set_listings_active: {
         Args: { p_listing_ids: string[]; p_note: string }
         Returns: number
