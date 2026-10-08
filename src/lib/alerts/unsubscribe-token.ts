@@ -2,7 +2,10 @@ import crypto from "node:crypto";
 
 export type UnsubscribeScope =
   | { kind: "watch"; userId: string; watchId: string }
-  | { kind: "email"; userId: string };
+  | { kind: "email"; userId: string }
+  // Roadmap P4: pause one saved search / cancel one demand follow.
+  | { kind: "saved_search"; userId: string; savedSearchId: string }
+  | { kind: "demand_follow"; userId: string; followId: string };
 
 function base64UrlEncode(buf: Buffer): string {
   return buf
@@ -88,6 +91,14 @@ export function verifyUnsubscribeToken(
         kind: "email",
         userId: parsed.userId,
       };
+    }
+
+    if (parsed && parsed.kind === "saved_search" && typeof parsed.userId === "string" && typeof parsed.savedSearchId === "string") {
+      return { kind: "saved_search", userId: parsed.userId, savedSearchId: parsed.savedSearchId };
+    }
+
+    if (parsed && parsed.kind === "demand_follow" && typeof parsed.userId === "string" && typeof parsed.followId === "string") {
+      return { kind: "demand_follow", userId: parsed.userId, followId: parsed.followId };
     }
 
     return null;

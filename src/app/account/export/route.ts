@@ -20,20 +20,17 @@ export async function GET() {
     profileRes,
     settingsRes,
     watchesRes,
-    alertsRes,
     clicksRes,
     lookupsRes,
     pushRes,
     prefsRes,
     foldersRes,
+    savedSearchesRes,
+    sharesRes,
   ] = await Promise.all([
     supabase.from("users").select("*").eq("id", user.id).single(),
     supabase.from("notification_settings").select("*").eq("user_id", user.id).single(),
     supabase.from("watches").select("*").eq("user_id", user.id),
-    supabase
-      .from("alert_events")
-      .select("watch_id, trigger_types, price, deal_score, created_at, alert_deliveries(channel, status, sent_at), watches!inner(user_id)")
-      .eq("watches.user_id", user.id),
     supabase.from("click_events").select("*").eq("user_id", user.id),
     admin
       .from("lookup_requests")
@@ -43,11 +40,17 @@ export async function GET() {
     supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
     // At most 20 folders per user (trigger watch_folders_enforce_limit), far below the 1,000-row cap.
     supabase.from("watch_folders").select("id, name, sort_order, created_at").eq("user_id", user.id).order("sort_order"),
+    // ≤ 10 saved searches, ≤ 20 shares (one per folder); follows are paged below.
+    supabase.from("saved_searches").select("name, params, status, created_at, last_alerted_at").eq("user_id", user.id).order("created_at"),
+    supabase
+      .from("watch_folder_shares")
+      .select("folder_id, title, display_name, show_prices, show_target, show_notes, include_done, created_at")
+      .eq("user_id", user.id),
   ]);
 
   // ANY failing query → throw. Ignoring errors hands the user a file that is
   // missing data yet looks complete.
-  const results = { profileRes, settingsRes, watchesRes, alertsRes, clicksRes, lookupsRes, pushRes, prefsRes, foldersRes };
+  const results = { profileRes, settingsRes, watchesRes, clicksRes, lookupsRes, pushRes, prefsRes, foldersRes, savedSearchesRes, sharesRes };
   for (const [name, res] of Object.entries(results)) {
     if (res.error) throw new Error(`Data export: failed to read ${name}: ${res.error.message}`);
   }
@@ -122,6 +125,40 @@ export async function GET() {
     if (!data || data.length < 1000) break;
   }
 
+  // Every alert of the account, whatever its source (0061 alert_events.user_id), paged past the 1,000-row cap.
+  const alertEvents: Array<{
+    watch_id: string | null; saved_search_id: string | null; demand_follow_id: string | null; trigger_types: string[];
+    price: number | null; deal_score: number | null; created_at: string;
+    alert_deliveries: Array<{ channel: string; status: string; sent_at: string | null }>;
+  }> = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("alert_events")
+      .select("watch_id, saved_search_id, demand_follow_id, trigger_types, price, deal_score, created_at, alert_deliveries(channel, status, sent_at)")
+      .eq("user_id", user.id)
+      .order("created_at")
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw new Error(`Data export: failed to read alert events: ${error.message}`);
+    alertEvents.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+
+  // ≤ 10 waiting follows plus finished ones kept 30 days; paged anyway.
+  const demandFollows: Array<{ keyword: string; status: string; created_at: string; expires_at: string; found_at: string | null }> = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("demand_follows")
+      .select("keyword, status, created_at, expires_at, found_at")
+      .eq("user_id", user.id)
+      .order("created_at")
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw new Error(`Data export: failed to read demand follows: ${error.message}`);
+    demandFollows.push(...(data ?? []));
+    if (!data || data.length < 1000) break;
+  }
+
   const now = new Date();
   const exportData = buildAccountExport({
     activity,
@@ -131,7 +168,7 @@ export async function GET() {
     preferences: prefsRes.data,
     watches: watchesRes.data ?? [],
     folders: foldersRes.data ?? [],
-    alertEvents: alertsRes.data ?? [],
+    alertEvents,
     pushDevices: pushRes.data ?? [],
     orders,
     clicks: clicksRes.data ?? [],
@@ -139,6 +176,9 @@ export async function GET() {
     extensionObservations,
     extensionContributions,
     dataReports,
+    savedSearches: savedSearchesRes.data ?? [],
+    demandFollows,
+    folderShares: sharesRes.data ?? [],
   });
 
   const filename = exportFileName(now);

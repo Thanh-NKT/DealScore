@@ -1,0 +1,133 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`watch-only alert email is byte-identical to pre-P4 > hike-only item 1`] = `
+{
+  "html": "<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:#15161A;line-height:1.5;max-width:600px">
+<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
+<h3 style="margin:0 0 4px">SSD Samsung 990 &lt;Pro&gt; <span style="color:#5E6168;font-weight:normal">— 2TB</span></h3>
+<p style="margin:4px 0;font-size:20px"><strong>2.500.000đ</strong></p>
+<p style="margin:4px 0">Deal Score <strong>82</strong>/100 · 🟢 Nên mua</p><ul style="margin:8px 0;padding-left:20px"><li>Giá đã xuống dưới mức bạn đặt</li><li>Thấp nhất 90 ngày</li><li>Rẻ hơn 12% trung vị</li></ul>
+<p style="margin:12px 0 4px"><a href="https://dealscore.vn/go/shopee/o1?src=email&amp;watch=w1&amp;alert=e1" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Xem giá trên DealScore</a></p>
+<p style="margin:4px 0;font-size:13px"><a href="https://dealscore.vn/account/watch#w1">Xem sản phẩm đang theo dõi</a> · <a href="https://dealscore.vn/unsubscribe?t=abc">Tạm dừng thông báo sản phẩm này</a></p>
+</div>
+<p style="color:#5E6168;font-size:12px">DealScore có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.</p>
+<p style="color:#5E6168;font-size:12px"><a href="https://dealscore.vn/unsubscribe?t=all">Tắt toàn bộ email thông báo</a></p>
+</body></html>",
+  "subject": "SSD Samsung 990 <Pro> đang cao hơn mức thường thấy",
+  "text": "SSD Samsung 990 <Pro> — 2TB
+Giá: 2.500.000đ
+Deal Score 82/100 · 🟢 Nên mua
+- Giá đã xuống dưới mức bạn đặt
+- Thấp nhất 90 ngày
+- Rẻ hơn 12% trung vị
+Xem giá trên DealScore: https://dealscore.vn/go/shopee/o1?src=email&watch=w1&alert=e1
+Xem sản phẩm đang theo dõi: https://dealscore.vn/account/watch#w1
+Tạm dừng thông báo sản phẩm này: https://dealscore.vn/unsubscribe?t=abc
+
+DealScore có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.
+Tắt toàn bộ email thông báo: https://dealscore.vn/unsubscribe?t=all",
+}
+`;
+
+exports[`watch-only alert email is byte-identical to pre-P4 > one item 1`] = `
+{
+  "html": "<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:#15161A;line-height:1.5;max-width:600px">
+<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
+<h3 style="margin:0 0 4px">SSD Samsung 990 &lt;Pro&gt; <span style="color:#5E6168;font-weight:normal">— 2TB</span></h3>
+<p style="margin:4px 0;font-size:20px"><strong>2.500.000đ</strong> <span style="color:#5E6168">(lúc bắt đầu theo dõi: 3.000.000đ)</span></p>
+<p style="margin:0 0 4px;color:#5E6168">≈ 2.400.000đ sau voucher</p><p style="margin:4px 0">Deal Score <strong>82</strong>/100 · 🟢 Nên mua</p><ul style="margin:8px 0;padding-left:20px"><li>Giá đã xuống dưới mức bạn đặt</li><li>Thấp nhất 90 ngày</li><li>Rẻ hơn 12% trung vị</li></ul>
+<p style="margin:12px 0 4px"><a href="https://dealscore.vn/go/shopee/o1?src=email&amp;watch=w1&amp;alert=e1" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Mua trên Shopee</a></p>
+<p style="margin:4px 0;font-size:13px"><a href="https://dealscore.vn/account/watch#w1">Xem sản phẩm đang theo dõi</a> · <a href="https://dealscore.vn/unsubscribe?t=abc">Tạm dừng thông báo sản phẩm này</a></p>
+</div>
+<p style="color:#5E6168;font-size:12px">DealScore có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.</p>
+<p style="color:#5E6168;font-size:12px"><a href="https://dealscore.vn/unsubscribe?t=all">Tắt toàn bộ email thông báo</a></p>
+</body></html>",
+  "subject": "SSD Samsung 990 <Pro> còn 2.500.000đ",
+  "text": "SSD Samsung 990 <Pro> — 2TB
+Giá: 2.500.000đ (lúc bắt đầu theo dõi: 3.000.000đ)
+≈ 2.400.000đ sau voucher
+Deal Score 82/100 · 🟢 Nên mua
+- Giá đã xuống dưới mức bạn đặt
+- Thấp nhất 90 ngày
+- Rẻ hơn 12% trung vị
+Đến Shopee: https://dealscore.vn/go/shopee/o1?src=email&watch=w1&alert=e1
+Xem sản phẩm đang theo dõi: https://dealscore.vn/account/watch#w1
+Tạm dừng thông báo sản phẩm này: https://dealscore.vn/unsubscribe?t=abc
+
+DealScore có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.
+Tắt toàn bộ email thông báo: https://dealscore.vn/unsubscribe?t=all",
+}
+`;
+
+exports[`watch-only alert email is byte-identical to pre-P4 > push payloads 1`] = `
+{
+  "body": "Còn 100.000đ",
+  "tag": "dealscore-alert",
+  "title": "A",
+  "url": "https://dealscore.vn/a",
+}
+`;
+
+exports[`watch-only alert email is byte-identical to pre-P4 > push payloads 2`] = `
+{
+  "body": "100.000đ — chưa nên mua lúc này",
+  "tag": "dealscore-alert",
+  "title": "A đang cao hơn mức thường thấy",
+  "url": "https://dealscore.vn/a",
+}
+`;
+
+exports[`watch-only alert email is byte-identical to pre-P4 > push payloads 3`] = `
+{
+  "body": "A, B…",
+  "tag": "dealscore-alert",
+  "title": "3 sản phẩm có tin mới",
+  "url": "https://dealscore.vn/account/watch",
+}
+`;
+
+exports[`watch-only alert email is byte-identical to pre-P4 > two items 1`] = `
+{
+  "html": "<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:#15161A;line-height:1.5;max-width:600px">
+<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
+<h3 style="margin:0 0 4px">SSD Samsung 990 &lt;Pro&gt; <span style="color:#5E6168;font-weight:normal">— 2TB</span></h3>
+<p style="margin:4px 0;font-size:20px"><strong>2.500.000đ</strong> <span style="color:#5E6168">(lúc bắt đầu theo dõi: 3.000.000đ)</span></p>
+<p style="margin:0 0 4px;color:#5E6168">≈ 2.400.000đ sau voucher</p><p style="margin:4px 0">Deal Score <strong>82</strong>/100 · 🟢 Nên mua</p><ul style="margin:8px 0;padding-left:20px"><li>Giá đã xuống dưới mức bạn đặt</li><li>Thấp nhất 90 ngày</li><li>Rẻ hơn 12% trung vị</li></ul>
+<p style="margin:12px 0 4px"><a href="https://dealscore.vn/go/shopee/o1?src=email&amp;watch=w1&amp;alert=e1" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Mua trên Shopee</a></p>
+<p style="margin:4px 0;font-size:13px"><a href="https://dealscore.vn/account/watch#w1">Xem sản phẩm đang theo dõi</a> · <a href="https://dealscore.vn/unsubscribe?t=abc">Tạm dừng thông báo sản phẩm này</a></p>
+</div><div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
+<h3 style="margin:0 0 4px">RAM <span style="color:#5E6168;font-weight:normal">— 2TB</span></h3>
+<p style="margin:4px 0;font-size:20px"><strong>2.500.000đ</strong></p>
+<p style="margin:0 0 4px;color:#5E6168">≈ 2.400.000đ sau voucher</p><ul style="margin:8px 0;padding-left:20px"><li>Giá đã xuống dưới mức bạn đặt</li><li>Thấp nhất 90 ngày</li><li>Rẻ hơn 12% trung vị</li></ul>
+<p style="margin:12px 0 4px"><a href="https://dealscore.vn/go/shopee/o1?src=email&amp;watch=w1&amp;alert=e1" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">Mua trên Shopee</a></p>
+<p style="margin:4px 0;font-size:13px"><a href="https://dealscore.vn/account/watch#w1">Xem sản phẩm đang theo dõi</a> · <a href="https://dealscore.vn/unsubscribe?t=abc">Tạm dừng thông báo sản phẩm này</a></p>
+</div>
+<p style="color:#5E6168;font-size:12px">DealScore có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.</p>
+<p style="color:#5E6168;font-size:12px"><a href="https://dealscore.vn/unsubscribe?t=all">Tắt toàn bộ email thông báo</a></p>
+</body></html>",
+  "subject": "2 sản phẩm bạn theo dõi vừa có tin mới",
+  "text": "SSD Samsung 990 <Pro> — 2TB
+Giá: 2.500.000đ (lúc bắt đầu theo dõi: 3.000.000đ)
+≈ 2.400.000đ sau voucher
+Deal Score 82/100 · 🟢 Nên mua
+- Giá đã xuống dưới mức bạn đặt
+- Thấp nhất 90 ngày
+- Rẻ hơn 12% trung vị
+Đến Shopee: https://dealscore.vn/go/shopee/o1?src=email&watch=w1&alert=e1
+Xem sản phẩm đang theo dõi: https://dealscore.vn/account/watch#w1
+Tạm dừng thông báo sản phẩm này: https://dealscore.vn/unsubscribe?t=abc
+
+RAM — 2TB
+Giá: 2.500.000đ
+≈ 2.400.000đ sau voucher
+- Giá đã xuống dưới mức bạn đặt
+- Thấp nhất 90 ngày
+- Rẻ hơn 12% trung vị
+Đến Shopee: https://dealscore.vn/go/shopee/o1?src=email&watch=w1&alert=e1
+Xem sản phẩm đang theo dõi: https://dealscore.vn/account/watch#w1
+Tạm dừng thông báo sản phẩm này: https://dealscore.vn/unsubscribe?t=abc
+
+DealScore có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.
+Tắt toàn bộ email thông báo: https://dealscore.vn/unsubscribe?t=all",
+}
+`;

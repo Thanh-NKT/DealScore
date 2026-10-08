@@ -6,7 +6,15 @@ import { DEFAULT_NOTIFICATION_SETTINGS, fromRow, resolveChannels, type Channel }
 import type { Recommendation } from "@/lib/pricing/deal-score";
 import { EmailSendError, sendEmail } from "@/lib/email";
 import { reportError } from "@/lib/observability";
-import { listUnsubscribeHeaders, renderAlertEmail, type AlertEmailItem } from "@/lib/email/templates/alert";
+import { listUnsubscribeHeaders, renderAlertEmail, type AlertEmailItem, type DiscoveryEmailBlock } from "@/lib/email/templates/alert";
+import {
+  discoveryLink,
+  discoveryProductUrl,
+  discoveryTitle,
+  parseEventItems,
+  type DiscoveryEventDetail,
+} from "@/lib/alerts/discovery";
+import { parseSavedParams } from "@/lib/saved-search/params";
 import { describeTriggers, isPriceHikeOnly } from "@/lib/alerts/triggers-text";
 import { signUnsubscribeToken } from "@/lib/alerts/unsubscribe-token";
 import { groupDeliveries, latestPerWatch, mergeDigestTriggers, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
@@ -58,7 +66,9 @@ interface EventDetail {
   user: { email: string | null; deletedAt: string | null; settings: ReturnType<typeof fromRow> };
 }
 
-async function loadEvents(client: Client, ids: string[]): Promise<Map<string, EventDetail>> {
+/** Watch alerts (alert_events.watch_id set). Same select as before P4. */
+async function loadWatchEvents(client: Client, ids: string[]): Promise<Map<string, EventDetail>> {
+  if (ids.length === 0) return new Map();
   const { data, error } = await client
     .from("alert_events")
     .select(
@@ -68,7 +78,8 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
          product_variants!inner(variant_key, products!inner(slug, canonical_name, image, categories(slug))),
          users!inner(email, deleted_at, notification_settings(*)))`,
     )
-    .in("id", ids);
+    .in("id", ids)
+    .not("watch_id", "is", null);
   if (error) throw new Error(`Failed to read alert_events: ${error.message}`);
 
   const map = new Map<string, EventDetail>();
@@ -79,7 +90,7 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
     map.set(r.id, {
       id: r.id,
       createdAt: r.created_at,
-      watchId: r.watch_id,
+      watchId: r.watch_id!,
       triggerTypes: r.trigger_types as TriggerType[],
       price: Number(r.price),
       offerId: r.offer_id,
@@ -131,6 +142,154 @@ async function loadEvents(client: Client, ids: string[]): Promise<Map<string, Ev
   return map;
 }
 
+const PRODUCT_ID_CHUNK = 200;
+
+/**
+ * Discovery alerts (saved search / demand found, 0061): one alert_events read with their source and user, then
+ * one products read for the named items. A product deleted since (P3 merge) is dropped from its block; a block
+ * left empty is skipped by the caller (source_inactive).
+ */
+export async function loadDiscoveryEvents(client: Client, ids: string[]): Promise<Map<string, DiscoveryEventDetail>> {
+  const map = new Map<string, DiscoveryEventDetail>();
+  if (ids.length === 0) return map;
+  const { data, error } = await client
+    .from("alert_events")
+    .select(
+      `id, created_at, user_id, trigger_types, items, items_total, saved_search_id, demand_follow_id,
+       saved_searches(name, status, channels, params), demand_follows(keyword, status),
+       users!inner(email, deleted_at, notification_settings(*))`,
+    )
+    .in("id", ids)
+    .is("watch_id", null);
+  if (error) throw new Error(`Failed to read discovery alert_events: ${error.message}`);
+
+  const parsed = (data ?? []).map((r) => ({ r, items: parseEventItems(r.items) }));
+  const productIds = [...new Set(parsed.flatMap((x) => x.items.map((i) => i.productId)))];
+  const products = new Map<string, { name: string; slug: string; categorySlug: string; image: string | null }>();
+  for (let i = 0; i < productIds.length; i += PRODUCT_ID_CHUNK) {
+    const { data: ps, error: pErr } = await client
+      .from("products")
+      .select("id, slug, canonical_name, image, categories(slug)")
+      .in("id", productIds.slice(i, i + PRODUCT_ID_CHUNK));
+    if (pErr) throw new Error(`Failed to read discovery products: ${pErr.message}`);
+    for (const p of ps ?? []) {
+      products.set(p.id, {
+        name: p.canonical_name,
+        slug: p.slug ?? "",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        categorySlug: (p.categories as any)?.slug ?? "san-pham",
+        image: p.image,
+      });
+    }
+  }
+
+  for (const { r, items } of parsed) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const u = r.users as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ss = r.saved_searches as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const df = r.demand_follows as any;
+    let source: DiscoveryEventDetail["source"] | null = null;
+    if (r.saved_search_id && ss) {
+      source = {
+        kind: "saved_search",
+        id: r.saved_search_id,
+        name: ss.name,
+        status: ss.status,
+        channels: ss.channels,
+        params: parseSavedParams(ss.params) ?? {},
+      };
+    } else if (r.demand_follow_id && df) {
+      source = { kind: "demand_found", id: r.demand_follow_id, keyword: df.keyword, status: df.status };
+    }
+    if (!source) continue; // source deleted since (the cascade normally removes the event too)
+    map.set(r.id, {
+      id: r.id,
+      createdAt: r.created_at,
+      trigger: source.kind,
+      userId: r.user_id,
+      source,
+      items: items.flatMap((i) => {
+        const p = products.get(i.productId);
+        return p ? [{ ...i, ...p }] : [];
+      }),
+      totalNew: Math.max(r.items_total ?? 0, items.length),
+      user: {
+        email: u.email,
+        deletedAt: u.deleted_at,
+        settings: u.notification_settings ? fromRow(u.notification_settings) : DEFAULT_NOTIFICATION_SETTINGS,
+      },
+    });
+  }
+  return map;
+}
+
+/** Why a discovery delivery must not be sent now, or null. */
+export function discoverySkipReason(e: DiscoveryEventDetail | undefined, channel: Channel): string | null {
+  if (!e || e.user.deletedAt) return "account_deleted";
+  if (e.source.kind === "saved_search" ? e.source.status !== "active" : e.source.status !== "found") return "source_inactive";
+  if (e.items.length === 0) return "source_inactive";
+  const channels = e.source.kind === "saved_search" ? e.source.channels : null;
+  if (!resolveChannels(e.user.settings, channels).includes(channel)) return "channel_disabled";
+  return null;
+}
+
+/** A digest kept the newest event of a source: fold the older events' products in (deduped, ≤ 5 listed). */
+export function mergeDiscoveryEvents(keep: DiscoveryEventDetail, older: DiscoveryEventDetail[]): DiscoveryEventDetail {
+  if (older.length === 0) return keep;
+  const seen = new Set(keep.items.map((i) => i.productId));
+  const items = [...keep.items];
+  let extra = 0;
+  for (const o of older) {
+    for (const i of o.items) {
+      if (seen.has(i.productId)) continue;
+      seen.add(i.productId);
+      items.push(i);
+    }
+    extra += o.totalNew;
+  }
+  items.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  return { ...keep, items: items.slice(0, 5), totalNew: Math.max(keep.totalNew + extra, items.length) };
+}
+
+/** Email block for a discovery event (UI spec §1.4). */
+export function discoveryEmailBlock(site: string, e: DiscoveryEventDetail, pauseUrl: string): DiscoveryEmailBlock {
+  const listed = e.items.slice(0, e.source.kind === "saved_search" ? 5 : 3);
+  const products = listed.map((i) => ({
+    name: i.name,
+    price: i.price,
+    recommendation: i.recommendation,
+    url: discoveryProductUrl(site, i),
+    imageUrl: i.image,
+  }));
+  const searchUrl = discoveryLink(site, e);
+  if (e.source.kind === "saved_search") {
+    return {
+      title: `Có sản phẩm mới khớp “${e.source.name}”`,
+      lead: `${e.totalNew} sản phẩm vừa khớp điều kiện của bạn${e.source.params.onlyBuy ? " · Nên mua" : ""}`,
+      products,
+      moreCount: Math.max(0, e.totalNew - listed.length),
+      searchUrl,
+      searchLabel: "Xem kết quả",
+      manageUrl: `${site}/account/searches`,
+      pauseUrl,
+      pauseLabel: "Tạm dừng tìm kiếm này",
+    };
+  }
+  return {
+    title: `DealScore đã có “${e.source.keyword}”`,
+    lead: "Lúc bạn tìm chưa có kết quả phù hợp. Giờ đã có:",
+    products,
+    moreCount: 0,
+    searchUrl,
+    searchLabel: "Xem tất cả kết quả",
+    manageUrl: `${site}/account/searches`,
+    pauseUrl,
+    pauseLabel: "Không báo nữa",
+  };
+}
+
 /**
  * The "≈ X sau voucher" figure for an alert email: the offer's stored effective price, only when the
  * alert price is still the offer's current price and the stored value passes shownEffectivePrice()
@@ -175,12 +334,21 @@ export async function dispatchDueDeliveries(
     channel: r.channel as Channel,
     attempts: r.attempts,
     alertEventId: r.alert_event_id,
-    watchId: r.watch_id,
+    watchId: r.watch_id ?? null,
     userId: r.user_id,
   }));
   if (claimed.length === 0) return stats;
 
-  const events = await loadEvents(client, [...new Set(claimed.map((c) => c.alertEventId))]);
+  const events = await loadWatchEvents(client, [...new Set(claimed.filter((c) => c.watchId).map((c) => c.alertEventId))]);
+  const discoveries = await loadDiscoveryEvents(client, [...new Set(claimed.filter((c) => !c.watchId).map((c) => c.alertEventId))]);
+  for (const c of claimed) {
+    if (c.watchId) c.sourceKey = `w:${c.watchId}`;
+    else {
+      const d = discoveries.get(c.alertEventId);
+      c.sourceKey = d ? `${d.source.kind === "saved_search" ? "s" : "d"}:${d.source.id}` : `e:${c.alertEventId}`;
+    }
+  }
+  const createdAt = (id: string) => events.get(id)?.createdAt ?? discoveries.get(id)?.createdAt ?? "";
 
   const update = async (ids: string[], patch: Database["public"]["Tables"]["alert_deliveries"]["Update"]) => {
     if (ids.length === 0) return;
@@ -192,6 +360,12 @@ export async function dispatchDueDeliveries(
   const ready: ClaimedDelivery[] = [];
   const skips = new Map<string, string[]>();
   for (const c of claimed) {
+    if (!c.watchId) {
+      const reason = discoverySkipReason(discoveries.get(c.alertEventId), c.channel);
+      if (reason) skips.set(reason, [...(skips.get(reason) ?? []), c.deliveryId]);
+      else ready.push(c);
+      continue;
+    }
     const e = events.get(c.alertEventId);
     let reason: string | null = null;
     if (!e || e.user.deletedAt) reason = "account_deleted";
@@ -203,11 +377,20 @@ export async function dispatchDueDeliveries(
   // Digests (weekly especially) can hold several alerts for one Watch: send only the newest,
   // carrying the triggers of the older ones of the same kind (mergeDigestTriggers), and mark those as superseded.
   const mergedTriggers = new Map<string, TriggerType[]>();
+  const mergedDiscoveries = new Map<string, DiscoveryEventDetail>();
   const latest: ClaimedDelivery[] = [];
-  for (const { keep, older } of latestPerWatch(ready, (id) => events.get(id)?.createdAt ?? "")) {
+  for (const { keep, older } of latestPerWatch(ready, createdAt)) {
     latest.push(keep);
     if (older.length === 0) continue;
     skips.set("superseded", [...(skips.get("superseded") ?? []), ...older.map((d) => d.deliveryId)]);
+    if (!keep.watchId) {
+      // Same source in one digest: one block, with the older events' products folded in.
+      mergedDiscoveries.set(
+        keep.alertEventId,
+        mergeDiscoveryEvents(discoveries.get(keep.alertEventId)!, older.map((d) => discoveries.get(d.alertEventId)!)),
+      );
+      continue;
+    }
     mergedTriggers.set(
       keep.alertEventId,
       mergeDigestTriggers(events.get(keep.alertEventId)!.triggerTypes, older.map((d) => events.get(d.alertEventId)!.triggerTypes)),
@@ -229,13 +412,16 @@ export async function dispatchDueDeliveries(
       continue;
     }
     const ids = group.deliveries.map((d) => d.deliveryId);
-    const items = group.deliveries.map((d) => events.get(d.alertEventId)!);
+    const items = group.deliveries.filter((d) => d.watchId).map((d) => events.get(d.alertEventId)!);
+    const discs = group.deliveries
+      .filter((d) => !d.watchId)
+      .map((d) => mergedDiscoveries.get(d.alertEventId) ?? discoveries.get(d.alertEventId)!);
 
     let providerId: string | null = null;
     try {
       if (group.channel === "email") {
         if (!secret) throw new Error("Missing UNSUBSCRIBE_SECRET");
-        const to = items[0].user.email;
+        const to = items[0]?.user.email ?? discs[0]?.user.email ?? null;
         if (!to) {
           await update(ids, { status: "skipped", skip_reason: "no_email" });
           stats.skipped += ids.length;
@@ -274,8 +460,22 @@ export async function dispatchDueDeliveries(
           pauseUrl: `${site}/unsubscribe?t=${signUnsubscribeToken({ kind: "watch", userId: group.userId, watchId: e.watchId }, secret)}`,
           };
         });
+        const discoveryBlocks: DiscoveryEmailBlock[] = discs.map((d) =>
+          discoveryEmailBlock(
+            site,
+            d,
+            `${site}/unsubscribe?t=${signUnsubscribeToken(
+              d.source.kind === "saved_search"
+                ? { kind: "saved_search", userId: group.userId, savedSearchId: d.source.id }
+                : { kind: "demand_follow", userId: group.userId, followId: d.source.id },
+              secret,
+            )}`,
+          ),
+        );
         const mail = renderAlertEmail({
           items: emailItems,
+          // Watch-only groups pass no discoveries: byte-identical to the pre-P4 email.
+          ...(discoveryBlocks.length > 0 ? { discoveries: discoveryBlocks } : {}),
           unsubscribeAllUrl: `${site}/unsubscribe?t=${allToken}`,
           siteUrl: site,
         });
@@ -310,6 +510,7 @@ export async function dispatchDueDeliveries(
             priceHikeOnly: isPriceHikeOnly(mergedTriggers.get(e.id) ?? e.triggerTypes),
           })),
           site,
+          discs.length > 0 ? discs.map((d) => ({ title: discoveryTitle(d), url: discoveryLink(site, d) })) : undefined,
         );
         const r = await push(group.userId, payload);
         if (r.delivered === 0 && r.failed === 0) {

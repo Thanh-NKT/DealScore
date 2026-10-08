@@ -7,8 +7,11 @@ export interface ClaimedDelivery {
   channel: Channel;
   attempts: number;
   alertEventId: string;
-  watchId: string;
+  /** null for a discovery alert (saved search / demand follow, 0061). */
+  watchId: string | null;
   userId: string;
+  /** Source of the alert: `w:{watch}` | `s:{saved search}` | `d:{follow}`. Absent → `w:{watchId}`. */
+  sourceKey?: string;
 }
 
 /** Group by (userId, channel), in order of first appearance. */
@@ -35,7 +38,7 @@ export function nextRetryAt(attempts: number, now: Date): Date | null {
 
 /**
  * A digest (daily, and especially weekly) can hold several alerts for the same Watch: the 24h cooldown
- * allows one per day. Keep only the newest alert per (user, channel, Watch) and report the older ones,
+ * allows one per day. Keep only the newest alert per (user, channel, source — a Watch, saved search or follow) and report the older ones,
  * so one email / push never lists the same product twice. `createdAt` gives each alert event's time.
  */
 export function latestPerWatch(
@@ -44,7 +47,7 @@ export function latestPerWatch(
 ): Array<{ keep: ClaimedDelivery; older: ClaimedDelivery[] }> {
   const map = new Map<string, ClaimedDelivery[]>();
   for (const r of rows) {
-    const key = `${r.channel}:${r.userId}:${r.watchId}`;
+    const key = `${r.channel}:${r.userId}:${r.sourceKey ?? `w:${r.watchId}`}`;
     map.set(key, [...(map.get(key) ?? []), r]);
   }
   return [...map.values()].map((list) => {

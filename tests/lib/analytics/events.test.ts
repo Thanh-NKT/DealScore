@@ -19,6 +19,10 @@ describe("event names", () => {
         "share_opened",
         "search_intent_applied",
         "preferences_saved",
+        "saved_search_created",
+        "demand_followed",
+        "folder_shared",
+        "shared_folder_viewed",
       ].sort(),
     );
   });

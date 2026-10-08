@@ -7,7 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 
 interface UnsubscribeFormProps {
   token: string;
-  scopeKind: "watch" | "email";
+  scopeKind: "watch" | "email" | "saved_search" | "demand_follow";
 }
 
 type Problem = "invalid" | "failed" | null;
@@ -17,6 +17,13 @@ type Problem = "invalid" | "failed" | null;
  * /api/unsubscribe (which redirects to the "done" screen). With JavaScript the request runs in place
  * so a failure is explained here instead of on a raw error page, and the button can't be pressed twice.
  */
+const SUBMIT_LABEL: Record<UnsubscribeFormProps["scopeKind"], string> = {
+  watch: "Tạm dừng thông báo sản phẩm này",
+  email: "Tắt email thông báo giá",
+  saved_search: "Tạm dừng tìm kiếm này",
+  demand_follow: "Không báo nữa",
+};
+
 export function UnsubscribeForm({ token, scopeKind }: UnsubscribeFormProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -49,7 +56,7 @@ export function UnsubscribeForm({ token, scopeKind }: UnsubscribeFormProps) {
         aria-busy={busy}
         className={buttonClass({ size: "lg", block: true })}
       >
-        {busy ? "Đang xử lý…" : scopeKind === "watch" ? "Tạm dừng thông báo sản phẩm này" : "Tắt email thông báo giá"}
+        {busy ? "Đang xử lý…" : SUBMIT_LABEL[scopeKind]}
       </button>
       <div aria-live="polite">
         {problem && (

@@ -59,7 +59,9 @@ export interface AccountExport {
   /** The user's named watch folders. */
   folders: Array<{ id: string; name: string; sort_order: number; created_at: string }>;
   alert_events: Array<{
-    watch_id: string;
+    /** null for a saved-search / demand-found alert (source). */
+    watch_id: string | null;
+    source: "watch" | "saved_search" | "demand_found";
     trigger_types: string[];
     price: number | null;
     deal_score: number | null;
@@ -89,6 +91,21 @@ export interface AccountExport {
   extension_contributions: Array<{ created_at: string }>;
   /** "Góp ý dữ liệu" the user sent while signed in. */
   data_reports: Array<{ kind: string; message: string | null; created_at: string; status: string }>;
+  /** Saved searches (roadmap P4 E). Engine state (saved_search_hits, params_version …) is not user data. */
+  saved_searches: Array<{ name: string; params: unknown; status: string; created_at: string; last_alerted_at: string | null }>;
+  /** "Báo khi có" keywords (roadmap P4 F). known_product_ids is engine state, not exported. */
+  demand_follows: Array<{ keyword: string; status: string; created_at: string; expires_at: string; found_at: string | null }>;
+  /** Shared folder links (roadmap P4 J) — settings only, never the token. */
+  folder_shares: Array<{
+    folder_id: string;
+    title: string | null;
+    display_name: string | null;
+    show_prices: boolean;
+    show_target: boolean;
+    show_notes: boolean;
+    include_done: boolean;
+    created_at: string;
+  }>;
 }
 
 /**
@@ -103,7 +120,8 @@ export function buildAccountExport(input: {
   watches: Row<"watches">[];
   folders?: Array<Pick<Row<"watch_folders">, "id" | "name" | "sort_order" | "created_at">>;
   alertEvents: Array<
-    Pick<Row<"alert_events">, "watch_id" | "trigger_types" | "price" | "deal_score" | "created_at"> & {
+    Pick<Row<"alert_events">, "watch_id" | "trigger_types" | "price" | "deal_score" | "created_at"> &
+      Partial<Pick<Row<"alert_events">, "saved_search_id" | "demand_follow_id">> & {
       alert_deliveries: Array<{ channel: string; status: string; sent_at: string | null }>;
     }
   >;
@@ -121,6 +139,14 @@ export function buildAccountExport(input: {
   >;
   extensionContributions?: Array<{ created_at: string }>;
   dataReports?: Array<{ kind: string; message: string | null; created_at: string; status: string }>;
+  savedSearches?: Array<Pick<Row<"saved_searches">, "name" | "params" | "status" | "created_at" | "last_alerted_at">>;
+  demandFollows?: Array<Pick<Row<"demand_follows">, "keyword" | "status" | "created_at" | "expires_at" | "found_at">>;
+  folderShares?: Array<
+    Pick<
+      Row<"watch_folder_shares">,
+      "folder_id" | "title" | "display_name" | "show_prices" | "show_target" | "show_notes" | "include_done" | "created_at"
+    >
+  >;
 }): AccountExport {
   const p = input.profile;
   const pref = input.preferences;
@@ -173,6 +199,7 @@ export function buildAccountExport(input: {
     folders: (input.folders ?? []).map((f) => ({ id: f.id, name: f.name, sort_order: f.sort_order, created_at: f.created_at })),
     alert_events: input.alertEvents.map((e) => ({
       watch_id: e.watch_id,
+      source: e.watch_id ? "watch" : e.saved_search_id ? "saved_search" : e.demand_follow_id ? "demand_found" : "watch",
       trigger_types: e.trigger_types,
       price: num(e.price),
       deal_score: e.deal_score,
@@ -206,6 +233,30 @@ export function buildAccountExport(input: {
     })),
     extension_contributions: (input.extensionContributions ?? []).map((c) => ({ created_at: c.created_at })),
     data_reports: (input.dataReports ?? []).map((r) => ({ kind: r.kind, message: r.message, created_at: r.created_at, status: r.status })),
+    saved_searches: (input.savedSearches ?? []).map((x) => ({
+      name: x.name,
+      params: x.params,
+      status: x.status,
+      created_at: x.created_at,
+      last_alerted_at: x.last_alerted_at,
+    })),
+    demand_follows: (input.demandFollows ?? []).map((f) => ({
+      keyword: f.keyword,
+      status: f.status,
+      created_at: f.created_at,
+      expires_at: f.expires_at,
+      found_at: f.found_at,
+    })),
+    folder_shares: (input.folderShares ?? []).map((f) => ({
+      folder_id: f.folder_id,
+      title: f.title,
+      display_name: f.display_name,
+      show_prices: f.show_prices,
+      show_target: f.show_target,
+      show_notes: f.show_notes,
+      include_done: f.include_done,
+      created_at: f.created_at,
+    })),
   };
 }
 

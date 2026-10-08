@@ -30,14 +30,70 @@ function voucherLine(it: AlertEmailItem): string | null {
   return x != null && Number.isFinite(x) && x >= 0 && x < it.price ? `≈ ${formatVnd(x)} sau voucher` : null;
 }
 
+/** A saved-search or demand-follow block (roadmap P4 E/F). Links go to DealScore pages, never /go. */
+export interface DiscoveryEmailBlock {
+  title: string;
+  lead: string;
+  products: Array<{ name: string; price: number | null; recommendation: Recommendation | null; url: string; imageUrl: string | null }>;
+  moreCount: number;
+  searchUrl: string;
+  searchLabel: string;
+  manageUrl: string;
+  /** Default "Quản lý tìm kiếm đã lưu". */
+  manageLabel?: string;
+  pauseUrl: string;
+  pauseLabel: string;
+}
+
+function discoveryHtml(b: DiscoveryEmailBlock): string {
+  const e = escapeHtml;
+  const rows = b.products
+    .map((p) => {
+      const img = p.imageUrl
+        ? `<img src="${e(p.imageUrl)}" width="56" height="56" alt="" style="width:56px;height:56px;border-radius:12px;object-fit:cover;vertical-align:middle;margin-right:12px">`
+        : "";
+      const verdict = p.recommendation && p.recommendation !== "insufficient_data" ? ` · ${e(RECOMMENDATION_LABEL[p.recommendation])}` : "";
+      return `<p style="margin:8px 0">${img}<a href="${e(p.url)}" style="color:#15161A;font-weight:600">${e(p.name)}</a><br><strong>${e(formatVnd(p.price))}</strong>${verdict}</p>`;
+    })
+    .join("");
+  const more = b.moreCount > 0 ? `<p style="margin:8px 0"><a href="${e(b.searchUrl)}">và ${b.moreCount} sản phẩm khác</a></p>` : "";
+  return `<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
+<h3 style="margin:0 0 4px">${e(b.title)}</h3>
+<p style="margin:4px 0;color:#5E6168">${e(b.lead)}</p>
+${rows}${more}<p style="margin:12px 0 4px"><a href="${e(b.searchUrl)}" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">${e(b.searchLabel)}</a></p>
+<p style="margin:4px 0;font-size:13px"><a href="${e(b.manageUrl)}">${e(b.manageLabel ?? "Quản lý tìm kiếm đã lưu")}</a> · <a href="${e(b.pauseUrl)}">${e(b.pauseLabel)}</a></p>
+</div>`;
+}
+
+function discoveryText(b: DiscoveryEmailBlock): string {
+  return [
+    b.title,
+    b.lead,
+    ...b.products.map((p) => `- ${p.name}: ${formatVnd(p.price)}${p.recommendation && p.recommendation !== "insufficient_data" ? ` · ${RECOMMENDATION_LABEL[p.recommendation]}` : ""} — ${p.url}`),
+    ...(b.moreCount > 0 ? [`và ${b.moreCount} sản phẩm khác: ${b.searchUrl}`] : []),
+    `${b.searchLabel}: ${b.searchUrl}`,
+    `${b.manageLabel ?? "Quản lý tìm kiếm đã lưu"}: ${b.manageUrl}`,
+    `${b.pauseLabel}: ${b.pauseUrl}`,
+    "",
+  ].join("\n");
+}
+
 const DISCLOSURE = "DealScore có thể nhận hoa hồng khi bạn mua qua liên kết này. Giá bạn trả không thay đổi.";
 
-export function renderAlertEmail(input: { items: AlertEmailItem[]; unsubscribeAllUrl: string; siteUrl: string }): {
+export function renderAlertEmail(input: {
+  items: AlertEmailItem[];
+  /** Discovery blocks (saved search / demand found). Empty or absent → byte-identical watch-only email. */
+  discoveries?: DiscoveryEmailBlock[];
+  unsubscribeAllUrl: string;
+  siteUrl: string;
+}): {
   subject: string;
   html: string;
   text: string;
 } {
   const { items } = input;
+  const discoveries = input.discoveries ?? [];
+  if (discoveries.length > 0) return renderWithDiscoveries(input, discoveries);
   const subject =
     items.length === 1
       ? items[0].priceHikeOnly
@@ -97,6 +153,32 @@ ${htmlItems}
     `Tắt toàn bộ email thông báo: ${input.unsubscribeAllUrl}`,
   ].join("\n");
 
+  return { subject, html, text };
+}
+
+/** An email holding at least one discovery block, with or without watch items (UI spec §1.4 subjects). */
+function renderWithDiscoveries(
+  input: { items: AlertEmailItem[]; unsubscribeAllUrl: string; siteUrl: string },
+  discoveries: DiscoveryEmailBlock[],
+): { subject: string; html: string; text: string } {
+  const watchPart = input.items.length > 0 ? renderAlertEmail({ ...input, discoveries: [] }) : null;
+  const subject =
+    input.items.length === 0 && discoveries.length === 1
+      ? discoveries[0].title
+      : `${input.items.length + discoveries.length} tin mới từ DealScore`;
+  const e = escapeHtml;
+  // The watch part's items (between <body…> and its footer) are reused verbatim.
+  const watchHtml = watchPart ? watchPart.html.slice(watchPart.html.indexOf(">\n") + 2, watchPart.html.indexOf('<p style="color:#5E6168;font-size:12px">')) : "";
+  const html = `<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:#15161A;line-height:1.5;max-width:600px">
+${watchHtml}${discoveries.map(discoveryHtml).join("")}
+${watchPart ? `<p style="color:#5E6168;font-size:12px">${e(DISCLOSURE)}</p>\n` : ""}<p style="color:#5E6168;font-size:12px"><a href="${e(input.unsubscribeAllUrl)}">Tắt toàn bộ email thông báo</a></p>
+</body></html>`;
+  const watchText = watchPart ? watchPart.text.slice(0, watchPart.text.lastIndexOf(DISCLOSURE)) : "";
+  const text = [
+    watchText + discoveries.map(discoveryText).join("\n"),
+    ...(watchPart ? [DISCLOSURE] : []),
+    `Tắt toàn bộ email thông báo: ${input.unsubscribeAllUrl}`,
+  ].join("\n");
   return { subject, html, text };
 }
 

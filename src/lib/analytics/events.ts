@@ -3,7 +3,7 @@
  *
  * Privacy by construction: every event has an allow-list of properties, each a number, boolean,
  * UUID or a value from a fixed enum. Anything else is dropped — no emails, search text or URLs can
- * reach the table. Keep EVENT_NAMES in sync with the check constraint (latest: migration 0015).
+ * reach the table. Keep EVENT_NAMES in sync with the check constraint (latest: migration 0060).
  */
 
 export const EVENT_NAMES = [
@@ -19,6 +19,11 @@ export const EVENT_NAMES = [
   "share_opened",
   "search_intent_applied",
   "preferences_saved",
+  // Roadmap P4 (0060).
+  "saved_search_created",
+  "demand_followed",
+  "folder_shared",
+  "shared_folder_viewed",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];
@@ -53,6 +58,11 @@ const SCHEMA: Record<EventName, Record<string, PropType>> = {
     fallback: "boolean",
   },
   preferences_saved: { brands: "number", categories: "number", has_price: "boolean", marketplaces: "number" },
+  saved_search_created: { has_max_price: "boolean", only_buy: "boolean" },
+  // No keyword, token or ids: who follows / shares what stays out of analytics.
+  demand_followed: {},
+  folder_shared: {},
+  shared_folder_viewed: {},
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -20,7 +20,12 @@ export async function POST(request: NextRequest) {
   const { error } =
     scope.kind === "watch"
       ? await admin.from("watches").update({ status: "paused" }).eq("id", scope.watchId).eq("user_id", scope.userId)
-      : await admin.from("notification_settings").update({ email_enabled: false }).eq("user_id", scope.userId);
+      : scope.kind === "saved_search"
+        ? await admin.from("saved_searches").update({ status: "paused" }).eq("id", scope.savedSearchId).eq("user_id", scope.userId)
+        : scope.kind === "demand_follow"
+          ? // One-shot opt-in: "Không báo nữa" cancels it (the row is gone, nothing kept).
+            await admin.from("demand_follows").delete().eq("id", scope.followId).eq("user_id", scope.userId)
+          : await admin.from("notification_settings").update({ email_enabled: false }).eq("user_id", scope.userId);
   if (error) throw new Error(`Unsubscribe failed: ${error.message}`);
 
   if ((request.headers.get("accept") ?? "").includes("text/html")) {

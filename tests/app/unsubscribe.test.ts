@@ -5,6 +5,20 @@ const updates: Array<[string, Record<string, unknown>, Record<string, string>]> 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: (table: string) => ({
+      delete: () => {
+        const filters: Record<string, string> = {};
+        const chain = {
+          eq: (col: string, val: string) => {
+            filters[col] = val;
+            return chain;
+          },
+          then: (res: (v: { error: null }) => void) => {
+            updates.push([table, { deleted: true }, filters]);
+            res({ error: null });
+          },
+        };
+        return chain;
+      },
       update: (values: Record<string, unknown>) => {
         const filters: Record<string, string> = {};
         const chain = {
@@ -57,5 +71,18 @@ describe("POST /api/unsubscribe", () => {
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toContain("/unsubscribe?done=watch");
     expect(updates).toEqual([["watches", { status: "paused" }, { id: "w1", user_id: "u1" }]]);
+  });
+
+  it("saved search → only that search paused (id + user_id)", async () => {
+    const res = await POST(
+      req(signUnsubscribeToken({ kind: "saved_search", userId: "u1", savedSearchId: "s1" }, "s"), "text/html") as never,
+    );
+    expect(res.headers.get("location")).toContain("/unsubscribe?done=saved_search");
+    expect(updates).toEqual([["saved_searches", { status: "paused" }, { id: "s1", user_id: "u1" }]]);
+  });
+
+  it("demand follow → only that follow deleted (id + user_id)", async () => {
+    await POST(req(signUnsubscribeToken({ kind: "demand_follow", userId: "u1", followId: "f1" }, "s")) as never);
+    expect(updates).toEqual([["demand_follows", { deleted: true }, { id: "f1", user_id: "u1" }]]);
   });
 });
