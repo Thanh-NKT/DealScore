@@ -6,16 +6,22 @@ import { admin, createTestUser, deleteTestUser, SUPABASE_URL, type TestUser } fr
 // Catalog-wide privilege guard (review-db M17). privilege_report() lists every public table anon /
 // authenticated can write and every SECURITY DEFINER function they can execute. A new entry must be added
 // here on purpose, together with its RLS policy or its own access checks.
+// P4 (0060/0062): demand_follows (delete only), saved_searches (RLS owner, column grants), watch_folder_shares
+// (RLS owner, settings columns + delete; insert and token only through the server action).
 const AUTHENTICATED_WRITABLE = [
+  "demand_follows",
   "notification_settings",
   "push_subscriptions",
+  "saved_searches",
   "user_preferences",
   "users",
+  "watch_folder_shares",
   "watch_folders",
   "watches",
 ];
 // deal_score_accuracy (0044): aggregates of backtest_runs only; the table itself stays closed.
-const PUBLIC_DEFINER_FUNCTIONS = ["deal_score_accuracy(integer)", "trending_products(text,integer,uuid)"];
+// shared_folder_view (0062): the public /shared/{token} page; returns only what the owner enabled.
+const PUBLIC_DEFINER_FUNCTIONS = ["deal_score_accuracy(integer)", "shared_folder_view(text)", "trending_products(text,integer,uuid)"];
 
 describe("privilege_report", () => {
   it("anon writes nothing; authenticated writes only RLS-protected user tables; definer RPCs are service-only", async () => {
@@ -61,6 +67,16 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_affiliate_top_items", { p_from: "2026-10-01", p_to: "2026-10-07" }],
   ["admin_user_kpis", {}],
   ["admin_retention_cohorts", {}],
+  // 0060–0065 (roadmap P4).
+  ["record_saved_search_evaluation", { p_id: Z, p_params_version: 1, p_now: "2026-10-01T00:00:00Z", p_hits: [], p_event: null }],
+  ["record_demand_follow_check", { p_id: Z, p_now: "2026-10-01T00:00:00Z", p_status: "waiting", p_event: null }],
+  ["admin_demand_follow_counts", { p_keywords: ["ssd"] }],
+  ["admin_folder_shares", {}],
+  ["admin_revoke_folder_share", { p_share_id: Z }],
+  ["offer_daily_prices", { p_offer_ids: [Z], p_from: "2026-10-01" }],
+  ["seller_offer_ids", { p_after: null, p_limit: 1 }],
+  ["record_voucher_check", { p_seller_id: Z, p_vouchers_seen: 0 }],
+  ["season_variant_ids", { p_category_id: Z, p_limit: 1 }],
 ];
 
 describe("service-role-only admin RPCs", () => {

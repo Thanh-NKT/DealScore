@@ -136,52 +136,88 @@ export type Database = {
           created_at: string
           deal_score: number | null
           deliver_after: string
+          demand_follow_id: string | null
           id: string
+          items: Json
+          items_total: number | null
           offer_id: string | null
           previous_alert_price: number | null
           price: number | null
           recommendation: string | null
           reference_price: number | null
+          saved_search_id: string | null
           score_reasons: string[]
           trigger_types: string[]
-          watch_id: string
+          user_id: string
+          watch_id: string | null
         }
         Insert: {
           baseline_price?: number | null
           created_at?: string
           deal_score?: number | null
           deliver_after?: string
+          demand_follow_id?: string | null
           id?: string
+          items?: Json
+          items_total?: number | null
           offer_id?: string | null
           previous_alert_price?: number | null
           price?: number | null
           recommendation?: string | null
           reference_price?: number | null
+          saved_search_id?: string | null
           score_reasons?: string[]
           trigger_types?: string[]
-          watch_id: string
+          user_id?: string
+          watch_id?: string | null
         }
         Update: {
           baseline_price?: number | null
           created_at?: string
           deal_score?: number | null
           deliver_after?: string
+          demand_follow_id?: string | null
           id?: string
+          items?: Json
+          items_total?: number | null
           offer_id?: string | null
           previous_alert_price?: number | null
           price?: number | null
           recommendation?: string | null
           reference_price?: number | null
+          saved_search_id?: string | null
           score_reasons?: string[]
           trigger_types?: string[]
-          watch_id?: string
+          user_id?: string
+          watch_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "alert_events_demand_follow_id_fkey"
+            columns: ["demand_follow_id"]
+            isOneToOne: false
+            referencedRelation: "demand_follows"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "alert_events_offer_id_fkey"
             columns: ["offer_id"]
             isOneToOne: false
             referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_events_saved_search_id_fkey"
+            columns: ["saved_search_id"]
+            isOneToOne: false
+            referencedRelation: "saved_searches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -305,6 +341,44 @@ export type Database = {
           {
             foreignKeyName: "categories_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_season_stats: {
+        Row: {
+          category_id: string
+          computed_at: string
+          event_key: string
+          median_ratio: number
+          occurrences: number
+          share_lower: number
+          variants_counted: number
+        }
+        Insert: {
+          category_id: string
+          computed_at: string
+          event_key: string
+          median_ratio: number
+          occurrences: number
+          share_lower: number
+          variants_counted: number
+        }
+        Update: {
+          category_id?: string
+          computed_at?: string
+          event_key?: string
+          median_ratio?: number
+          occurrences?: number
+          share_lower?: number
+          variants_counted?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_season_stats_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["id"]
@@ -563,6 +637,50 @@ export type Database = {
             columns: ["variant_id"]
             isOneToOne: false
             referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demand_follows: {
+        Row: {
+          created_at: string
+          expires_at: string
+          found_at: string | null
+          id: string
+          keyword: string
+          known_product_ids: string[]
+          last_checked_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          found_at?: string | null
+          id?: string
+          keyword: string
+          known_product_ids?: string[]
+          last_checked_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          found_at?: string | null
+          id?: string
+          keyword?: string
+          known_product_ids?: string[]
+          last_checked_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demand_follows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1253,6 +1371,161 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_search_hits: {
+        Row: {
+          alerted_at: string | null
+          alerted_price: number | null
+          first_seen_at: string
+          in_set: boolean
+          last_seen_at: string
+          product_id: string
+          saved_search_id: string
+        }
+        Insert: {
+          alerted_at?: string | null
+          alerted_price?: number | null
+          first_seen_at: string
+          in_set: boolean
+          last_seen_at: string
+          product_id: string
+          saved_search_id: string
+        }
+        Update: {
+          alerted_at?: string | null
+          alerted_price?: number | null
+          first_seen_at?: string
+          in_set?: boolean
+          last_seen_at?: string
+          product_id?: string
+          saved_search_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_search_hits_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_search_hits_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_search_hits_saved_search_id_fkey"
+            columns: ["saved_search_id"]
+            isOneToOne: false
+            referencedRelation: "saved_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_searches: {
+        Row: {
+          channels: string[] | null
+          created_at: string
+          id: string
+          initialized_at: string | null
+          last_alerted_at: string | null
+          last_evaluated_at: string | null
+          name: string
+          params: Json
+          params_version: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channels?: string[] | null
+          created_at?: string
+          id?: string
+          initialized_at?: string | null
+          last_alerted_at?: string | null
+          last_evaluated_at?: string | null
+          name: string
+          params: Json
+          params_version?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          channels?: string[] | null
+          created_at?: string
+          id?: string
+          initialized_at?: string | null
+          last_alerted_at?: string | null
+          last_evaluated_at?: string | null
+          name?: string
+          params?: Json
+          params_version?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_searches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_price_profiles: {
+        Row: {
+          claim_offers: number
+          claim_weeks: number
+          computed_at: string
+          doubtful_weeks: number
+          hike_weeks: number
+          median_swing: number | null
+          offers_tracked: number
+          seller_id: string
+          stable_offers: number
+          version: string
+          window_days: number
+        }
+        Insert: {
+          claim_offers: number
+          claim_weeks: number
+          computed_at: string
+          doubtful_weeks: number
+          hike_weeks: number
+          median_swing?: number | null
+          offers_tracked: number
+          seller_id: string
+          stable_offers: number
+          version: string
+          window_days: number
+        }
+        Update: {
+          claim_offers?: number
+          claim_weeks?: number
+          computed_at?: string
+          doubtful_weeks?: number
+          hike_weeks?: number
+          median_swing?: number | null
+          offers_tracked?: number
+          seller_id?: string
+          stable_offers?: number
+          version?: string
+          window_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_price_profiles_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: true
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sellers: {
         Row: {
           external_seller_id: string
@@ -1571,6 +1844,55 @@ export type Database = {
           },
         ]
       }
+      voucher_seller_checks: {
+        Row: {
+          day: string
+          seller_id: string
+          vouchers_seen: number
+        }
+        Insert: {
+          day: string
+          seller_id: string
+          vouchers_seen?: number
+        }
+        Update: {
+          day?: string
+          seller_id?: string
+          vouchers_seen?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_seller_checks_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voucher_sightings: {
+        Row: {
+          day: string
+          voucher_id: string
+        }
+        Insert: {
+          day: string
+          voucher_id: string
+        }
+        Update: {
+          day?: string
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_sightings_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vouchers: {
         Row: {
           code: string | null
@@ -1639,6 +1961,66 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watch_folder_shares: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          folder_id: string
+          id: string
+          include_done: boolean
+          show_notes: boolean
+          show_prices: boolean
+          show_target: boolean
+          title: string | null
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          folder_id: string
+          id?: string
+          include_done?: boolean
+          show_notes?: boolean
+          show_prices?: boolean
+          show_target?: boolean
+          title?: string | null
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          folder_id?: string
+          id?: string
+          include_done?: boolean
+          show_notes?: boolean
+          show_prices?: boolean
+          show_target?: boolean
+          title?: string | null
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watch_folder_shares_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: true
+            referencedRelation: "watch_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "watch_folder_shares_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1990,6 +2372,27 @@ export type Database = {
           variant_key: string
         }[]
       }
+      admin_demand_follow_counts: {
+        Args: { p_keywords: string[] }
+        Returns: {
+          keyword: string
+          waiting: number
+        }[]
+      }
+      admin_folder_shares: {
+        Args: { p_limit?: number; p_offset?: number; p_q?: string }
+        Returns: {
+          created_at: string
+          display_name: string
+          folder_name: string
+          item_count: number
+          owner_pending_deletion: boolean
+          share_id: string
+          title: string
+          total_count: number
+          updated_at: string
+        }[]
+      }
       admin_freshness: {
         Args: { p_edges_minutes?: number[]; p_stale_hours?: number }
         Returns: Json
@@ -2121,6 +2524,10 @@ export type Database = {
       }
       admin_review_price_anomalies: {
         Args: { p_decision: string; p_ids: string[]; p_note?: string }
+        Returns: Json
+      }
+      admin_revoke_folder_share: {
+        Args: { p_note?: string; p_share_id: string }
         Returns: Json
       }
       admin_run_counter: { Args: { p: Json }; Returns: number }
@@ -2290,6 +2697,16 @@ export type Database = {
           reason: string
         }[]
       }
+      offer_daily_prices: {
+        Args: { p_from: string; p_offer_ids: string[] }
+        Returns: {
+          day: string
+          list_price: number
+          min_price: number
+          obs_count: number
+          offer_id: string
+        }[]
+      }
       offer_in_history: {
         Args: {
           p_deactivated_by: string
@@ -2364,7 +2781,25 @@ export type Database = {
         Args: { p_after?: string; p_limit?: number }
         Returns: Json
       }
+      record_demand_follow_check: {
+        Args: { p_event: Json; p_id: string; p_now: string; p_status: string }
+        Returns: string
+      }
       record_observations: { Args: { p: Json }; Returns: string[] }
+      record_saved_search_evaluation: {
+        Args: {
+          p_event: Json
+          p_hits: Json
+          p_id: string
+          p_now: string
+          p_params_version: number
+        }
+        Returns: string
+      }
+      record_voucher_check: {
+        Args: { p_seller_id: string; p_vouchers_seen: number }
+        Returns: undefined
+      }
       record_watch_evaluation: {
         Args: {
           p_config_version: number
@@ -2391,6 +2826,7 @@ export type Database = {
         Args: { p_daily_cap: number; p_marketplaces: string[]; p_value: string }
         Returns: number
       }
+      saved_search_params_valid: { Args: { p: Json }; Returns: boolean }
       search_index_report: {
         Args: { p_q: string; p_term_groups?: Json }
         Returns: {
@@ -2442,6 +2878,26 @@ export type Database = {
           variant_id: string
         }[]
       }
+      season_variant_ids: {
+        Args: { p_category_id: string; p_limit: number }
+        Returns: {
+          days: number
+          variant_id: string
+        }[]
+      }
+      seller_offer_ids: {
+        Args: { p_after: string; p_limit: number }
+        Returns: {
+          offer_ids: string[]
+          seller_id: string
+          variant_ids: string[]
+        }[]
+      }
+      seller_voucher_history: {
+        Args: { p_days?: number; p_seller_id: string }
+        Returns: Json
+      }
+      shared_folder_view: { Args: { p_token: string }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       submit_data_report: { Args: { p: Json }; Returns: Json }
