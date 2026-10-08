@@ -103,6 +103,66 @@ Thứ tự chạy (một lần, lúc ít truy cập):
    báo deadlock / timeout, chạy lại từ `--after` đó.
 4. `pnpm scores:recompute` — verdict tính lại trên lịch sử mới.
 
+## Triển khai roadmap (0032–0074) lên môi trường có dữ liệu thật
+
+**Index CONCURRENTLY — mỗi file đúng một lệnh, không chạy được trong transaction** (cùng quy tắc với 0027 ở trên):
+
+| File | Index | Phụ thuộc |
+|---|---|---|
+| `0027_price_obs_observed_at_index.sql` | `idx_price_obs_observed_at` on `price_observations (observed_at)` | — |
+| `0034_listings_active_observed_index.sql` | `idx_listings_active_observed` on `listings (marketplace, last_observed_at) where status = 'active'` | — |
+| `0035_products_gtin_index.sql` | `idx_products_gtin` on `products (gtin) where gtin is not null` | — |
+| `0054_click_events_created_index.sql` | `idx_click_events_created` on `click_events (created_at)` | — |
+| `0066_alert_events_user_index.sql` | `idx_alert_events_user_time` on `alert_events (user_id, created_at desc)` | cột `user_id` của **0061** |
+
+Build hỏng để lại index `INVALID` mà `if not exists` bỏ qua: kiểm
+`select indexrelid::regclass, indisvalid from pg_index where not indisvalid;` — có dòng nào thì
+`drop index concurrently <tên>;` rồi chạy lại lệnh của file đó.
+
+**Thứ tự chạy (một lần, lúc ít truy cập):**
+
+1. Backup / PITR trước (xem *Backup DB*).
+2. **DealScore migrations trước, theo đúng thứ tự số**: `corepack pnpm db:push` (CLI v2.117 không bọc file trong
+   transaction). Nếu công cụ báo *cannot run inside a transaction block* ở một file CONCURRENTLY: chạy tay lệnh duy
+   nhất của file đó trên kết nối riêng, `supabase migration repair --status applied <số>`, rồi `db push` tiếp.
+   - **0061** backfill `alert_events.user_id` và `set not null` → giữ khóa ACCESS EXCLUSIVE trên `alert_events` trong
+     lúc chạy: nếu bảng lớn, tạm dừng `dealscore-alerts` và `dealscore-collector` (cả hai ghi `alert_events`):
+     `select cron.alter_job(jobid, active := false) from cron.job where jobname in ('dealscore-alerts','dealscore-collector');`,
+     bật lại (`active := true`) sau 0061.
+   - **0062 / 0072** dựng lại `categories_slug_reserved`: dừng kèm tên slug nếu một danh mục đang dùng slug của route
+     (`shared`, `compare`, `radar`, …) — đổi slug danh mục đó rồi chạy lại.
+   - 0060 / 0065 tự tạo hai job mới ở trên — dùng hai secret Vault sẵn có, không cần đặt thêm.
+3. Deploy app DealScore (cùng commit với migration — `database.types.ts` khớp schema).
+4. Deploy app **Admin-DealScore sau cùng** (gọi `admin_*` RPC và `/api/admin/*` mới; `database.types.ts` giống hệt DealScore).
+5. Kiểm: `select jobname, schedule, active from cron.job order by jobname;` có `dealscore-discovery-alerts` và
+   `dealscore-insights`; `select * from cron.job_run_details order by start_time desc limit 20;` sau ~15 phút.
+
+**Biến môi trường:** roadmap **không** thêm biến mới. Route mới dùng biến có sẵn: `CRON_SECRET`
+(`/api/cron/discovery-alerts`, `/api/cron/insights`) và `ADMIN_API_SECRET` (`/api/admin/matching/attributes`,
+`/api/admin/price-anomalies/scan`, `/api/admin/status`). Xem `.env.local.example`.
+
+### Ngưỡng cần chỉnh theo dữ liệu thật ("tune with real data")
+
+Mỗi tính năng giữ ngưỡng ở **một** module; dòng có chú thích `// tune with real data` là giá trị đoán trước khi có
+dữ liệu. Hằng số có "mirrored by" phải sửa cùng hàm SQL được nêu.
+
+| Tính năng | Module | Hằng số chính |
+|---|---|---|
+| Tìm kiếm đã lưu (P4) | `src/lib/saved-search/constants.ts` | `SAVED_SEARCH_MATCH_CAP`, `SAVED_SEARCH_EVAL_INTERVAL_HOURS`, `SAVED_SEARCH_COOLDOWN_HOURS`, `SAVED_SEARCH_REALERT_DAYS`, `SAVED_SEARCH_STALE_HOURS` (`MAX_SAVED_SEARCHES` = trigger 0060) |
+| Theo dõi nhu cầu (P4) | `src/lib/demand-follow/constants.ts` | `DEMAND_FOLLOW_TTL_DAYS`, `DEMAND_FOUND_USER_COOLDOWN_HOURS`, `DEMAND_FOUND_FRESH_HOURS`, `DEMAND_FOLLOW_CHECK_INTERVAL_HOURS` |
+| Báo tăng giá (P2) | `src/lib/watch/constants.ts` | `PRICE_HIKE_*` (ngưỡng, hysteresis, cooldown riêng), `CHANGE_WINDOW_DAYS` |
+| Bất thường giá (P3) | `src/lib/anomalies/constants.ts` | `ANOMALY_SPIKE_RATIO`, `ANOMALY_DROP_RATIO`, `ANOMALY_BASELINE_DAYS`, `ANOMALY_MIN_BASELINE_OBS` |
+| Giá theo đơn vị (P4) | `src/lib/pricing/unit-price.ts` | `UNIT_MAX_PACKS`, `UNIT_LIMITS`, `UNIT_PER_100_FROM`, `UNIT_PRICE_CATEGORY_SLUGS` |
+| Sale ảo (P2) | `src/lib/pricing/deal-score.ts` | `FAKE_SALE_LIST_DISCOUNT`, `FAKE_SALE_MEDIAN_FLOOR`, `FAKE_SALE_HIKE_RATIO` |
+| Lịch mùa giảm giá (P4 A) | `src/lib/seasons/constants.ts` | `SEASON_BASELINE_*`, `SEASON_WINDOW_MIN_SHARE`, `SEASON_MIN_COVERAGE_DAYS`, `SEASON_MIN_VARIANTS_CATEGORY` (`SEASON_JOB_MAX_VARIANTS` mirrored by `season_variant_ids`, 0065) |
+| Hồ sơ giá người bán (P4 H) | `src/lib/sellers/constants.ts` | `SELLER_MIN_*`, `SELLER_STABLE_SWING` (`SELLER_PROFILE_WINDOW_DAYS` mirrored by `seller_offer_ids`, 0064) |
+| Mẫu voucher (P4) | `src/lib/vouchers/patterns.ts` | `VOUCHER_PATTERN_MIN_CHECK_DAYS`, `VOUCHER_PATTERN_MIN_CHECK_MONTHS`, `VOUCHER_PATTERN_MIN_SHAPE_MONTHS`, `VOUCHER_PATTERN_TIMING_SHARE` |
+| Độ chính xác công khai (P2) | `src/lib/transparency/accuracy.ts` | `ACCURACY_MIN_SAMPLES`, `ACCURACY_MIN_CLASS_SAMPLES`, `ACCURACY_WEEKS` |
+| Gợi ý giá mục tiêu / tiết kiệm | `src/lib/watch/target-evidence.ts`, `src/lib/watch/savings.ts` | `TARGET_EVIDENCE_*`, `TARGET_SUGGEST_PERCENTILE`, `SAVINGS_*` |
+| Báo sai dữ liệu (P2) | `src/lib/reports/constants.ts` | `REPORTS_PER_HOUR_USER`, `REPORTS_PER_HOUR_GUEST`, `REPORTS_PER_DAY_GLOBAL`, `REPORT_DEDUP_HOURS` |
+| Chia sẻ thư mục (P4 J) | `src/lib/share-folder/constants.ts` | `SHARED_FOLDER_MAX_ITEMS`, `SHARED_PRICE_STALE_HOURS` |
+| Verdict theo biến thể | `src/lib/pricing/variant-verdict.ts` | `VARIANT_SCORE_MAX_AGE_HOURS` |
+
 ## Checklist triển khai (ngoài migration)
 
 - `LOOKUP_IP_SALT` **bắt buộc** ở production: thiếu thì throttle đăng nhập vẫn đếm nhưng mỗi lượt gửi
@@ -156,6 +216,16 @@ Migration 0017 thêm job `dealscore-sourcing` (02:41 giờ VN mỗi ngày) → `
 tự lấy sản phẩm mới cho từng sàn đã cấu hình, có trần mỗi ngày, ghi `sourcing_runs`. Chạy tay: `pnpm sourcing:run`.
 Migration 0019 thêm job `dealscore-sourcing-demand` (`11 */3 * * *`) → `/api/cron/sourcing?mode=demand`: chỉ chạy các từ khóa nhu cầu
 (`origin = 'demand'`) đang chờ. Chạy tay: `pnpm sourcing:run all demand`.
+
+Roadmap P4 thêm hai job, cùng hai secret Vault ở trên (POST, `Authorization: Bearer <CRON_SECRET>`, khóa job riêng):
+
+| Job (migration) | Lịch | Route | Chạy tay | Việc |
+|---|---|---|---|---|
+| `dealscore-discovery-alerts` (0060) | `7,22,37,52 * * * *` | `/api/cron/discovery-alerts` | `pnpm alerts:discovery` | Đánh giá tìm kiếm đã lưu (`evaluateSavedSearches`) rồi kiểm theo dõi nhu cầu (`checkDemandFollows`). Chỉ **ghi** `alert_events` + `alert_deliveries`; gửi vẫn là `dealscore-alerts` (cùng claim / retry / giờ yên lặng / digest / hủy đăng ký). |
+| `dealscore-insights` (0065) | `37 * * * *` | `/api/cron/insights` | `pnpm insights:run` | Hồ sơ giá người bán (P4 H) rồi lịch mùa giảm giá theo danh mục (P4 A). Mỗi lượt chỉ làm phần cũ hơn 7 ngày → nhịp tuần tự hình thành. Chỉ ghi hai bảng cache insight — Deal Score / search / alert không đọc. |
+
+Không có job pg_cron nào khác trong 0030–0074. Quét bất thường giá (0051) chạy **trong** `dealscore-collector`
+(`runCollector` → `detectPriceAnomalies`) và quét lại tay từ Admin (`POST /api/admin/price-anomalies/scan`).
 
 ## Giám sát (1.10)
 
