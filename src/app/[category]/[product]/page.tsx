@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { loadActiveVouchers, loadProductPageData } from "@/lib/product/page-data";
+import { loadSlugRedirect, slugRedirectPath } from "@/lib/product/slug-redirect";
+import { createClient } from "@/lib/supabase/server";
 import { toGroups } from "@/lib/vouchers/select";
 import { collectedAt as vouchersCollectedAt } from "@/lib/vouchers/store";
 import { PriceSummary } from "@/components/product/price-summary";
@@ -67,6 +69,9 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const data = await getPageData(productSlug, variant);
 
   if (!data) {
+    // A merged product's old slug (migration 0050): one 308 hop to the product it was merged into.
+    const redirect = await loadSlugRedirect(await createClient(), productSlug);
+    if (redirect) permanentRedirect(slugRedirectPath(redirect, query));
     notFound();
   }
 

@@ -994,6 +994,42 @@ export type Database = {
           },
         ]
       }
+      product_slug_redirects: {
+        Row: {
+          merged_at: string
+          old_slug: string
+          product_id: string
+          variant_map: Json
+        }
+        Insert: {
+          merged_at?: string
+          old_slug: string
+          product_id: string
+          variant_map?: Json
+        }
+        Update: {
+          merged_at?: string
+          old_slug?: string
+          product_id?: string
+          variant_map?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_slug_redirects_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_slug_redirects_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variants: {
         Row: {
           capacity_gb: number | null
@@ -1898,6 +1934,14 @@ export type Database = {
         Args: { p_hours?: number; p_stale_hours?: number }
         Returns: Json
       }
+      admin_merge_preview: {
+        Args: { p_source_id: string; p_target_id: string }
+        Returns: Json
+      }
+      admin_merge_products: {
+        Args: { p: Json; p_source_id: string; p_target_id: string }
+        Returns: Json
+      }
       admin_move_offer: {
         Args: { p_offer_id: string; p_target_variant_id?: string }
         Returns: Json
@@ -1911,6 +1955,10 @@ export type Database = {
       admin_rebuild_variant_rollup: {
         Args: { p_variant_ids: string[] }
         Returns: undefined
+      }
+      admin_repoint_variant_watches: {
+        Args: { p_from_variant_ids: string[]; p_to_variant_id: string }
+        Returns: Json
       }
       admin_repoint_watches: {
         Args: { p_from_product_id: string; p_to_variant_id: string }
@@ -2098,6 +2146,13 @@ export type Database = {
           p_product_status: string
         }
         Returns: boolean
+      }
+      offer_latest_trusted_observation: {
+        Args: { p_offer_id: string }
+        Returns: {
+          observed_at: string
+          price: number
+        }[]
       }
       price_drop_radar: {
         Args: {

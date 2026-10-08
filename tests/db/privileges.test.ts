@@ -34,6 +34,7 @@ describe("privilege_report", () => {
 
 // Admin RPCs added after privilege_report was written: called as anon they must be refused outright
 // (permission denied, not a business error from inside the function).
+const Z = "00000000-0000-4000-8000-000000000000";
 const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_list_products", {}],
   ["admin_create_product", { p: {} }],
@@ -46,6 +47,10 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_data_reports", {}],
   ["admin_data_report_counts", {}],
   ["admin_resolve_data_reports", { p_ids: ["00000000-0000-4000-8000-000000000000"], p_status: "resolved" }],
+  // 0050 product merge.
+  ["admin_merge_preview", { p_source_id: Z, p_target_id: Z }],
+  ["admin_merge_products", { p_source_id: Z, p_target_id: Z, p: {} }],
+  ["admin_repoint_variant_watches", { p_from_variant_ids: [Z], p_to_variant_id: Z }],
 ];
 
 describe("service-role-only admin RPCs", () => {
