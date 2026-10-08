@@ -197,7 +197,8 @@ export async function updateSavedSearch(
   if (Object.keys(update).length === 0) return { ok: true };
   const { error } = await supabase.from("saved_searches").update(update).eq("id", id).eq("user_id", user.id);
   if (error) return { ok: false, error: error.code === "23505" ? "duplicate" : "unavailable" };
-  // A params change re-baselines (DB trigger nulls initialized_at): baseline the new params at once.
+  // A params change re-baselines (the DB trigger nulls initialized_at and last_evaluated_at, 0070, so the row is
+  // due): baseline the new params at once.
   if (update.params) baselineAfter(id);
   revalidatePath("/account/searches");
   return { ok: true };

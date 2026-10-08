@@ -121,3 +121,47 @@ describe("evaluateSavedSearches: baseline (I2)", () => {
     }
   });
 });
+
+describe("evaluateSavedSearches: params edit (final review I1)", () => {
+  it("an edit made right after an evaluation is baselined at once; the next new product alerts, alone", async () => {
+    const c = await createFixtureCatalog("sse-edit");
+    try {
+      await c.product({ price: 100_000 });
+      const u = await user();
+      const id = await save(u, { categorySlug: c.categorySlug, maxPrice: 5_000_000 });
+      let now = new Date();
+      expect(await evaluateSavedSearches({ now, ids: [id] })).toMatchObject({ evaluated: 1, alerts: 0 });
+
+      // The owner lowers the ceiling minutes later (well inside the 6 h interval): the save action's baseline.
+      const { error } = await u.client
+        .from("saved_searches")
+        .update({ params: { categorySlug: c.categorySlug, maxPrice: 3_000_000 } as never })
+        .eq("id", id);
+      expect(error).toBeNull();
+      expect((await row(id)).last_evaluated_at).toBeNull();
+      now = new Date(now.getTime() + 5 * 60_000);
+      expect(await evaluateSavedSearches({ now, ids: [id] })).toMatchObject({ evaluated: 1, alerts: 0 });
+      expect((await row(id)).initialized_at).not.toBeNull();
+
+      // A product entering after the edit is news, not baseline.
+      const fresh = await c.product({ price: 200_000 });
+      now = new Date(now.getTime() + 7 * H);
+      expect(await evaluateSavedSearches({ now, ids: [id] })).toMatchObject({ evaluated: 1, alerts: 1 });
+      const ev = await events(id);
+      expect(ev).toHaveLength(1);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((ev[0].items as any[]).map((i) => i.product_id)).toEqual([fresh.productId]);
+    } finally {
+      await c.cleanup();
+    }
+  });
+
+  it("a name / status / channels change keeps the cursor (not a re-baseline)", async () => {
+    const u = await user();
+    const id = await save(u, { categorySlug: cat.categorySlug, maxPrice: 5_000_000 });
+    const now = new Date();
+    await evaluateSavedSearches({ now, ids: [id] });
+    await u.client.from("saved_searches").update({ name: "Đổi tên" }).eq("id", id);
+    expect(Date.parse((await row(id)).last_evaluated_at!)).toBe(now.getTime());
+  });
+});
