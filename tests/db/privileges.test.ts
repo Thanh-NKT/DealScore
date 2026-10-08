@@ -53,6 +53,8 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_data_reports", {}],
   ["admin_data_report_counts", {}],
   ["admin_resolve_data_reports", { p_ids: ["00000000-0000-4000-8000-000000000000"], p_status: "resolved" }],
+  // 0045: SECURITY INVOKER, so privilege_report() does not see it (final review Minor 5).
+  ["offer_latest_trusted_observation", { p_offer_id: Z }],
   // 0050 product merge.
   ["admin_merge_preview", { p_source_id: Z, p_target_id: Z }],
   ["admin_merge_products", { p_source_id: Z, p_target_id: Z, p: {} }],
@@ -80,6 +82,20 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["record_voucher_check", { p_seller_id: Z, p_vouchers_seen: 0 }],
   ["season_variant_ids", { p_category_id: Z, p_limit: 1 }],
 ];
+
+// Internal write helpers with no audit row of their own: only the audited definer RPCs that call them
+// (admin_merge_products, admin_move_offer, admin_review_match) may run them — not even service_role (0071).
+const INTERNAL_HELPERS: [string, Record<string, unknown>][] = [
+  ["admin_repoint_variant_watches", { p_from_variant_ids: [Z], p_to_variant_id: Z }],
+  ["admin_repoint_watches", { p_from_product_id: Z, p_to_variant_id: Z }],
+];
+
+describe("internal helpers refuse every API role", () => {
+  it.each(INTERNAL_HELPERS)("%s refuses service_role", async (fn, args) => {
+    const { error } = await admin.rpc(fn as never, args as never);
+    expect(error?.code).toBe("42501");
+  });
+});
 
 describe("service-role-only admin RPCs", () => {
   const anon = createClient<Database>(SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
