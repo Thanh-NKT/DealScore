@@ -456,15 +456,23 @@ describe("admin_merge_products × ingest_listing", () => {
         ingest(b, key),
         ingest(a, key),
       ]);
+      expect(joinB.error).toBeNull();
+      expect(againA.error).toBeNull();
       if (m.error) {
         // The only allowed failure: a listing joined the source between the read and the locks.
         expect(m.error.message).toContain("admin_merge_products: dữ liệu đang được cập nhật, hãy thử lại");
-      } else {
-        merged++;
-        expect(await offerVariant(a)).toEqual([tgt.variants[0]]);
+        // "hãy thử lại": once the concurrent ingests are done the retry must succeed. Without it, the race is
+        // lost in every round on a fast machine and the success path was never asserted (flaky "merged > 0").
+        const { data: again } = await admin.from("products").select("id, product_variants(id)").eq("draft_key", key).single();
+        const retry = await merge(
+          again!.id,
+          tgt.id,
+          (again!.product_variants as { id: string }[]).map((v) => ({ source_variant_id: v.id, target_variant_id: tgt.variants[0] })),
+        );
+        expect(retry.error).toBeNull();
       }
-      expect(joinB.error).toBeNull();
-      expect(againA.error).toBeNull();
+      merged++;
+      expect(await offerVariant(a)).toEqual([tgt.variants[0]]);
       for (const ext of [a, b]) {
         const vids = await offerVariant(ext);
         expect(vids.length).toBe(1);
@@ -475,7 +483,7 @@ describe("admin_merge_products × ingest_listing", () => {
         .in("listings.external_item_id", [a, b]);
       expect(orphan!.every((o) => o.product_variants !== null)).toBe(true);
     }
-    expect(merged).toBeGreaterThan(0);
+    expect(merged).toBe(ROUNDS);
   });
 
   it("an ingest auto-matching a verified source variant mid-merge either lands on a live variant or fails whole", async () => {
@@ -501,16 +509,25 @@ describe("admin_merge_products × ingest_listing", () => {
         auto(c),
         auto(a),
       ]);
-      if (m.error) expect(m.error.message).toContain("admin_merge_products: dữ liệu đang được cập nhật, hãy thử lại");
-      else merged++;
       expect(againA.error).toBeNull();
       // The new listing's ingest may lose the race to the variant's deletion: a FK error, nothing written.
       if (joinC.error) expect(joinC.error.code).toBe("23503");
-      const { data: rows } = await admin.from("offers").select("variant_id, product_variants(id), listings!inner(external_item_id)")
-        .in("listings.external_item_id", [a, c]);
-      expect(rows!.length).toBe(joinC.error ? 1 : 2);
-      expect(rows!.every((o) => o.variant_id !== null && o.product_variants !== null)).toBe(true);
+      const live = async () => {
+        const { data: rows } = await admin.from("offers").select("variant_id, product_variants(id), listings!inner(external_item_id)")
+          .in("listings.external_item_id", [a, c]);
+        expect(rows!.length).toBe(joinC.error ? 1 : 2);
+        expect(rows!.every((o) => o.variant_id !== null && o.product_variants !== null)).toBe(true);
+      };
+      await live();
+      if (m.error) {
+        expect(m.error.message).toContain("admin_merge_products: dữ liệu đang được cập nhật, hãy thử lại");
+        // "hãy thử lại": with the ingests done the retry must succeed (the success path is asserted every round).
+        const retry = await merge(src.id, tgt.id, [{ source_variant_id: src.variants[0], target_variant_id: tgt.variants[0] }]);
+        expect(retry.error).toBeNull();
+        await live();
+      }
+      merged++;
     }
-    expect(merged).toBeGreaterThan(0);
+    expect(merged).toBe(ROUNDS);
   });
 });
