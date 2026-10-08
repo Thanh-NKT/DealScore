@@ -62,7 +62,7 @@ export interface MatchResult {
   reason: string;
 }
 
-const ATTRIBUTE_LABEL: Record<AttributeKey, string> = {
+export const ATTRIBUTE_LABEL: Record<AttributeKey, string> = {
   capacityGb: "dung lượng",
   color: "màu",
   sizeInch: "kích thước",
@@ -82,7 +82,7 @@ const MODEL_EXTENSIONS: ReadonlySet<string> = new Set([...MODEL_SUFFIXES, "evo",
  * - otherwise partial: model tokens found as whole title tokens, each not followed by an extension.
  * Substrings never count: "G304" is not in "G3040".
  */
-function modelCoverage(titleTokens: string[], model: string): { found: number; total: number; extended: boolean } {
+export function modelCoverage(titleTokens: string[], model: string): { found: number; total: number; extended: boolean } {
   const modelTokens = model.split(" ");
   const total = modelTokens.length;
   const compact = modelTokens.join("");
@@ -110,7 +110,7 @@ function modelCoverage(titleTokens: string[], model: string): { found: number; t
   return { found, total, extended: false };
 }
 
-function containsPhrase(normalizedText: string, normalizedPhrase: string): boolean {
+export function containsPhrase(normalizedText: string, normalizedPhrase: string): boolean {
   if (!normalizedPhrase) return false;
   return ` ${normalizedText} `.includes(` ${normalizedPhrase} `);
 }
@@ -143,12 +143,12 @@ function cleanGtin(raw: string | null | undefined): string | null {
   return d.padStart(14, "0");
 }
 
-function attributesEqual(key: AttributeKey, a: OfferAttributes[AttributeKey], b: OfferAttributes[AttributeKey]) {
+export function attributesEqual(key: AttributeKey, a: OfferAttributes[AttributeKey], b: OfferAttributes[AttributeKey]) {
   if (a == null || b == null) return false;
   return key === "capacityGb" ? capacityEqual(a as number, b as number) : a === b;
 }
 
-function formatAttribute(key: AttributeKey, value: OfferAttributes[AttributeKey]): string {
+export function formatAttribute(key: AttributeKey, value: OfferAttributes[AttributeKey]): string {
   if (key === "capacityGb") {
     const gb = value as number;
     return gb >= 1000 ? `${Math.round((gb / 1024) * 10) / 10}TB` : `${gb}GB`;
@@ -161,7 +161,7 @@ function round4(x: number): number {
   return Math.round(x * 10_000) / 10_000;
 }
 
-function offerAttributes(offer: OfferToMatch): OfferAttributes {
+export function offerAttributes(offer: OfferToMatch): OfferAttributes {
   const fromModel = extractAttributes(offer.modelName);
   // Titles are long: Vietnamese color words only count after "màu" there.
   const fromTitle = extractAttributes(offer.title, { bareVietnameseColors: false });
@@ -172,11 +172,16 @@ function offerAttributes(offer: OfferToMatch): OfferAttributes {
   };
 }
 
-function variantAttributes(c: MatchCandidate): OfferAttributes {
+export function variantAttributes(c: MatchCandidate): OfferAttributes {
   const specText = Object.values(c.variantSpecs)
     .filter((v): v is string | number => typeof v === "string" || typeof v === "number")
     .join(" ");
   return extractAttributes(`${c.variantKey} ${specText}`);
+}
+
+/** Title tokens for modelCoverage(). "S24+" is "S24 Plus", not "S24": spell the plus out before normalizeText drops it (as draftKey does). */
+export function modelTitleTokens(title: string): string[] {
+  return normalizeText(title.replace(/([a-z0-9])\+/gi, "$1 plus")).split(" ").filter(Boolean);
 }
 
 export function scoreCandidate(offer: OfferToMatch, c: MatchCandidate): MatchResult {
@@ -207,8 +212,7 @@ export function scoreCandidate(offer: OfferToMatch, c: MatchCandidate): MatchRes
 
   const model = normalizeText(c.model ?? "");
   if (model) {
-    // "S24+" is "S24 Plus", not "S24": spell the plus out before normalizeText drops it (as draftKey does).
-    const titleTokens = normalizeText(offer.title.replace(/([a-z0-9])\+/gi, "$1 plus")).split(" ").filter(Boolean);
+    const titleTokens = modelTitleTokens(offer.title);
     const { found, total, extended } = modelCoverage(titleTokens, model);
     score += WEIGHT_MODEL * (found / total);
     if (found === total) matched.push(`model ${c.model}`);

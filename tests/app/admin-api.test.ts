@@ -24,10 +24,14 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc, from }
 const recomputeDealScores = vi.fn(async () => ({ scored: 3, tally: {} }));
 vi.mock("@/lib/pricing/recompute-scores", () => ({ recomputeDealScores }));
 
+const loadAttributeTables = vi.fn(async (_db: unknown, ids: string[]) => ids.slice(0, 1).map((candidateId) => ({ candidateId, rows: [] })));
+vi.mock("@/lib/matching/attribute-table", () => ({ loadAttributeTables }));
+
 const status = await import("@/app/api/admin/status/route");
 const authorize = await import("@/app/api/admin/tiktok/authorize-url/route");
 const recompute = await import("@/app/api/admin/deal-scores/recompute/route");
 const scan = await import("@/app/api/admin/price-anomalies/scan/route");
+const attributes = await import("@/app/api/admin/matching/attributes/route");
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
@@ -220,6 +224,41 @@ describe("POST /api/admin/price-anomalies/scan", () => {
   it("500 internal when the RPC fails", async () => {
     rpc.mockImplementation(async () => ({ data: null, error: { message: "boom" } }) as never);
     const res = await post({ hours: 1 });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "internal" });
+  });
+});
+
+describe("POST /api/admin/matching/attributes", () => {
+  const post = (body: unknown, auth?: string) =>
+    attributes.POST(req("/api/admin/matching/attributes", { method: "POST", body: JSON.stringify(body) }, auth) as never);
+
+  it("401 without the right secret", async () => {
+    expect((await post({ candidateIds: [A] }, "Bearer x")).status).toBe(401);
+    expect(loadAttributeTables).not.toHaveBeenCalled();
+  });
+
+  it("400 for 0 ids, 51 ids, non-uuid ids or a bad body", async () => {
+    const many = Array.from({ length: 51 }, () => A);
+    for (const body of [{ candidateIds: [] }, { candidateIds: many }, { candidateIds: ["x"] }, { candidateIds: A }, {}]) {
+      const res = await post(body);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "bad_request" });
+    }
+    expect(loadAttributeTables).not.toHaveBeenCalled();
+  });
+
+  it("returns { items } from the loader (gone candidates already dropped there)", async () => {
+    const res = await post({ candidateIds: [A, B] });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(await res.json()).toEqual({ items: [{ candidateId: A, rows: [] }] });
+    expect(loadAttributeTables).toHaveBeenCalledWith(expect.anything(), [A, B]);
+  });
+
+  it("500 internal when loading fails", async () => {
+    loadAttributeTables.mockRejectedValueOnce(new Error("db down"));
+    const res = await post({ candidateIds: [A] });
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ error: "internal" });
   });
