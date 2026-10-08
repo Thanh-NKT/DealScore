@@ -1903,6 +1903,32 @@ export type Database = {
       }
     }
     Functions: {
+      admin_affiliate_report: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
+      admin_affiliate_top_items: {
+        Args: {
+          p_from: string
+          p_limit?: number
+          p_sort?: string
+          p_to: string
+        }
+        Returns: {
+          category_slug: string
+          clicks: number
+          commission_completed: number
+          external_item_id: string
+          gmv_completed: number
+          listing_id: string
+          listing_title: string
+          marketplace: string
+          orders: number
+          product_id: string
+          product_name: string
+          product_slug: string
+        }[]
+      }
       admin_check_product_fields: {
         Args: { p: Json; p_fn: string; p_self: string }
         Returns: undefined
@@ -2074,6 +2100,17 @@ export type Database = {
         Args: { p_ids: string[]; p_note?: string; p_status: string }
         Returns: Json
       }
+      admin_retention_cohorts: {
+        Args: { p_max_offset?: number; p_weeks?: number }
+        Returns: {
+          active_users: number
+          cohort_size: number
+          cohort_week: string
+          complete: boolean
+          segment: string
+          week_offset: number
+        }[]
+      }
       admin_review_match: {
         Args: {
           p_candidate_id: string
@@ -2136,6 +2173,7 @@ export type Database = {
         Args: { p: Json; p_product_id: string }
         Returns: Json
       }
+      admin_user_kpis: { Args: never; Returns: Json }
       claim_due_deliveries: {
         Args: { p_limit: number; p_now: string }
         Returns: {

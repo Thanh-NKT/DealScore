@@ -56,6 +56,11 @@ const SERVICE_ONLY_RPCS: [string, Record<string, unknown>][] = [
   ["admin_price_anomalies", {}],
   ["admin_price_anomaly_counts", {}],
   ["admin_review_price_anomalies", { p_ids: [Z], p_decision: "keep" }],
+  // 0052 affiliate report, 0053 user KPIs / cohorts.
+  ["admin_affiliate_report", { p_from: "2026-10-01", p_to: "2026-10-07" }],
+  ["admin_affiliate_top_items", { p_from: "2026-10-01", p_to: "2026-10-07" }],
+  ["admin_user_kpis", {}],
+  ["admin_retention_cohorts", {}],
 ];
 
 describe("service-role-only admin RPCs", () => {
