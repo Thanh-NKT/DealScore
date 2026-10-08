@@ -171,3 +171,44 @@ describe("admin_data_reports / counts / resolve", () => {
     }
   });
 });
+
+// 0045 (P2 review M8): seen_price / current_price use the same extension corroboration gate as
+// refresh_variant_current_price — an uncorroborated extension price is never "the price the user saw".
+describe("seen_price / current_price corroboration gate (0045)", () => {
+  let g: SeededVariant;
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+  beforeAll(async () => {
+    g = await seedVariantWithHistory({ price: 1_500_000, days: 2, daily: () => 1_500_000 });
+    await admin.from("price_observations").insert([
+      { offer_id: g.offerId, price: 1_500_000, observed_at: hoursAgo(3), is_valid: true, source: "api" },
+      // Newest, valid, but extension-only and far from any trusted price.
+      { offer_id: g.offerId, price: 700_000, observed_at: hoursAgo(1), is_valid: true, source: "extension" },
+    ]);
+  });
+  afterAll(async () => {
+    await g.cleanup();
+  });
+
+  it("skips an uncorroborated extension observation for seen_price and current_price", async () => {
+    const { data, error } = await submit({ product_id: g.productId, offer_id: g.offerId, kind: "wrong_price" });
+    expect(error).toBeNull();
+    const id = (data as { id: string }).id;
+    const { data: row } = await admin.from("data_reports").select("seen_price").eq("id", id).single();
+    expect(row!.seen_price).toBe(1_500_000);
+    const { data: rows } = await admin.rpc("admin_data_reports", { p_product_id: g.productId });
+    const r = rows!.find((x) => x.id === id)!;
+    expect(r.current_price).toBe(1_500_000);
+  });
+
+  it("uses a corroborated extension observation (trusted price within 24h and 2%)", async () => {
+    await admin.from("price_observations").insert([
+      { offer_id: g.offerId, price: 1_490_000, observed_at: hoursAgo(0.5), is_valid: true, source: "extension" },
+    ]);
+    const { data } = await submit({ product_id: g.productId, offer_id: g.offerId, kind: "stock" });
+    const id = (data as { id: string }).id;
+    const { data: row } = await admin.from("data_reports").select("seen_price").eq("id", id).single();
+    expect(row!.seen_price).toBe(1_490_000);
+    const { data: rows } = await admin.rpc("admin_data_reports", { p_product_id: g.productId });
+    expect(rows!.find((x) => x.id === id)!.current_price).toBe(1_490_000);
+  });
+});

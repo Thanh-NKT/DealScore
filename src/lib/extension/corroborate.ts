@@ -18,7 +18,8 @@
  *
  * A promoted row enters the price history. It becomes the CURRENT price (and so reaches the cached
  * verdict and the watch alerts) only once a trusted observation of the offer is within TOLERANCE and
- * WINDOW_HOURS of it — refresh_variant_current_price (migration 0028) keeps the same two constants.
+ * WINDOW_HOURS of it — refresh_variant_current_price (migration 0028) and
+ * offer_latest_trusted_observation (0045) keep the same two constants.
  */
 
 export const TOLERANCE = 0.02;
