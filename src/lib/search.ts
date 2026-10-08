@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import { MARKETPLACES, type MarketplaceId } from "@/lib/marketplaces";
@@ -259,7 +260,7 @@ export function sanitizeBoostTerms(terms: readonly string[] | undefined): string
   return clean.length > 0 ? [...new Set(clean)] : undefined;
 }
 
-type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
+type SupabaseServer = SupabaseClient<Database>;
 type SearchRpcRow = Database["public"]["Functions"]["search_products"]["Returns"][number];
 
 /**
@@ -323,16 +324,27 @@ export function toFakeSaleKind(v: string | null | undefined): FakeSaleKind | nul
 }
 
 export async function searchProducts(params: SearchParams): Promise<SearchResult> {
+  return searchProductsWith(await createClient(), params);
+}
+
+/**
+ * searchProducts with an explicit client: the saved-search / demand-follow jobs (roadmap P4 E/F) run the same
+ * search with the admin client. `limit` widens one page (≤ 48 rows); paging stays in PAGE_SIZE steps.
+ */
+export async function searchProductsWith(
+  supabase: SupabaseClient<Database>,
+  params: SearchParams,
+  opts: { limit?: number } = {},
+): Promise<SearchResult> {
   const page = params.page || 1;
   const offset = (page - 1) * PAGE_SIZE;
-
-  const supabase = await createClient();
+  const limit = Math.min(Math.max(opts.limit ?? PAGE_SIZE, 1), 48);
 
   // Dropping an unknown category instead would show the whole catalog under a category chip.
   const catId = await resolveCategoryId(supabase, params);
   if (catId === null) return { items: [], total: 0, page, pageSize: PAGE_SIZE };
 
-  const rows = await runSearchRpc(supabase, params, catId, PAGE_SIZE, offset);
+  const rows = await runSearchRpc(supabase, params, catId, limit, offset);
 
   // No results is a VALID state (1.1.b AC#6) — the results page suggests
   // removing filters and invites pasting a Shopee URL.

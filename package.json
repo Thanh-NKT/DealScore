@@ -23,13 +23,16 @@
     "rollup:rebuild": "tsx --conditions=react-server --env-file=.env.local scripts/rebuild-rollups.ts",
     "test:db": "vitest run --config vitest.db.config.mts",
     "alerts:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-alerts.ts",
+    "alerts:discovery": "tsx --conditions=react-server --env-file=.env.local scripts/run-discovery-alerts.ts",
     "conversions:import": "tsx --conditions=react-server --env-file=.env.local scripts/import-conversions.ts",
     "collector:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-collector.ts",
     "backtest:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-backtest.ts",
     "tiktok:authorize": "tsx --conditions=react-server --env-file=.env.local scripts/tiktok-authorize.ts",
     "sourcing:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-sourcing.ts",
     "marketplace:probe": "tsx --conditions=react-server --env-file=.env.local scripts/marketplace-probe.ts",
-    "db:backup": "tsx --env-file=.env.local scripts/db-backup.ts"
+    "db:backup": "tsx --env-file=.env.local scripts/db-backup.ts",
+    "insights:run": "tsx --conditions=react-server --env-file=.env.local scripts/run-insights.ts",
+    "seed:p4": "tsx --conditions=react-server --env-file=.env.local scripts/seed-roadmap-p4.ts"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.3.0",

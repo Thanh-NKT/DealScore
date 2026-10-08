@@ -94,7 +94,9 @@ Never mix these up; the choice encodes the security model.
   `src/app/api/vouchers/refresh/route.ts`, `src/lib/vouchers/refresh-effective.ts`,
   `src/lib/tiktok/source.ts`, `src/app/api/tiktok/oauth/callback/route.ts`, `src/lib/sourcing/run.ts` (qua client truyền vào), `src/lib/sourcing/record-demand.ts`, `src/app/api/cron/sourcing/route.ts`, `scripts/run-sourcing.ts`,
   `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`, `scripts/tiktok-authorize.ts`, `src/app/api/admin/*/route.ts`,
-  `src/actions/report.ts` (`rate_hit` + `submit_data_report`, "Góp ý dữ liệu").
+  `src/actions/report.ts` (`rate_hit` + `submit_data_report`, "Góp ý dữ liệu"),
+  P4: `src/lib/saved-search/evaluate.ts`, `src/lib/demand-follow/check.ts`, `src/app/api/cron/discovery-alerts/route.ts`,
+  `scripts/run-discovery-alerts.ts`.
   **Admin:** app riêng `Admin-DealScore` (một người dùng) gọi RPC `admin_*` (migration 0021, ghi `admin_audit`) và `/api/admin/*` (bảo vệ bằng `ADMIN_API_SECRET`).
   Luôn lấy danh tính bằng `getUser()` trước và lọc theo đúng `user.id` —
   không bao giờ nhận `userId` từ form.

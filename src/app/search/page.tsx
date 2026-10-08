@@ -15,11 +15,8 @@ import { SortSelect } from "@/components/search/sort-select";
 import { ProductCard } from "@/components/search/product-card";
 import { EmptyState } from "@/components/search/empty-state";
 import { IntentChips } from "@/components/search/intent-chips";
-import { getIntentVocab } from "@/lib/intent/vocab";
-import { parseQueryIntent } from "@/lib/intent/parse";
-import { applyIntent } from "@/lib/intent/merge";
+import { resolveSearchParams } from "@/lib/search/resolve-params";
 import { searchLinkParams } from "@/lib/intent/links";
-import type { IntentChip } from "@/lib/intent/types";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { applyPreferences, isEmptyPreferences, type Preferences } from "@/lib/preferences";
@@ -82,24 +79,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   // Query intent (spec §3): "ssd 2tb dưới 3 triệu" → category + capacity + price chips. The URL
   // always wins over what the text says (applyIntent). getIntentVocab never throws.
-  let intentParams: SearchParams = raw;
-  let applied: IntentChip[] = [];
-  let demandIntent: { text: string; brands?: string[]; categoryName?: string } | undefined;
-  if (raw.intent !== false && raw.q) {
-    const vocab = await getIntentVocab();
-    const intent = parseQueryIntent(raw.q, vocab);
-    demandIntent = {
-      text: intent.text,
-      brands: intent.brands,
-      categoryName: vocab.categories.find((c) => c.slug === intent.categorySlug)?.name,
-    };
-    ({ params: intentParams, applied } = applyIntent(raw, intent));
-    // Intent consumed every word: "relevance" (the default for a text query) means nothing now, so
-    // fall back to the no-query default instead of carrying sort=relevance into the links.
-    if (!intentParams.q && !raw.sortExplicit && intentParams.sort === "relevance") {
-      intentParams = { ...intentParams, sort: "updated" };
-    }
-  }
+  const { params: intentParams, applied, demandIntent } = await resolveSearchParams(raw);
 
   // "Theo sở thích của tôi" (spec §5, off by default): saved preferences fill what neither the URL
   // nor the query intent set. Only the searched params change — links keep `prefs=1` (carried by
