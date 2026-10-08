@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupDeliveries, latestPerWatch, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
+import { groupDeliveries, latestPerWatch, mergeDigestTriggers, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
 
 const d = (id: string, userId: string, channel: "email" | "push"): ClaimedDelivery => ({
   deliveryId: id,
@@ -63,5 +63,20 @@ describe("latestPerWatch", () => {
       ["3", 0],
       ["5", 0],
     ]);
+  });
+});
+
+describe("mergeDigestTriggers — price_hike never merges with price-drop triggers", () => {
+  it("newest is a drop: older drop triggers join, an older price_hike does not", () => {
+    expect(mergeDigestTriggers(["target_price"], [["price_hike"], ["drop_pct"]])).toEqual(["target_price", "drop_pct"]);
+    expect(mergeDigestTriggers(["drop_pct"], [["price_hike"]])).toEqual(["drop_pct"]);
+  });
+  it("newest is a hike: it wins alone, older drop triggers are not carried", () => {
+    expect(mergeDigestTriggers(["price_hike"], [["target_price", "deal_score"]])).toEqual(["price_hike"]);
+    expect(mergeDigestTriggers(["price_hike"], [["price_hike"]])).toEqual(["price_hike"]);
+  });
+  it("same-kind merges are unchanged and deduplicated", () => {
+    expect(mergeDigestTriggers(["target_price"], [["target_price", "deeper_drop"]])).toEqual(["target_price", "deeper_drop"]);
+    expect(mergeDigestTriggers(["deal_score"], [])).toEqual(["deal_score"]);
   });
 });

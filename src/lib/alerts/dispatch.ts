@@ -9,7 +9,7 @@ import { reportError } from "@/lib/observability";
 import { listUnsubscribeHeaders, renderAlertEmail, type AlertEmailItem } from "@/lib/email/templates/alert";
 import { describeTriggers, isPriceHikeOnly } from "@/lib/alerts/triggers-text";
 import { signUnsubscribeToken } from "@/lib/alerts/unsubscribe-token";
-import { groupDeliveries, latestPerWatch, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
+import { groupDeliveries, latestPerWatch, mergeDigestTriggers, nextRetryAt, type ClaimedDelivery } from "@/lib/alerts/group";
 import type { TriggerType } from "@/lib/watch/types";
 import { siteUrl } from "@/lib/site-url";
 import { buildPushPayload } from "@/lib/push/payload";
@@ -201,16 +201,17 @@ export async function dispatchDueDeliveries(
     else ready.push(c);
   }
   // Digests (weekly especially) can hold several alerts for one Watch: send only the newest,
-  // carrying the triggers of the older ones, and mark those as superseded.
+  // carrying the triggers of the older ones of the same kind (mergeDigestTriggers), and mark those as superseded.
   const mergedTriggers = new Map<string, TriggerType[]>();
   const latest: ClaimedDelivery[] = [];
   for (const { keep, older } of latestPerWatch(ready, (id) => events.get(id)?.createdAt ?? "")) {
     latest.push(keep);
     if (older.length === 0) continue;
     skips.set("superseded", [...(skips.get("superseded") ?? []), ...older.map((d) => d.deliveryId)]);
-    const triggers = new Set<TriggerType>(events.get(keep.alertEventId)!.triggerTypes);
-    for (const d of older) for (const t of events.get(d.alertEventId)!.triggerTypes) triggers.add(t);
-    mergedTriggers.set(keep.alertEventId, [...triggers]);
+    mergedTriggers.set(
+      keep.alertEventId,
+      mergeDigestTriggers(events.get(keep.alertEventId)!.triggerTypes, older.map((d) => events.get(d.alertEventId)!.triggerTypes)),
+    );
   }
 
   for (const [reason, ids] of skips) {

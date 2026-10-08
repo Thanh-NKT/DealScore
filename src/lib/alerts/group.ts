@@ -1,5 +1,6 @@
 import type { Channel } from "@/lib/account/notification-settings";
 import { MAX_DELIVERY_ATTEMPTS, RETRY_DELAYS_MINUTES } from "@/lib/watch/constants";
+import type { TriggerType } from "@/lib/watch/types";
 
 export interface ClaimedDelivery {
   deliveryId: string;
@@ -54,4 +55,18 @@ export function latestPerWatch(
       .map((x) => x.d);
     return { keep: sorted[0], older: sorted.slice(1) };
   });
+}
+
+/**
+ * Triggers of the kept (newest) alert of a Watch after latestPerWatch, with the older alerts' triggers merged in —
+ * never across kinds: a "price_hike" ("chưa nên mua") and a price drop in one item would contradict each other
+ * (and the hike % would come from the wrong event). Newest is a drop → older drop triggers join, older hikes are
+ * dropped. Newest is a hike → it stays alone (the price is high now; older drop news is stale).
+ */
+export function mergeDigestTriggers(keep: readonly TriggerType[], older: readonly (readonly TriggerType[])[]): TriggerType[] {
+  const drops = keep.filter((t) => t !== "price_hike");
+  if (drops.length === 0) return [...new Set(keep)];
+  const out = new Set<TriggerType>(drops);
+  for (const list of older) for (const t of list) if (t !== "price_hike") out.add(t);
+  return [...out];
 }
