@@ -4,14 +4,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_NOTIFICATION_SETTINGS, fromRow, resolveChannels, type Channel } from "@/lib/account/notification-settings";
 import { computeDeliverAfter } from "@/lib/alerts/schedule";
 import { toEventItems } from "@/lib/alerts/discovery";
-import { searchProductsWith, type SearchItem } from "@/lib/search";
+import { searchMatchSet, type SearchItem } from "@/lib/search";
 import { parseSavedParams, savedToSearchParams } from "@/lib/saved-search/params";
 import { decideSavedSearch, type SavedSearchMatch, type SavedSearchHitState } from "@/lib/saved-search/decide";
 import {
   SAVED_SEARCH_COOLDOWN_HOURS,
   SAVED_SEARCH_EVAL_BATCH,
   SAVED_SEARCH_EVAL_INTERVAL_HOURS,
-  SAVED_SEARCH_SCAN_LIMIT,
+  SAVED_SEARCH_MATCH_CAP,
 } from "@/lib/saved-search/constants";
 import type { Recommendation } from "@/lib/pricing/deal-score";
 
@@ -56,25 +56,34 @@ const HITS_PAGE = 1000;
 /**
  * Saved-search pass of the discovery cron (spec §2.2). Due = active, owner not deleted, never evaluated or
  * evaluated more than SAVED_SEARCH_EVAL_INTERVAL_HOURS ago. Never writes watches or calls decideAlert().
+ *
+ * Every due row moves its last_evaluated_at, also when it is skipped (no channel, unparsable params) or throws:
+ * a row that never moves would head the queue forever and starve every other search (P4 review I1).
+ * The whole match set (≤ SAVED_SEARCH_MATCH_CAP) is read, so the baseline holds every product matching at save
+ * time (P4 review I2). `ids` limits the pass to those searches (the save action's immediate baseline, tests).
  */
 export async function evaluateSavedSearches(
-  opts: { now: Date; deadline?: number; limit?: number },
+  opts: { now: Date; deadline?: number; limit?: number; ids?: string[] },
   client: Client = createAdminClient(),
-): Promise<{ evaluated: number; alerts: number; suppressed: number; errors: number }> {
-  const stats = { evaluated: 0, alerts: 0, suppressed: 0, errors: 0 };
+): Promise<{ evaluated: number; alerts: number; suppressed: number; skipped: number; errors: number }> {
+  const stats = { evaluated: 0, alerts: 0, suppressed: 0, skipped: 0, errors: 0 };
+  if (opts.ids && opts.ids.length === 0) return stats;
   const dueBefore = new Date(opts.now.getTime() - SAVED_SEARCH_EVAL_INTERVAL_HOURS * 3_600_000).toISOString();
-  const { data: rows, error } = await client
+  let due = client
     .from("saved_searches")
     .select("id, user_id, params, params_version, channels, initialized_at, last_alerted_at, users!inner(deleted_at, notification_settings(*))")
     .eq("status", "active")
     .is("users.deleted_at", null)
-    .or(`last_evaluated_at.is.null,last_evaluated_at.lt.${dueBefore}`)
+    .or(`last_evaluated_at.is.null,last_evaluated_at.lt.${dueBefore}`);
+  if (opts.ids) due = due.in("id", opts.ids);
+  const { data: rows, error } = await due
     .order("last_evaluated_at", { ascending: true, nullsFirst: true })
+    .order("id")
     .limit(Math.min(opts.limit ?? SAVED_SEARCH_EVAL_BATCH, SAVED_SEARCH_EVAL_BATCH));
   if (error) throw new Error(`Failed to read saved searches: ${error.message}`);
   if (!rows || rows.length === 0) return stats;
 
-  // Hits of the batch (≤ 20 × ~48 rows), paged past the 1,000-row cap.
+  // Hits of the batch (≤ 20 × SAVED_SEARCH_MATCH_CAP rows), paged past the 1,000-row cap.
   const hitsBy = new Map<string, SavedSearchHitState[]>();
   const ids = rows.map((r) => r.id);
   for (let from = 0; ; from += HITS_PAGE) {
@@ -94,25 +103,42 @@ export async function evaluateSavedSearches(
     if (!hits || hits.length < HITS_PAGE) break;
   }
 
+  /** Moves the cursor only (no hits, initialized_at untouched). A params change made meanwhile wins. */
+  const touch = async (r: { id: string; params_version: number }) => {
+    const { error: tErr } = await client
+      .from("saved_searches")
+      .update({ last_evaluated_at: opts.now.toISOString() })
+      .eq("id", r.id)
+      .eq("params_version", r.params_version);
+    if (tErr) console.error(`evaluateSavedSearches: could not move saved search ${r.id}:`, tErr.message);
+  };
+
   for (const r of rows) {
     if (opts.deadline && Date.now() > opts.deadline) break;
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const u = r.users as any;
       const settings = u?.notification_settings ? fromRow(u.notification_settings) : DEFAULT_NOTIFICATION_SETTINGS;
-      // No channel → write no state (same as watches): turning a channel back on still reports what is new.
+      // No channel → no hit state is written (same as watches): turning a channel back on still reports what is
+      // new. Only the cursor moves. A search not baselined yet is baselined anyway (a baseline never alerts).
       const channels = resolveChannels(settings, (r.channels as Channel[] | null) ?? null);
-      if (channels.length === 0) continue;
+      if (channels.length === 0 && r.initialized_at) {
+        stats.skipped++;
+        await touch(r);
+        continue;
+      }
       const params = parseSavedParams(r.params);
       if (!params) {
         stats.errors++;
+        await touch(r);
         continue;
       }
-      const result = await searchProductsWith(client, savedToSearchParams(params), { limit: SAVED_SEARCH_SCAN_LIMIT });
+      const scan = await searchMatchSet(client, savedToSearchParams(params), SAVED_SEARCH_MATCH_CAP);
       const d = decideSavedSearch(
         { initializedAt: r.initialized_at, lastAlertedAt: r.last_alerted_at, hits: hitsBy.get(r.id) ?? [] },
-        toMatches(result.items),
+        toMatches(scan.items),
         opts.now,
+        { complete: scan.complete },
       );
       stats.evaluated++;
       if (d.kind === "suppressed_cooldown") stats.suppressed++;
@@ -135,6 +161,8 @@ export async function evaluateSavedSearches(
     } catch (err) {
       stats.errors++;
       console.error(`evaluateSavedSearches: error on saved search ${r.id}:`, err instanceof Error ? err.message : err);
+      // Back off: retried after SAVED_SEARCH_EVAL_INTERVAL_HOURS instead of heading the next run.
+      await touch(r).catch(() => undefined);
     }
   }
   return stats;

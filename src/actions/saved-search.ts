@@ -1,30 +1,46 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/database.types";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { parseSearchParams } from "@/lib/search";
+import { parseSearchParams, searchProductsWith } from "@/lib/search";
 import { resolveSearchParams } from "@/lib/search/resolve-params";
 import {
   canSaveSearch,
   defaultSavedSearchName,
   parseSavedParams,
+  savedToSearchParams,
   toSavedParams,
   type SavedSearchParams,
 } from "@/lib/saved-search/params";
-import { SAVED_SEARCH_NAME_MAX } from "@/lib/saved-search/constants";
+import { SAVED_SEARCH_MATCH_CAP, SAVED_SEARCH_NAME_MAX } from "@/lib/saved-search/constants";
+import { evaluateSavedSearches } from "@/lib/saved-search/evaluate";
 import { trackAfter } from "@/lib/analytics/track";
 
 export type SavedSearchResult =
   | { ok: true; id: string }
   | {
       ok: false;
-      error: "unauthenticated" | "invalid" | "no_scope" | "no_condition" | "limit" | "duplicate" | "unavailable";
+      error:
+        | "unauthenticated"
+        | "invalid"
+        | "no_scope"
+        | "no_condition"
+        | "too_broad"
+        | "limit"
+        | "duplicate"
+        | "unavailable";
     };
 
 export type SavedSearchUpdateResult =
   | { ok: true }
-  | { ok: false; error: "unauthenticated" | "not_found" | "invalid" | "no_condition" | "duplicate" | "unavailable" };
+  | {
+      ok: false;
+      error: "unauthenticated" | "not_found" | "invalid" | "no_condition" | "too_broad" | "duplicate" | "unavailable";
+    };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -43,6 +59,35 @@ function dbError(code: string | undefined): "limit" | "duplicate" | "invalid" | 
   if (code === "23514") return "limit";
   if (code === "22P02") return "invalid";
   return "unavailable";
+}
+
+/**
+ * More than SAVED_SEARCH_MATCH_CAP matches today → "too_broad": the engine reads the whole match set on every
+ * evaluation, and a set it cannot read in full could announce products that matched all along (P4 review I2).
+ * Catalog data is public-read: the user's own client counts it.
+ */
+async function breadth(supabase: SupabaseClient<Database>, params: SavedSearchParams): Promise<"ok" | "too_broad" | "unavailable"> {
+  try {
+    const { total } = await searchProductsWith(supabase, savedToSearchParams(params), { limit: 1 });
+    return total > SAVED_SEARCH_MATCH_CAP ? "too_broad" : "ok";
+  } catch {
+    return "unavailable";
+  }
+}
+
+/**
+ * Baseline at save time (P4 review I2): every product matching now is written as already known, right after
+ * the response, instead of waiting for the next discovery run. Scoped to the one id the user's own insert or
+ * update returned; failures only log (the cron baselines it on its next pass).
+ */
+function baselineAfter(id: string): void {
+  after(async () => {
+    try {
+      await evaluateSavedSearches({ now: new Date(), ids: [id] });
+    } catch (err) {
+      console.error(`saved-search: baseline of ${id} failed:`, err instanceof Error ? err.message : err);
+    }
+  });
 }
 
 /**
@@ -85,12 +130,15 @@ export async function saveSearch(input: {
   if (name === "invalid") return { ok: false, error: "invalid" };
 
   const supabase = await createClient();
+  const wide = await breadth(supabase, params);
+  if (wide !== "ok") return { ok: false, error: wide };
   const { data, error } = await supabase
     .from("saved_searches")
     .insert({ name: name ?? defaultSavedSearchName(params), params: params as never })
     .select("id")
     .single();
   if (error || !data) return { ok: false, error: dbError(error?.code) };
+  baselineAfter(data.id);
 
   trackAfter("saved_search_created", {
     userId: user.id,
@@ -142,11 +190,15 @@ export async function updateSavedSearch(
     if (next.minPrice != null && next.maxPrice != null && next.minPrice > next.maxPrice) delete next.minPrice;
     if (!canSaveSearch(next).ok) return { ok: false, error: "no_condition" };
     if (!parseSavedParams(next)) return { ok: false, error: "invalid" };
+    const wide = await breadth(supabase, next);
+    if (wide !== "ok") return { ok: false, error: wide };
     update.params = next as never;
   }
   if (Object.keys(update).length === 0) return { ok: true };
   const { error } = await supabase.from("saved_searches").update(update).eq("id", id).eq("user_id", user.id);
   if (error) return { ok: false, error: error.code === "23505" ? "duplicate" : "unavailable" };
+  // A params change re-baselines (DB trigger nulls initialized_at): baseline the new params at once.
+  if (update.params) baselineAfter(id);
   revalidatePath("/account/searches");
   return { ok: true };
 }

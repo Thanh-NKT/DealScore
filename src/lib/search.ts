@@ -388,7 +388,15 @@ export async function searchProductsWith(
   // removing filters and invites pasting a Shopee URL.
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
 
-  const items: SearchItem[] = rows.map((d) => ({
+  const items = rows.map(toSearchItem);
+  await attachUnitPrices(supabase, items);
+
+  return { items, total, page, pageSize: PAGE_SIZE };
+}
+
+/** SearchItem from a search_products row (unitPrice is filled by attachUnitPrices for display only). */
+function toSearchItem(d: SearchRpcRow): SearchItem {
+  return {
     productId: d.product_id,
     slug: d.slug,
     canonicalName: d.canonical_name,
@@ -407,10 +415,41 @@ export async function searchProductsWith(
     offerCount: d.offer_count != null ? Number(d.offer_count) : null,
     fakeSale: toFakeSaleKind(d.fake_sale),
     unitPrice: null,
-  }));
-  await attachUnitPrices(supabase, items);
+  };
+}
 
-  return { items, total, page, pageSize: PAGE_SIZE };
+/** search_products clamps p_limit to 60 (0042). */
+const MATCH_SET_PAGE = 60;
+
+/**
+ * The whole match set of `params` (price ascending), at most `cap` rows read in pages of 60 — for the
+ * saved-search engine (roadmap P4 E), which must know every product that matches, not only the first page.
+ * `complete` is false when more than the rows read match: the caller must treat what it did not see as
+ * unknown. No unit prices (display only). An unknown category slug → an empty, complete set.
+ */
+export async function searchMatchSet(
+  supabase: SupabaseClient<Database>,
+  params: SearchParams,
+  cap: number,
+): Promise<{ items: SearchItem[]; total: number; complete: boolean }> {
+  const catId = await resolveCategoryId(supabase, params);
+  if (catId === null) return { items: [], total: 0, complete: true };
+  const p: SearchParams = { ...params, sort: "price_asc", page: 1 };
+  const seen = new Set<string>();
+  const items: SearchItem[] = [];
+  let total = 0;
+  for (let offset = 0; offset < cap; offset += MATCH_SET_PAGE) {
+    const rows = await runSearchRpc(supabase, p, catId, Math.min(MATCH_SET_PAGE, cap - offset), offset);
+    if (rows.length > 0) total = Number(rows[0].total_count);
+    // The ordering ends on id, but the set may move between two page reads: never keep a product twice.
+    for (const row of rows) {
+      if (seen.has(row.product_id)) continue;
+      seen.add(row.product_id);
+      items.push(toSearchItem(row));
+    }
+    if (rows.length < Math.min(MATCH_SET_PAGE, cap - offset) || offset + rows.length >= total) break;
+  }
+  return { items, total, complete: total <= items.length };
 }
 
 export interface FilterFacets {

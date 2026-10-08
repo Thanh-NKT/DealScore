@@ -4,8 +4,12 @@
  */
 export const MAX_SAVED_SEARCHES = 10;
 export const SAVED_SEARCH_NAME_MAX = 60;
-/** Results scanned per evaluation: two result pages. */
-export const SAVED_SEARCH_SCAN_LIMIT = 48; // tune with real data
+/**
+ * The whole match set is read on every evaluation (baseline included), at most this many products (5 search
+ * pages of 60). Saving a search that matches more is refused ("too_broad"); if one grows past it later, the
+ * scan is "incomplete" and decideSavedSearch() never announces a product it had not seen before (P4 review I2).
+ */
+export const SAVED_SEARCH_MATCH_CAP = 300; // tune with real data
 export const SAVED_SEARCH_EVAL_INTERVAL_HOURS = 6; // tune with real data
 export const SAVED_SEARCH_EVAL_BATCH = 20;
 /** At most one alert per saved search per this many hours. */

@@ -17,6 +17,7 @@ const RESULT_TEXT: Record<string, string> = {
   unauthenticated: "Phiên đăng nhập đã hết. Hãy đăng nhập lại.",
   not_found: "Không tìm thấy tìm kiếm này.",
   no_scope: "Tìm kiếm cần có từ khóa, danh mục hoặc hãng.",
+  too_broad: "Tìm kiếm này khớp quá nhiều sản phẩm. Hạ giá tối đa hoặc chọn thêm hãng, danh mục rồi lưu lại.",
   invalid: "Kiểm tra lại các ô bên trên.",
 };
 const CONDITION_ERROR = "Chọn giá tối đa hoặc “Chỉ khi Nên mua” để tránh báo quá nhiều.";

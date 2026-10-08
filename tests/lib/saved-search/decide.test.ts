@@ -8,9 +8,38 @@ const match = (id: string, price = 100, lastObservedAt: string | null = fresh): 
 });
 
 describe("decideSavedSearch", () => {
-  it("not initialised → baseline of the fresh matches only", () => {
+  it("not initialised → baseline of every match, stale ones included (P4 review I2)", () => {
     const d = decideSavedSearch({ initializedAt: null, lastAlertedAt: null, hits: [] }, [match("a"), match("b", 1, null)], now);
-    expect(d).toEqual({ kind: "baseline", hits: [{ productId: "a", inSet: true, alerted: false, price: 100 }] });
+    expect(d).toEqual({
+      kind: "baseline",
+      hits: [
+        { productId: "a", inSet: true, alerted: false, price: 100 },
+        { productId: "b", inSet: true, alerted: false, price: 1 },
+      ],
+    });
+  });
+  it("truncated scan: no leaving, a never-seen product joins quietly, a seen-leaving one may alert", () => {
+    const d = decideSavedSearch(
+      {
+        initializedAt: fresh,
+        lastAlertedAt: null,
+        hits: [
+          { productId: "gone", inSet: true, alertedAt: null },
+          { productId: "back", inSet: false, alertedAt: null },
+        ],
+      },
+      [match("new", 50), match("back", 60)],
+      now,
+      { complete: false },
+    );
+    expect(d.kind).toBe("alert");
+    if (d.kind !== "alert") return;
+    expect(d.items.map((i) => i.productId)).toEqual(["back"]);
+    expect(d.totalNew).toBe(1);
+    expect(d.hits).toEqual([
+      { productId: "new", inSet: true, alerted: false, price: 50 },
+      { productId: "back", inSet: true, alerted: true, price: 60 },
+    ]);
   });
   it("leaving products are written out of the set", () => {
     const d = decideSavedSearch(

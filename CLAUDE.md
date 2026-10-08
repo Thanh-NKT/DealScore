@@ -96,7 +96,7 @@ Never mix these up; the choice encodes the security model.
   `src/lib/tiktok/credentials.ts` (qua client truyền vào), `scripts/marketplace-probe.ts`, `scripts/tiktok-authorize.ts`, `src/app/api/admin/*/route.ts`,
   `src/actions/report.ts` (`rate_hit` + `submit_data_report`, "Góp ý dữ liệu"),
   P4: `src/lib/saved-search/evaluate.ts`, `src/lib/demand-follow/check.ts`, `src/app/api/cron/discovery-alerts/route.ts`,
-  `scripts/run-discovery-alerts.ts`, `src/actions/demand-follow.ts` (upsert `demand_follows`), `src/actions/share-folder.ts`
+  `scripts/run-discovery-alerts.ts`, `src/actions/saved-search.ts` (baseline ngay sau khi lưu, `evaluateSavedSearches({ ids: [id] })` trong `after()`), `src/actions/demand-follow.ts` (upsert `demand_follows`), `src/actions/share-folder.ts`
   (insert / rotate `watch_folder_shares`, token from the server only), `src/lib/sellers/profile-job.ts`, `src/lib/seasons/job.ts`,
   `src/app/api/cron/insights/route.ts`, `scripts/run-insights.ts`, `scripts/seed-roadmap-p4.ts`.
   **Admin:** app riêng `Admin-DealScore` (một người dùng) gọi RPC `admin_*` (migration 0021, ghi `admin_audit`) và `/api/admin/*` (bảo vệ bằng `ADMIN_API_SECRET`).
