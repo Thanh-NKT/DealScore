@@ -212,3 +212,18 @@ describe("seen_price / current_price corroboration gate (0045)", () => {
     expect(rows!.find((x) => x.id === id)!.current_price).toBe(1_490_000);
   });
 });
+
+// 0045: a report with an offer but no variant lists the offer's variant (admin "Ẩn tin bán" recomputes it).
+describe("admin_data_reports variant fallback (0045)", () => {
+  it("returns the offer's variant when the report has none; the report's own variant otherwise", async () => {
+    const { data } = await submit({ product_id: b.productId, offer_id: b.offerId, kind: "wrong_price", message: "fallback" });
+    const id = (data as { id: string }).id;
+    const { data: stored } = await admin.from("data_reports").select("variant_id").eq("id", id).single();
+    expect(stored!.variant_id).toBeNull();
+    const { data: rows } = await admin.rpc("admin_data_reports", { p_product_id: b.productId, p_limit: 100 });
+    const r = rows!.find((x) => x.id === id)!;
+    expect(r).toMatchObject({ variant_id: b.variantId, variant_key: "Mặc định", offer_id: b.offerId });
+    const own = rows!.filter((x) => x.offer_id === null);
+    expect(own.every((x) => x.variant_id === null)).toBe(true);
+  });
+});

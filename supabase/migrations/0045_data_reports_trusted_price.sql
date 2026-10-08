@@ -6,7 +6,9 @@
 --    trusted (non-extension) observation of the same offer agrees within 24h and 2%
 --    (TOLERANCE / WINDOW_HOURS in src/lib/extension/corroborate.ts — keep in sync).
 -- 2. submit_data_report: same as 0043, but seen_price reads the helper.
--- 3. admin_data_reports: same as 0043, but current_price / current_observed_at read the helper.
+-- 3. admin_data_reports: same as 0043, but current_price / current_observed_at read the helper, and
+--    variant_id / variant_key fall back to the offer's variant when the report has none (the admin
+--    "Ẩn tin bán" action recomputes that variant's Deal Score).
 -- Signatures and grants are unchanged.
 
 -- 1 ---------------------------------------------------------------------------
@@ -173,8 +175,9 @@ begin
   from page pg
   join products pr on pr.id = pg.product_id
   left join categories c on c.id = pr.category_id
-  left join product_variants pv on pv.id = pg.variant_id
   left join offers o on o.id = pg.offer_id
+  -- A report on an offer without its own variant shows (and recomputes) the offer's variant.
+  left join product_variants pv on pv.id = coalesce(pg.variant_id, o.variant_id)
   left join listings l on l.id = o.listing_id
   left join sellers s on s.id = l.seller_id
   left join lateral (
