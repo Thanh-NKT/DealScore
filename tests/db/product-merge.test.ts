@@ -531,3 +531,48 @@ describe("admin_merge_products × ingest_listing", () => {
     expect(merged).toBe(ROUNDS);
   });
 });
+
+// Final review Minor 1 (0073): a merge must not make the target "enter" a saved search, nor be "new" for a
+// demand follow, when the user already knew the source.
+describe("admin_merge_products keeps discovery state", () => {
+  it("source hits move to the target (alerted_at kept, target's own hit wins); known_product_ids swap the id", async () => {
+    const tgt = await makeProduct({ status: "verified", variants: [{ key: "A" }] });
+    const src = await makeProduct({ status: "draft", variants: [{ key: "A" }] });
+    const both = await makeProduct({ status: "verified", variants: [{ key: "B" }] });
+    const bothSrc = await makeProduct({ status: "draft", variants: [{ key: "B" }] });
+    const u = await newUser();
+    const mk = async (name: string) =>
+      (await admin.from("saved_searches")
+        .insert({ user_id: u.id, name, params: { q: `merge ${tag} ${name}`, maxPrice: 5_000_000 } as never })
+        .select("id").single()).data!.id;
+    const s1 = await mk("one");
+    const s2 = await mk("two");
+    const t = new Date(Date.now() - 3 * dayMs).toISOString();
+    const hit = (ss: string, pid: string, o: Record<string, unknown> = {}) =>
+      ({ saved_search_id: ss, product_id: pid, in_set: true, first_seen_at: t, last_seen_at: t, ...o });
+    const { error: hErr } = await admin.from("saved_search_hits").insert([
+      hit(s1, src.id, { alerted_at: t, alerted_price: 900_000 }),
+      hit(s2, bothSrc.id, { alerted_at: t }),
+      hit(s2, both.id, { in_set: false }),
+    ]);
+    expect(hErr).toBeNull();
+    const { data: f, error: fErr } = await admin.from("demand_follows")
+      .insert({ user_id: u.id, keyword: `merge ${tag}`, expires_at: new Date(Date.now() + 30 * dayMs).toISOString(),
+                known_product_ids: [src.id, bothSrc.id, both.id] })
+      .select("id").single();
+    expect(fErr).toBeNull();
+
+    expect((await merge(src.id, tgt.id, [{ source_variant_id: src.variants[0], target_variant_id: tgt.variants[0] }])).error).toBeNull();
+    expect((await merge(bothSrc.id, both.id, [{ source_variant_id: bothSrc.variants[0], target_variant_id: both.variants[0] }])).error).toBeNull();
+
+    const { data: hits } = await admin.from("saved_search_hits")
+      .select("saved_search_id, product_id, in_set, alerted_at, alerted_price").in("saved_search_id", [s1, s2]);
+    const by = (ss: string, pid: string) => hits!.find((h) => h.saved_search_id === ss && h.product_id === pid);
+    expect(hits).toHaveLength(2);
+    expect(by(s1, tgt.id)).toMatchObject({ in_set: true, alerted_price: 900_000 });
+    expect(Date.parse(by(s1, tgt.id)!.alerted_at!)).toBe(Date.parse(t));
+    expect(by(s2, both.id)).toMatchObject({ in_set: false, alerted_at: null });
+    const { data: after } = await admin.from("demand_follows").select("known_product_ids").eq("id", f!.id).single();
+    expect([...after!.known_product_ids].sort()).toEqual([tgt.id, both.id].sort());
+  });
+});
