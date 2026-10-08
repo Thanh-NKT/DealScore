@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { unitPrice, variantUnitQuantity, type UnitPrice, type UnitQuantity } from "@/lib/pricing/unit-price";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import {
@@ -45,6 +46,10 @@ export interface ProductPageData {
     offerCount?: number;
     /** variant_deal_scores row (null = none); only shown while it matches the price (variantVerdict). */
     cachedScore: CachedVariantScore | null;
+    /** Price per ml / g / piece from this variant's own text (P4 G). Display only. */
+    unitPrice?: UnitPrice | null;
+    /** Parsed quantity behind unitPrice (the hero recomputes it for the best-buy price). */
+    unitQuantity?: UnitQuantity | null;
   }>;
   selectedVariantId: string;
   pricing: VariantPricing;
@@ -96,6 +101,7 @@ export async function loadProductPageData(params: {
       return null;
     }
 
+    const variantCount = variantsRaw.length;
     const variants = variantsRaw.map((v) => {
       const vcp = (Array.isArray(v.variant_current_price)
         ? v.variant_current_price[0]
@@ -103,10 +109,18 @@ export async function loadProductPageData(params: {
       const vds = (Array.isArray(v.variant_deal_scores)
         ? v.variant_deal_scores[0]
         : v.variant_deal_scores) as Record<string, unknown> | null | undefined;
+      const price = vcp?.price != null ? Number(vcp.price) : null;
+      const specs = v.specs && typeof v.specs === "object" && !Array.isArray(v.specs) ? (v.specs as Record<string, unknown>) : null;
       return {
         id: v.id as string,
         variantKey: (v.variant_key as string) || "Tiêu chuẩn",
-        price: vcp?.price != null ? Number(vcp.price) : null,
+        ...((q) => ({ unitQuantity: q, unitPrice: unitPrice(price, q) }))(
+          variantUnitQuantity(
+            { variantKey: (v.variant_key as string) || "", specs },
+            { canonicalName: productAny.canonical_name as string, variantCount },
+          ),
+        ),
+        price,
         inStock: (vcp?.in_stock as boolean | undefined) ?? true,
         offerCount: vcp?.offer_count != null ? Number(vcp.offer_count) : 0,
         cachedScore: vds

@@ -63,6 +63,7 @@ function toCard(r: CardRow): SearchItem {
     // Radar / trending RPCs carry no shop count or fake-sale flag (spec Q3).
     offerCount: null,
     fakeSale: null,
+    unitPrice: null,
   };
 }
 

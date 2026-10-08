@@ -5,6 +5,7 @@ import { MARKETPLACES, type MarketplaceId } from "@/lib/marketplaces";
 import { expandQuery } from "@/lib/search/synonyms";
 import type { AutocompleteItem } from "@/lib/search/autocomplete-types";
 import type { FakeSaleKind } from "@/lib/pricing/deal-score";
+import { unitPrice, variantUnitQuantity, type UnitPrice } from "@/lib/pricing/unit-price";
 
 export type { AutocompleteItem } from "@/lib/search/autocomplete-types";
 
@@ -73,6 +74,8 @@ export interface SearchItem {
   offerCount: number | null;
   /** Cached fake-sale kind for the card's price (variant_deal_scores.fake_sale, same price guard as score). */
   fakeSale: FakeSaleKind | null;
+  /** Price per ml / g / piece from the card variant's own text (P4 G); null when unparsed or unknown. Display only. */
+  unitPrice: UnitPrice | null;
 }
 
 /**
@@ -318,6 +321,41 @@ async function runSearchRpc(
   return data ?? [];
 }
 
+/**
+ * One product_variants read for the shown products (≤ 48 × a few variants): the card variant's key / specs, and
+ * how many variants each product has (the product-name fallback is for single-variant products only). A failed
+ * read leaves unitPrice null — a display extra never takes the search down.
+ */
+async function attachUnitPrices(supabase: SupabaseServer, items: SearchItem[]): Promise<void> {
+  const productIds = [...new Set(items.filter((i) => i.variantId && i.bestPrice != null).map((i) => i.productId))];
+  if (productIds.length === 0) return;
+  let data: Array<{ id: string; product_id: string; variant_key: string; specs: unknown }> | null;
+  try {
+    const res = await supabase
+      .from("product_variants")
+      .select("id, product_id, variant_key, specs")
+      .in("product_id", productIds)
+      .limit(1000);
+    if (res.error) throw new Error(res.error.message);
+    data = res.data;
+  } catch (err) {
+    console.error("search: unit price variants read failed:", err instanceof Error ? err.message : err);
+    return;
+  }
+  const byId = new Map((data ?? []).map((v) => [v.id, v]));
+  const counts = new Map<string, number>();
+  for (const v of data ?? []) counts.set(v.product_id, (counts.get(v.product_id) ?? 0) + 1);
+  for (const item of items) {
+    const v = item.variantId ? byId.get(item.variantId) : undefined;
+    if (!v) continue;
+    const q = variantUnitQuantity(
+      { variantKey: v.variant_key, specs: (v.specs ?? null) as Record<string, unknown> | null },
+      { canonicalName: item.canonicalName, variantCount: counts.get(item.productId) ?? 0 },
+    );
+    item.unitPrice = unitPrice(item.bestPrice, q);
+  }
+}
+
 /** Only the two known kinds pass; anything else (null, a future value) shows no warning. */
 export function toFakeSaleKind(v: string | null | undefined): FakeSaleKind | null {
   return v === "list_inflated" || v === "pre_sale_hike" ? v : null;
@@ -368,7 +406,9 @@ export async function searchProductsWith(
     isFlashSale: d.is_flash_sale === true,
     offerCount: d.offer_count != null ? Number(d.offer_count) : null,
     fakeSale: toFakeSaleKind(d.fake_sale),
+    unitPrice: null,
   }));
+  await attachUnitPrices(supabase, items);
 
   return { items, total, page, pageSize: PAGE_SIZE };
 }

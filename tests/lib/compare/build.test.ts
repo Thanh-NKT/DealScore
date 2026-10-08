@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildComparison } from "@/lib/compare/build";
+import { parseUnitQuantity } from "@/lib/pricing/unit-price";
 import type { ProductPageData } from "@/lib/product/page-data";
 import type { Recommendation } from "@/lib/pricing/deal-score";
 
@@ -121,5 +122,21 @@ describe("buildComparison", () => {
   it("sides carry name, price and a link to the exact variant", () => {
     const c = buildComparison(page({ slug: "a" }), page({ slug: "b" }));
     expect(c.a).toMatchObject({ name: "A", href: "/ssd/a?variant=a-v", recommendation: "wait" });
+  });
+});
+
+describe("buildComparison — unit price row (P4 G)", () => {
+  const withUnit = (slug: string, price: number, key: string) => {
+    const p = page({ slug, price });
+    p.variants = [{ id: `${slug}-v`, variantKey: key, price, inStock: true, cachedScore: null, unitQuantity: parseUnitQuantity(key) }];
+    return p;
+  };
+  it("shows 'Giá theo đơn vị' only when both sides share a unit; cheaper per unit wins", () => {
+    const c = buildComparison(withUnit("a", 300_000, "48 miếng"), withUnit("b", 500_000, "96 miếng"));
+    expect(c.rows.find((r) => r.key === "unit_price")).toMatchObject({ a: "6.250 đ/miếng", b: "5.208 đ/miếng", winner: "b" });
+    const d = buildComparison(withUnit("a", 300_000, "48 miếng"), withUnit("b", 500_000, "1L"));
+    expect(d.rows.find((r) => r.key === "unit_price")).toBeUndefined();
+    const e = buildComparison(withUnit("a", 300_000, "2TB"), withUnit("b", 500_000, "2TB"));
+    expect(e.rows.find((r) => r.key === "unit_price")).toBeUndefined();
   });
 });

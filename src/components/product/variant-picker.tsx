@@ -3,6 +3,7 @@ import { formatVnd } from "@/lib/format";
 import type { VariantVerdict } from "@/lib/pricing/variant-verdict";
 import { verdictText } from "./verdict-tag";
 import { variantLabel } from "./variant-label";
+import { comparableUnitPrices, type UnitPrice } from "@/lib/pricing/unit-price";
 
 type Variant = {
   id: string;
@@ -11,7 +12,19 @@ type Variant = {
   inStock: boolean;
   /** Deal Score label of this variant (variantVerdict); { kind: "none" } shows nothing. */
   verdict: VariantVerdict;
+  /** Price per ml / g / piece (P4 G), shown only when ≥ 2 variants are comparable. */
+  unitPrice?: UnitPrice | null;
 };
+
+/** The unit line of a chip: only with ≥ 2 comparable variants; the cheapest per unit is marked. */
+export function unitLines(variants: Variant[]): Map<string, { label: string; cheapest: boolean }> {
+  const out = new Map<string, { label: string; cheapest: boolean }>();
+  if (!comparableUnitPrices(variants, (v) => (v.inStock ? (v.unitPrice ?? null) : null))) return out;
+  const shown = variants.filter((v) => v.inStock && v.unitPrice);
+  const min = Math.min(...shown.map((v) => v.unitPrice!.value));
+  for (const v of shown) out.set(v.id, { label: v.unitPrice!.label, cheapest: v.unitPrice!.value === min });
+  return out;
+}
 
 const DOT = { buy: "bg-buy", wait: "bg-wait", avoid: "bg-avoid" } as const;
 
@@ -59,7 +72,7 @@ function priceNote(v: Variant): string {
   return v.price != null && Number.isFinite(v.price) && v.price > 0 ? formatVnd(v.price) : "Chưa có giá";
 }
 
-function Chip({ v, selected, range }: { v: Variant; selected: boolean; range: number }) {
+function Chip({ v, selected, range, unit }: { v: Variant; selected: boolean; range: number; unit?: { label: string; cheapest: boolean } }) {
   const label = variantLabel(v.variantKey);
   const note = priceNote(v);
   const title = chipTitle(label, note, v.verdict);
@@ -72,7 +85,7 @@ function Chip({ v, selected, range }: { v: Variant; selected: boolean; range: nu
       title={title}
       aria-label={hasVerdict ? title : undefined}
       className={`inline-flex min-h-11 max-w-full items-center gap-x-2 gap-y-0.5 rounded-md border px-4 py-1.5 text-body-sm font-semibold transition-colors duration-150 ease-out ${
-        hasVerdict ? "max-sm:max-h-14 max-sm:flex-col max-sm:items-start max-sm:justify-center" : ""
+        hasVerdict || unit ? `${unit ? "max-sm:max-h-18" : "max-sm:max-h-14"} max-sm:flex-col max-sm:items-start max-sm:justify-center` : ""
       } ${
         selected
           ? "border-night bg-night text-night-ink"
@@ -90,6 +103,17 @@ function Chip({ v, selected, range }: { v: Variant; selected: boolean; range: nu
         </span>
       </span>
       <VerdictLine verdict={v.verdict} selected={selected} />
+      {unit ? (
+        <span
+          title={`Tính từ “${v.variantKey}”`}
+          className={`num whitespace-nowrap text-micro ${unit.cheapest ? "font-semibold" : "font-medium"} ${
+            selected ? "text-night-ink-2" : unit.cheapest ? "text-buy" : "text-ink-3"
+          }`}
+        >
+          ≈ {unit.label}
+          {unit.cheapest ? <span className="sr-only"> (rẻ nhất theo đơn vị)</span> : null}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -103,6 +127,7 @@ export function VariantPicker({ variants, selectedId, range }: VariantPickerProp
   const list = (variants ?? []).filter((v) => v?.id);
   if (list.length < 2) return null;
 
+  const units = unitLines(list);
   const selectedIndex = list.findIndex((v) => v.id === selectedId);
   let head = list.slice(0, VISIBLE_CHIPS);
   let rest = list.slice(VISIBLE_CHIPS);
@@ -120,7 +145,7 @@ export function VariantPicker({ variants, selectedId, range }: VariantPickerProp
       {/* Phones: one swipeable row instead of stacked rows, so the price and verdict stay in the first screen. */}
       <div className="flex flex-wrap gap-2.5 max-sm:-mx-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 max-sm:[scrollbar-width:none] max-sm:[&>*]:shrink-0">
         {head.map((v) => (
-          <Chip key={v.id} v={v} selected={v.id === selectedId} range={range} />
+          <Chip key={v.id} v={v} selected={v.id === selectedId} range={range} unit={units.get(v.id)} />
         ))}
       </div>
       {rest.length > 0 && (
@@ -131,7 +156,7 @@ export function VariantPicker({ variants, selectedId, range }: VariantPickerProp
           </summary>
           <div className="mt-2 flex flex-wrap gap-2.5">
             {rest.map((v) => (
-              <Chip key={v.id} v={v} selected={v.id === selectedId} range={range} />
+              <Chip key={v.id} v={v} selected={v.id === selectedId} range={range} unit={units.get(v.id)} />
             ))}
           </div>
         </details>

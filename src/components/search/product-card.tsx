@@ -1,3 +1,4 @@
+import { unitPriceLabel } from "@/components/product/unit-price";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import type { SearchItem } from "@/lib/search";
@@ -175,6 +176,9 @@ export function ProductCard({ item, href, categoryName, insight }: ProductCardPr
                   {source.tail}
                 </span>
               )}
+              {price != null && item.unitPrice ? (
+                <span className="num truncate text-micro text-ink-3">{unitPriceLabel(item.unitPrice)}</span>
+              ) : null}
             </div>
 
             <div className="flex shrink-0 flex-col items-center gap-0.5">

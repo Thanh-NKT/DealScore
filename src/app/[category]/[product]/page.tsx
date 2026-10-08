@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { toGroups } from "@/lib/vouchers/select";
 import { collectedAt as vouchersCollectedAt } from "@/lib/vouchers/store";
 import { PriceSummary } from "@/components/product/price-summary";
+import { UnitPriceNote } from "@/components/product/unit-price";
+import { unitPrice } from "@/lib/pricing/unit-price";
 import { VariantPicker } from "@/components/product/variant-picker";
 import { variantVerdict } from "@/lib/pricing/variant-verdict";
 import { verdictNote } from "@/lib/pricing/verdict-copy";
@@ -112,6 +114,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   // …while "where to buy" follows the price the buyer pays after vouchers, on whichever marketplace.
   const buy = pricing.bestBuy ?? cheapest;
   const buyListedPrice = buy?.price ?? currentPrice;
+  // P4 G: price per ml / g / piece of the hero price, from the selected variant's own text.
+  const heroUnitPrice = unitPrice(buyListedPrice, currentVariant?.unitQuantity ?? null);
 
   trackAfter("product_viewed", {
     userId: user?.id ?? null,
@@ -230,10 +234,13 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               <div className="flex flex-col gap-4 rounded-frame border border-line bg-surface-2/35 p-5">
                 {/* Top: Best Price + Deal Score Ring */}
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <PriceSummary
-                    cheapest={buy ?? pricing.lastKnown}
-                    offerCount={offerCount}
-                  />
+                  <div className="min-w-0">
+                    <PriceSummary
+                      cheapest={buy ?? pricing.lastKnown}
+                      offerCount={offerCount}
+                    />
+                    <UnitPriceNote unitPrice={heroUnitPrice} variantKey={currentVariant?.variantKey ?? ""} className="mt-1.5" />
+                  </div>
 
                   {recommendation && (
                     <div className="flex shrink-0 flex-col items-center gap-1">

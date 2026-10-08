@@ -5,6 +5,7 @@
 import type { ProductPageData } from "@/lib/product/page-data";
 import type { Recommendation } from "@/lib/pricing/deal-score";
 import { formatVnd } from "@/lib/format";
+import { comparableUnitPrices, unitPrice, type UnitPrice } from "@/lib/pricing/unit-price";
 
 export type Winner = "a" | "b" | "tie" | null;
 
@@ -71,6 +72,12 @@ function side(p: ProductPageData): CompareSide {
   };
 }
 
+/** Unit price of the compared variant at the compared price (P4 G); null when its text does not parse. */
+export function compareUnitPrice(p: ProductPageData): UnitPrice | null {
+  const v = p.variants.find((x) => x.id === p.selectedVariantId);
+  return unitPrice(p.pricing.cheapest?.price ?? null, v?.unitQuantity ?? null);
+}
+
 function vsMedian(price: number | null, median: number | null): number | null {
   return price != null && median != null && median > 0 ? (price - median) / median : null;
 }
@@ -120,6 +127,14 @@ export function buildComparison(pa: ProductPageData, pb: ProductPageData): Compa
       b: b.recommendation ? VERDICT_TEXT[b.recommendation] : DASH,
       winner: pick(rankA, rankB, "higher", 0),
     },
+    ...(() => {
+      // "Giá theo đơn vị" only when both sides parse to the same unit and base.
+      const ua = compareUnitPrice(pa);
+      const ub = compareUnitPrice(pb);
+      return ua && ub && comparableUnitPrices([ua, ub], (u) => u)
+        ? [{ key: "unit_price", label: "Giá theo đơn vị", a: ua.label, b: ub.label, winner: pick(ua.value, ub.value, "lower") }]
+        : [];
+    })(),
     { key: "vs_median", label: "So với trung vị 90 ngày", a: signedPct(ma), b: signedPct(mb), winner: pick(ma, mb, "lower", 0) },
     { key: "low", label: "Đáy 90 ngày", a: formatVnd(sa.low), b: formatVnd(sb.low), winner: null },
     { key: "median", label: "Trung vị 90 ngày", a: formatVnd(sa.median), b: formatVnd(sb.median), winner: null },

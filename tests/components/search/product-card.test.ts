@@ -18,6 +18,7 @@ function item(over: Partial<SearchItem> = {}): SearchItem {
     recommendation: "buy",
     lastObservedAt: null,
     effectivePrice: null,
+    unitPrice: null,
     variantId: null,
     marketplace: "tiktok",
     isFlashSale: false,
