@@ -58,7 +58,7 @@ const NOTHING: HikeDecision = { fire: false, next: null };
 /**
  * The "chưa nên mua lúc này" alert: its own edge (`hikeActive`) and its own 7-day cooldown
  * (`lastHikeAlertedAt`). It never touches the price-drop state (last_alerted_at, last_alert_price,
- * baseline_price, cond_state), and a price-drop alert in the same run always wins.
+ * baseline_price, cond_state), and a price-drop alert (sent or held back by its cooldown) in the same run always wins.
  */
 export function decideHikeAlert(
   config: WatchConfig,
@@ -69,8 +69,9 @@ export function decideHikeAlert(
 ): HikeDecision {
   const price = snap.price;
   if (!config.notifyPriceHike || snap.isStale || !snap.inStock || price == null || !(price > 0)) return NOTHING;
-  // The price-drop alert wins; the edge is still there next run.
-  if (main.kind === "alert") return NOTHING;
+  // The price-drop alert wins; the edge is still there next run. A drop edge held back by its own cooldown wins
+  // too: "chưa nên mua" now would contradict the drop alert that follows once the cooldown ends.
+  if (main.kind === "alert" || main.kind === "suppressed_cooldown") return NOTHING;
   // Contradiction: the user's own price is reached — never say "don't buy now".
   if (config.targetPrice != null && price <= config.targetPrice) {
     return state.hikeActive === false ? NOTHING : { fire: false, next: { hikeActive: false } };

@@ -96,6 +96,17 @@ describe("H3 — a price-drop alert in the same run wins", () => {
   });
 });
 
+describe("H3b — a price-drop edge held back by its cooldown also wins", () => {
+  it("main suppressed_cooldown → no hike in that run, no hike state written", () => {
+    const config = cfg({ notifyBackInStock: true });
+    const from: WatchState = { ...start, lastInStock: false, lastAlertedAt: new Date(day(1).getTime() - 2 * 3_600_000).toISOString(), lastAlertPrice: 1000 };
+    const s1 = snap(1.2);
+    const d = decideAlert(config, from, s1, day(1));
+    expect(d.kind).toBe("suppressed_cooldown");
+    expect(decideHikeAlert(config, from, s1, day(1), d)).toEqual({ fire: false, next: null });
+  });
+});
+
 describe("H4 — independent cooldowns", () => {
   it("a hike alert at N1 does not delay a target-price alert at N2", () => {
     const r = run(cfg({ targetPrice: 1100 }), [
