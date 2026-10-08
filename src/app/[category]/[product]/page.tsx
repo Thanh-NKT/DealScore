@@ -345,7 +345,12 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
           {/* Section 3: Marketplace Comparison & Price Alert */}
           <section className="grid grid-cols-1 items-start gap-6 min-[1121px]:grid-cols-[1fr_420px]">
-            <OfferList offers={pricing.offers} bestBuyId={buy?.offerId ?? null} offerVouchers={data.offerVouchers} />
+            <OfferList
+              offers={pricing.offers}
+              bestBuyId={buy?.offerId ?? null}
+              offerVouchers={data.offerVouchers}
+              offerSellers={Object.fromEntries(Object.entries(data.offerListings ?? {}).map(([id, l]) => [id, l.sellerId]))}
+            />
 
             <PriceAlertCard
               currentPrice={currentPrice}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { PricedOffer } from "@/lib/pricing/variant-pricing";
 import { offerPerks, type OfferPerk } from "@/lib/pricing/offer-perks";
 import type { Voucher } from "@/lib/vouchers/types";
@@ -18,6 +19,8 @@ interface OfferListProps {
   offerVouchers?: Record<string, Voucher[]>;
   /** id of the voucher section the "Có mã giảm giá" chip links to; null = plain text. */
   voucherAnchor?: string | null;
+  /** offerId → seller id (page-data offerListings): the seller name links to /seller/{id} (P4 H). */
+  offerSellers?: Record<string, string | null>;
 }
 
 /** Product page voucher section (VoucherPicker), the target of the "Có mã giảm giá" chip. */
@@ -90,7 +93,9 @@ function OfferRow({
   primary,
   perks,
   voucherAnchor,
+  sellerId = null,
 }: {
+  sellerId?: string | null;
   offer: PricedOffer;
   perks: OfferPerk[];
   voucherAnchor: string | null;
@@ -139,9 +144,19 @@ function OfferRow({
             </span>
           )}
         </div>
-        <span className="truncate text-body-sm font-semibold text-ink" title={seller}>
-          {seller}
-        </span>
+        {sellerId ? (
+          <Link
+            href={`/seller/${sellerId}`}
+            className="truncate text-body-sm font-semibold text-ink underline-offset-2 hover:underline"
+            title={`Hồ sơ giá của ${seller}`}
+          >
+            {seller}
+          </Link>
+        ) : (
+          <span className="truncate text-body-sm font-semibold text-ink" title={seller}>
+            {seller}
+          </span>
+        )}
       </div>
 
       {/* Col 2: Rating & Stock */}
@@ -225,7 +240,7 @@ function OfferRow({
   );
 }
 
-export function OfferList({ offers, bestBuyId, offerVouchers, voucherAnchor = VOUCHER_SECTION_ID }: OfferListProps) {
+export function OfferList({ offers, bestBuyId, offerVouchers, voucherAnchor = VOUCHER_SECTION_ID, offerSellers }: OfferListProps) {
   const list = offers ?? [];
 
   if (list.length === 0) {
@@ -284,6 +299,7 @@ export function OfferList({ offers, bestBuyId, offerVouchers, voucherAnchor = VO
         <div className="flex flex-col gap-2.5">
           {head.map((offer) => (
             <OfferRow
+              sellerId={offerSellers?.[offer.offerId] ?? null}
               key={offer.offerId}
               offer={offer}
               cheapestPrice={cheapestPrice}
@@ -304,6 +320,7 @@ export function OfferList({ offers, bestBuyId, offerVouchers, voucherAnchor = VO
             <div className="mt-2.5 flex flex-col gap-2.5">
               {rest.map((offer) => (
                 <OfferRow
+              sellerId={offerSellers?.[offer.offerId] ?? null}
                   key={offer.offerId}
                   offer={offer}
                   cheapestPrice={cheapestPrice}
