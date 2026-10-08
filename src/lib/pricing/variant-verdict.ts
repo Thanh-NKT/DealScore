@@ -13,7 +13,8 @@ export const SCORE_PRICE_TOLERANCE = 1;
 
 export interface CachedVariantScore {
   score: number | null;
-  recommendation: Recommendation;
+  /** null = the cached value is not a known recommendation (see asRecommendation): nothing is shown. */
+  recommendation: Recommendation | null;
   priceAtCompute: number | null;
   computedAt: string;
 }
@@ -24,6 +25,12 @@ export type VariantVerdict =
   | { kind: "none" };
 
 const NONE: VariantVerdict = { kind: "none" };
+const RECOMMENDATIONS: readonly Recommendation[] = ["buy", "wait", "avoid", "insufficient_data"];
+
+/** A cached recommendation from the DB, or null when it is not one of the four known values. */
+export function asRecommendation(value: unknown): Recommendation | null {
+  return RECOMMENDATIONS.includes(value as Recommendation) ? (value as Recommendation) : null;
+}
 const ringScore = (s: number) => Math.min(100, Math.max(0, Math.round(s)));
 
 function toVerdict(score: number | null, recommendation: Recommendation, live: boolean): VariantVerdict {
@@ -42,7 +49,7 @@ export function variantVerdict(input: {
   if (variant.id === selectedId) {
     return headline ? toVerdict(headline.score, headline.recommendation, true) : NONE;
   }
-  if (!variant.inStock || variant.price == null || !cached || cached.priceAtCompute == null) return NONE;
+  if (!variant.inStock || variant.price == null || !cached || cached.priceAtCompute == null || cached.recommendation == null) return NONE;
   if (Math.abs(cached.priceAtCompute - variant.price) > SCORE_PRICE_TOLERANCE) return NONE;
   const computed = Date.parse(cached.computedAt);
   if (!Number.isFinite(computed) || now.getTime() - computed > VARIANT_SCORE_MAX_AGE_HOURS * 3_600_000) return NONE;

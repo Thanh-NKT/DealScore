@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SCORE_PRICE_TOLERANCE,
   VARIANT_SCORE_MAX_AGE_HOURS,
+  asRecommendation,
   variantVerdict,
   type CachedVariantScore,
 } from "@/lib/pricing/variant-verdict";
@@ -54,6 +55,13 @@ describe("variantVerdict", () => {
     expect(variantVerdict({ ...base, variant: variant({ inStock: false }), cached: cached() })).toEqual({ kind: "none" });
     expect(variantVerdict({ ...base, variant: variant({ price: null }), cached: cached() })).toEqual({ kind: "none" });
     expect(variantVerdict({ ...base, variant: variant(), cached: null })).toEqual({ kind: "none" });
+  });
+
+  it("an unknown cached recommendation shows nothing (asRecommendation maps it to null)", () => {
+    for (const r of ["buy", "wait", "avoid", "insufficient_data"]) expect(asRecommendation(r)).toBe(r);
+    for (const r of ["BUY", "", null, undefined, 3]) expect(asRecommendation(r)).toBeNull();
+    const base = { selectedId: "sel", headline: headline(90), now: NOW, variant: variant() };
+    expect(variantVerdict({ ...base, cached: cached({ recommendation: asRecommendation("maybe") }) })).toEqual({ kind: "none" });
   });
 
   it("rounds and clamps the score like ScoreRing", () => {

@@ -7,8 +7,7 @@ import {
   type VariantPricing,
 } from "@/lib/pricing/variant-pricing";
 import type { DailyPriceRow } from "@/lib/pricing/price-history";
-import type { Recommendation } from "@/lib/pricing/deal-score";
-import type { CachedVariantScore } from "@/lib/pricing/variant-verdict";
+import { asRecommendation, type CachedVariantScore } from "@/lib/pricing/variant-verdict";
 import { toVnDate } from "@/lib/format";
 import { productGallery } from "@/lib/product/images";
 import { listVouchersForListings, VOUCHERS_CACHE_TAG, type VoucherScope } from "@/lib/vouchers/store";
@@ -113,7 +112,7 @@ export async function loadProductPageData(params: {
         cachedScore: vds
           ? {
               score: vds.score != null ? Number(vds.score) : null,
-              recommendation: vds.recommendation as Recommendation,
+              recommendation: asRecommendation(vds.recommendation),
               priceAtCompute: vds.price_at_compute != null ? Number(vds.price_at_compute) : null,
               computedAt: String(vds.computed_at),
             }
