@@ -10,8 +10,11 @@ export { PURGE_AFTER_DAYS, purgeCutoff, purgeDate } from "@/lib/account/purge-da
  * Deleting auth.users cascades to users → watches → alert_events, notification_settings,
  * user_preferences (covered by tests/db/preferences.test.ts "is removed with the user"), and the user's
  * extension_observations / extension_contributions (user_id FK, migration 0023; tests/db/user-data.test.ts);
- * click_events.user_id and lookup_requests.user_id → null.
- * A new table holding user data must reference users(id) the same way — erasure relies on the cascade.
+ * click_events.user_id, lookup_requests.user_id and data_reports.user_id → null (migration 0043: a "Góp ý dữ
+ * liệu" report is kept anonymised — its kind and free-text message stay for the admin queue, unlinked from the
+ * person; the form asks not to write personal data).
+ * A new table holding user data must reference users(id) the same way (cascade, or set null when the row is kept
+ * anonymised on purpose) — erasure relies on it.
  * One user failing does not stop the run. Safe to re-run.
  *
  * Works in batches of `limit` until the backlog is empty or `deadline` (ms epoch) passes, then
