@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- DealScore logo tile (DESIGN.md "Logo"): primary square, white trend-up stroke. -->
+  <rect width="32" height="32" rx="8" fill="#1F5666"/>
+  <g transform="translate(5 5) scale(0.9167)" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m3 17 6-6 4 4 8-8"/>
+    <path d="M15 7h6v6"/>
+  </g>
+</svg>
