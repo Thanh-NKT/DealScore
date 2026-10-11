@@ -86,6 +86,11 @@ describe("buildAuthorizeUrl", () => {
     expect(url.searchParams.get("service_id")).toBe("svc");
     expect(url.searchParams.get("state")).toBe("st");
   });
+
+  it("asks for creator authorization (user_type=1), not seller", () => {
+    const url = new URL(buildAuthorizeUrl(cfg, "st"));
+    expect(url.searchParams.get("user_type")).toBe("1");
+  });
 });
 
 describe("tokens (T3)", () => {

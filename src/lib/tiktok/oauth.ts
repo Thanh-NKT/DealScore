@@ -86,6 +86,8 @@ export function buildAuthorizeUrl(cfg: TikTokConfig, state: string): string {
   const url = new URL(cfg.authorizeUrl);
   url.searchParams.set("service_id", cfg.serviceId);
   url.searchParams.set("state", state);
+  // Affiliate Creator APIs need a creator-side grant: user_type=1 = creator (default is seller).
+  url.searchParams.set("user_type", "1");
   return url.toString();
 }
 
