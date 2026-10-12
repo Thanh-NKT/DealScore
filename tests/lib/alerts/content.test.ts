@@ -86,6 +86,22 @@ describe("renderAlertEmail", () => {
     expect(e.text).toContain("Xem giá trên DealScore: https://dealscore.vn/o-cung/ssd?variant=v");
   });
 
+  it("the CTA names the marketplace its /go link leads to, not always Shopee", () => {
+    const e = renderAlertEmail(
+      input([item({ marketplace: "tiktok", buyUrl: "https://dealscore.vn/go/tiktok/o9?src=email&watch=w1&alert=a1" })]),
+    );
+    expect(e.html).toContain("Mua trên TikTok Shop");
+    expect(e.html).not.toContain("Mua trên Shopee");
+    expect(e.text).toContain("Đến TikTok Shop: https://dealscore.vn/go/tiktok/o9");
+  });
+
+  it("no offer to send the buyer to (buyUrl is the product page) → CTA to DealScore", () => {
+    const e = renderAlertEmail(input([item({ marketplace: null, buyUrl: "https://dealscore.vn/o-cung/ssd?variant=v" })]));
+    expect(e.html).toContain("Xem giá trên DealScore");
+    expect(e.html).not.toContain("Mua trên");
+    expect(e.text).toContain("Xem giá trên DealScore: https://dealscore.vn/o-cung/ssd?variant=v");
+  });
+
   it("1 item → name + price subject; 3 items → count", () => {
     expect(renderAlertEmail(input([item()])).subject).toBe(`SSD Samsung 990 còn ${formatVnd(2_500_000)}`);
     expect(renderAlertEmail(input([item(), item(), item()])).subject).toBe("3 sản phẩm bạn theo dõi vừa có tin mới");

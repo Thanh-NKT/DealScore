@@ -26,16 +26,17 @@ Lưu ý: Lịch sử click liên kết mua sắm được giữ lại độc l�
   const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8" /></head>
-<body style="font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #15161A; max-width: 500px; margin: 0 auto; padding: 24px;">
+<body style="font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #14121E; max-width: 500px; margin: 0 auto; padding: 24px;">
+  <p style="margin: 0 0 16px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em;">Deal<span style="color: #4F35E3;">Score</span></p>
   <h2>Xác nhận yêu cầu xóa tài khoản</h2>
   <p>Chúng tôi đã nhận được yêu cầu xóa tài khoản DealScore của bạn.</p>
   <p>Mọi thông báo và theo dõi giá đã được <strong>dừng ngay lập tức</strong>. Toàn bộ thông tin cá nhân và dữ liệu theo dõi sẽ được xóa vĩnh viễn vào ngày <strong>${hDate}</strong>.</p>
   <p>Trong vòng 30 ngày (trước ${hDate}), nếu bạn đổi ý, bạn có thể đăng nhập lại để khôi phục tài khoản nguyên vẹn:</p>
   <p style="margin: 20px 0;">
-    <a href="${hLogin}" style="background-color: #15161A; color: #FFFFFF; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-weight: 600;">Đăng nhập để khôi phục</a>
+    <a href="${hLogin}" style="display: inline-block; background-color: #4F35E3; color: #FFFFFF; padding: 11px 22px; border-radius: 999px; text-decoration: none; font-weight: 700;">Đăng nhập để khôi phục</a>
   </p>
-  <hr style="border: none; border-top: 1px solid #E4E2DA; margin: 24px 0;" />
-  <p style="font-size: 13px; color: #62656D;">
+  <hr style="border: none; border-top: 1px solid #E4E4EB; margin: 24px 0;" />
+  <p style="font-size: 13px; color: #66647C;">
     Lưu ý: Dữ liệu click mua sắm được lưu giữ ở dạng vô danh nhằm đối soát hoa hồng tiếp thị liên kết và không gắn với bất kỳ danh tính nào.
   </p>
 </body>

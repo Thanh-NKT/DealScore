@@ -1,6 +1,7 @@
 import { RECOMMENDATION_LABEL, type Recommendation } from "@/lib/pricing/deal-score";
 import { formatVnd } from "@/lib/format";
 import { escapeHtml } from "@/lib/email/escape";
+import { marketplaceName } from "@/lib/marketplaces";
 
 export interface AlertEmailItem {
   productName: string;
@@ -19,9 +20,44 @@ export interface AlertEmailItem {
    * "Xem giá trên DealScore" to the product page (buyUrl), never a marketplace button.
    */
   priceHikeOnly?: boolean;
+  /**
+   * The marketplace buyUrl's /go link leads to ("tiktok" → "Mua trên TikTok Shop"). null: buyUrl is the
+   * DealScore product page (no offer to send the buyer to), so the CTA is "Xem giá trên DealScore".
+   * Omitted: Shopee, the only marketplace when this email was first designed.
+   */
+  marketplace?: string | null;
   buyUrl: string;
   manageUrl: string;
   pauseUrl: string;
+}
+
+/**
+ * Email palette: the web app's "Sân trung lập" tokens (src/app/globals.css), inlined — mail clients have no
+ * CSS variables. A CTA to a marketplace wears that marketplace's colour; a CTA to DealScore is iris.
+ */
+const C = { ink: "#14121E", ink3: "#66647C", line: "#E4E4EB", primary: "#4F35E3" };
+const CTA_BG: Record<string, string> = { shopee: "#DA391A", tiktok: "#010101" };
+const VERDICT_COLOR: Record<Recommendation, string> = {
+  buy: "#047A4E",
+  wait: "#A05A00",
+  avoid: "#C9271D",
+  insufficient_data: C.ink3,
+};
+const BODY_OPEN = `<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:${C.ink};line-height:1.5;max-width:600px">`;
+const WORDMARK = `<p style="margin:0 0 16px;font-size:20px;font-weight:800;letter-spacing:-0.02em">Deal<span style="color:${C.primary}">Score</span></p>`;
+const FOOTER_P = `<p style="color:${C.ink3};font-size:12px">`;
+const CARD = `<div style="border:1px solid ${C.line};border-radius:20px;padding:16px 18px;margin:0 0 16px;background:#FFFFFF">`;
+const LINK = `style="color:${C.primary}"`;
+
+function button(href: string, label: string, background: string): string {
+  return `<a href="${href}" style="display:inline-block;padding:11px 20px;background:${background};color:#FFFFFF;border-radius:999px;font-weight:700;text-decoration:none">${label}</a>`;
+}
+
+/** Name of the marketplace the CTA leads to, or null when it leads to DealScore itself. */
+function ctaMarketplace(it: AlertEmailItem): string | null {
+  if (it.priceHikeOnly) return null;
+  if (it.marketplace === undefined) return "Shopee";
+  return it.marketplace ? marketplaceName(it.marketplace) : null;
 }
 
 /** "≈ X sau voucher" (same copy as ProductCard), or null when there is nothing lower to show. */
@@ -53,15 +89,15 @@ function discoveryHtml(b: DiscoveryEmailBlock): string {
         ? `<img src="${e(p.imageUrl)}" width="56" height="56" alt="" style="width:56px;height:56px;border-radius:12px;object-fit:cover;vertical-align:middle;margin-right:12px">`
         : "";
       const verdict = p.recommendation && p.recommendation !== "insufficient_data" ? ` · ${e(RECOMMENDATION_LABEL[p.recommendation])}` : "";
-      return `<p style="margin:8px 0">${img}<a href="${e(p.url)}" style="color:#15161A;font-weight:600">${e(p.name)}</a><br><strong>${e(formatVnd(p.price))}</strong>${verdict}</p>`;
+      return `<p style="margin:8px 0">${img}<a href="${e(p.url)}" style="color:${C.ink};font-weight:600">${e(p.name)}</a><br><strong>${e(formatVnd(p.price))}</strong>${verdict}</p>`;
     })
     .join("");
-  const more = b.moreCount > 0 ? `<p style="margin:8px 0"><a href="${e(b.searchUrl)}">và ${b.moreCount} sản phẩm khác</a></p>` : "";
-  return `<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
+  const more = b.moreCount > 0 ? `<p style="margin:8px 0"><a href="${e(b.searchUrl)}" ${LINK}>và ${b.moreCount} sản phẩm khác</a></p>` : "";
+  return `${CARD}
 <h3 style="margin:0 0 4px">${e(b.title)}</h3>
-<p style="margin:4px 0;color:#5E6168">${e(b.lead)}</p>
-${rows}${more}<p style="margin:12px 0 4px"><a href="${e(b.searchUrl)}" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">${e(b.searchLabel)}</a></p>
-<p style="margin:4px 0;font-size:13px"><a href="${e(b.manageUrl)}">${e(b.manageLabel ?? "Quản lý tìm kiếm đã lưu")}</a> · <a href="${e(b.pauseUrl)}">${e(b.pauseLabel)}</a></p>
+<p style="margin:4px 0;color:${C.ink3}">${e(b.lead)}</p>
+${rows}${more}<p style="margin:14px 0 4px">${button(e(b.searchUrl), e(b.searchLabel), C.primary)}</p>
+<p style="margin:4px 0;font-size:13px"><a href="${e(b.manageUrl)}" ${LINK}>${e(b.manageLabel ?? "Quản lý tìm kiếm đã lưu")}</a> · <a href="${e(b.pauseUrl)}" ${LINK}>${e(b.pauseLabel)}</a></p>
 </div>`;
 }
 
@@ -106,31 +142,36 @@ export function renderAlertEmail(input: {
     .map((it) => {
       const score =
         it.dealScore != null && it.recommendation
-          ? `<p style="margin:4px 0">Deal Score <strong>${it.dealScore}</strong>/100 · ${e(RECOMMENDATION_LABEL[it.recommendation])}</p>`
+          ? `<p style="margin:4px 0">Deal Score <strong>${it.dealScore}</strong>/100 · <strong style="color:${VERDICT_COLOR[it.recommendation]}">${e(RECOMMENDATION_LABEL[it.recommendation])}</strong></p>`
           : "";
       const reasons = [...it.triggerTexts, ...it.scoreReasons.slice(0, 2)]
         .map((r) => `<li>${e(r)}</li>`)
         .join("");
       const baseline =
         it.baselinePrice != null && !it.priceHikeOnly
-          ? ` <span style="color:#5E6168">(lúc bắt đầu theo dõi: ${e(formatVnd(it.baselinePrice))})</span>`
+          ? ` <span style="color:${C.ink3};font-size:15px">(lúc bắt đầu theo dõi: ${e(formatVnd(it.baselinePrice))})</span>`
           : "";
       const eff = voucherLine(it);
-      const effHtml = eff ? `<p style="margin:0 0 4px;color:#5E6168">${e(eff)}</p>` : "";
-      return `<div style="border:1px solid #E4E2DA;border-radius:20px;padding:16px;margin:0 0 16px">
-<h3 style="margin:0 0 4px">${e(it.productName)} <span style="color:#5E6168;font-weight:normal">— ${e(it.variantKey)}</span></h3>
-<p style="margin:4px 0;font-size:20px"><strong>${e(formatVnd(it.price))}</strong>${baseline}</p>
+      const effHtml = eff ? `<p style="margin:0 0 4px;color:${C.ink3}">${e(eff)}</p>` : "";
+      const where = ctaMarketplace(it);
+      const cta = where
+        ? button(e(it.buyUrl), `Mua trên ${e(where)}`, CTA_BG[it.marketplace ?? "shopee"] ?? C.primary)
+        : button(e(it.buyUrl), "Xem giá trên DealScore", C.primary);
+      return `${CARD}
+<h3 style="margin:0 0 4px">${e(it.productName)} <span style="color:${C.ink3};font-weight:normal">— ${e(it.variantKey)}</span></h3>
+<p style="margin:4px 0;font-size:22px"><strong>${e(formatVnd(it.price))}</strong>${baseline}</p>
 ${effHtml}${score}<ul style="margin:8px 0;padding-left:20px">${reasons}</ul>
-<p style="margin:12px 0 4px"><a href="${e(it.buyUrl)}" style="display:inline-block;padding:10px 16px;background:#1F5666;color:#FFFFFF;border-radius:12px;font-weight:600;text-decoration:none">${it.priceHikeOnly ? "Xem giá trên DealScore" : "Mua trên Shopee"}</a></p>
-<p style="margin:4px 0;font-size:13px"><a href="${e(it.manageUrl)}">Xem sản phẩm đang theo dõi</a> · <a href="${e(it.pauseUrl)}">Tạm dừng thông báo sản phẩm này</a></p>
+<p style="margin:14px 0 4px">${cta}</p>
+<p style="margin:4px 0;font-size:13px"><a href="${e(it.manageUrl)}" ${LINK}>Xem sản phẩm đang theo dõi</a> · <a href="${e(it.pauseUrl)}" ${LINK}>Tạm dừng thông báo sản phẩm này</a></p>
 </div>`;
     })
     .join("");
 
-  const html = `<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:#15161A;line-height:1.5;max-width:600px">
+  const html = `${BODY_OPEN}
+${WORDMARK}
 ${htmlItems}
-<p style="color:#5E6168;font-size:12px">${e(DISCLOSURE)}</p>
-<p style="color:#5E6168;font-size:12px"><a href="${e(input.unsubscribeAllUrl)}">Tắt toàn bộ email thông báo</a></p>
+${FOOTER_P}${e(DISCLOSURE)}</p>
+${FOOTER_P}<a href="${e(input.unsubscribeAllUrl)}" ${LINK}>Tắt toàn bộ email thông báo</a></p>
 </body></html>`;
 
   const text = [
@@ -143,7 +184,7 @@ ${htmlItems}
           ? [`Deal Score ${it.dealScore}/100 · ${RECOMMENDATION_LABEL[it.recommendation]}`]
           : []),
         ...[...it.triggerTexts, ...it.scoreReasons.slice(0, 2)].map((r) => `- ${r}`),
-        it.priceHikeOnly ? `Xem giá trên DealScore: ${it.buyUrl}` : `Đến Shopee: ${it.buyUrl}`,
+        ctaMarketplace(it) ? `Đến ${ctaMarketplace(it)}: ${it.buyUrl}` : `Xem giá trên DealScore: ${it.buyUrl}`,
         `Xem sản phẩm đang theo dõi: ${it.manageUrl}`,
         `Tạm dừng thông báo sản phẩm này: ${it.pauseUrl}`,
         "",
@@ -167,11 +208,11 @@ function renderWithDiscoveries(
       ? discoveries[0].title
       : `${input.items.length + discoveries.length} tin mới từ DealScore`;
   const e = escapeHtml;
-  // The watch part's items (between <body…> and its footer) are reused verbatim.
-  const watchHtml = watchPart ? watchPart.html.slice(watchPart.html.indexOf(">\n") + 2, watchPart.html.indexOf('<p style="color:#5E6168;font-size:12px">')) : "";
-  const html = `<!doctype html><html lang="vi"><body style="font-family:'Be Vietnam Pro',-apple-system,Segoe UI,Roboto,sans-serif;color:#15161A;line-height:1.5;max-width:600px">
-${watchHtml}${discoveries.map(discoveryHtml).join("")}
-${watchPart ? `<p style="color:#5E6168;font-size:12px">${e(DISCLOSURE)}</p>\n` : ""}<p style="color:#5E6168;font-size:12px"><a href="${e(input.unsubscribeAllUrl)}">Tắt toàn bộ email thông báo</a></p>
+  // The watch part's items (between its wordmark and its footer) are reused verbatim.
+  const head = `${BODY_OPEN}\n${WORDMARK}\n`;
+  const watchHtml = watchPart ? watchPart.html.slice(head.length, watchPart.html.indexOf(FOOTER_P)) : "";
+  const html = `${head}${watchHtml}${discoveries.map(discoveryHtml).join("")}
+${watchPart ? `${FOOTER_P}${e(DISCLOSURE)}</p>\n` : ""}${FOOTER_P}<a href="${e(input.unsubscribeAllUrl)}" ${LINK}>Tắt toàn bộ email thông báo</a></p>
 </body></html>`;
   const watchText = watchPart ? watchPart.text.slice(0, watchPart.text.lastIndexOf(DISCLOSURE)) : "";
   const text = [

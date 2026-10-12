@@ -460,6 +460,8 @@ export async function dispatchDueDeliveries(
             referencePrice: e.referencePrice,
           }),
           priceHikeOnly: hikeOnly,
+          // The CTA names the marketplace its /go link leads to; null when it falls back to the product page.
+          marketplace: !hikeOnly && e.offerId && e.marketplace ? e.marketplace : null,
           scoreReasons: e.scoreReasons.slice(0, 2),
           buyUrl:
             !hikeOnly && e.offerId && e.marketplace

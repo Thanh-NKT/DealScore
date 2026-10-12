@@ -3,8 +3,10 @@ import { renderAlertEmail, type AlertEmailItem } from "@/lib/email/templates/ale
 import { buildPushPayload } from "@/lib/push/payload";
 
 // Roadmap P4 (E/F): discovery blocks were added to the alert email and push payload. A watch-only alert must
-// stay BYTE-identical to what was sent before P4. The snapshots below were recorded from the pre-P4 renderer
-// (commit 34f42e1) — never update them to make this test pass.
+// stay BYTE-identical to what it was before P4. The snapshots were recorded from the pre-P4 renderer (commit
+// 34f42e1) and re-recorded once, on purpose, for the owner-approved iris redesign (2026-10-12: palette,
+// wordmark, pill CTA in the marketplace's colour; the text part is unchanged). Never update them to make
+// this test pass.
 const item = (o: Partial<AlertEmailItem> = {}): AlertEmailItem => ({
   productName: "SSD Samsung 990 <Pro>",
   variantKey: "2TB",
