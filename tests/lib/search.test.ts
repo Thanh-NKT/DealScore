@@ -106,25 +106,28 @@ describe("marketplace filter (?market=)", () => {
   const markets = (qs: string) => parseSearchParams(new URLSearchParams(qs)).marketplaces;
 
   it("parses a comma list, in canonical order, deduped and case-insensitive", () => {
-    expect(markets("market=lazada,SHOPEE,shopee")).toEqual(["shopee", "lazada"]);
+    expect(markets("market=tiktok,SHOPEE,shopee")).toEqual(["shopee", "tiktok"]);
   });
 
   it("also tolerates repeated market params", () => {
-    expect(markets("market=lazada&market=tiktok")).toEqual(["tiktok", "lazada"]);
-    expect(parseSearchParams({ market: ["lazada", "shopee"] }).marketplaces).toEqual(["shopee", "lazada"]);
+    expect(markets("market=tiktok&market=shopee")).toEqual(["shopee", "tiktok"]);
+    expect(parseSearchParams({ market: ["tiktok", "shopee"] }).marketplaces).toEqual(["shopee", "tiktok"]);
   });
 
   it("drops unknown ids; nothing known means no filter", () => {
     expect(markets("market=shopee,amazon")).toEqual(["shopee"]);
     expect(markets("market=amazon")).toBeUndefined();
+    // Lazada is not a DealScore marketplace any more: an old ?market=lazada link means "no filter".
+    expect(markets("market=lazada")).toBeUndefined();
+    expect(markets("market=lazada,tiktok")).toEqual(["tiktok"]);
     expect(markets("market=")).toBeUndefined();
     expect(markets("")).toBeUndefined();
   });
 
   it("serializes as one comma-separated market param and round-trips", () => {
-    const sp = toSearchParams(parseSearchParams(new URLSearchParams("q=ssd&market=lazada&market=shopee")));
-    expect(sp.getAll("market")).toEqual(["shopee,lazada"]);
-    expect(parseSearchParams(sp).marketplaces).toEqual(["shopee", "lazada"]);
+    const sp = toSearchParams(parseSearchParams(new URLSearchParams("q=ssd&market=tiktok&market=shopee")));
+    expect(sp.getAll("market")).toEqual(["shopee,tiktok"]);
+    expect(parseSearchParams(sp).marketplaces).toEqual(["shopee", "tiktok"]);
   });
 
   it("writes nothing when no marketplace is selected", () => {
@@ -320,11 +323,11 @@ describe("searchProducts — card marketplace and flash flag (0026)", () => {
     category.result = { data: null, error: null };
     rpc.mockReset();
     rpc.mockResolvedValue({
-      data: [{ product_id: "p1", slug: "a", canonical_name: "A", category_slug: "x", total_count: 1, marketplace: "lazada", is_flash_sale: true }],
+      data: [{ product_id: "p1", slug: "a", canonical_name: "A", category_slug: "x", total_count: 1, marketplace: "tiktok", is_flash_sale: true }],
       error: null,
     });
     const [item] = (await searchProducts({ q: "a" })).items;
-    expect(item).toMatchObject({ marketplace: "lazada", isFlashSale: true });
+    expect(item).toMatchObject({ marketplace: "tiktok", isFlashSale: true });
 
     rpc.mockResolvedValue({ data: [{ product_id: "p1", slug: "a", canonical_name: "A", total_count: 1 }], error: null });
     const [old] = (await searchProducts({ q: "a" })).items;

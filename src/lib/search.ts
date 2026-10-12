@@ -22,7 +22,7 @@ export interface SearchParams {
   minRating?: MinRating;
   freeShipping?: boolean;
   hasVoucher?: boolean;
-  /** Keep products sold on at least one of these marketplaces (`?market=shopee,lazada`). */
+  /** Keep products sold on at least one of these marketplaces (`?market=shopee,tiktok`). */
   marketplaces?: MarketplaceId[];
   /** From query intent (Phase 3 group A) — GB, not yet filtered in SQL (Task 4). `?cap=2048`. */
   capacityGb?: number;
@@ -101,7 +101,7 @@ export interface SearchResult {
 const PAGE_SIZE = 24;
 
 /**
- * `?market=shopee,lazada` (repeated `market=` also accepted) → known marketplace ids, deduped and in
+ * `?market=shopee,tiktok` (repeated `market=` also accepted) → known marketplace ids, deduped and in
  * MARKETPLACES order so one selection has exactly one URL. Unknown ids are dropped; none → undefined.
  */
 export function parseMarketplaces(values: readonly string[]): MarketplaceId[] | undefined {

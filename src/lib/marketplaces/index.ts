@@ -2,7 +2,8 @@
  * Marketplace URL registry (Phase 2, group C). One place that knows each marketplace's URLs and where
  * /go may redirect. Client-safe. Data access lives in sources.ts (server-only).
  *
- * TikTok Shop and Lazada URL formats are assumptions until a spike confirms them.
+ * DealScore compares Shopee and TikTok Shop only. The TikTok Shop URL format is an assumption until a
+ * spike confirms it. A link from any other marketplace (Lazada, Tiki…) is "not supported".
  */
 import { externalItemId, parseShopeeUrl, SHOPEE_HOSTS, SHORT_HOSTS, normalizeLookupInput } from "@/lib/shopee/parse-url";
 import type { MarketplaceId } from "@/lib/marketplaces/types";
@@ -82,24 +83,7 @@ const tiktok: MarketplaceAdapter = {
   imageHosts: ["ibyteimg.com", "tiktokcdn.com"],
 };
 
-const lazada: MarketplaceAdapter = {
-  id: "lazada",
-  name: "Lazada",
-  hosts: new Set(["www.lazada.vn", "lazada.vn"]),
-  shortHosts: new Set(["s.lazada.vn"]),
-  parseUrl(url) {
-    if (this.shortHosts.has(url.hostname.toLowerCase())) return { ok: false, reason: "needs_redirect" };
-    const m = url.pathname.match(/^\/products\/[^/]*-i(\d{3,20})(?:-s\d+)?\.html$/);
-    return m
-      ? { ok: true, item: { marketplace: "lazada", externalItemId: m[1], canonicalUrl: `https://www.lazada.vn/products/-i${m[1]}.html` } }
-      : { ok: false, reason: "unrecognized_format" };
-  },
-  targetHosts: new Set(["www.lazada.vn", "s.lazada.vn", "c.lazada.vn"]),
-  // Assumption (no data source yet): Lazada images are served from these Alibaba CDNs.
-  imageHosts: ["slatic.net", "alicdn.com"],
-};
-
-export const MARKETPLACES: readonly MarketplaceAdapter[] = [shopee, tiktok, lazada];
+export const MARKETPLACES: readonly MarketplaceAdapter[] = [shopee, tiktok];
 
 export function getAdapter(id: string): MarketplaceAdapter | null {
   return MARKETPLACES.find((m) => m.id === id) ?? null;

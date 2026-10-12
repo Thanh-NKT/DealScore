@@ -81,7 +81,7 @@ export function buildCsp(opts: {
     // Inline style attributes (React `style={…}`) cannot carry a nonce. A nonce here would also
     // disable 'unsafe-inline', so styles stay on 'unsafe-inline'.
     "style-src": ["'self'", "'unsafe-inline'"],
-    // Product images come from marketplace CDNs (Shopee, TikTok, Lazada, …).
+    // Product images come from marketplace CDNs (Shopee, TikTok Shop).
     "img-src": ["'self'", "data:", "blob:", "https:"],
     "font-src": ["'self'", "data:"],
     "connect-src": ["'self'", supabase, supabaseWs, sentry],

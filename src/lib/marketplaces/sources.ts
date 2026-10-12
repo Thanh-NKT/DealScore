@@ -3,7 +3,7 @@ import { shopeeSource } from "@/lib/shopee/source";
 import { tiktokSource } from "@/lib/tiktok/source";
 import type { Env, MarketplaceId, MarketplaceSource } from "@/lib/marketplaces/types";
 
-/** Data sources by marketplace. Lazada has none yet. Adding one = one entry here. */
+/** Data sources by marketplace (one per entry of MARKETPLACES). Adding one = one entry here. */
 const SOURCES: readonly MarketplaceSource[] = [shopeeSource, tiktokSource];
 
 export function getSource(id: string): MarketplaceSource | null {

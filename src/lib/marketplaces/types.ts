@@ -2,7 +2,7 @@
  * Marketplace-agnostic data types. Client-safe: no node:* imports, no admin client.
  * Every source (fake, Shopee Affiliate, TikTok Shop Affiliate) returns these shapes.
  */
-export type MarketplaceId = "shopee" | "tiktok" | "lazada";
+export type MarketplaceId = "shopee" | "tiktok";
 export type Env = Record<string, string | undefined>;
 
 export interface MarketplaceModel {

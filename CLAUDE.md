@@ -166,8 +166,10 @@ Never mix these up; the choice encodes the security model.
   không query; draft là `noindex`. Trang danh mục `/{category}` và `/brand/{slug}`.
 - **Analytics (1.11):** first-party, bảng `analytics_events` + view `metrics_*`. Chỉ ghi qua `trackAfter()` phía server,
   thuộc tính theo allow-list trong `src/lib/analytics/events.ts` (thêm sự kiện = sửa cả check constraint).
-- **Đa sàn (G2):** mọi hiểu biết về URL / nguồn dữ liệu / đích `/go` của từng sàn nằm trong `src/lib/marketplaces/`
-  (TikTok Shop, Lazada: giả định, chưa có dữ liệu). So sánh giữa sàn chỉ hiện khi có ≥ 2 sàn thật.
+- **Đa sàn (G2):** DealScore chỉ so **Shopee và TikTok Shop** (`MarketplaceId`); mọi hiểu biết về URL / nguồn dữ liệu /
+  đích `/go` của từng sàn nằm trong `src/lib/marketplaces/`. Lazada đã bị bỏ (migration 0075: listing Lazada cũ bị tắt kiểu
+  admin, SQL chỉ nhận `shopee` / `tiktok`); link Lazada / Tiki / Sendo dán vào chỉ được giải thích là chưa hỗ trợ.
+  So sánh giữa sàn chỉ hiện khi có ≥ 2 sàn thật.
 - **Nguồn dữ liệu thật:** `src/lib/marketplaces/index.ts` chỉ nhận diện URL (dùng được ở client); đọc dữ liệu qua
   `getSource(id)` (`sources.ts`, server-only): Shopee Affiliate `productOfferV2` (`src/lib/shopee/affiliate-source.ts`),
   TikTok Shop Affiliate Creator API (`src/lib/tiktok/`, token OAuth trong `marketplace_credentials`, `pnpm tiktok:authorize`).

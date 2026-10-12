@@ -18,24 +18,22 @@ describe("compareMarketplaces", () => {
   });
 
   it("returns null when the second marketplace has no in-stock price", () => {
-    expect(compareMarketplaces([offer("shopee", 100), offer("lazada", 90, false), offer("tiktok", null)])).toBeNull();
+    expect(compareMarketplaces([offer("shopee", 100), offer("tiktok", 90, false), offer("tiktok", null)])).toBeNull();
   });
 
   it("takes each marketplace's cheapest in-stock offer, cheapest first, with gaps", () => {
     const c = compareMarketplaces([
       offer("shopee", 2_500_000),
       offer("shopee", 2_450_000),
-      offer("lazada", 2_330_000),
-      offer("lazada", 2_100_000, false),
-      offer("tiktok", 2_600_000),
+      offer("tiktok", 2_330_000),
+      offer("tiktok", 2_100_000, false),
     ])!;
     expect(c.rows.map((r) => [r.marketplace, r.price, r.sellers, r.gap])).toEqual([
-      ["lazada", 2_330_000, 1, 0],
+      ["tiktok", 2_330_000, 1, 0],
       ["shopee", 2_450_000, 2, 120_000],
-      ["tiktok", 2_600_000, 1, 270_000],
     ]);
-    expect(c.cheapest).toBe("lazada");
-    expect(c.summary).toBe("Rẻ nhất trên Lazada, thấp hơn Shopee 120.000đ (5%).");
+    expect(c.cheapest).toBe("tiktok");
+    expect(c.summary).toBe("Rẻ nhất trên TikTok Shop, thấp hơn Shopee 120.000đ (5%).");
   });
 
   it("ranks marketplaces by the price after vouchers, so a voucher can flip the winner", () => {
@@ -62,7 +60,7 @@ describe("compareMarketplaces", () => {
   });
 
   it("says so when the marketplaces are within 1%", () => {
-    const c = compareMarketplaces([offer("shopee", 1_000_000), offer("lazada", 1_005_000)])!;
+    const c = compareMarketplaces([offer("shopee", 1_000_000), offer("tiktok", 1_005_000)])!;
     expect(c.summary).toBe("Giá trên các sàn gần như bằng nhau.");
   });
 });

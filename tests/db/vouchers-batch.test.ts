@@ -65,15 +65,16 @@ describe("listVouchersForListings", () => {
   });
 
   it("a listing with many recent vouchers does not push another listing's candidates out of the batch", async () => {
-    const busy = await listing("lazada", 4, false);
-    const quiet = await listing("lazada", 5, false);
+    // "othermart": a made-up marketplace code, so no seeded platform voucher lands on these listings.
+    const busy = await listing("othermart", 4, false);
+    const quiet = await listing("othermart", 5, false);
     const base = { discountType: "amount" as const, discountValue: 5_000, maxDiscount: null, minSpend: 0, startsAt: null, expiresAt: null };
-    await upsertVouchers(admin, [{ ...base, code: `${CODE}Q`, marketplace: "lazada", kind: "platform", sellerId: null, listingId: quiet.listingId }], { source: "api" });
+    await upsertVouchers(admin, [{ ...base, code: `${CODE}Q`, marketplace: "othermart", kind: "platform", sellerId: null, listingId: quiet.listingId }], { source: "api" });
     await admin.from("vouchers").update({ last_seen_at: new Date(Date.now() - 86_400_000).toISOString() }).eq("code", `${CODE}Q`);
     // 450 newer vouchers on the busy listing: more than the batch limit for two listings (400).
     await upsertVouchers(
       admin,
-      Array.from({ length: 450 }, (_, i) => ({ ...base, code: `${CODE}B${i}`, marketplace: "lazada", kind: "platform" as const, sellerId: null, listingId: busy.listingId })),
+      Array.from({ length: 450 }, (_, i) => ({ ...base, code: `${CODE}B${i}`, marketplace: "othermart", kind: "platform" as const, sellerId: null, listingId: busy.listingId })),
       { source: "api" },
     );
     const now = new Date();

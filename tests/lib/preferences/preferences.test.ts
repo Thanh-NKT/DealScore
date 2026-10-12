@@ -85,8 +85,8 @@ describe("normalizePreferences", () => {
   });
 
   it("marketplaces: only known ids, deduped, in marketplace order", () => {
-    const p = normalizePreferences({ marketplaces: ["lazada", "amazon", "SHOPEE", "lazada"] });
-    expect(p.marketplaces).toEqual(["shopee", "lazada"]);
+    const p = normalizePreferences({ marketplaces: ["tiktok", "amazon", "SHOPEE", "lazada", "tiktok"] });
+    expect(p.marketplaces).toEqual(["shopee", "tiktok"]);
   });
 });
 
@@ -130,7 +130,7 @@ describe("applyPreferences", () => {
       brands: ["Kingston"],
       categorySlug: "chuot",
       maxPrice: 500_000,
-      marketplaces: ["lazada"],
+      marketplaces: ["tiktok"],
     };
     expect(applyPreferences(params, full, SLUGS)).toEqual(params);
   });
@@ -189,7 +189,7 @@ describe("parsePreferencesForm", () => {
         ["minPrice", "500k"],
         ["maxPrice", "3.000.000"],
         ["marketplaces", "shopee"],
-        ["marketplaces", "lazada"],
+        ["marketplaces", "tiktok"],
       ]),
     );
     expect(r).toEqual({
@@ -200,7 +200,7 @@ describe("parsePreferencesForm", () => {
         categoryIds: [CAT_SSD],
         minPrice: 500_000,
         maxPrice: 3_000_000,
-        marketplaces: ["shopee", "lazada"],
+        marketplaces: ["shopee", "tiktok"],
       },
     });
   });

@@ -38,9 +38,9 @@ const search = async (p_marketplaces?: string[]) => {
 
 beforeAll(async () => {
   await item("shop", "shopee");
-  await item("laz", "lazada");
-  await item("gone", "lazada", "inactive");
-  await item("unmatched", "lazada", "active", "pending");
+  await item("tt", "tiktok");
+  await item("gone", "tiktok", "inactive");
+  await item("unmatched", "tiktok", "active", "pending");
   // Single-listing drafts are hidden from search (0019); these fixtures stand for verified products.
   const { error } = await admin.from("products").update({ status: "verified" }).like("slug", `test-markets-${tag}%`);
   if (error) throw error;
@@ -55,20 +55,20 @@ afterAll(async () => {
 
 describe("search_products marketplace filter", () => {
   it("null or empty array means no filter", async () => {
-    expect(await search()).toEqual(["gone", "laz", "shop", "unmatched"]);
-    expect(await search([])).toEqual(["gone", "laz", "shop", "unmatched"]);
+    expect(await search()).toEqual(["gone", "shop", "tt", "unmatched"]);
+    expect(await search([])).toEqual(["gone", "shop", "tt", "unmatched"]);
   });
 
   it("keeps products with a matched offer on an active listing of the chosen marketplaces", async () => {
     expect(await search(["shopee"])).toEqual(["shop"]);
-    expect(await search(["lazada"])).toEqual(["laz"]);
-    expect(await search(["shopee", "lazada"])).toEqual(["laz", "shop"]);
-    expect(await search(["tiktok"])).toEqual([]);
+    expect(await search(["tiktok"])).toEqual(["tt"]);
+    expect(await search(["shopee", "tiktok"])).toEqual(["shop", "tt"]);
+    expect(await search(["lazada"])).toEqual([]);
   });
 
   it("filter_availability lists marketplaces that have matched offers", async () => {
     const { data, error } = await admin.rpc("filter_availability");
     if (error) throw error;
-    expect(data?.[0].marketplaces).toEqual(expect.arrayContaining(["lazada", "shopee"]));
+    expect(data?.[0].marketplaces).toEqual(expect.arrayContaining(["shopee", "tiktok"]));
   });
 });

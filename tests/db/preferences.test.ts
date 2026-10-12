@@ -22,8 +22,11 @@ describe("user_preferences", () => {
     expect(error).toBeNull();
     const { error: again } = await u.client
       .from("user_preferences")
-      .upsert({ user_id: u.id, brands: ["Samsung", "WD"], marketplaces: ["shopee", "lazada"] });
+      .upsert({ user_id: u.id, brands: ["Samsung", "WD"], marketplaces: ["shopee", "tiktok"] });
     expect(again).toBeNull();
+    // 0075: Lazada is not a DealScore marketplace; the check rejects it.
+    const { error: lazada } = await u.client.from("user_preferences").upsert({ user_id: u.id, marketplaces: ["lazada"] });
+    expect(lazada?.code).toBe("23514");
 
     const { data } = await u.client.from("user_preferences").select("*").eq("user_id", u.id);
     expect(data).toHaveLength(1);
@@ -31,7 +34,7 @@ describe("user_preferences", () => {
       brands: ["Samsung", "WD"],
       excluded_brands: [],
       category_ids: [],
-      marketplaces: ["shopee", "lazada"],
+      marketplaces: ["shopee", "tiktok"],
     });
   });
 

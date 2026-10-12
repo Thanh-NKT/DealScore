@@ -9,7 +9,7 @@ const ingestProduct = vi.fn(async () => ({ status: "ingested", productUrl: "/tai
 vi.mock("@/lib/ingest", () => ({ findExistingProductUrl, ingestProduct }));
 const configured = new Set<string>();
 vi.mock("@/lib/marketplaces/sources", () => ({
-  getSource: (id: string) => (id === "lazada" ? null : { isConfigured: () => configured.has(id) }),
+  getSource: (id: string) => ({ isConfigured: () => configured.has(id) }),
 }));
 vi.mock("@/lib/lookup/resolve-redirect", () => ({ resolveProductRedirect: vi.fn() }));
 
@@ -31,8 +31,13 @@ describe("lookupProductUrl", () => {
 
   it("TikTok not configured → not_shopee with market, before any quota", async () => {
     expect(await call("https://www.tiktok.com/view/product/1729384756")).toEqual({ status: "error", code: "not_shopee", market: "TikTok Shop" });
-    expect(await call("https://www.lazada.vn/products/x-i123456.html")).toEqual({ status: "error", code: "not_shopee", market: "Lazada" });
     expect(beginLookup).not.toHaveBeenCalled();
+  });
+
+  it("a marketplace DealScore does not compare (Lazada) → not_shopee, before any quota", async () => {
+    expect(await call("https://www.lazada.vn/products/x-i123456.html")).toEqual({ status: "error", code: "not_shopee" });
+    expect(beginLookup).not.toHaveBeenCalled();
+    expect(ingestProduct).not.toHaveBeenCalled();
   });
 
   it("Shopee not configured keeps the old answer (upstream_unavailable) after quota", async () => {

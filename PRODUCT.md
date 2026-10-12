@@ -40,7 +40,7 @@ DealScore không phải công cụ phân tích tài chính và không phải tra
 
 - Stack: Next.js 16 App Router, React 19, Tailwind 4, Supabase (Postgres, RLS).
 - **Giao diện tiếng Việt.** Định dạng giá kiểu **2.399.000đ**.
-- Nguồn dữ liệu hiện chỉ có Shopee; TikTok Shop rồi Lazada sau, Tiki nếu phù hợp. So sánh giữa các sàn chỉ hiện khi có ≥ 2 sàn thật, không giả lập.
+- Nguồn dữ liệu: Shopee và TikTok Shop; Lazada đã bỏ khỏi phạm vi (10/2026), Tiki nếu phù hợp. So sánh giữa các sàn chỉ hiện khi có ≥ 2 sàn thật, không giả lập.
 - Deal Score v0: percentile giá 50% / khoảng cách tới đáy 30% / so sánh offer 20% (62.5/37.5 khi không có offer so sánh). Chỉ chấm khi có ≥ 14 ngày và ≥ 10 quan sát hợp lệ; dưới ngưỡng là "Chưa đủ dữ liệu". **Hoa hồng affiliate không bao giờ là đầu vào của Deal Score.**
 - Thuật ngữ cố định: Deal Score, Nên mua / Có thể chờ / Chưa nên mua / Chưa đủ dữ liệu, "Giảm giá chưa thực chất". Vì người dùng không rành thuật ngữ, mỗi con số hay khái niệm lạ phải đi kèm một câu giải thích bằng lời thường.
 - Watch và Alert là tên nội bộ (code, spec, analytics). Trên giao diện và trong email chỉ dùng: **theo dõi giá** / **Đang theo dõi** (Watch), **thông báo giá** (Alert; không dùng "cảnh báo"), **giá mong muốn** (giá người dùng đặt; không dùng "giá mục tiêu"), **Giảm giá thật** (trang /radar; không dùng "Radar"), **Đến <sàn>** cho mọi nút ra sàn, **nơi bán** cho một listing (không dùng "offer"). Không viết tắt tiếng Anh như "7d", "90d".

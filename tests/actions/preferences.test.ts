@@ -70,6 +70,7 @@ describe("savePreferences", () => {
         ["categoryIds", CAT],
         ["minPrice", "3tr"],
         ["maxPrice", "1tr"],
+        ["marketplaces", "tiktok"],
         ["marketplaces", "lazada"],
         ["marketplaces", "amazon"],
       ]),
@@ -83,7 +84,7 @@ describe("savePreferences", () => {
       category_ids: [CAT],
       min_price: 1_000_000,
       max_price: 3_000_000,
-      marketplaces: ["lazada"],
+      marketplaces: ["tiktok"],
       updated_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
     });
     // excluded_brands is not on the form: the stored value must be left alone.

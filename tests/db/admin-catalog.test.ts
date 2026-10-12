@@ -51,13 +51,14 @@ beforeAll(async () => {
   user = await createTestUser();
   const { data: cats } = await admin.from("categories").select("id").order("slug").limit(2);
   [categoryA, categoryB] = [cats![0].id, cats![1].id];
-  // fresh: verified, 2 active listings observed now (one shopee, one lazada) + an inactive one.
+  // fresh: verified, 2 active listings observed now (one shopee, one on "othermart" — a made-up code no other
+  // row uses, so the marketplace filter below is isolated) + an inactive one.
   await product("fresh", {
     canonical_name: `Nồi chiên không dầu ${tag} 100xxok`, brand: "Philips", model: `HD9252${tag}`, status: "verified",
     gtin: gtin(1), created_at: iso(3 * HOUR),
   });
   await listing("fresh", "shopee", { last_observed_at: iso(HOUR), last_attempt_at: iso(HOUR) });
-  await listing("fresh", "lazada", { last_observed_at: iso(2 * HOUR) });
+  await listing("fresh", "othermart", { last_observed_at: iso(2 * HOUR) });
   await listing("fresh", "shopee", { status: "inactive", last_observed_at: iso(300 * HOUR) });
   await admin.from("variant_current_price").insert({ variant_id: variantIds.fresh, price: 1_990_000, observed_at: iso(HOUR) });
   // stale: verified, one tiktok listing last observed 72 h ago.
@@ -96,7 +97,7 @@ describe("admin_list_products", () => {
     const fresh = (r.data.items as Record<string, unknown>[]).find((i) => i.id === ids.fresh)!;
     expect(fresh).toMatchObject({
       status: "verified", brand: "Philips", gtin: gtin(1), slug: `test-${tag}-fresh`, category_id: categoryA,
-      variant_count: 1, listing_count: 2, marketplaces: ["lazada", "shopee"], min_price: 1_990_000,
+      variant_count: 1, listing_count: 2, marketplaces: ["othermart", "shopee"], min_price: 1_990_000,
       is_stale: false, failing_count: 0,
     });
     expect(typeof fresh.category_slug).toBe("string");
@@ -145,9 +146,9 @@ describe("admin_list_products", () => {
   it("filters by category and marketplace (active listings only)", async () => {
     expect(itemIds(await list({ p_category_id: categoryB }))).toEqual([ids.bare]);
     expect(itemIds(await list({ p_marketplace: "tiktok" }))).toEqual([ids.stale]);
-    const lazada = await list({ p_marketplace: "lazada" });
-    expect(itemIds(lazada)).toEqual([ids.fresh]);
-    expect(lazada.data.counts).toEqual({ all: 1, verified: 1, draft: 0, stale: 0, error: 0 });
+    const other = await list({ p_marketplace: "othermart" });
+    expect(itemIds(other)).toEqual([ids.fresh]);
+    expect(other.data.counts).toEqual({ all: 1, verified: 1, draft: 0, stale: 0, error: 0 });
   });
 
   it("sorts by listings, newest, name and pages in SQL", async () => {

@@ -7,15 +7,19 @@ describe("detectMarketplace", () => {
     ["https://s.shopee.vn/abc", "shopee"],
     ["https://www.tiktok.com/view/product/1729384756", "tiktok"],
     ["https://vt.tiktok.com/ZSabc/", "tiktok"],
-    ["https://www.lazada.vn/products/ssd-samsung-990-i2345678-s9876543.html", "lazada"],
-    ["s.lazada.vn/s.abc", "lazada"],
   ])("%s → %s", (url, id) => {
     expect(detectMarketplace(url)?.adapter.id).toBe(id);
   });
 
+  it("Lazada is not a DealScore marketplace: its links are not recognized", () => {
+    expect(detectMarketplace("https://www.lazada.vn/products/ssd-samsung-990-i2345678-s9876543.html")).toBeNull();
+    expect(detectMarketplace("s.lazada.vn/s.abc")).toBeNull();
+    expect(getAdapter("lazada")).toBeNull();
+  });
+
   it("matches hosts exactly — lookalike domains are rejected", () => {
     expect(detectMarketplace("https://shopee.vn.evil.com/product/1/2")).toBeNull();
-    expect(detectMarketplace("https://evil-lazada.vn/products/x-i1.html")).toBeNull();
+    expect(detectMarketplace("https://evil-shopee.vn/product/1/2")).toBeNull();
     expect(detectMarketplace("https://tiktok.com.attacker.net/view/product/1")).toBeNull();
   });
 
@@ -43,29 +47,19 @@ describe("parseProductUrl", () => {
     });
   });
 
-  it("Lazada item id with or without the sku part", () => {
-    for (const url of [
-      "https://www.lazada.vn/products/ssd-samsung-990-i2345678-s9876543.html?spm=x",
-      "https://www.lazada.vn/products/ssd-samsung-990-i2345678.html",
-    ]) {
-      const r = parseProductUrl(url);
-      expect(r).toMatchObject({ ok: true, item: { marketplace: "lazada", externalItemId: "2345678" } });
-    }
-  });
-
-  it("short links need a redirect; other paths are unrecognized", () => {
+  it("short links need a redirect; other paths are unrecognized; other marketplaces are not supported", () => {
     expect(parseProductUrl("https://vt.tiktok.com/ZSabc/")).toEqual({ ok: false, reason: "needs_redirect" });
-    expect(parseProductUrl("https://www.lazada.vn/catalog/?q=ssd")).toEqual({ ok: false, reason: "unrecognized_format" });
+    expect(parseProductUrl("https://www.tiktok.com/@shop/video/123")).toEqual({ ok: false, reason: "unrecognized_format" });
     expect(parseProductUrl("https://example.com/x")).toEqual({ ok: false, reason: "not_supported" });
+    expect(parseProductUrl("https://www.lazada.vn/products/ssd-samsung-990-i2345678.html")).toEqual({ ok: false, reason: "not_supported" });
   });
 });
 
 describe("registry", () => {
-  it("lists the three marketplaces with Vietnamese-facing names", () => {
+  it("lists the two marketplaces DealScore compares, with Vietnamese-facing names", () => {
     expect(MARKETPLACES.map((m) => [m.id, m.name])).toEqual([
       ["shopee", "Shopee"],
       ["tiktok", "TikTok Shop"],
-      ["lazada", "Lazada"],
     ]);
   });
 
@@ -75,9 +69,10 @@ describe("registry", () => {
 
   it("redirect targets are the union of every adapter's hosts", () => {
     const hosts = allTargetHosts();
-    for (const h of ["shopee.vn", "s.shopee.vn", "shope.ee", "www.tiktok.com", "www.lazada.vn", "s.lazada.vn"]) {
+    for (const h of ["shopee.vn", "s.shopee.vn", "shope.ee", "www.tiktok.com", "vt.tiktok.com"]) {
       expect(hosts.has(h)).toBe(true);
     }
     expect(hosts.has("evil.com")).toBe(false);
+    expect(hosts.has("www.lazada.vn")).toBe(false);
   });
 });

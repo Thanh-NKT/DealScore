@@ -17,7 +17,7 @@ const CASES: Array<[string, Partial<QueryIntent>]> = [
   ["chuột không dây chơi game tầm 1 triệu", { categorySlug: "chuot", minPrice: 850_000, maxPrice: 1_150_000, boostTerms: ["wireless", "gaming"], text: "" }],
   ["Samsung 990 Pro", { brands: ["Samsung"], text: "990 Pro" }],
   ["man hinh 27 inch tu 3 den 5 trieu", { categorySlug: "man-hinh", sizeInch: 27, minPrice: 3_000_000, maxPrice: 5_000_000, text: "" }],
-  ["bàn phím cơ rẻ nhất trên lazada", { categorySlug: "ban-phim", sort: "price_asc", marketplaces: ["lazada"], boostTerms: ["mechanical"], text: "" }],
+  ["bàn phím cơ rẻ nhất trên tiktok shop", { categorySlug: "ban-phim", sort: "price_asc", marketplaces: ["tiktok"], boostTerms: ["mechanical"], text: "" }],
   ["WD 1TB có voucher freeship", { brands: ["WD"], capacityGb: 1024, hasVoucher: true, freeShipping: true, text: "" }],
   ["Pro", { text: "Pro", chips: [] }],
   ["mình cần mua tai nghe chống ồn cho văn phòng", { categorySlug: "tai-nghe", boostTerms: ["anc", "office"], text: "" }],

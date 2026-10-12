@@ -7,7 +7,7 @@
  * What you get:
  *   - Catalog: categories → products (verified + draft) → variants → offers on Shopee; every third
  *     verified product also on TikTok Shop in a fixed scenario (tiktokScenario: TikTok cheaper /
- *     cheaper only after vouchers / Shopee cheaper), a few on Lazada → 120 days of price_observations,
+ *     cheaper only after vouchers / Shopee cheaper) → 120 days of price_observations,
  *     sellers, listings, vouchers, affiliate_offers, match_candidates (pending / accepted / rejected),
  *     collector_runs (the last 7 days of observations point at them).
  *   - Derived: variant_current_price, variant_daily_prices, variant_deal_scores, backtest_runs
@@ -136,7 +136,7 @@ const addMinutes = (at: Date, m: number) => new Date(at.getTime() + m * 60_000);
 interface SeedOffer {
   id: string;
   listingId: string;
-  marketplace: "shopee" | "tiktok" | "lazada";
+  marketplace: "shopee" | "tiktok";
   externalItemId: string;
   externalModelId: string;
   latestPrice: number;
@@ -271,10 +271,8 @@ async function seedCatalog() {
     { marketplace: "tiktok", external_seller_id: "seed-tt-0", name: "TikTok Demo Store", rating: 4.7, rating_count: 820, is_official: false, location: "TP. Hồ Chí Minh" },
     { marketplace: "tiktok", external_seller_id: "seed-tt-1", name: "TikTok Mall Demo", rating: 4.9, rating_count: 3120, is_official: true, location: "Hà Nội" },
     { marketplace: "tiktok", external_seller_id: "seed-tt-2", name: "Gian Hàng Live Demo", rating: 4.5, rating_count: 410, is_official: false, location: "Đà Nẵng" },
-    { marketplace: "lazada", external_seller_id: "seed-lz-0", name: "LazMall Demo", rating: 4.8, rating_count: 1540, is_official: true, location: "Hà Nội" },
   ]);
   const tiktokSellers = otherSellers.filter((s) => s.marketplace === "tiktok");
-  const lazadaSeller = otherSellers.find((s) => s.marketplace === "lazada")!;
   const tiktokDeals: TiktokDeal[] = [];
 
   const variants: SeedVariant[] = [];
@@ -367,10 +365,6 @@ async function seedCatalog() {
             scenario,
           });
         }
-      }
-      if (!isDraft && v === 0 && p % 9 === 0) {
-        const id = String(880000 + p);
-        specs.push({ marketplace: "lazada", sellerId: lazadaSeller.id, extId: id, url: `https://www.lazada.vn/products/-i${id}.html` });
       }
 
       const observations: Record<string, unknown>[] = [];

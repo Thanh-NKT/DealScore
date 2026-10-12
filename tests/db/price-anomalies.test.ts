@@ -7,7 +7,8 @@ import { detectPriceAnomalies } from "@/lib/anomalies/detect";
 import { admin, createTestUser, deleteTestUser, SUPABASE_URL, type TestUser } from "./helpers";
 
 // Migration 0051: price_anomalies, detect_price_anomalies and the admin review RPCs (roadmap P3 item 10).
-// Listings are on "lazada" so the ordering checks are not mixed with other tests' (shopee) anomalies.
+// Listings are on "othermart" (a made-up marketplace code no other row uses) so the ordering checks are not
+// mixed with other tests' or the seed's anomalies.
 const tag = `pa${randomUUID().replace(/-/g, "").slice(0, 8)}`;
 let categoryId: string;
 let seq = 0;
@@ -37,7 +38,7 @@ async function seedOffer(opts: { obs: Obs[]; matchStatus?: string; product?: { i
   const ext = `ext-${tag}-${++seq}`;
   extIds.push(ext);
   const { data: l } = await admin.from("listings")
-    .insert({ marketplace: "lazada", external_item_id: ext, url: `https://lazada.vn/${ext}`, title: `Listing ${ext}`, status: "active" })
+    .insert({ marketplace: "othermart", external_item_id: ext, url: `https://example.com/${ext}`, title: `Listing ${ext}`, status: "active" })
     .select("id").single();
   const { data: o, error: oErr } = await admin.from("offers")
     .insert({ listing_id: l!.id, variant_id: variantId!, match_status: opts.matchStatus ?? "manual" }).select("id").single();
@@ -239,23 +240,23 @@ describe("admin_price_anomalies / counts", () => {
     const big = await seedOffer({ obs: [...stable(10), { msAgo: H, price: 20_000_000 }] });
     const four = await seedOffer({ obs: [...stable(10), { msAgo: H, price: 4_000_000 }] });
     expect((await detect([big.offerId, four.offerId])).data).toBe(2);
-    const { data, error } = await admin.rpc("admin_price_anomalies", { p_marketplace: "lazada", p_limit: 100 });
+    const { data, error } = await admin.rpc("admin_price_anomalies", { p_marketplace: "othermart", p_limit: 100 });
     expect(error).toBeNull();
     const rows = (data ?? []).filter((r) => [big.offerId, drop.offerId, four.offerId].includes(r.offer_id));
     expect(rows.map((r) => r.offer_id)).toEqual([drop.offerId, big.offerId, four.offerId]);
     const d = rows[0];
     expect(d).toMatchObject({
-      kind: "drop", status: "open", watched: true, marketplace: "lazada", listing_id: drop.listingId, variant_id: drop.variantId,
+      kind: "drop", status: "open", watched: true, marketplace: "othermart", listing_id: drop.listingId, variant_id: drop.variantId,
       product_id: drop.productId, product_status: "verified", observation_valid: true, current_price: 350_000,
     });
     expect(Number(d.total_count)).toBe((data ?? []).length);
     expect(rows[1].watched).toBe(false);
 
-    const spikes = (await admin.rpc("admin_price_anomalies", { p_kind: "spike", p_marketplace: "lazada", p_limit: 100 })).data ?? [];
+    const spikes = (await admin.rpc("admin_price_anomalies", { p_kind: "spike", p_marketplace: "othermart", p_limit: 100 })).data ?? [];
     expect(spikes.every((r) => r.kind === "spike")).toBe(true);
     const one = (await admin.rpc("admin_price_anomalies", { p_status: "all", p_offer_id: spike4.offerId })).data ?? [];
     expect(one.map((r) => r.status)).toEqual(["kept"]);
-    const page = (await admin.rpc("admin_price_anomalies", { p_marketplace: "lazada", p_limit: 1, p_offset: 1 })).data ?? [];
+    const page = (await admin.rpc("admin_price_anomalies", { p_marketplace: "othermart", p_limit: 1, p_offset: 1 })).data ?? [];
     expect(page).toHaveLength(1);
     expect(Number(page[0].total_count)).toBe((data ?? []).length);
   });

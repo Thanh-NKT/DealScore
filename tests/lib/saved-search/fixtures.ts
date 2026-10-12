@@ -5,10 +5,11 @@ export const SAVED_PARAMS_FIXTURES: Array<[string, unknown, boolean]> = [
   ["category + onlyBuy", { categorySlug: "ssd", onlyBuy: true }, true],
   ["brand-only scope", { brands: ["Philips"], maxPrice: 900000 }, true],
   ["everything", {
-    q: "ssd", categorySlug: "ssd", brands: ["Samsung"], minPrice: 1000, maxPrice: 3000000, marketplaces: ["shopee", "lazada"],
+    q: "ssd", categorySlug: "ssd", brands: ["Samsung"], minPrice: 1000, maxPrice: 3000000, marketplaces: ["shopee", "tiktok"],
     capacityGb: 2048, onlyBuy: true, freeShipping: true, hasVoucher: true, minRating: 4.5,
   }, true],
   ["no condition", { q: "ssd" }, false],
+  ["Lazada market (not a DealScore marketplace)", { q: "ssd", maxPrice: 1, marketplaces: ["lazada"] }, false],
   ["no scope", { maxPrice: 1000 }, false],
   ["unknown key", { q: "ssd", maxPrice: 1, sort: "price_asc" }, false],
   ["q too long", { q: "x".repeat(101), maxPrice: 1 }, false],
