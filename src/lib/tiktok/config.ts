@@ -4,23 +4,21 @@ import type { Env } from "@/lib/marketplaces/types";
 export interface TikTokConfig {
   appKey: string;
   appSecret: string;
-  serviceId: string;
   apiUrl: string;
   authUrl: string;
+  /** T3 — creator authorization page (`app_key` + `state`), not the seller `services.tiktokshop.com` one. */
   authorizeUrl: string;
 }
 
 export function tiktokConfig(env: Env): TikTokConfig | null {
   const appKey = env.TIKTOK_SHOP_APP_KEY;
   const appSecret = env.TIKTOK_SHOP_APP_SECRET;
-  const serviceId = env.TIKTOK_SHOP_SERVICE_ID;
-  if (!appKey || !appSecret || !serviceId) return null;
+  if (!appKey || !appSecret) return null;
   return {
     appKey,
     appSecret,
-    serviceId,
     apiUrl: (env.TIKTOK_SHOP_API_URL || "https://open-api.tiktokglobalshop.com").replace(/\/+$/, ""),
     authUrl: (env.TIKTOK_SHOP_AUTH_URL || "https://auth.tiktok-shops.com").replace(/\/+$/, ""),
-    authorizeUrl: env.TIKTOK_SHOP_AUTHORIZE_URL || "https://services.tiktokshop.com/open/authorize",
+    authorizeUrl: env.TIKTOK_SHOP_AUTHORIZE_URL || "https://shop.tiktok.com/alliance/creator/auth",
   };
 }

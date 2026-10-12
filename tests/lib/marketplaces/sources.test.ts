@@ -4,7 +4,7 @@ import { MarketplaceUnavailableError } from "@/lib/marketplaces/types";
 
 beforeEach(() => {
   // Real keys in the shell must not leak into these expectations (Tasks 5 and 8 make them count).
-  for (const k of ["SHOPEE_AFFILIATE_APP_ID", "SHOPEE_AFFILIATE_SECRET", "TIKTOK_SHOP_APP_KEY", "TIKTOK_SHOP_APP_SECRET", "TIKTOK_SHOP_SERVICE_ID"]) {
+  for (const k of ["SHOPEE_AFFILIATE_APP_ID", "SHOPEE_AFFILIATE_SECRET", "TIKTOK_SHOP_APP_KEY", "TIKTOK_SHOP_APP_SECRET"]) {
     vi.stubEnv(k, "");
   }
 });

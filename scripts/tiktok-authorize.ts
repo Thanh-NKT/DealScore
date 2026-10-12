@@ -1,6 +1,6 @@
 /**
  * Print the one-time TikTok Shop authorization link (valid 30 minutes, usable once).
- * Needs TIKTOK_SHOP_APP_KEY / TIKTOK_SHOP_APP_SECRET / TIKTOK_SHOP_SERVICE_ID, ADMIN_API_SECRET,
+ * Needs TIKTOK_SHOP_APP_KEY / TIKTOK_SHOP_APP_SECRET, ADMIN_API_SECRET,
  * NEXT_PUBLIC_SITE_URL and the Supabase service-role env — the SAME ADMIN_API_SECRET and database as the
  * deployed app, or the callback rejects the state.
  * Run: pnpm tiktok:authorize
@@ -16,7 +16,7 @@ async function main() {
   const key = oauthStateKey(process.env);
   const site = process.env.NEXT_PUBLIC_SITE_URL;
   const missing = [
-    !cfg && "TIKTOK_SHOP_APP_KEY / TIKTOK_SHOP_APP_SECRET / TIKTOK_SHOP_SERVICE_ID",
+    !cfg && "TIKTOK_SHOP_APP_KEY / TIKTOK_SHOP_APP_SECRET",
     !key && "ADMIN_API_SECRET",
     !site && "NEXT_PUBLIC_SITE_URL",
   ].filter(Boolean);

@@ -4,7 +4,7 @@ import { tiktokConfig } from "@/lib/tiktok/config";
 import { signTikTokRequest } from "@/lib/tiktok/sign";
 import { MarketplaceUnavailableError } from "@/lib/marketplaces/types";
 
-const cfg = tiktokConfig({ TIKTOK_SHOP_APP_KEY: "key", TIKTOK_SHOP_APP_SECRET: "sec", TIKTOK_SHOP_SERVICE_ID: "svc" })!;
+const cfg = tiktokConfig({ TIKTOK_SHOP_APP_KEY: "key", TIKTOK_SHOP_APP_SECRET: "sec" })!;
 const now = () => new Date(1_700_000_000_000);
 const reply = (body: unknown, status = 200) => vi.fn(async () => new Response(JSON.stringify(body), { status }));
 

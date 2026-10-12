@@ -4,7 +4,7 @@ import { expectedFieldWarnings, missingEnv, probeTarget, redact } from "@/lib/ma
 describe("probe helpers", () => {
   it("missingEnv lists what each marketplace needs", () => {
     expect(missingEnv("shopee", {})).toEqual(["SHOPEE_AFFILIATE_APP_ID", "SHOPEE_AFFILIATE_SECRET"]);
-    expect(missingEnv("tiktok", { TIKTOK_SHOP_APP_KEY: "k" })).toEqual(["TIKTOK_SHOP_APP_SECRET", "TIKTOK_SHOP_SERVICE_ID"]);
+    expect(missingEnv("tiktok", { TIKTOK_SHOP_APP_KEY: "k" })).toEqual(["TIKTOK_SHOP_APP_SECRET"]);
   });
 
   it("probeTarget: URL or id → item; anything else → keyword search", () => {

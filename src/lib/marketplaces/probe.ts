@@ -3,7 +3,7 @@ import type { Env, MarketplaceId, MarketplaceItem } from "@/lib/marketplaces/typ
 
 const REQUIRED_ENV: Record<"shopee" | "tiktok", string[]> = {
   shopee: ["SHOPEE_AFFILIATE_APP_ID", "SHOPEE_AFFILIATE_SECRET"],
-  tiktok: ["TIKTOK_SHOP_APP_KEY", "TIKTOK_SHOP_APP_SECRET", "TIKTOK_SHOP_SERVICE_ID"],
+  tiktok: ["TIKTOK_SHOP_APP_KEY", "TIKTOK_SHOP_APP_SECRET"],
 };
 
 export function missingEnv(marketplace: "shopee" | "tiktok", env: Env): string[] {

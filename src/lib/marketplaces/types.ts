@@ -57,6 +57,11 @@ export interface MarketplaceSource {
   /** The fake source is the one in use (its data is 'seed'). */
   isFake(env?: Env): boolean;
   fetchItem(externalItemId: string): Promise<MarketplaceItem>;
+  /**
+   * Optional batch fetch (sources whose API takes many ids per call). Ids missing from the map were not
+   * found — same meaning as MarketplaceItemNotFoundError from fetchItem.
+   */
+  fetchItems?(externalItemIds: string[]): Promise<Map<string, MarketplaceItem>>;
   searchItems(q: SearchQuery): Promise<SearchPage>;
 }
 

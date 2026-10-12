@@ -14,6 +14,7 @@ import {
   type MarketplaceItem,
 } from "@/lib/marketplaces/types";
 import { saveListingExtras } from "@/lib/listing-extras";
+import { batchedFetcher, type FetchMany, type FetchOne } from "@/lib/collector/batch-fetch";
 import { refreshEffectivePrices } from "@/lib/vouchers/refresh-effective";
 import { reportError } from "@/lib/observability";
 import { detectPriceAnomalies } from "@/lib/anomalies/detect";
@@ -36,7 +37,9 @@ import { detectPriceAnomalies } from "@/lib/anomalies/detect";
  */
 
 export interface CollectorDeps {
-  fetchItem: (marketplace: MarketplaceId, externalItemId: string) => Promise<MarketplaceItem>;
+  fetchItem: FetchOne;
+  /** Batch fetch for marketplaces that have one (null otherwise). Overriding only `fetchItem` disables it. */
+  fetchItems: FetchMany;
   configured: () => boolean;
   evaluate: typeof evaluateWatches;
   loadCandidates: (client: SupabaseClient<Database>, poolSize: number) => Promise<CollectorListing[]>;
@@ -67,8 +70,13 @@ async function fetchItem(marketplace: MarketplaceId, externalItemId: string): Pr
   return source.fetchItem(externalItemId);
 }
 
+function fetchItems(marketplace: MarketplaceId, externalItemIds: string[]): Promise<Map<string, MarketplaceItem>> | null {
+  return getSource(marketplace)?.fetchItems?.(externalItemIds) ?? null;
+}
+
 const defaultDeps: CollectorDeps = {
   fetchItem,
+  fetchItems,
   configured: () => configuredMarketplaces().length > 0,
   evaluate: evaluateWatches,
   loadCandidates,
@@ -103,6 +111,8 @@ export const STALE_RUN_MS = 15 * 60_000;
 const MAX_ADOPTED_RUNS = 50;
 /** Save the touched variant ids to the run row every N listings (kill-during-fetch safety). */
 const PENDING_FLUSH_EVERY = 25;
+/** Ids per batch fetch (TikTok's by-id endpoint takes up to 50). */
+const FETCH_BATCH_SIZE = 50;
 
 /**
  * Variants left un-scored by earlier runs (killed, or post-processing failed), and the earliest day
@@ -159,7 +169,9 @@ export async function runCollector(
   client: SupabaseClient<Database> = createAdminClient(),
   deps: Partial<CollectorDeps> = {},
 ): Promise<CollectorResult> {
-  const { fetchItem, configured, evaluate, loadCandidates: load, detect } = { ...defaultDeps, ...deps };
+  const { fetchItem, fetchItems: batchFetch, configured, evaluate, loadCandidates: load, detect } = { ...defaultDeps, ...deps };
+  // A caller that stubs only fetchItem must not reach the real batch API.
+  const fetchItems: FetchMany = deps.fetchItem && !deps.fetchItems ? () => null : batchFetch;
   if (!configured()) return { skipped: "not_configured" };
 
   const now = opts.now ?? new Date();
@@ -200,7 +212,8 @@ export async function runCollector(
     else if (errors.length < MAX_ERROR_MESSAGES) errors.push(`pending variants: ${error.message}`);
   };
 
-  for (const listing of due) {
+  const fetchAt = batchedFetcher(due, fetchItem, fetchItems, FETCH_BATCH_SIZE);
+  for (const [index, listing] of due.entries()) {
     if (fetchDeadline && Date.now() > fetchDeadline) break;
     if (++sinceFlush > PENDING_FLUSH_EVERY) {
       sinceFlush = 1;
@@ -213,7 +226,7 @@ export async function runCollector(
       let payload: Record<string, unknown>;
       let detail: MarketplaceItem | null = null;
       try {
-        detail = await fetchItem(listing.marketplace, listing.externalItemId);
+        detail = await fetchAt(index);
         payload = {
           listing_id: listing.id,
           run_id: run.id,

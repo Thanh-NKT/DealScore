@@ -43,7 +43,7 @@ beforeEach(() => {
   rpc.mockImplementation(rpcDefault);
   vi.unstubAllEnvs();
   vi.stubEnv("ADMIN_API_SECRET", "s");
-  for (const k of ["SHOPEE_CLIENT", "TIKTOK_CLIENT", "SHOPEE_AFFILIATE_APP_ID", "SHOPEE_AFFILIATE_SECRET", "TIKTOK_SHOP_APP_KEY", "TIKTOK_SHOP_APP_SECRET", "TIKTOK_SHOP_SERVICE_ID"]) vi.stubEnv(k, "");
+  for (const k of ["SHOPEE_CLIENT", "TIKTOK_CLIENT", "SHOPEE_AFFILIATE_APP_ID", "SHOPEE_AFFILIATE_SECRET", "TIKTOK_SHOP_APP_KEY", "TIKTOK_SHOP_APP_SECRET"]) vi.stubEnv(k, "");
 });
 
 describe("admin API auth", () => {
@@ -90,11 +90,10 @@ describe("POST /api/admin/tiktok/authorize-url", () => {
   it("returns a signed link and logs the action", async () => {
     vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k");
     vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec");
-    vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://dealscore.vn");
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
     const body = await res.json();
-    expect(new URL(body.url).searchParams.get("service_id")).toBe("svc");
+    expect(new URL(body.url).searchParams.get("app_key")).toBe("k");
     expect(rpc).toHaveBeenCalledWith("try_acquire_job_lock", expect.objectContaining({ p_owner: "oauth-state", p_ttl_seconds: 1800 }));
     expect(body.redirectUri).toBe("https://dealscore.vn/api/tiktok/oauth/callback");
     expect(rpc).toHaveBeenCalledWith("admin_log", expect.objectContaining({ p_action: "tiktok.authorize_link" }));
@@ -147,7 +146,7 @@ describe("POST /api/admin/deal-scores/recompute", () => {
 
 describe("authorize-url nonce registration", () => {
   it("500 and no link when the nonce cannot be registered", async () => {
-    vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec"); vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc");
+    vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec");
     rpc.mockImplementation((async () => ({ data: null, error: { message: "db down" } })) as never);
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
@@ -157,7 +156,7 @@ describe("authorize-url nonce registration", () => {
 });
 
 describe("authorize-url audit failure", () => {
-  const env = () => { vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec"); vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc"); vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://dealscore.vn"); };
+  const env = () => { vi.stubEnv("TIKTOK_SHOP_APP_KEY", "k"); vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec"); vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://dealscore.vn"); };
   const failAdminLog = (result: () => Promise<unknown>) =>
     rpc.mockImplementation((async (name: string) => (name === "admin_log" ? result() : rpcDefault(name))) as never);
   it("still returns the link when admin_log returns an error", async () => {
@@ -165,14 +164,14 @@ describe("authorize-url audit failure", () => {
     failAdminLog(async () => ({ data: null, error: { message: "x" } }));
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
     expect(res.status).toBe(200);
-    expect((await res.json()).url).toContain("svc");
+    expect((await res.json()).url).toContain("app_key=k");
   });
   it("still returns the link when admin_log rejects", async () => {
     env();
     failAdminLog(async () => { throw new Error("down"); });
     const res = await authorize.POST(req("/api/admin/tiktok/authorize-url", { method: "POST" }) as never);
     expect(res.status).toBe(200);
-    expect((await res.json()).url).toContain("svc");
+    expect((await res.json()).url).toContain("app_key=k");
   });
 });
 

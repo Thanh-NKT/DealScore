@@ -22,7 +22,6 @@ beforeEach(() => {
   consumeState.mockResolvedValue(true);
   vi.stubEnv("TIKTOK_SHOP_APP_KEY", "key");
   vi.stubEnv("TIKTOK_SHOP_APP_SECRET", "sec");
-  vi.stubEnv("TIKTOK_SHOP_SERVICE_ID", "svc");
 });
 
 describe("GET /api/tiktok/oauth/callback", () => {

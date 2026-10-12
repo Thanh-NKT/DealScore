@@ -13,20 +13,19 @@ import {
   verifyState,
 } from "@/lib/tiktok/oauth";
 
-const env = { TIKTOK_SHOP_APP_KEY: "key", TIKTOK_SHOP_APP_SECRET: "sec", TIKTOK_SHOP_SERVICE_ID: "svc" };
+const env = { TIKTOK_SHOP_APP_KEY: "key", TIKTOK_SHOP_APP_SECRET: "sec" };
 const cfg = tiktokConfig(env)!;
 const now = new Date("2026-10-01T00:00:00Z");
 
 describe("tiktokConfig", () => {
-  it("needs key, secret and service id; hosts have defaults", () => {
+  it("needs key and secret; hosts have defaults", () => {
     expect(tiktokConfig({ TIKTOK_SHOP_APP_KEY: "key" })).toBeNull();
     expect(cfg).toEqual({
       appKey: "key",
       appSecret: "sec",
-      serviceId: "svc",
       apiUrl: "https://open-api.tiktokglobalshop.com",
       authUrl: "https://auth.tiktok-shops.com",
-      authorizeUrl: "https://services.tiktokshop.com/open/authorize",
+      authorizeUrl: "https://shop.tiktok.com/alliance/creator/auth",
     });
   });
 });
@@ -80,16 +79,10 @@ describe("single-use nonce", () => {
 });
 
 describe("buildAuthorizeUrl", () => {
-  it("adds service_id and state", () => {
+  it("is the creator authorization page with app_key and state (not the seller service_id link)", () => {
     const url = new URL(buildAuthorizeUrl(cfg, "st"));
-    expect(url.origin + url.pathname).toBe("https://services.tiktokshop.com/open/authorize");
-    expect(url.searchParams.get("service_id")).toBe("svc");
-    expect(url.searchParams.get("state")).toBe("st");
-  });
-
-  it("asks for creator authorization (user_type=1), not seller", () => {
-    const url = new URL(buildAuthorizeUrl(cfg, "st"));
-    expect(url.searchParams.get("user_type")).toBe("1");
+    expect(url.origin + url.pathname).toBe("https://shop.tiktok.com/alliance/creator/auth");
+    expect(Object.fromEntries(url.searchParams)).toEqual({ app_key: "key", state: "st" });
   });
 });
 
@@ -106,6 +99,11 @@ describe("tokens (T3)", () => {
       refreshToken: "R",
       refreshExpiresAt: new Date(1800000000 * 1000),
     });
+  });
+
+  it("accepts a creator token (user_type 1) and rejects any other user_type", () => {
+    expect(parseTokenResponse({ code: 0, data: { ...body.data, user_type: 1 } }).accessToken).toBe("A");
+    expect(() => parseTokenResponse({ code: 0, data: { ...body.data, user_type: 0 } })).toThrow("not a creator token");
   });
 
   it("rejects error responses and missing fields without echoing tokens", () => {

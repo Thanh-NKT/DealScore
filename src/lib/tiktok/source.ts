@@ -5,7 +5,7 @@ import { tiktokConfig, type TikTokConfig } from "@/lib/tiktok/config";
 import { callTikTok, type TikTokCaller } from "@/lib/tiktok/api";
 import { getTikTokAccessToken, supabaseTokenStore, type RefreshBackoff } from "@/lib/tiktok/credentials";
 import { refreshTokens } from "@/lib/tiktok/oauth";
-import { fetchTikTokItem, searchTikTokItems } from "@/lib/tiktok/affiliate-source";
+import { fetchTikTokItem, fetchTikTokItems, searchTikTokItems } from "@/lib/tiktok/affiliate-source";
 import { isFakeEnabled, MarketplaceUnavailableError, type Env, type MarketplaceSource } from "@/lib/marketplaces/types";
 
 /** Shared by every call in this process: a failing refresh is retried at most every REFRESH_BACKOFF_MS. */
@@ -38,6 +38,10 @@ export const tiktokSource: MarketplaceSource = {
   async fetchItem(id) {
     if (isFakeEnabled(process.env, "TIKTOK_CLIENT")) return fakeTikTokItem(id);
     return fetchTikTokItem(id, caller());
+  },
+  async fetchItems(ids) {
+    if (isFakeEnabled(process.env, "TIKTOK_CLIENT")) return new Map(ids.map((id) => [id, fakeTikTokItem(id)]));
+    return fetchTikTokItems(ids, caller());
   },
   async searchItems(q) {
     if (isFakeEnabled(process.env, "TIKTOK_CLIENT")) return fakeTikTokSearch(q);

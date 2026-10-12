@@ -84,10 +84,9 @@ export async function consumeState(client: SupabaseClient<Database>, nonce: stri
 
 export function buildAuthorizeUrl(cfg: TikTokConfig, state: string): string {
   const url = new URL(cfg.authorizeUrl);
-  url.searchParams.set("service_id", cfg.serviceId);
+  // T3 — the creator authorization page takes app_key (seller links take service_id; not interchangeable).
+  url.searchParams.set("app_key", cfg.appKey);
   url.searchParams.set("state", state);
-  // Affiliate Creator APIs need a creator-side grant: user_type=1 = creator (default is seller).
-  url.searchParams.set("user_type", "1");
   return url.toString();
 }
 
@@ -98,11 +97,18 @@ export interface TikTokTokens {
   refreshExpiresAt: Date;
 }
 
-/** T3 — { code: 0, data: { access_token, access_token_expire_in, refresh_token, refresh_token_expire_in } } (epoch seconds). */
+/**
+ * T3 — { code: 0, data: { access_token, access_token_expire_in, refresh_token, refresh_token_expire_in,
+ * user_type, … } } (epoch seconds). The Affiliate Creator APIs need a creator token: a `user_type` other
+ * than 1 (e.g. 0 = seller) is rejected, on both the code exchange and a refresh.
+ */
 export function parseTokenResponse(body: unknown): TikTokTokens {
   const b = body as { code?: number; message?: string; data?: Record<string, unknown> } | null;
   if (!b || b.code !== 0) throw new Error(`TikTok token endpoint error ${b?.code ?? "?"}: ${b?.message ?? ""}`);
   const d = b.data ?? {};
+  if (d.user_type != null && Number(d.user_type) !== 1) {
+    throw new Error(`TikTok token is not a creator token (user_type ${String(d.user_type)})`);
+  }
   const access = d.access_token;
   const refresh = d.refresh_token;
   const accessExp = Number(d.access_token_expire_in);
