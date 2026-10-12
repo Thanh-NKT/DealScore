@@ -48,7 +48,7 @@ function OnlyBuyHint({ href }: { href: string }) {
       <InfoIcon className="mt-1 size-4 shrink-0 text-ink-2" />
       <span>
         Thử{" "}
-        <Link href={href} scroll={false} className="font-semibold text-primary underline-offset-4 hover:underline">
+        <Link href={href} scroll={false} className="font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
           tắt “Chỉ hiện Nên mua”
         </Link>{" "}
         — có thể có sản phẩm tốt đang ở mức Có thể chờ.
@@ -76,7 +76,7 @@ export function EmptyState({
             <AlertIcon className="size-5" />
           </span>
           <div className="min-w-0">
-            <h2 className="display text-h3 font-bold text-balance text-ink [overflow-wrap:anywhere] max-sm:text-title">
+            <h2 className="display text-h3 font-semibold text-balance text-ink [overflow-wrap:anywhere] max-sm:text-title">
               {kind === "load_error" ? "Chưa tải được kết quả tìm kiếm" : `Dữ liệu từ ${source ?? "sàn"} đang tạm gián đoạn`}
             </h2>
             <p className="mt-1.5 text-body leading-relaxed text-ink-2">
@@ -101,7 +101,7 @@ export function EmptyState({
   if (kind === "page_out_of_range") {
     return (
       <div className="flex flex-col items-center rounded-lg border border-dashed border-line-strong bg-surface p-8 sm:p-16 text-center">
-        <h2 className="display text-h3 font-bold text-ink max-sm:text-title">Trang này không còn kết quả</h2>
+        <h2 className="display text-h3 font-semibold text-ink max-sm:text-title">Trang này không còn kết quả</h2>
         <p className="mt-1.5 text-body leading-relaxed text-ink-2">Số kết quả đã ít đi so với lúc đường dẫn này được tạo.</p>
         <Link href={firstPageHref} className={`${PRIMARY} mt-5`}>
           Về trang đầu
@@ -113,7 +113,7 @@ export function EmptyState({
   if (kind === "too_strict") {
     return (
       <div className="flex flex-col items-center rounded-lg border border-dashed border-line-strong bg-surface p-8 sm:p-16 text-center">
-        <h2 className="display text-h3 font-bold text-balance text-ink [overflow-wrap:anywhere] max-sm:text-title">
+        <h2 className="display text-h3 font-semibold text-balance text-ink [overflow-wrap:anywhere] max-sm:text-title">
           Chưa có sản phẩm khớp bộ lọc
         </h2>
         {onlyBuyOffHref && <OnlyBuyHint href={onlyBuyOffHref} />}
@@ -131,7 +131,7 @@ export function EmptyState({
   return (
     <div className="space-y-6 rounded-lg border border-dashed border-line-strong bg-surface p-7 sm:p-8 [&>*]:max-w-[62ch]">
       <div>
-        <h2 className="display text-h3 font-bold text-ink max-sm:text-title [overflow-wrap:anywhere]">
+        <h2 className="display text-h3 font-semibold text-ink max-sm:text-title [overflow-wrap:anywhere]">
           {q ? `Chưa có sản phẩm nào cho ${quoted(q)}` : "Chưa có sản phẩm nào"}
         </h2>
         {onlyBuyOffHref && <OnlyBuyHint href={onlyBuyOffHref} />}
@@ -150,7 +150,7 @@ export function EmptyState({
         </ul>
       </div>
       <div className="border-t border-line pt-6">
-        <p className="mb-3 text-body-sm font-semibold text-ink">Có link sản phẩm Shopee? Dán vào đây để DealScore bắt đầu theo dõi:</p>
+        <p className="mb-3 text-body-sm font-semibold text-ink">Có link sản phẩm? Dán vào đây để DealScore bắt đầu theo dõi:</p>
         <UrlLookupForm />
       </div>
     </div>

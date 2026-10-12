@@ -23,7 +23,7 @@ interface BuyButtonProps {
 }
 
 const BASE =
-  "inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 font-semibold transition-colors duration-150 ease-out";
+  "inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 font-semibold transition-colors duration-150 ease-out";
 const SIZE = { md: "min-h-11 text-body-sm", lg: "min-h-13 text-body font-bold" } as const;
 
 export function BuyButton({

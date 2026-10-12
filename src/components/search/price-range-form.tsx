@@ -129,7 +129,7 @@ export function PriceRangeForm({ hidden, min, max }: PriceRangeFormProps) {
 
       <button
         type="submit"
-        className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line-strong bg-surface text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-line-strong/60 bg-surface text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
       >
         Áp dụng khoảng giá
       </button>

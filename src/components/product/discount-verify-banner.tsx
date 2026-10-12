@@ -37,7 +37,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
                 className={`size-5 ${status === "insufficient" ? "text-unknown" : isValid ? "text-buy" : "text-wait"}`}
                 strokeWidth={2.2}
               />
-              <h2 className="text-title font-bold text-ink">Kiểm tra mức giảm</h2>
+              <h2 className="display text-title font-semibold text-ink">Kiểm tra mức giảm</h2>
               <span
                 className={`rounded-full px-2.5 py-0.5 text-micro font-bold ${chip.tone}`}
               >
@@ -50,7 +50,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
           <button
             type="button"
             onClick={() => setOpenModal(true)}
-            className="flex min-h-11 items-center gap-1.5 text-body-sm font-bold text-primary hover:text-primary-hover transition-colors cursor-pointer"
+            className="flex min-h-11 items-center gap-1.5 rounded-full border border-line-strong/50 px-4 text-body-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary cursor-pointer"
           >
             <span>Cách DealScore kiểm tra</span>
             <span aria-hidden="true">→</span>
@@ -66,11 +66,11 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
           aria-labelledby="verify-modal-title"
           className="fixed inset-0 z-[10000] flex items-center justify-center bg-night/60 p-4"
         >
-          <div className="relative flex w-full max-w-[580px] flex-col gap-5 rounded-lg bg-surface p-6 sm:p-8 shadow-lift">
+          <div className="relative flex w-full max-w-[580px] flex-col gap-5 rounded-hero bg-surface p-6 sm:p-8 shadow-lift">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <ShieldVerifyIcon className="size-6 text-buy" strokeWidth={2.4} />
-                <h3 id="verify-modal-title" className="display text-h3 font-bold tracking-tight text-ink">
+                <h3 id="verify-modal-title" className="display text-h3 font-semibold text-ink">
                   3 bước kiểm tra mức giảm
                 </h3>
               </div>
@@ -90,7 +90,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
 
             <div className="flex flex-col gap-4">
               <div className="flex gap-3.5">
-                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-night text-micro font-bold text-night-ink">
+                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary text-micro font-bold text-on-primary">
                   1
                 </span>
                 <div className="flex flex-col gap-0.5">
@@ -102,7 +102,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
               </div>
 
               <div className="flex gap-3.5">
-                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-night text-micro font-bold text-night-ink">
+                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary text-micro font-bold text-on-primary">
                   2
                 </span>
                 <div className="flex flex-col gap-0.5">
@@ -114,7 +114,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
               </div>
 
               <div className="flex gap-3.5">
-                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-night text-micro font-bold text-night-ink">
+                <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary text-micro font-bold text-on-primary">
                   3
                 </span>
                 <div className="flex flex-col gap-0.5">
@@ -129,7 +129,7 @@ export function DiscountVerifyBanner({ status, message }: DiscountVerifyBannerPr
             <button
               type="button"
               onClick={() => setOpenModal(false)}
-              className="mt-2 flex h-11 items-center justify-center rounded-md bg-night text-body-sm font-bold text-night-ink transition-opacity hover:opacity-90 cursor-pointer"
+              className="mt-2 flex h-11 items-center justify-center rounded-full bg-primary text-body-sm font-semibold text-on-primary transition-colors hover:bg-primary-hover cursor-pointer"
             >
               Đã hiểu
             </button>

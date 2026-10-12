@@ -1,4 +1,43 @@
-/* DealScore popup — UI Mockup design tokens */
+/* DealScore popup — the web app's "Sân trung lập" tokens (src/app/globals.css): iris, cool greys, midnight. */
+:root {
+  --canvas: #F4F4F7;
+  --surface: #FFFFFF;
+  --line: #E4E4EB;
+  --line-strong: #8D8BA0;
+  --ink: #14121E;
+  --ink-2: #45435A;
+  --ink-3: #66647C;
+  --primary: #4F35E3;
+  --primary-hover: #3F25CC;
+  --on-primary: #FFFFFF;
+  --night: #15112B;
+  --night-line: #3C3566;
+  --night-ink: #FFFFFF;
+  --night-ink-2: #D7D3EF;
+  --glow: 0 10px 24px -10px rgb(79 53 227 / 0.6);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0D0C14;
+    --surface: #16141F;
+    --line: #2C2939;
+    --line-strong: #6F6B86;
+    --ink: #F4F3F9;
+    --ink-2: #CCC9DB;
+    --ink-3: #9C99B2;
+    --primary: #A093FF;
+    --primary-hover: #B5AAFF;
+    --on-primary: #110D2A;
+    --night: #130F28;
+    --night-line: #372F60;
+    /* On a dark surface a coloured blur reads as a glow: plain elevation instead. */
+    --glow: 0 8px 20px -10px rgb(0 0 0 / 0.7);
+    color-scheme: dark;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -6,8 +45,8 @@
 body {
   margin: 0;
   width: 360px;
-  background: #F5F4EF;
-  color: #15161A;
+  background: var(--canvas);
+  color: var(--ink);
   font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -19,11 +58,11 @@ body {
   flex-direction: column;
 }
 
-/* Header */
+/* Header: a midnight band, the iris mark, the wordmark */
 .pop-header {
-  height: 54px;
-  background: #15161A;
-  color: #FFFFFF;
+  height: 56px;
+  background: var(--night);
+  color: var(--night-ink);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -33,12 +72,18 @@ body {
 .logo-mark {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
-  background: #D4F66B;
+  border-radius: 9px;
+  background: #4F35E3;
+  color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.logo-mark svg {
+  width: 30px;
+  height: 30px;
 }
 
 .brand-title {
@@ -49,14 +94,17 @@ body {
   flex-grow: 1;
 }
 
+.brand-title span {
+  color: #A9A4CB;
+}
+
 .badge-pill {
   padding: 3px 10px;
   border-radius: 999px;
-  background: #1C1E24;
-  border: 1px solid #6B6E76;
+  border: 1px solid var(--night-line);
   font-size: 12px;
   font-weight: 600;
-  color: #C9CBD1;
+  color: var(--night-ink-2);
   white-space: nowrap;
 }
 
@@ -70,9 +118,9 @@ body {
 
 /* Cards */
 .card {
-  background: #FFFFFF;
-  border: 1px solid #E4E2DA;
-  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -80,22 +128,22 @@ body {
 }
 
 .card-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #62656D;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
 
 .account-status {
   margin: 0;
   font-size: 13px;
-  color: #45484F;
+  color: var(--ink-2);
   line-height: 1.5;
 }
 
 .account-status a {
-  color: #4330E6;
+  color: var(--primary);
   font-weight: 700;
   text-decoration: none;
 }
@@ -116,13 +164,13 @@ body {
 .switch-label {
   font-size: 14px;
   font-weight: 600;
-  color: #15161A;
+  color: var(--ink);
 }
 
 .custom-switch {
   width: 18px;
   height: 18px;
-  accent-color: #4330E6;
+  accent-color: var(--primary);
   cursor: pointer;
   margin: 0;
 }
@@ -130,15 +178,21 @@ body {
 /* Details */
 .pop-details, .adv-details {
   font-size: 12px;
-  color: #62656D;
+  color: var(--ink-3);
   margin-top: 4px;
 }
 
 .pop-details summary, .adv-details summary {
   cursor: pointer;
   font-weight: 600;
-  color: #4330E6;
+  color: var(--primary);
   outline: none;
+}
+
+.pop-details summary:focus-visible, .adv-details summary:focus-visible,
+.btn-primary:focus-visible, .custom-select:focus-visible, .custom-switch:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .pop-details ul {
@@ -150,7 +204,7 @@ body {
 }
 
 .adv-details {
-  border-top: 1px solid #E4E2DA;
+  border-top: 1px solid var(--line);
   padding-top: 8px;
 }
 
@@ -163,18 +217,17 @@ body {
 
 .select-group label {
   font-size: 12px;
-  color: #62656D;
+  color: var(--ink-3);
 }
 
 .custom-select {
   height: 38px;
   padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid #8F8C82;
-  background: #FFFFFF;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
   font-size: 13px;
-  color: #15161A;
-  outline: none;
+  color: var(--ink);
 }
 
 /* Actions */
@@ -190,23 +243,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: #4330E6;
-  color: #FFFFFF;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
+  box-shadow: var(--glow);
   transition: background-color 0.15s ease;
 }
 
 .btn-primary:hover {
-  background: #2E1FB8;
+  background: var(--primary-hover);
 }
 
 .pop-disclaimer {
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  color: #62656D;
+  color: var(--ink-3);
   text-align: center;
 }

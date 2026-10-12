@@ -64,9 +64,9 @@ export function ProductGallery({
         Main image stage. It stretches to the height of the decision column beside it (flex-1), so a
         product with a single image leaves no empty band; the min heights keep it right on phones.
       */}
-      <div className="group relative min-h-[320px] w-full flex-1 overflow-hidden rounded-frame border border-line/80 bg-surface-2/45 sm:min-h-[380px]">
+      <div className="group relative min-h-[320px] w-full flex-1 overflow-hidden rounded-hero bg-surface-2/70 sm:min-h-[440px]">
         {activeSrc ? (
-          <div className="absolute inset-6 flex items-center justify-center sm:inset-8">
+          <div className="absolute inset-8 flex items-center justify-center sm:inset-12">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={activeSrc}
@@ -74,12 +74,12 @@ export function ProductGallery({
               decoding="async"
               referrerPolicy="no-referrer"
               onError={() => markFailed(activeSrc)}
-              className="max-h-full max-w-full min-h-0 min-w-0 h-full w-full object-contain transition-transform duration-300 ease-out group-hover:scale-[1.03]"
+              className="max-h-full max-w-full min-h-0 min-w-0 h-full w-full object-contain mix-blend-multiply transition-transform duration-500 ease-out group-hover:scale-[1.03] dark:mix-blend-normal"
             />
           </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <ImageMissingIcon className="size-24 text-ink-3/50" />
+            <ImageMissingIcon className="size-20 text-ink-3/40" />
           </div>
         )}
 

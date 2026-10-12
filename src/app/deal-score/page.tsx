@@ -35,9 +35,9 @@ function RateTile({
     <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-5 shadow-xs">
       <VerdictTag recommendation={recommendation} />
       {rate.pct != null ? (
-        <span className="num display text-stat font-extrabold text-ink">{pctText(rate.pct)}</span>
+        <span className="num display text-stat font-bold text-ink">{pctText(rate.pct)}</span>
       ) : (
-        <span className="display text-h4 font-bold text-ink-2">Chưa đủ mẫu</span>
+        <span className="display text-h4 font-semibold text-ink-2">Chưa đủ mẫu</span>
       )}
       <span className="num text-label text-ink-2">
         {rate.correct}/{rate.n} lần đúng
@@ -55,11 +55,17 @@ export default async function DealScoreAccuracyPage() {
   const trendPoints = summary.trend.filter((t) => t.overall != null).length;
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-10 sm:px-6 sm:py-14 lg:px-14">
-      <div className="max-w-[68ch]">
-        <h1 className="display text-h2 font-extrabold leading-tight text-balance text-ink">Deal Score đúng tới đâu?</h1>
-        <p className="mt-4 text-body leading-relaxed text-ink-2">{leadText(horizon)}</p>
-      </div>
+    <main className="w-full flex-1">
+      <header className="border-b border-line bg-ledger">
+        <div className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 sm:py-14 lg:px-14">
+          <div className="max-w-[68ch]">
+            <span className="eyebrow text-ink-3">Minh bạch · Kiểm tra ngược</span>
+            <h1 className="display mt-3 text-h1-sm font-semibold leading-[1.05] text-balance text-ink sm:text-h1">Deal Score đúng tới đâu?</h1>
+            <p className="mt-4 text-body leading-relaxed text-ink-2 sm:text-title sm:leading-relaxed">{leadText(horizon)}</p>
+          </div>
+        </div>
+      </header>
+      <div className="mx-auto max-w-[1440px] px-4 pb-14 pt-4 sm:px-6 lg:px-14">
 
       {latest != null && summary.enough ? (
         <>
@@ -68,8 +74,10 @@ export default async function DealScoreAccuracyPage() {
               Lần kiểm tra gần nhất
             </h2>
             {latest.overall != null && (
-              <div className="flex flex-col gap-1">
-                <span className="num display text-stat font-extrabold text-gradient-primary">{pctText(latest.overall)}</span>
+              <div className="flex flex-col gap-2">
+                <span className="num display text-display font-semibold leading-none text-ink">
+                  <span className="text-primary">{pctText(latest.overall)}</span>
+                </span>
                 <span className="num text-body-sm text-ink-2">
                   kết luận đúng trong lần kiểm tra gần nhất · {latest.samples} mẫu, {latest.variants} sản phẩm ·{" "}
                   {vnDate(latest.ranAt)}
@@ -97,7 +105,7 @@ export default async function DealScoreAccuracyPage() {
 
           {trendPoints >= 2 && (
             <section aria-labelledby="accuracy-trend" className="mt-10 rounded-lg border border-line bg-surface p-5 shadow-xs sm:p-6">
-              <h2 id="accuracy-trend" className="display text-h4 font-bold text-ink">
+              <h2 id="accuracy-trend" className="display text-h4 font-semibold text-ink">
                 Tỉ lệ đúng qua các tuần
               </h2>
               <div className="mt-4">
@@ -114,7 +122,7 @@ export default async function DealScoreAccuracyPage() {
       )}
 
       <section aria-labelledby="accuracy-method" className="mt-12 max-w-[68ch]">
-        <h2 id="accuracy-method" className="display text-h3 font-bold text-ink">
+        <h2 id="accuracy-method" className="display text-h3 font-semibold text-ink">
           Cách tính
         </h2>
         <div className="mt-3 space-y-3 text-body leading-[1.6] text-ink-2">
@@ -132,6 +140,7 @@ export default async function DealScoreAccuracyPage() {
           </p>
         </div>
       </section>
+      </div>
     </main>
   );
 }

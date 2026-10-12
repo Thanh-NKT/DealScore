@@ -59,7 +59,7 @@ const secondaryBtn = buttonClass({ variant: "secondary", size: "md" });
 const primaryBtn = buttonClass({ size: "md" });
 const dangerBtn = buttonClass({ variant: "danger", size: "md" });
 /** One condition = one inner box on the card surface. */
-const conditionBox = "rounded-md bg-surface-2 p-3.5";
+const conditionBox = "rounded-tile bg-surface-2 p-4";
 
 function CloseIcon() {
   return (
@@ -232,13 +232,13 @@ export function WatchModal({
       onClick={(e) => {
         if (e.target === dialogRef.current) requestClose(); // click on the backdrop
       }}
-      className="m-auto max-h-[90dvh] w-[min(34rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-line bg-surface p-0 text-ink shadow-lift backdrop:bg-night/60"
+      className="m-auto max-h-[90dvh] w-[min(34rem,calc(100vw-2rem))] overflow-hidden rounded-hero border border-line bg-surface p-0 text-ink shadow-lift backdrop:bg-night/50 backdrop:backdrop-blur-sm"
     >
       <div className="flex max-h-[90dvh] flex-col">
         <div className="shrink-0 border-b border-line bg-surface px-7 pb-4 pt-6 max-[760px]:px-5 max-[760px]:pb-3.5 max-[760px]:pt-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 id={`${uid}-title`} className="display text-h3 font-bold leading-tight max-[760px]:text-h4">
+              <h2 id={`${uid}-title`} className="display text-h3 font-semibold leading-tight max-[760px]:text-h4">
                 {existingWatch ? "Sửa theo dõi giá" : "Theo dõi giá"}
               </h2>
               <p className="mt-1 line-clamp-2 text-body-sm text-ink-2 [overflow-wrap:anywhere]" title={productName}>
@@ -250,7 +250,7 @@ export function WatchModal({
                 {price != null ? <b className="num font-bold text-ink">{formatVnd(price)}</b> : "chưa có giá"}
               </p>
             </div>
-            <button type="button" onClick={requestClose} aria-label="Đóng" className="-mr-2 -mt-1 inline-flex size-11 shrink-0 items-center justify-center rounded-md text-ink-2 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink">
+            <button type="button" onClick={requestClose} aria-label="Đóng" className="-mr-2 -mt-1 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink">
               <CloseIcon />
             </button>
           </div>
@@ -284,7 +284,7 @@ export function WatchModal({
               <span className="mx-auto inline-flex size-14 items-center justify-center rounded-full bg-accent text-on-accent">
                 <CheckCircleIcon className="size-7" strokeWidth={2} />
               </span>
-              <h3 className="display mt-3 text-h3 font-bold">Đã lưu theo dõi</h3>
+              <h3 className="display mt-3 text-h3 font-semibold">Đã lưu theo dõi</h3>
               <p className="mx-auto mt-1 max-w-[40ch] text-control text-ink-2">
                 DealScore sẽ kiểm tra giá định kỳ và báo cho bạn khi có điều kiện được đáp ứng.
               </p>
@@ -359,7 +359,7 @@ export function WatchModal({
                           setDirty(true);
                           setShowPriceError(false);
                         }}
-                        className="mt-2.5 inline-flex min-h-10 items-center rounded-md border border-line-strong bg-surface px-3 text-label font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas"
+                        className="mt-2.5 inline-flex min-h-10 items-center rounded-full border border-line-strong/60 bg-surface px-5 text-label font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas"
                       >
                         Dùng gợi ý {formatVnd(suggested)} (thấp hơn 10%)
                       </button>

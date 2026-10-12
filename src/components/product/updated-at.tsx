@@ -10,6 +10,8 @@ interface UpdatedAtProps {
   isStale?: boolean;
   /** "compact": one short line for cards; "default": the freshness stamp beside the product name. */
   variant?: "default" | "compact";
+  /** Compact only: lead with a clock (fresh) or the alert icon (stale), so the line stands alone. */
+  icon?: boolean;
 }
 
 const MINUTE = 60_000;
@@ -72,7 +74,7 @@ function relative(d: Date, now: number): string {
  * alert icon, "hãy kiểm tra lại trên sàn"). The server renders the absolute time; the client swaps
  * in relative time after hydration and keeps it current once a minute.
  */
-export function UpdatedAt({ iso, isStale, variant = "default" }: UpdatedAtProps) {
+export function UpdatedAt({ iso, isStale, variant = "default", icon = false }: UpdatedAtProps) {
   const now = useSyncExternalStore(subscribeClock, clientMinute, serverMinute);
   const date = parse(iso);
 
@@ -93,10 +95,13 @@ export function UpdatedAt({ iso, isStale, variant = "default" }: UpdatedAtProps)
 
   if (variant === "compact") {
     return (
-      <span className={`inline-flex items-center gap-1 ${stale ? "text-ink-2" : ""}`}>
-        {stale && <AlertIcon className="size-3.5" />}
-        {time}
-        {stale && <span>· có thể đã cũ</span>}
+      // One text run after the icon, so a narrow card wraps it as a sentence, not as two columns.
+      <span className={`inline-flex min-w-0 items-start gap-1 ${stale ? "text-ink-2" : ""}`}>
+        {stale ? <AlertIcon className="mt-px size-3.5 shrink-0" /> : icon ? <ClockIcon className="mt-px size-3.5 shrink-0" /> : null}
+        <span className="min-w-0">
+          {time}
+          {stale && " · có thể đã cũ"}
+        </span>
       </span>
     );
   }

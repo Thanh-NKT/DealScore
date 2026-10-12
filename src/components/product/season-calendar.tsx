@@ -11,11 +11,18 @@ export function SeasonCalendar({ season }: { season: ProductSeason }) {
   const ranked = season.status === "ok" ? season.ranked : null;
   const maxDepth = ranked ? Math.max(...ranked.map((e) => Math.max(0, 1 - e.medianRatio)), 0.01) : 0;
   return (
-    <section aria-labelledby="season-title" className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6 sm:p-7">
-      <h2 id="season-title" className="display text-h3 font-bold tracking-tight text-ink">
-        Lịch mùa giá
-      </h2>
-      {season.upcoming ? <p className="text-body-sm text-ink">{upcomingCopy(season.upcoming)}</p> : null}
+    <section aria-labelledby="season-title" className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-5 sm:p-7">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="eyebrow text-ink-3">Theo các đợt sale lớn</span>
+          <h2 id="season-title" className="display text-h3 font-semibold text-ink">
+            Lịch mùa giá
+          </h2>
+        </div>
+        {season.upcoming ? (
+          <p className="rounded-full bg-accent px-3.5 py-1 text-body-sm font-semibold text-on-accent">{upcomingCopy(season.upcoming)}</p>
+        ) : null}
+      </div>
 
       {season.status === "insufficient" ? (
         <p className="text-body-sm text-ink-3">
@@ -24,16 +31,16 @@ export function SeasonCalendar({ season }: { season: ProductSeason }) {
         </p>
       ) : (
         <>
-          <ul className="flex flex-col gap-3">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {season.events.map((e) => {
               const c = seasonRowCopy(e);
               return (
-                <li key={e.key} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line pb-3 last:border-b-0 last:pb-0">
-                  <div className="min-w-0">
-                    <p className="text-body font-semibold text-ink">{c.label}</p>
-                    <p className={`num text-body-sm ${c.lower ? "text-buy" : "text-ink-2"}`}>{c.text}</p>
+                <li key={e.key} className="flex flex-col gap-2 rounded-tile bg-surface-2/60 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="num text-h2 font-bold leading-none text-ink">{c.label}</p>
+                    <span className="eyebrow shrink-0 pt-1 text-ink-3">{c.count}</span>
                   </div>
-                  <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-label text-ink-2">{c.count}</span>
+                  <p className={`num text-body-sm leading-snug ${c.lower ? "font-semibold text-buy" : "text-ink-2"}`}>{c.text}</p>
                 </li>
               );
             })}

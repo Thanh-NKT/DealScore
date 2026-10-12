@@ -15,27 +15,27 @@ function SideCard({ side, other, position }: { side: CompareSide; other: Compare
   return (
     <article className="flex h-full min-w-0 flex-col gap-4 rounded-lg border border-line bg-surface p-5 max-sm:gap-3 max-sm:p-3.5">
       <div className="flex items-start gap-3.5 max-sm:flex-col max-sm:gap-2.5">
-        <div className="w-20 shrink-0 overflow-hidden rounded-md bg-surface-2 max-sm:w-14">
+        <div className="w-20 shrink-0 overflow-hidden rounded-tile bg-surface-2 max-sm:w-14">
           <ProductImage src={side.image} className="bg-surface-2! p-2 max-sm:p-1.5" iconClassName="size-7 max-sm:size-5" />
         </div>
         <div className="min-w-0 space-y-1">
           <p className="text-micro font-semibold text-ink-3">{position === "a" ? "Sản phẩm A" : "Sản phẩm B"}</p>
           <h2 className="line-clamp-3 text-body-sm leading-snug font-semibold text-ink [overflow-wrap:anywhere] max-sm:text-body-sm">
-            <Link href={side.href} className="underline-offset-4 hover:text-primary hover:underline">
+            <Link href={side.href} className="hover:underline hover:decoration-line-strong hover:underline-offset-4">
               {side.name}
             </Link>
           </h2>
         </div>
       </div>
       {side.price != null ? (
-        <p className="num text-price-input leading-none font-extrabold max-sm:text-title">{formatVnd(side.price)}</p>
+        <p className="num text-price-input leading-none font-bold max-sm:text-title">{formatVnd(side.price)}</p>
       ) : (
         <p className="text-body-sm font-semibold text-ink-3">Chưa có giá còn hàng</p>
       )}
       <VerdictRow score={side.score} recommendation={side.recommendation} />
       <Link
         href={change}
-        className="mt-auto inline-flex min-h-10 w-fit items-center text-label font-semibold text-primary underline-offset-4 hover:text-primary-hover hover:underline"
+        className="mt-auto inline-flex min-h-10 w-fit items-center text-label font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
       >
         Đổi sản phẩm {position.toUpperCase()}
       </Link>
@@ -49,10 +49,10 @@ function Cell({ row, side, numeric }: { row: CompareRow; side: "a" | "b"; numeri
   return (
     <td className={`px-5 py-3.5 align-top max-sm:px-2.5 ${numeric ? "num text-title max-sm:text-body" : "text-body-sm max-sm:text-body-sm"}`}>
       <span className={`inline-flex items-start gap-1.5 ${wins ? "font-bold text-ink" : value === "—" ? "text-ink-3" : "font-medium text-ink-2"}`}>
-        <span className="[overflow-wrap:anywhere]">{value}</span>
+        <span className={`[overflow-wrap:anywhere] ${wins ? "highlight" : ""}`}>{value}</span>
         {wins && (
           <>
-            <CheckIcon className="mt-[0.2em] size-[1em] shrink-0" strokeWidth={2.5} />
+            <CheckIcon className="mt-[0.2em] size-[1em] shrink-0 text-buy" strokeWidth={2.5} />
             <span className="sr-only">(tốt hơn)</span>
           </>
         )}
@@ -66,7 +66,7 @@ function Table({ caption, rows, a, b }: { caption: string; rows: CompareRow[]; a
   return (
     <div className="overflow-hidden rounded-lg border border-line bg-surface">
       <table className="w-full table-fixed border-collapse text-left">
-        <caption className="display border-b border-line px-5 py-4 text-left text-h3 font-bold text-ink max-sm:px-3 max-sm:text-title">
+        <caption className="display border-b border-line px-5 py-4 text-left text-h3 font-semibold text-ink max-sm:px-3 max-sm:text-title">
           {caption}
         </caption>
         <colgroup>
@@ -118,7 +118,7 @@ export function CompareView({ comparison }: { comparison: Comparison }) {
         <div className="hidden flex-col justify-end gap-2 pr-5 pb-1 sm:flex">
           <Link
             href={`/compare?a=${encodeURIComponent(b.slug)}&b=${encodeURIComponent(a.slug)}`}
-            className="inline-flex min-h-11 w-fit items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+            className="inline-flex min-h-11 w-fit items-center rounded-full border border-line-strong/50 bg-surface px-5 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
           >
             Đổi vị trí A ↔ B
           </Link>

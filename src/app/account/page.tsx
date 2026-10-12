@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const CARD = "rounded-lg border border-line bg-surface p-7 max-[760px]:p-5";
 const SECONDARY =
-  "inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-line-strong/60 bg-surface px-5 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
 
 function SlidersIcon({ className = "size-5" }: { className?: string }) {
   return (
@@ -53,7 +53,7 @@ export default async function AccountPage() {
       {/* Account header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-1.5">
-          <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-ink sm:text-h1">Tài khoản của tôi</h1>
+          <h1 className="display text-h1-sm font-semibold leading-[1.1] text-ink sm:text-h1">Tài khoản của tôi</h1>
           <p className="text-control text-ink-2 [overflow-wrap:anywhere]">
             Đăng nhập với email: <strong className="font-semibold text-ink">{user.email}</strong>
             {joinedDate && (
@@ -85,7 +85,7 @@ export default async function AccountPage() {
               </span>
             </div>
             <div>
-              <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Sản phẩm đang theo dõi</h2>
+              <h2 className="display text-h3 font-semibold leading-tight text-ink max-[760px]:text-title">Sản phẩm đang theo dõi</h2>
               <p className="mt-1.5 text-control leading-relaxed text-ink-2">
                 Xem khoảng cách tới giá mong muốn, giá đã thay đổi thế nào và các thông báo giá đã nhận.
               </p>
@@ -105,7 +105,7 @@ export default async function AccountPage() {
               <SlidersIcon />
             </span>
             <div>
-              <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Cài đặt thông báo</h2>
+              <h2 className="display text-h3 font-semibold leading-tight text-ink max-[760px]:text-title">Cài đặt thông báo</h2>
               <p className="mt-1.5 text-control leading-relaxed text-ink-2">
                 Tùy chỉnh kênh nhận tin (Email, Web Push), tần suất tức thì hoặc tóm tắt ngày, và khung giờ im lặng.
               </p>
@@ -118,7 +118,7 @@ export default async function AccountPage() {
 
         <section className={`${CARD} flex flex-col justify-between gap-6 sm:col-span-2 sm:flex-row sm:items-center`}>
           <div>
-            <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Tìm kiếm đã lưu</h2>
+            <h2 className="display text-h3 font-semibold leading-tight text-ink max-[760px]:text-title">Tìm kiếm đã lưu</h2>
             <p className="mt-1.5 text-control leading-relaxed text-ink-2">
               Nhận báo khi có sản phẩm mới khớp tìm kiếm của bạn, và khi DealScore đã có sản phẩm bạn từng tìm không thấy.
             </p>
@@ -130,11 +130,11 @@ export default async function AccountPage() {
 
         <section className={`${CARD} flex flex-col justify-between gap-6 sm:col-span-2 sm:flex-row sm:items-center`}>
           <div className="flex items-start gap-4">
-            <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink">
+            <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink">
               <HeartIcon className="size-5" />
             </span>
             <div>
-              <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Sở thích mua sắm</h2>
+              <h2 className="display text-h3 font-semibold leading-tight text-ink max-[760px]:text-title">Sở thích mua sắm</h2>
               <p className="mt-1.5 text-control leading-relaxed text-ink-2">
                 Hãng, danh mục, khoảng giá và sàn bạn hay mua — dùng cho nút “Theo sở thích của tôi” khi tìm kiếm.
               </p>
@@ -148,14 +148,14 @@ export default async function AccountPage() {
 
       {/* Marketing preferences */}
       <section className={`${CARD} space-y-4`}>
-        <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Tùy chọn bản tin &amp; Khuyến mãi</h2>
+        <h2 className="display text-h3 font-semibold leading-tight text-ink max-[760px]:text-title">Tùy chọn bản tin &amp; Khuyến mãi</h2>
         <MarketingToggle initialOptIn={user.marketingOptIn} />
       </section>
 
       {/* Data & privacy */}
       <section className={`${CARD} space-y-5`}>
         <div>
-          <h2 className="display text-h3 font-bold leading-tight text-ink max-[760px]:text-title">Dữ liệu cá nhân &amp; Quyền riêng tư</h2>
+          <h2 className="display text-h3 font-semibold leading-tight text-ink max-[760px]:text-title">Dữ liệu cá nhân &amp; Quyền riêng tư</h2>
           <p className="mt-1.5 text-control leading-relaxed text-ink-2">
             Bạn có toàn quyền kiểm soát dữ liệu của mình tại DealScore theo quy định về bảo vệ dữ liệu cá nhân.
           </p>
@@ -182,7 +182,7 @@ export default async function AccountPage() {
           </div>
           <Link
             href="/account/delete"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-avoid bg-surface px-4 text-control font-semibold text-avoid transition-colors duration-150 ease-out hover:bg-avoid-soft"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-avoid/70 bg-surface px-5 text-control font-semibold text-avoid transition-colors duration-150 ease-out hover:bg-avoid-soft"
           >
             Yêu cầu xóa tài khoản
           </Link>

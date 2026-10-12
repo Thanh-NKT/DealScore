@@ -84,12 +84,12 @@ function Chip({ v, selected, range, unit }: { v: Variant; selected: boolean; ran
       aria-current={selected ? "true" : undefined}
       title={title}
       aria-label={hasVerdict ? title : undefined}
-      className={`inline-flex min-h-11 max-w-full items-center gap-x-2 gap-y-0.5 rounded-md border px-4 py-1.5 text-body-sm font-semibold transition-colors duration-150 ease-out ${
+      className={`inline-flex min-h-11 max-w-full items-center gap-x-2 gap-y-0.5 rounded-tile border px-4 py-1.5 text-body-sm font-semibold transition-colors duration-150 ease-out ${
         hasVerdict || unit ? `${unit ? "max-sm:max-h-18" : "max-sm:max-h-14"} max-sm:flex-col max-sm:items-start max-sm:justify-center` : ""
       } ${
         selected
-          ? "border-night bg-night text-night-ink"
-          : "border-line-strong bg-surface text-ink hover:bg-surface-2"
+          ? "scope-night border-ink bg-night text-night-ink shadow-sm"
+          : "border-line-strong/50 bg-surface text-ink hover:border-primary hover:text-primary"
       }`}
     >
       <span className="inline-flex min-w-0 max-w-full items-center gap-2">
@@ -139,8 +139,8 @@ export function VariantPicker({ variants, selectedId, range }: VariantPickerProp
 
   return (
     <nav aria-labelledby="variant-picker-heading" className="space-y-2">
-      <h2 id="variant-picker-heading" className="text-label font-bold text-ink-2">
-        Chọn phiên bản <span className="num font-semibold text-ink-3">({list.length})</span>
+      <h2 id="variant-picker-heading" className="eyebrow text-ink-3">
+        Chọn phiên bản <span className="num">({list.length})</span>
       </h2>
       {/* Phones: one swipeable row instead of stacked rows, so the price and verdict stay in the first screen. */}
       <div className="flex flex-wrap gap-2.5 max-sm:-mx-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-1 max-sm:[scrollbar-width:none] max-sm:[&>*]:shrink-0">
@@ -150,7 +150,7 @@ export function VariantPicker({ variants, selectedId, range }: VariantPickerProp
       </div>
       {rest.length > 0 && (
         <details className="group">
-          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-body-sm font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:text-primary-hover hover:decoration-primary-hover [&::-webkit-details-marker]:hidden">
+          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center text-body-sm font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">Xem thêm {rest.length} phiên bản</span>
             <span className="hidden group-open:inline">Thu gọn</span>
           </summary>

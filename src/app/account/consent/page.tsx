@@ -33,7 +33,7 @@ export default async function ConsentPage({ searchParams }: ConsentPageProps) {
           <span className="mb-2 inline-flex size-11 items-center justify-center rounded-md bg-surface-2 text-ink">
             <ShieldCheckIcon className="size-5" strokeWidth={2} />
           </span>
-          <h1 className="display text-h2 font-extrabold leading-[1.15] text-ink max-[760px]:text-price-input">Điều khoản &amp; Quyền riêng tư</h1>
+          <h1 className="display text-h2 font-semibold leading-[1.15] text-ink max-[760px]:text-price-input">Điều khoản &amp; Quyền riêng tư</h1>
           <p className="text-control leading-relaxed text-ink-2">
             Để bảo vệ quyền lợi và dữ liệu cá nhân theo quy định, vui lòng xác nhận sự đồng ý của bạn trước khi tiếp tục sử dụng DealScore.
           </p>

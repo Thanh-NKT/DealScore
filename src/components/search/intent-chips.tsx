@@ -41,7 +41,7 @@ export function IntentChips({ applied, params, originalQuery, fallback }: Intent
   return (
     <div className="space-y-2">
       {fallback && (
-        <p role="status" className="rounded-sm border border-wait/30 bg-wait-soft px-3 py-2 text-body-sm text-wait">
+        <p role="status" className="rounded-tile bg-wait-soft px-4 py-2.5 text-body-sm text-wait">
           Không có sản phẩm khớp đủ các điều kiện — đây là kết quả gần đúng cho &ldquo;{originalQuery}&rdquo;.
         </p>
       )}
@@ -53,16 +53,16 @@ export function IntentChips({ applied, params, originalQuery, fallback }: Intent
             href={searchHref(toSearchParams({ ...removeChip(params, chip.kind), page: 1 }))}
             scroll={false}
             aria-label={`Bỏ điều kiện ${chip.label}`}
-            className="group/chip inline-flex min-h-10 max-w-full items-center rounded-sm"
+            className="group/chip inline-flex min-h-10 max-w-full items-center rounded-full"
           >
-            <span className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-sm bg-primary-soft pl-2.5 pr-2 text-micro font-semibold text-primary transition-colors duration-150 ease-out group-hover/chip:bg-primary group-hover/chip:text-on-primary">
+            <span className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full bg-surface-2 pl-3 pr-2 text-micro font-semibold text-ink transition-colors duration-150 ease-out group-hover/chip:bg-primary group-hover/chip:text-on-primary">
               <span className="num min-w-0 truncate">{chip.label}</span>
               <CrossIcon />
             </span>
           </Link>
         ))}
         {!fallback && (
-          <Link href={exactHref} className="ml-1 inline-flex min-h-10 items-center text-micro font-semibold text-primary hover:underline">
+          <Link href={exactHref} className="ml-1 inline-flex min-h-10 items-center text-micro font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
             Tìm đúng chữ &ldquo;{originalQuery}&rdquo;
           </Link>
         )}

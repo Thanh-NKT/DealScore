@@ -5,6 +5,7 @@ import { CheckCircleIcon, CheckIcon, ChevronDownIcon } from "@/components/ui/ico
 import { marketplaceName, type MarketplaceId } from "@/lib/marketplaces";
 import { PriceRangeForm } from "./price-range-form";
 import { pillClass } from "@/components/ui/pill";
+import { MarketplaceMark } from "@/components/product/marketplace-mark";
 import type { IntentChipKind } from "@/lib/intent/types";
 import { capacityLabel } from "@/lib/intent/parse";
 
@@ -73,7 +74,7 @@ function Option({
       scroll={false}
       aria-current={selected && !multi ? "true" : undefined}
       aria-pressed={multi ? selected : undefined}
-      className={`-mx-2 flex min-h-10 items-center gap-2.5 rounded-sm px-2 text-body-sm text-ink transition-colors duration-150 ease-out hover:bg-surface-2 ${selected ? on : ""}`}
+      className={`-mx-2 flex min-h-10 items-center gap-2.5 rounded-inner px-2 text-body-sm text-ink transition-colors duration-150 ease-out hover:bg-surface-2 ${selected ? on : ""}`}
     >
       {multi ? (
         <span
@@ -105,7 +106,7 @@ function Folded<T>({ items, isSelected, render, noun }: { items: T[]; isSelected
       {[...head, ...pinned].map(render)}
       {folded.length > 0 && (
         <details className="group/fold">
-          <summary className="flex min-h-10 cursor-pointer list-none items-center gap-1 text-label font-semibold text-primary hover:text-primary-hover [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-10 cursor-pointer list-none items-center gap-1 text-label font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink [&::-webkit-details-marker]:hidden">
             <span className="group-open/fold:hidden">
               Xem thêm {folded.length} {noun}
             </span>
@@ -119,7 +120,7 @@ function Folded<T>({ items, isSelected, render, noun }: { items: T[]; isSelected
   );
 }
 
-const GROUP_HEADING = "mb-2 text-body-sm font-bold text-ink";
+const GROUP_HEADING = "eyebrow mb-2.5 text-ink-3";
 
 function FilterBody({
   params,
@@ -154,7 +155,7 @@ function FilterBody({
         <Link
           href={href(params, { sort: params.sort === "deal_score" ? undefined : "deal_score" })}
           scroll={false}
-          className={`mb-2 flex h-10 items-center gap-2 rounded-inner border px-3 text-body-sm font-semibold transition-colors duration-150 ease-out ${
+          className={`mb-2 flex h-10 items-center gap-2 rounded-full border px-3.5 text-body-sm font-semibold transition-colors duration-150 ease-out ${
             params.sort === "deal_score"
               ? "border-buy bg-buy text-canvas"
               : "border-buy/30 bg-buy-soft/70 text-buy hover:bg-buy-soft"
@@ -234,7 +235,10 @@ function FilterBody({
           <div className="flex flex-col">
             {availableMarketplaces.map((m) => (
               <Option key={m} to={toggleMarket(m)} selected={selectedMarkets.has(m)} multi>
-                {marketplaceName(m)}
+                <span className="inline-flex items-center gap-2">
+                  <MarketplaceMark marketplace={m} size="sm" />
+                  {marketplaceName(m)}
+                </span>
               </Option>
             ))}
           </div>
@@ -261,7 +265,7 @@ function FilterBody({
 }
 
 const CLEAR_LINK =
-  "inline-flex items-center text-label font-semibold text-primary underline-offset-4 hover:text-primary-hover hover:underline cursor-pointer";
+  "inline-flex items-center text-label font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink cursor-pointer";
 
 export function Filters(props: FiltersProps) {
   const count = activeFilterCount(props.params);
@@ -286,7 +290,7 @@ export function Filters(props: FiltersProps) {
       </details>
       <div className="hidden rounded-lg border border-line bg-surface p-5 md:block">
         <div className="mb-4 flex items-center justify-between gap-3 border-b border-line pb-3">
-          <h2 className="display text-title font-bold tracking-tight text-ink">Bộ lọc tìm kiếm</h2>
+          <h2 className="display text-title font-semibold text-ink">Bộ lọc tìm kiếm</h2>
           {clear}
         </div>
         <FilterBody {...props} idPrefix="filters-d" />
@@ -374,20 +378,20 @@ export function ActiveFilterChips({
           {chips.map((c) => (
             <span
               key={c.key}
-              className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full bg-primary-soft pl-2.5 pr-1 text-micro font-semibold text-primary"
+              className="inline-flex h-8 max-w-full items-center gap-1.5 rounded-full bg-primary pl-3 pr-1 text-micro font-semibold text-on-primary"
             >
               <span className="min-w-0 truncate">{c.label}</span>
               <Link
                 href={c.to}
                 scroll={false}
                 aria-label={`Bỏ lọc ${c.label}`}
-                className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-surface text-primary transition-colors hover:bg-primary hover:text-on-primary"
+                className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-on-primary/15 text-on-primary transition-colors hover:bg-on-primary hover:text-primary"
               >
                 <CrossIcon className="size-2.5" />
               </Link>
             </span>
           ))}
-          <Link href={clearHref(params)} scroll={false} className="ml-1 text-micro font-semibold text-primary hover:underline">
+          <Link href={clearHref(params)} scroll={false} className="ml-1 text-micro font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
             Xóa hết
           </Link>
         </div>

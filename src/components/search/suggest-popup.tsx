@@ -48,7 +48,7 @@ function RowBody({
               Tìm “<span className="font-semibold text-ink">{row.q}</span>”
             </span>
             {row.chips.map((c) => (
-              <span key={c} className="num shrink-0 rounded-sm bg-primary-soft px-2 py-0.5 text-micro font-semibold text-primary">
+              <span key={c} className="num shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink">
                 {c}
               </span>
             ))}
@@ -108,7 +108,7 @@ function RowBody({
         </>
       );
     case "clear-recent":
-      return <span className="ml-auto text-label font-semibold text-primary">Xóa lịch sử</span>;
+      return <span className="ml-auto text-label font-semibold text-ink underline decoration-line-strong underline-offset-4">Xóa lịch sử</span>;
     case "product": {
       const s = row.item;
       const name = s.name?.trim() || "Sản phẩm chưa có tên";
@@ -165,7 +165,7 @@ export function SuggestPopup({
     if (active >= 0) document.getElementById(optionId(active))?.scrollIntoView({ block: "nearest" });
   }, [active, optionId]);
 
-  const shell = "absolute inset-x-0 z-50 mt-2 overflow-hidden rounded-md border border-line bg-surface shadow-lift";
+  const shell = "absolute inset-x-0 z-50 mt-2 overflow-hidden rounded-frame border border-line bg-surface shadow-lift";
 
   if (suggestions.groups.length === 0) {
     if (!suggestions.empty) return null;

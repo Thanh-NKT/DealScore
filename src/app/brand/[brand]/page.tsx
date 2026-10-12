@@ -31,7 +31,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const path = `/brand/${brandSlug(name)}${page > 1 ? `?page=${page}` : ""}`;
   return {
     title: `${name} — giá hôm nay, lịch sử giá & Deal Score | DealScore`,
-    description: `Giá sản phẩm ${name} trên Shopee: lịch sử giá theo phiên bản, Deal Score có giải thích và báo khi giảm giá.`,
+    description: `Giá sản phẩm ${name} trên các sàn thương mại điện tử: lịch sử giá theo phiên bản, Deal Score có giải thích và báo khi giảm giá.`,
     alternates: { canonical: `${siteUrl()}${path}` },
   };
 }

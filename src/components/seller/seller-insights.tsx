@@ -9,7 +9,7 @@ export function SellerProfileCard({ profile }: { profile: SellerProfileView | nu
   const copy = profile ? sellerProfileCopy(profile) : null;
   return (
     <section aria-labelledby="seller-profile-title" className={CARD}>
-      <h2 id="seller-profile-title" className="display text-h4 font-bold text-ink">
+      <h2 id="seller-profile-title" className="display text-h4 font-semibold text-ink">
         Giá của shop trong 90 ngày
       </h2>
       {!profile || !copy ? (
@@ -20,7 +20,7 @@ export function SellerProfileCard({ profile }: { profile: SellerProfileView | nu
         <div className="flex flex-col gap-4">
           {copy.stability ? (
             <div>
-              <p className="num display text-stat font-extrabold text-ink">{copy.stability.big}</p>
+              <p className="num display text-stat font-bold text-ink">{copy.stability.big}</p>
               <p className="text-body-sm text-ink-2">{copy.stability.label}</p>
               <p className="text-body-sm text-ink-3">{copy.stability.sub}</p>
             </div>
@@ -54,7 +54,7 @@ export function VoucherPatternsCard({ summary }: { summary: VoucherPatternSummar
   const empty = voucherSummaryCopy(summary);
   return (
     <section aria-labelledby="seller-vouchers-title" className={CARD}>
-      <h2 id="seller-vouchers-title" className="display text-h4 font-bold text-ink">
+      <h2 id="seller-vouchers-title" className="display text-h4 font-semibold text-ink">
         Mã giảm giá của shop
       </h2>
       {summary.status === "patterns" ? (

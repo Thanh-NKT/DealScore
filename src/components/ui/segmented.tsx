@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
 
 /**
- * DESIGN.md "Điều khiển phân đoạn": one look for sort, chart range, tabs, the auth switch and the
- * discovery filter. `surface-2` track (12px corners, 4px padding, no border), segments ≥ 40px tall,
- * the active one petrol with on-primary text.
+ * One look for sort, chart range, tabs, the auth switch and the discovery filter: a `surface-2` pill
+ * track, segments ≥ 36px tall, the active one a raised paper segment with iris text.
  *
  * Link-based and tab-based variants use the class helpers directly (they own their own roles);
  * plain button groups use <SegmentedControl>. No "use client": the helpers are called from server
@@ -18,14 +17,14 @@ type SegmentSize = "sm" | "md" | "lg";
 const SEGMENT_TEXT: Record<SegmentSize, string> = { sm: "text-label", md: "text-body-sm", lg: "text-control" };
 
 export function segmentTrack({ display = "inline-flex", className = "" }: { display?: TrackDisplay; className?: string } = {}): string {
-  return `${display} max-w-full gap-1 rounded-md bg-surface-2 p-1 ${className}`.trim();
+  return `${display} max-w-full gap-0.5 rounded-full border border-line bg-surface-2 p-1 ${className}`.trim();
 }
 
 export function segmentClass(active: boolean, { size = "sm", className = "" }: { size?: SegmentSize; className?: string } = {}): string {
-  const base = `inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm px-3.5 ${SEGMENT_TEXT[size]} transition-colors duration-150 ease-out cursor-pointer disabled:cursor-not-allowed`;
+  const base = `inline-flex min-h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 ${SEGMENT_TEXT[size]} transition-[background-color,color,box-shadow] duration-200 ease-out cursor-pointer disabled:cursor-not-allowed`;
   const tone = active
-    ? "bg-primary font-bold text-on-primary shadow-xs"
-    : "font-medium text-ink-2 hover:bg-surface/70 hover:text-ink";
+    ? "bg-surface font-semibold text-primary shadow-sm ring-1 ring-line"
+    : "font-medium text-ink-2 hover:bg-surface/60 hover:text-ink";
   return `${base} ${tone} ${className}`.trim();
 }
 

@@ -20,8 +20,8 @@ const QUICK_QUERIES = [
 ];
 
 /**
- * Homepage Hero search & Shopee link lookup bar.
- * - Automatically detects pasted Shopee links (shopee.vn / shope.ee) and runs `/api/lookup` directly.
+ * Homepage hero search & product-link lookup bar.
+ * - Automatically detects pasted links the lookup supports and runs `/api/lookup` directly.
  * - Explains unsupported marketplace links (TikTok Shop, Lazada, Tiki) instead of running a dead text search.
  * - Same sectioned suggestions, recent searches and keyboard behaviour as `SearchBox` (shared hook + popup).
  */
@@ -78,18 +78,18 @@ export function HeroSearchForm() {
   };
 
   return (
-    <div ref={wrapperRef} className="flex max-w-[700px] flex-col gap-3">
+    <div ref={wrapperRef} className="flex max-w-[720px] flex-col gap-4">
       <div className="relative w-full">
         <form
           action="/search"
           method="get"
           role="search"
           onSubmit={onSubmit}
-          className="flex items-center gap-2.5 rounded-lg border-2 border-line-strong bg-surface p-2 pl-4 transition-colors focus-within:border-primary motion-reduce:transition-none sm:pl-5"
+          className="flex items-center gap-2.5 rounded-full border border-line bg-surface p-1.5 pl-5 shadow-lift transition-[box-shadow,border-color] focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 motion-reduce:transition-none sm:pl-6"
         >
-          <SearchIcon className="size-[22px] shrink-0 text-ink-2 max-[380px]:hidden" />
+          <SearchIcon className="size-[22px] shrink-0 text-primary max-[380px]:hidden" strokeWidth={2.2} />
           <label htmlFor={`${uid}-home-q`} className="sr-only">
-            Tìm sản phẩm hoặc dán link Shopee
+            Tìm sản phẩm hoặc dán link sản phẩm
           </label>
           <input
             ref={inputRef}
@@ -120,8 +120,8 @@ export function HeroSearchForm() {
           />
 
           {canLookup && !lookup.loading && (
-            <span className="hidden shrink-0 items-center rounded-sm bg-primary-soft px-2.5 py-1 text-micro font-semibold text-primary sm:inline-flex">
-              Link Shopee
+            <span className="hidden shrink-0 items-center rounded-full bg-accent px-2.5 py-1 text-micro font-semibold text-on-accent sm:inline-flex">
+              Đã nhận link
             </span>
           )}
 
@@ -134,7 +134,7 @@ export function HeroSearchForm() {
                 lookup.clearProblem();
                 inputRef.current?.focus();
               }}
-              className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-sm text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink motion-reduce:transition-none"
+              className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink motion-reduce:transition-none"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="size-4">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -146,7 +146,7 @@ export function HeroSearchForm() {
             <button
               type="button"
               onClick={lookup.cancel}
-              className="flex h-13 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface px-5 text-control font-semibold text-ink transition-colors hover:bg-surface-2"
+              className="flex h-13 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface px-6 text-control font-semibold text-ink transition-colors hover:bg-surface-2"
             >
               Hủy
             </button>
@@ -156,7 +156,16 @@ export function HeroSearchForm() {
               disabled={lookup.navigating}
               className={buttonClass({ size: "lg", className: "shrink-0 max-[480px]:px-4 max-[480px]:text-control" })}
             >
-              {lookup.navigating ? "Đang mở…" : canLookup ? "Phân tích link" : "Kiểm tra giá"}
+              {lookup.navigating ? (
+                "Đang mở…"
+              ) : canLookup ? (
+                "Phân tích link"
+              ) : (
+                <>
+                  <span className="max-[480px]:hidden">Kiểm tra giá</span>
+                  <span className="min-[481px]:hidden">Tìm</span>
+                </>
+              )}
             </button>
           )}
         </form>
@@ -189,14 +198,14 @@ export function HeroSearchForm() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 pt-0.5">
-        <span className="text-label font-semibold text-ink-3">Thử tìm:</span>
+        <span className="eyebrow text-ink-3">Thử tìm</span>
         {QUICK_QUERIES.map((q) => (
           <Link
             key={q}
             href={`/search?q=${encodeURIComponent(q)}`}
-            className="flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-label font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
+            className="flex h-9 items-center gap-1.5 rounded-full border border-line bg-surface/80 px-3.5 text-label font-medium text-ink-2 transition-colors hover:border-primary/40 hover:bg-surface hover:text-primary"
           >
-            <SearchIcon className="size-3.5 text-primary" />
+            <SearchIcon className="size-3.5 text-ink-3" />
             {q}
           </Link>
         ))}

@@ -23,7 +23,7 @@ export function GoogleSignIn({ next, label = "Tiếp tục với Google" }: { ne
         <input type="hidden" name="next" value={next} />
         <button
           type="submit"
-          className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-md border border-line-strong bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+          className="inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-line-strong/50 bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary hover:text-primary"
         >
           <GoogleMark />
           {label}

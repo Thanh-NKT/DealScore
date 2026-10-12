@@ -26,36 +26,47 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
   });
 
   return (
-    <section aria-labelledby="cats-title" className="space-y-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="cats-title" className="display text-h2 font-bold leading-[1.2] tracking-tight text-ink">
-          Hôm nay <span className="text-gradient-warm">bạn cần gì?</span>
-        </h2>
-        <Link
-          href="/search"
-          className="text-label font-semibold text-primary underline-offset-4 hover:underline"
-        >
+    <section aria-labelledby="cats-title" className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex flex-col gap-2">
+          <span className="eyebrow text-ink-3">Danh mục</span>
+          <h2 id="cats-title" className="display text-h2-sm font-bold leading-tight text-ink sm:text-h2">
+            Hôm nay bạn cần gì?
+          </h2>
+        </div>
+        <Link href="/search" className="text-label font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary">
           Tất cả danh mục →
         </Link>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+      <div className="grid grid-cols-4 gap-2 sm:gap-3 lg:grid-cols-8">
         {cats.map((c) => (
           <Link
             key={c.slug}
             href={`/search?cat=${c.slug}`}
-            className="group flex flex-col items-center gap-2.5 rounded-lg border border-line bg-surface p-4 text-ink transition-colors duration-150 ease-out hover:border-primary/40"
+            style={{ backgroundColor: c.tint }}
+            className="group relative flex flex-col items-center gap-2 overflow-hidden rounded-tile px-1.5 py-3 text-center text-ink ring-1 ring-ink/5 transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lift hover:ring-primary/30 sm:min-h-[132px] sm:items-stretch sm:justify-between sm:gap-6 sm:p-4 sm:text-left"
           >
-            <span
-              style={{ backgroundColor: c.tint }}
-              className="flex size-13 items-center justify-center rounded-md transition-transform duration-150 ease-out group-hover:scale-105"
+            {/* The category's icon, drawn large and faint in the corner, then small and crisp in a paper chip. */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--ink)"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-4 -top-4 size-24 opacity-[0.07] transition-transform duration-500 ease-out group-hover:-rotate-6 group-hover:scale-110 max-sm:hidden"
             >
+              <path d={c.path} />
+            </svg>
+            <span className="flex size-11 items-center justify-center rounded-full bg-surface/85 shadow-xs transition-transform duration-300 ease-out group-hover:scale-105">
               <svg
-                width="26"
-                height="26"
+                width="21"
+                height="21"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="var(--ink)"
-                strokeWidth="1.6"
+                strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden="true"
@@ -63,8 +74,9 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 <path d={c.path} />
               </svg>
             </span>
-            <span className="text-center text-body-sm font-semibold text-ink transition-colors group-hover:text-primary">
+            <span className="relative flex items-center justify-center gap-1 text-label font-semibold leading-tight text-ink sm:justify-between sm:text-control">
               {c.name}
+              <span aria-hidden="true" className="text-ink-2 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-primary max-sm:hidden">→</span>
             </span>
           </Link>
         ))}

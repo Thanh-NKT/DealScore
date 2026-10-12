@@ -68,6 +68,7 @@ export default async function TrendingPage({ searchParams }: PageProps) {
 
   return (
     <DiscoveryShell
+      eyebrow={<><TrendUpIcon className="size-3.5 text-primary" strokeWidth={2.4} />Bảng xếp hạng</>}
       title="Xu hướng"
       lead={tab.lead}
       controls={
@@ -99,9 +100,9 @@ export default async function TrendingPage({ searchParams }: PageProps) {
         />
       ) : (
         <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
-          {listRes.value.map((item) => (
+          {listRes.value.map((item, i) => (
             <li key={item.productId} className="flex [&>a]:flex-1">
-              <ProductCard item={item} insight={insightFor(mode, item)} />
+              <ProductCard item={item} rank={i + 1} insight={insightFor(mode, item)} />
             </li>
           ))}
         </ol>

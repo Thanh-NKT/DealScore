@@ -16,12 +16,13 @@ export default function RouteError({ error, retry }: { error: Error & { digest?:
   }, [error]);
 
   return (
-    <main className="mx-auto flex w-full max-w-[1440px] flex-1 items-center justify-center px-4 py-16 sm:px-6 lg:px-14">
-      <div role="alert" className="flex w-full max-w-[560px] flex-col gap-4 rounded-lg border border-line bg-surface p-7 max-sm:p-5">
-        <span className="grid size-10 place-items-center rounded-md bg-surface-2 text-ink">
-          <AlertIcon className="size-5" />
+    <main className="flex w-full flex-1 items-center justify-center bg-ledger px-4 py-16 sm:px-6 lg:px-14">
+      <div role="alert" className="flex w-full max-w-[620px] flex-col gap-4 rounded-hero border border-line bg-surface p-8 shadow-lift max-sm:p-5">
+        <span className="eyebrow flex items-center gap-1.5 text-avoid">
+          <AlertIcon className="size-4" />
+          Lỗi tải trang
         </span>
-        <h1 className="display text-h3 font-bold text-ink">Chưa tải được trang này</h1>
+        <h1 className="display text-h3 font-semibold text-ink">Chưa tải được trang này</h1>
         <p className="text-body-sm leading-relaxed text-ink-2">
           DealScore gặp trục trặc khi lấy dữ liệu. Thường chỉ cần thử lại sau vài giây. Nếu vẫn lỗi, hãy quay về trang chủ và
           tìm lại sản phẩm.

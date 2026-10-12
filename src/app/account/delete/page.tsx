@@ -19,7 +19,7 @@ export default async function DeleteAccountPage() {
       </nav>
       <div className="space-y-6 rounded-lg border border-line bg-surface p-7 max-[760px]:p-5">
         <div>
-          <h1 className="display text-h2 font-extrabold leading-[1.15] text-ink max-[760px]:text-price-input">Xóa tài khoản</h1>
+          <h1 className="display text-h2 font-semibold leading-[1.15] text-ink max-[760px]:text-price-input">Xóa tài khoản</h1>
           <p className="mt-1.5 text-control text-ink-2">Đọc kỹ những gì sẽ xảy ra trước khi xác nhận.</p>
         </div>
 
@@ -27,7 +27,7 @@ export default async function DeleteAccountPage() {
 
         <Link
           href="/account"
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line-strong bg-surface text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-line-strong/60 bg-surface text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
         >
           Giữ tài khoản và quay lại
         </Link>

@@ -17,7 +17,7 @@ interface ConfirmPageProps {
 }
 
 const CARD = "mx-auto w-full max-w-[480px] space-y-4 rounded-lg border border-line bg-surface p-7 max-[760px]:p-5";
-const TITLE = "display text-h2 font-extrabold leading-[1.15] text-balance text-ink max-[760px]:text-price-input";
+const TITLE = "display text-h2 font-semibold leading-[1.15] text-balance text-ink max-[760px]:text-price-input";
 const BODY = "max-w-[68ch] text-body leading-[1.6] text-ink-2";
 const ICON_TILE = "inline-flex size-12 items-center justify-center rounded-md bg-surface-2 text-ink";
 

@@ -48,7 +48,7 @@ export function CheckEmail({
   return (
     <div className="space-y-5" aria-live="polite">
       <div className="flex items-start gap-3.5">
-        <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink">
+        <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink">
           <MailIcon className="size-5" />
         </span>
         <div className="min-w-0 text-control leading-relaxed text-ink-2">

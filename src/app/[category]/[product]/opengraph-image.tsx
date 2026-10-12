@@ -11,19 +11,20 @@ export const contentType = "image/png";
 
 // Colors from globals.css (light theme) — the image has no CSS variables.
 const C = {
-  canvas: "#F5F4EF",
+  canvas: "#F4F4F7",
   surface: "#FFFFFF",
-  line: "#E4E2DA",
-  ink: "#15161A",
-  ink3: "#62656D",
-  primary: "#4330E6",
+  line: "#E4E4EB",
+  ink: "#14121E",
+  ink3: "#66647C",
+  primary: "#4F35E3",
+  onPrimary: "#FFFFFF",
 };
 
 const VERDICT: Record<Recommendation, { text: string; fg: string; bg: string }> = {
-  buy: { text: "Nên mua", fg: "#0B7A48", bg: "#E3F4EA" },
-  wait: { text: "Có thể chờ", fg: "#9A5B00", bg: "#FFF3C9" },
-  avoid: { text: "Chưa nên mua", fg: "#B42318", bg: "#FDE7E4" },
-  insufficient_data: { text: "Chưa đủ dữ liệu", fg: "#62656D", bg: "#EFEEE8" },
+  buy: { text: "Nên mua", fg: "#047A4E", bg: "#E1F4EA" },
+  wait: { text: "Có thể chờ", fg: "#A05A00", bg: "#FCF0D7" },
+  avoid: { text: "Chưa nên mua", fg: "#C9271D", bg: "#FDE8E5" },
+  insufficient_data: { text: "Chưa đủ dữ liệu", fg: "#66647C", bg: "#EFEFF4" },
 };
 
 /**
@@ -79,7 +80,19 @@ export default async function Image({ params }: { params: Promise<{ category: st
           color: C.ink,
         }}
       >
-        <div style={{ display: "flex", fontSize: 32, fontWeight: 700, color: C.primary }}>DealScore</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 32, fontWeight: 700, color: C.ink }}>
+          {/* The iris logo tile (same drawing as app/icon.svg) */}
+          <div style={{ display: "flex", width: 52, height: 52, borderRadius: 15, background: C.primary }}>
+            <svg width="52" height="52" viewBox="0 0 32 32" fill="none">
+              <rect x="8.5" y="9" width="6" height="15" rx="3" fill={C.onPrimary} fillOpacity="0.42" />
+              <rect x="17.5" y="14.5" width="6" height="9.5" rx="3" fill={C.onPrimary} />
+              <path d="M17.6 9.3l2.1 2.1 3.7-4" stroke={C.onPrimary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div style={{ display: "flex" }}>
+            Deal<span style={{ color: C.primary }}>Score</span>
+          </div>
+        </div>
 
         <div
           style={{

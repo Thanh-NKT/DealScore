@@ -50,12 +50,12 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       aria-label={label}
       title={label}
-      className="flex size-11 items-center justify-center rounded-md border border-line bg-surface-2/60 text-ink transition-colors duration-150 ease-out hover:border-primary/40 hover:bg-surface-2 cursor-pointer"
+      className="flex size-10 items-center justify-center rounded-full max-[440px]:size-9 text-ink-2 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink cursor-pointer"
     >
       {isDark ? (
-        <SunIcon className="size-5 text-wait" strokeWidth={2} />
+        <SunIcon className="size-[19px]" strokeWidth={1.9} />
       ) : (
-        <MoonIcon className="size-5 text-ink-2" strokeWidth={2} />
+        <MoonIcon className="size-[19px]" strokeWidth={1.9} />
       )}
     </button>
   );

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <main className="mx-auto w-full max-w-[68ch] flex-1 px-4 py-10 sm:px-6 sm:py-14">
-      <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-balance text-ink sm:text-h1">Điều khoản sử dụng</h1>
+      <h1 className="display text-h1-sm font-semibold leading-[1.1] text-balance text-ink sm:text-h1">Điều khoản sử dụng</h1>
       <p className="mt-5 flex items-start gap-2.5 rounded-md bg-surface-2 p-4 text-control leading-relaxed text-ink-2">
         <InfoIcon className="mt-0.5 size-5 text-ink" />
         <span>

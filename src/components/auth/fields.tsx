@@ -13,7 +13,7 @@ export const NETWORK_ERROR = "Chưa kết nối được tới DealScore. Kiểm
 export const INPUT = inputClass({ size: "lg" });
 export const PRIMARY = buttonClass({ size: "lg", block: true });
 export const SECONDARY = buttonClass({ variant: "secondary", size: "md" });
-export const TEXT_LINK = "font-semibold text-primary underline underline-offset-4 hover:text-primary-hover";
+export const TEXT_LINK = "font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink";
 
 type Action = (prev: AuthFormState, form: FormData) => Promise<AuthFormState>;
 
@@ -65,7 +65,7 @@ export function Problem({ id, children }: { id?: string; children: React.ReactNo
     <div
       id={id}
       role="alert"
-      className="flex items-start gap-2.5 rounded-md border border-avoid/35 bg-avoid-soft p-3.5 text-body-sm font-semibold text-avoid"
+      className="flex items-start gap-2.5 rounded-tile bg-avoid-soft p-4 text-body-sm font-semibold text-avoid"
     >
       <AlertIcon className="mt-0.5 size-4 shrink-0" />
       <div className="min-w-0 space-y-2">{children}</div>
@@ -137,7 +137,7 @@ export function EmailField({
           suggestion && (
             <p className="text-ink-2">
               Có phải bạn định nhập{" "}
-              <button type="button" onClick={() => onChange(suggestion)} className="font-semibold text-primary underline underline-offset-4 hover:text-primary-hover">
+              <button type="button" onClick={() => onChange(suggestion)} className="font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
                 {suggestion}
               </button>
               ?
@@ -204,7 +204,7 @@ export function PasswordField({
           aria-pressed={visible}
           aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
           aria-controls={id}
-          className="absolute inset-y-0 right-0.5 my-auto inline-flex size-11 items-center justify-center rounded-md text-ink-2 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink"
+          className="absolute inset-y-0 right-0.5 my-auto inline-flex size-11 items-center justify-center rounded-full text-ink-2 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink"
         >
           {visible ? <EyeOffIcon className="size-5" /> : <EyeIcon className="size-5" />}
         </button>

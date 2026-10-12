@@ -1,7 +1,8 @@
 import { isDiscountVerified, type PricedOffer } from "@/lib/pricing/variant-pricing";
 import { formatVnd } from "@/lib/format";
 import { ClockIcon, TrendDownIcon } from "@/components/ui/icons";
-import { marketplaceName, marketplaceStyle } from "./marketplace";
+import { marketplaceName } from "./marketplace";
+import { MarketplaceChip } from "./marketplace-mark";
 
 interface PriceSummaryProps {
   /**
@@ -18,7 +19,7 @@ function validPrice(value: number | null | undefined): number | null {
   return value != null && Number.isFinite(value) && value > 0 ? value : null;
 }
 
-const LABEL = "text-label font-semibold text-ink-3";
+const LABEL = "eyebrow text-ink-3";
 
 export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
   const price = validPrice(cheapest?.price);
@@ -27,7 +28,7 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
     return (
       <div className="min-w-0 space-y-2">
         <p className={LABEL}>Giá hiện tại</p>
-        <p className="num text-price-hero font-extrabold leading-none text-ink-3 max-[760px]:text-price-sm" aria-hidden="true">
+        <p className="num text-price-hero font-bold leading-none text-ink-3 max-[760px]:text-price-sm" aria-hidden="true">
           —
         </p>
         <p className="text-body-sm text-ink-2">Chưa có dữ liệu giá cho phiên bản này.</p>
@@ -36,18 +37,15 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
   }
 
   const where = marketplaceName(cheapest.marketplace);
-  const mBadge = marketplaceStyle(cheapest.marketplace).badge;
 
   if (!cheapest.inStock) {
     return (
       <div className="min-w-0 space-y-2">
         <div className="flex items-center gap-2">
           <span className={LABEL}>Giá hiện tại</span>
-          <span className={`rounded-md px-2.5 py-0.5 text-nano font-bold ${mBadge}`}>
-            {where}
-          </span>
+          <MarketplaceChip marketplace={cheapest.marketplace} />
         </div>
-        <p className="num text-price-hero font-extrabold leading-none text-ink-3 max-[760px]:text-price-sm" aria-hidden="true">
+        <p className="num text-price-hero font-bold leading-none text-ink-3 max-[760px]:text-price-sm" aria-hidden="true">
           —
         </p>
         <p className="text-control font-semibold text-ink">Tạm hết hàng ở mọi người bán.</p>
@@ -70,17 +68,15 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
   const effectiveRaw = validPrice(cheapest.effectivePrice);
   const effective = effectiveRaw != null && effectiveRaw < price ? effectiveRaw : null;
   const text = formatVnd(price);
-  const fitDivisor = text.length * 0.58 + 0.2;
+  const fitDivisor = text.length * 0.62 + 0.2;
 
   return (
     <div className="@container min-w-0 flex-1 space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <span className={LABEL}>{offerCount > 1 ? "Giá tốt nhất hiện tại" : "Giá hiện tại"}</span>
-        <span className={`rounded-md px-2.5 py-0.5 text-nano font-bold ${mBadge}`}>
-          {where}
-        </span>
+        <MarketplaceChip marketplace={cheapest.marketplace} />
         {cheapest.sellerIsOfficial && (
-          <span className="rounded-md bg-primary-soft px-2.5 py-0.5 text-nano font-bold text-primary">
+          <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-micro font-semibold text-primary">
             Gian hàng chính hãng
           </span>
         )}
@@ -88,7 +84,7 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
 
       <div className="flex flex-wrap items-baseline gap-3">
         <p
-          className="num font-extrabold leading-none text-ink [--cap:36px] min-[761px]:[--cap:46px]"
+          className="num font-bold leading-none tracking-tight text-ink [--cap:38px] min-[761px]:[--cap:50px]"
           style={{ fontSize: `min(var(--cap), calc(100cqi / ${fitDivisor.toFixed(2)}))` }}
         >
           <span className="sr-only">Giá hiện tại: </span>
@@ -96,13 +92,13 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
         </p>
 
         {showListed && discountVerified && off != null && (
-          <span className="num inline-flex items-center gap-1 rounded-full bg-buy px-2.5 py-1 text-label font-extrabold text-canvas shadow-2xs">
+          <span className="num inline-flex items-center gap-1 rounded-full bg-buy px-2.5 py-1 text-label font-bold text-canvas shadow-2xs">
             <TrendDownIcon className="size-3.5" strokeWidth={2.6} />
             −{off}%
           </span>
         )}
         {showListed && !discountVerified && !discountDoubtful && off != null && (
-          <span className="num inline-flex items-center rounded-full border border-line-strong bg-surface px-2.5 py-1 text-label font-bold text-ink-2">
+          <span className="num inline-flex items-center rounded-full border border-line-strong/60 bg-surface px-2.5 py-1 text-label font-bold text-ink-2">
             −{off}%
           </span>
         )}
@@ -112,7 +108,7 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
           next to the real price. Point to the voucher block, which shows it framed ("~", "Ước tính"). */}
       {effective != null && (
         <p className="text-body-sm text-ink-2">
-          <a href="#ma-giam-gia" className="font-semibold text-primary underline-offset-2 hover:underline">
+          <a href="#ma-giam-gia" className="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary">
             Có mã giảm giá trên {where} · xem giá ước tính
           </a>
         </p>
@@ -126,7 +122,7 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
                 Giá niêm yết <s className="num decoration-[1.5px]">{formatVnd(listed)}</s>
               </span>
               {discountDoubtful ? (
-                <span className="rounded-sm bg-wait-soft px-2 py-0.5 text-micro font-semibold text-wait">
+                <span className="rounded-full bg-wait-soft px-2.5 py-0.5 text-micro font-semibold text-wait">
                   Giảm giá chưa thực chất
                 </span>
               ) : discountVerified && saved != null && saved > 0 ? (
@@ -139,7 +135,7 @@ export function PriceSummary({ cheapest, offerCount }: PriceSummaryProps) {
             </span>
           )}
           {cheapest.isFlashSale && (
-            <span className="inline-flex items-center gap-1.5 rounded-sm border border-wait/30 bg-wait-soft px-2 py-0.5 text-micro font-semibold text-wait">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-wait-soft px-2.5 py-0.5 text-micro font-semibold text-wait">
               <ClockIcon className="size-3.5" />
               Flash sale ngắn hạn
             </span>

@@ -47,7 +47,7 @@ export function DeleteAccountForm() {
   return (
     <div className="space-y-6">
       <section aria-labelledby={`${uid}-what`} className="space-y-3 text-control leading-relaxed text-ink">
-        <h2 id={`${uid}-what`} className="display text-h4 font-bold leading-tight">
+        <h2 id={`${uid}-what`} className="display text-h4 font-semibold leading-tight">
           Những gì sẽ bị xóa
         </h2>
         <ul className="list-disc space-y-1.5 pl-5">
@@ -56,7 +56,7 @@ export function DeleteAccountForm() {
           <li>Cài đặt thông báo và các trình duyệt đã đăng ký nhận thông báo.</li>
           <li>Email và tài khoản đăng nhập của bạn.</li>
         </ul>
-        <h2 className="display pt-2 text-h4 font-bold leading-tight">Chuyện gì xảy ra tiếp theo</h2>
+        <h2 className="display pt-2 text-h4 font-semibold leading-tight">Chuyện gì xảy ra tiếp theo</h2>
         <ul className="list-disc space-y-1.5 pl-5">
           <li>DealScore ngừng gửi mọi thông báo ngay, và bạn được đăng xuất khỏi tất cả thiết bị.</li>
           <li>

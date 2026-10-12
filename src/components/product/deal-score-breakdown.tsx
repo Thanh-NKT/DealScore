@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckIcon, DashIcon, InfoIcon } from "@/components/ui/icons";
-import { ScoreRing, VerdictTag } from "@/components/product/verdict-tag";
+import { ScoreRing, ScoreScale, VerdictTag } from "@/components/product/verdict-tag";
 import { parseReasons } from "@/lib/pricing/verdict-copy";
 import { MIN_DAYS_FOR_SCORE, MIN_OBSERVATIONS_FOR_SCORE, type Recommendation } from "@/lib/pricing/deal-score";
 
@@ -36,89 +36,75 @@ export function DealScoreBreakdown({
   );
 
   return (
-    <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6 sm:p-7">
+    <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-5 sm:p-7">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
-        <div className="space-y-1">
-          <h2 className="display text-h3 font-bold tracking-tight text-ink">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="eyebrow text-ink-3">Vì sao có điểm này</span>
+          <h2 className="display text-h3 font-semibold text-ink">
             {scoreVal != null ? "Phân tích Deal Score" : "Đang thu thập dữ liệu"}
           </h2>
-          <p className="text-label text-ink-3">
-            Chấm điểm tự động từ dữ liệu giá thực tế
-          </p>
         </div>
         <ScoreRing score={scoreVal} recommendation={recommendation} size="sm" showBadge />
       </div>
 
       {/* Reasons list */}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col">
         {shownReasons.length === 0 && (
           <p className="text-body-sm leading-relaxed text-ink-2">Chưa có lý do chi tiết cho mức giá này.</p>
         )}
         {shownReasons.map((r) => (
-          <div
-            key={r.text}
-            className="flex items-start gap-3 rounded-md border border-line/70 bg-surface-2/45 p-3"
-          >
+          <div key={r.text} className="flex items-start gap-3 border-b border-line py-3 first:pt-0 last:border-b-0 last:pb-0">
             <span
-              className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-sm ${
-                r.kind === "pro" ? "bg-buy-soft text-buy" : "bg-surface text-ink-2 border border-line"
+              className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full ${
+                r.kind === "pro" ? "bg-buy-soft text-buy" : "bg-surface-2 text-ink-2"
               }`}
             >
-              {r.kind === "pro" ? <CheckIcon className="size-3.5" strokeWidth={2.5} /> : <DashIcon className="size-3.5" strokeWidth={2.5} />}
+              {r.kind === "pro" ? <CheckIcon className="size-3.5" strokeWidth={2.6} /> : <DashIcon className="size-3.5" strokeWidth={2.6} />}
             </span>
-            <span className="text-body-sm leading-relaxed font-medium text-ink">{r.text}</span>
+            <span className="text-body-sm font-medium leading-relaxed text-ink">{r.text}</span>
           </div>
         ))}
       </div>
 
-      {/* Deal Score Scale Bar */}
-      <div className="flex flex-col gap-2.5 rounded-tile border border-line bg-surface-2/35 p-4">
+      {/* Deal Score scale */}
+      <div className="flex flex-col gap-3 rounded-tile bg-surface-2/60 p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-label font-bold text-ink-2">Thang đo khuyến nghị</span>
+          <span className="eyebrow text-ink-3">Thang khuyến nghị</span>
           <VerdictTag recommendation={recommendation} />
         </div>
 
-        <div className="relative py-1.5">
-          <div className="grid h-2.5 grid-cols-[50fr_25fr_25fr] gap-1">
-            <span className="rounded-l-full bg-avoid" title="0–49: Chưa nên mua" />
-            <span className="bg-wait" title="50–74: Có thể chờ" />
-            <span className="rounded-r-full bg-buy" title="75+: Nên mua" />
-          </div>
+        <ScoreScale score={scoreVal} />
 
-          {scoreVal != null && (
-            <span
-              aria-hidden="true"
-              style={{ left: `calc(${scoreVal}% - 5px)` }}
-              className="absolute top-0.5 h-4.5 w-2.5 rounded-full border-2 border-surface bg-night shadow-xs"
-            />
-          )}
-        </div>
-
-        <div className="grid grid-cols-[50fr_25fr_25fr] gap-1 text-micro leading-snug text-ink-3">
+        <div className="grid grid-cols-[49fr_25fr_26fr] gap-1 text-micro leading-snug text-ink-3">
           <div>
-            <strong className="num font-bold text-avoid">0–49</strong> · Chưa nên mua
+            <strong className="num font-semibold text-avoid">0–49</strong>
+            <span className="block">Chưa nên mua</span>
           </div>
           <div>
-            <strong className="num font-bold text-wait">50–74</strong> · Có thể chờ
+            <strong className="num font-semibold text-wait">50–74</strong>
+            <span className="block">Có thể chờ</span>
           </div>
           <div className="text-right">
-            <strong className="num font-bold text-buy">75–100</strong> · Nên mua
+            <strong className="num font-semibold text-buy">75–100</strong>
+            <span className="block">Nên mua</span>
           </div>
         </div>
       </div>
 
-      {/* 3 Weight Pillars */}
-      <div className="space-y-2">
-        <span className="text-micro font-bold text-ink-3">Tỷ trọng cấu thành điểm:</span>
-        <div className="grid grid-cols-2 gap-2">
+      {/* Weights */}
+      <div className="flex flex-col gap-2.5">
+        <span className="eyebrow text-ink-3">Tỷ trọng cấu thành điểm</span>
+        <div className="flex flex-col gap-2">
           {WEIGHTS.map((w) => (
-            <div
-              key={w.label}
-              className="flex flex-col items-center justify-center rounded-inner border border-line bg-surface-2/40 px-2 py-2.5 text-center"
-            >
-              <span className="num display text-body font-extrabold text-primary">{w.weight}</span>
-              <span className="mt-0.5 text-micro font-medium leading-tight text-ink-2">{w.label}</span>
+            <div key={w.label} className="flex flex-col gap-1.5">
+              <div className="flex items-baseline justify-between gap-2 text-label">
+                <span className="text-ink-2">{w.label}</span>
+                <span className="num font-semibold text-ink">{w.weight}</span>
+              </div>
+              <span aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+                <span className="block h-full rounded-full bg-primary" style={{ width: w.weight.replace(",", ".") }} />
+              </span>
             </div>
           ))}
         </div>
@@ -128,7 +114,7 @@ export function DealScoreBreakdown({
       </div>
 
       {/* Compact Footer Note */}
-      <div className="flex items-start gap-2 rounded-inner bg-surface-2/60 p-3 text-micro leading-relaxed text-ink-3">
+      <div className="flex items-start gap-2 border-t border-line pt-4 text-micro leading-relaxed text-ink-3">
         <InfoIcon className="mt-0.5 size-3.5 shrink-0 text-ink-3" />
         <span>
           Giá flash sale không được tính vào lịch sử giá; nếu giá hiện tại là giá flash sale, điểm so nó với giá thường và lý do đầu tiên sẽ nói rõ. Hoa hồng tiếp thị không làm thay đổi điểm. Cần ít nhất {MIN_DAYS_FOR_SCORE} ngày và {MIN_OBSERVATIONS_FOR_SCORE} lần ghi nhận giá để chấm.
@@ -137,7 +123,7 @@ export function DealScoreBreakdown({
 
       <Link
         href="/deal-score"
-        className="inline-flex min-h-10 items-center self-start text-label font-semibold text-primary underline-offset-4 hover:underline"
+        className="-mt-2 inline-flex min-h-10 items-center self-start text-label font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink"
       >
         Deal Score đúng tới đâu? →
       </Link>

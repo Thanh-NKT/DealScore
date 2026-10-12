@@ -32,7 +32,7 @@ export default async function NotificationSettingsPage() {
             Quay lại Tài khoản
           </Link>
         </nav>
-        <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-ink sm:text-h1">Cài đặt thông báo</h1>
+        <h1 className="display text-h1-sm font-semibold leading-[1.1] text-ink sm:text-h1">Cài đặt thông báo</h1>
         <p className="text-body leading-relaxed text-ink-2">
           Tùy chỉnh phương thức và thời điểm bạn muốn nhận thông báo giá từ DealScore.
         </p>

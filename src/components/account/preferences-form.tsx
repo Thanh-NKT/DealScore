@@ -82,7 +82,7 @@ export function PreferencesForm({ initial, brands, categories, marketplaces }: P
       className="space-y-7"
     >
       <fieldset aria-describedby={`${uid}-brands-hint`} className="space-y-3">
-        <legend className="display mb-1 text-h4 font-bold leading-tight text-ink">Hãng yêu thích</legend>
+        <legend className="display mb-1 text-h4 font-semibold leading-tight text-ink">Hãng yêu thích</legend>
         <p id={`${uid}-brands-hint`} className="text-body-sm text-ink-2">
           Chọn tối đa <span className="num">{MAX_PREFERENCE_ITEMS}</span> hãng.{" "}
           {brandCount > 0 && (
@@ -126,7 +126,7 @@ export function PreferencesForm({ initial, brands, categories, marketplaces }: P
       </fieldset>
 
       <fieldset aria-describedby={`${uid}-cats-hint`} className="space-y-3">
-        <legend className="display mb-1 text-h4 font-bold leading-tight text-ink">Danh mục hay mua</legend>
+        <legend className="display mb-1 text-h4 font-semibold leading-tight text-ink">Danh mục hay mua</legend>
         <p id={`${uid}-cats-hint`} className="text-body-sm text-ink-2">
           Khi bạn chọn đúng một danh mục, kết quả tìm kiếm sẽ tự lọc theo danh mục đó.
         </p>
@@ -146,7 +146,7 @@ export function PreferencesForm({ initial, brands, categories, marketplaces }: P
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="display mb-1 text-h4 font-bold leading-tight text-ink">Khoảng giá</legend>
+        <legend className="display mb-1 text-h4 font-semibold leading-tight text-ink">Khoảng giá</legend>
         <p className="text-body-sm text-ink-2">Để trống nếu không muốn giới hạn. Có thể gõ tắt như 500k, 2tr5.</p>
         <div className="flex flex-wrap gap-4">
           <PriceBox id={`${uid}-min`} name="minPrice" label="Từ" initial={initial.minPrice} error={errors.minPrice} />
@@ -155,7 +155,7 @@ export function PreferencesForm({ initial, brands, categories, marketplaces }: P
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="display mb-1 text-h4 font-bold leading-tight text-ink">Sàn hay mua</legend>
+        <legend className="display mb-1 text-h4 font-semibold leading-tight text-ink">Sàn hay mua</legend>
         <div className="flex flex-wrap gap-2">
           {marketplaces.map((m) => (
             <label key={m.id} className={CHIP}>

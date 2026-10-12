@@ -96,11 +96,11 @@ export function ShareFolderDialog({ folder, open, onClose }: { folder: WatchFold
       onClick={(e) => {
         if (e.target === ref.current && !pending) onClose();
       }}
-      className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-line bg-surface p-0 text-ink shadow-lift backdrop:bg-night/60 max-[760px]:mb-0 max-[760px]:w-full max-[760px]:max-w-full max-[760px]:rounded-b-none"
+      className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] overflow-y-auto rounded-hero border border-line bg-surface p-0 text-ink shadow-lift backdrop:bg-night/50 backdrop:backdrop-blur-sm max-[760px]:mb-0 max-[760px]:w-full max-[760px]:max-w-full max-[760px]:rounded-b-none"
     >
       <div className="space-y-4 p-6 max-[760px]:p-5">
         <div className="flex items-start justify-between gap-4">
-          <h2 id={`${uid}-title`} className="display text-h4 font-bold leading-tight">
+          <h2 id={`${uid}-title`} className="display text-h4 font-semibold leading-tight">
             Chia sẻ “{folder.name}”
           </h2>
           <button
@@ -108,7 +108,7 @@ export function ShareFolderDialog({ folder, open, onClose }: { folder: WatchFold
             onClick={onClose}
             disabled={pending}
             aria-label="Đóng"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-ink-2 hover:bg-surface-2"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-surface-2"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="size-5">
               <path d="M6 6l12 12M18 6 6 18" />

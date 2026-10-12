@@ -112,7 +112,7 @@ export function DataReportDialog({ productId, productName, variantId, offers }: 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex min-h-10 items-center gap-1.5 rounded-md px-2 text-label font-semibold text-ink-2 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink"
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-label font-semibold text-ink-2 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink"
       >
         <FlagIcon className="size-4" />
         Góp ý dữ liệu
@@ -128,11 +128,11 @@ export function DataReportDialog({ productId, productName, variantId, offers }: 
         onClick={(e) => {
           if (e.target === dialogRef.current) close(); // backdrop
         }}
-        className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-lg border border-line bg-surface p-0 text-ink shadow-lift backdrop:bg-night/60 max-[760px]:mb-0 max-[760px]:w-full max-[760px]:rounded-b-none"
+        className="m-auto max-h-[90dvh] w-[min(32rem,calc(100vw-2rem))] max-w-none overflow-hidden rounded-hero border border-line bg-surface p-0 text-ink shadow-lift backdrop:bg-night/50 backdrop:backdrop-blur-sm max-[760px]:mb-0 max-[760px]:w-full max-[760px]:rounded-b-none"
       >
         <div className="flex max-h-[90dvh] flex-col">
           <div className="shrink-0 border-b border-line px-6 pb-4 pt-5 max-[760px]:px-4">
-            <h2 id={`${uid}-title`} className="display text-h4 font-bold text-ink">
+            <h2 id={`${uid}-title`} className="display text-h4 font-semibold text-ink">
               Góp ý dữ liệu
             </h2>
             <p className="mt-1 line-clamp-2 text-body-sm text-ink-2 [overflow-wrap:anywhere]">

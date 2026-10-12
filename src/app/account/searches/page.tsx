@@ -31,11 +31,11 @@ export default async function SavedSearchesPage() {
             Quay lại Tài khoản
           </Link>
         </nav>
-        <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-ink sm:text-h1">Tìm kiếm đã lưu</h1>
+        <h1 className="display text-h1-sm font-semibold leading-[1.1] text-ink sm:text-h1">Tìm kiếm đã lưu</h1>
       </div>
 
       <section aria-labelledby="saved-title" className="space-y-3">
-        <h2 id="saved-title" className="display text-h3 font-bold text-ink">
+        <h2 id="saved-title" className="display text-h3 font-semibold text-ink">
           Tìm kiếm đã lưu (<span className="num">{searches.length}</span>/<span className="num">{MAX_SAVED_SEARCHES}</span>)
         </h2>
         <SavedSearchList rows={searches.map((s) => savedSearchRowView(s, categoryNames))} />
@@ -43,7 +43,7 @@ export default async function SavedSearchesPage() {
 
       {follows.length > 0 ? (
         <section aria-labelledby="follows-title" className="space-y-3">
-          <h2 id="follows-title" className="display text-h3 font-bold text-ink">
+          <h2 id="follows-title" className="display text-h3 font-semibold text-ink">
             Đang chờ có sản phẩm
           </h2>
           <DemandFollowList rows={follows.map(demandFollowRowView)} />

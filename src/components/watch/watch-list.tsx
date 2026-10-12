@@ -206,7 +206,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         {/* Header Row: Title & Paste Link Search */}
         <div className="flex flex-col gap-4 min-[900px]:flex-row min-[900px]:items-center min-[900px]:justify-between">
           <div className="flex flex-col gap-2">
-            <h1 className="display text-stat font-extrabold leading-[1.1] tracking-[-0.02em] text-ink sm:text-price-md">
+            <h1 className="display text-stat font-semibold leading-[1.1] tracking-[-0.02em] text-ink sm:text-price-md">
               Đang theo dõi
             </h1>
             <div className="flex flex-wrap items-center gap-2 text-label font-medium text-ink-2">
@@ -228,7 +228,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
 
           <form
             onSubmit={handlePasteSubmit}
-            className="flex w-full max-w-[500px] items-center gap-2.5 rounded-md border border-line-strong bg-surface p-1.5 pl-3.5 shadow-sm transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary"
+            className="flex w-full max-w-[500px] items-center gap-2.5 rounded-full border border-line-strong/50 bg-surface p-1.5 pl-4 shadow-sm transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10"
           >
             <svg
               width="18"
@@ -252,12 +252,12 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
               type="text"
               value={pasteUrl}
               onChange={(e) => setPasteUrl(e.target.value)}
-              placeholder="Dán link sản phẩm Shopee…"
+              placeholder="Dán link sản phẩm…"
               className="h-10 min-w-0 flex-1 border-none bg-transparent text-body-sm text-ink outline-none placeholder:text-ink-3"
             />
             <button
               type="submit"
-              className={buttonClass({ size: "sm", rounded: "sm", className: "shrink-0" })}
+              className={buttonClass({ size: "sm", className: "shrink-0" })}
             >
               <BellIcon className="size-4" strokeWidth={2.2} />
               <span>Theo dõi giá</span>
@@ -272,7 +272,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
               <TargetIcon className="size-4" strokeWidth={2.2} />
             </span>
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="display text-h3 font-extrabold leading-none text-ink">
+              <span className="display text-h3 font-semibold leading-none text-ink">
                 {reachedCount}
               </span>
               <span className="truncate text-label font-medium text-ink-2">
@@ -286,7 +286,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
               <TrendDownIcon className="size-4" strokeWidth={2.2} />
             </span>
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="display text-h3 font-extrabold leading-none text-ink">
+              <span className="display text-h3 font-semibold leading-none text-ink">
                 {droppedCount}
               </span>
               <span className="truncate text-label font-medium text-ink-2" title="sản phẩm giảm giá trong 7 ngày qua">
@@ -300,7 +300,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
               <CheckCircleIcon className="size-4" strokeWidth={2.2} />
             </span>
             <div className="flex min-w-0 items-baseline gap-2">
-              <span className="display text-h3 font-extrabold leading-none text-ink">
+              <span className="display text-h3 font-semibold leading-none text-ink">
                 {goodDealsCount}
               </span>
               <span className="truncate text-label font-medium text-ink-2">
@@ -357,7 +357,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
 
         {activeTab === "done" && savings.counted >= 1 && savings.total > 0 && (
           <div className="flex flex-col gap-1 rounded-md border border-line bg-surface px-4 py-3 shadow-xs">
-            <span className="num display text-stat font-extrabold leading-none text-buy">{formatVnd(savings.total)}</span>
+            <span className="num display text-stat font-bold leading-none text-buy">{formatVnd(savings.total)}</span>
             <span className="text-label font-medium text-ink-2">Bạn đã mua thấp hơn trung vị 30 ngày</span>
             <span className="text-micro text-ink-3">
               Tính trên <span className="num">{savings.counted}</span> lần mua có đủ lịch sử giá · giá DealScore ghi nhận lúc bạn
@@ -369,7 +369,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         {/* Tracked Items Table */}
         {folderFilteredItems.length === 0 ? (
           <div className="rounded-lg border border-dashed border-line-strong bg-surface p-12 text-center">
-            <p className="display text-h4 font-bold text-ink">
+            <p className="display text-h4 font-semibold text-ink">
               {currentTabInfo.empty}
             </p>
             <p className="mx-auto mt-2 max-w-[46ch] text-control text-ink-2">
@@ -488,7 +488,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                             height="28"
                             viewBox="0 0 24 24"
                             fill="none"
-                            stroke="var(--ink)"
+                            stroke="var(--primary)"
                             strokeWidth="1.5"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -592,7 +592,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                           )}
                         </svg>
                         <span
-                          className={`display absolute text-control font-extrabold leading-none ${
+                          className={`display absolute text-control font-bold leading-none ${
                             score != null ? "text-ink" : "text-ink-3"
                           }`}
                         >
@@ -647,7 +647,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                         <button
                           type="button"
                           onClick={() => setEditing(item)}
-                          className="inline-flex h-10 items-center gap-1.5 self-start whitespace-nowrap rounded-md border border-dashed border-line-strong px-3 text-label font-semibold text-ink-2 transition-colors hover:border-ink hover:bg-canvas hover:text-ink"
+                          className="inline-flex h-10 items-center gap-1.5 self-start whitespace-nowrap rounded-full border border-dashed border-line-strong px-4 text-label font-semibold text-ink-2 transition-colors hover:border-primary hover:bg-primary-soft/50 hover:text-primary"
                         >
                           <TargetIcon className="size-4 shrink-0" />
                           <span>Đặt giá mong muốn</span>
@@ -687,7 +687,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                           href={href}
                           aria-label={`Xem chi tiết giá ${name}`}
                           title="Xem chi tiết giá"
-                          className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-ink-2 transition-colors hover:bg-canvas hover:text-ink"
+                          className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-2 transition-colors hover:bg-canvas hover:text-ink"
                         >
                           <ChartIcon className="size-4" />
                         </Link>
@@ -712,7 +712,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                             "Chưa đổi được trạng thái."
                           )
                         }
-                        className={`relative inline-flex size-10 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                        className={`relative inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors ${
                           alertOn
                             ? "border-primary-soft bg-primary-soft text-primary-hover hover:bg-primary-soft/80"
                             : "border-line-strong bg-surface text-ink-3 hover:bg-canvas hover:text-ink"
@@ -735,7 +735,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                         onClick={() => setEditing(item)}
                         aria-label={`Sửa theo dõi ${name}`}
                         title="Sửa"
-                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-ink-2 transition-colors hover:bg-canvas hover:text-ink"
+                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-2 transition-colors hover:bg-canvas hover:text-ink"
                       >
                         <PencilIcon className="size-4" />
                       </button>
@@ -744,7 +744,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                         onClick={() => setConfirmDelete(item.id)}
                         aria-label={`Xóa theo dõi ${name}`}
                         title="Xóa"
-                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-ink-2 transition-colors hover:border-avoid hover:bg-avoid-soft hover:text-avoid"
+                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink-2 transition-colors hover:border-avoid hover:bg-avoid-soft hover:text-avoid"
                       >
                         <TrashIcon className="size-4" />
                       </button>
@@ -761,7 +761,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
         {confirmDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-night/60 p-4">
             <div className="w-full max-w-md rounded-lg bg-surface p-6 shadow-lift">
-              <h3 className="display text-h4 font-bold text-ink">
+              <h3 className="display text-h4 font-semibold text-ink">
                 {(() => {
                   const target = items.find((i) => i.id === confirmDelete)?.product.name?.trim();
                   return target ? `Xóa theo dõi “${target}”?` : "Xóa theo dõi sản phẩm này?";
@@ -774,7 +774,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(null)}
-                  className="h-10 rounded-md border border-line-strong px-4 text-body-sm font-semibold text-ink"
+                  className="h-10 rounded-full border border-line-strong/60 px-5 text-body-sm font-semibold text-ink"
                 >
                   Giữ lại
                 </button>
@@ -787,7 +787,7 @@ export function WatchList({ initialItems, folders, settings }: WatchListProps) {
                       "Chưa xóa được theo dõi."
                     )
                   }
-                  className="h-10 rounded-md bg-avoid px-4 text-body-sm font-semibold text-canvas"
+                  className="h-10 rounded-full bg-avoid px-5 text-body-sm font-semibold text-canvas"
                 >
                   Xóa theo dõi
                 </button>

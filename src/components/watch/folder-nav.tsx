@@ -150,7 +150,7 @@ export function FolderNav({ folders, counts, selected, onSelect }: FolderNavProp
                   type="button"
                   disabled={pending}
                   onClick={() => run(() => deleteFolder(f.id), () => selected === f.id && onSelect(ALL))}
-                  className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-avoid bg-surface px-3 text-label font-semibold text-avoid transition-colors hover:bg-avoid-soft disabled:border-line disabled:text-ink-3"
+                  className="inline-flex h-10 flex-1 items-center justify-center rounded-full border border-avoid/70 bg-surface px-3 text-label font-semibold text-avoid transition-colors hover:bg-avoid-soft disabled:border-line disabled:text-ink-3"
                 >
                   {pending ? "Đang xóa…" : "Xóa thư mục"}
                 </button>
@@ -279,7 +279,7 @@ function FolderRow({
             aria-haspopup="menu"
             aria-expanded={menu.open}
             onClick={() => menu.setOpen(!menu.open)}
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-ink-3 transition-colors hover:bg-canvas hover:text-ink"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-canvas hover:text-ink"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <circle cx="5" cy="12" r="1.75" />

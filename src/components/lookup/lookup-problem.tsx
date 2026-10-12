@@ -41,7 +41,7 @@ export function LookupProblem({ problem, input, onRetry }: LookupProblemProps) {
             {offerSearch && (
               <Link
                 href={searchText ? `/search?q=${encodeURIComponent(searchText)}` : "/search"}
-                className="inline-flex min-h-10 max-w-full items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out [overflow-wrap:anywhere] hover:bg-surface-2"
+                className="inline-flex min-h-10 max-w-full items-center rounded-full border border-line-strong/60 bg-surface px-5 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out [overflow-wrap:anywhere] hover:bg-surface-2"
               >
                 {searchText ? `Tìm “${searchText.length > 40 ? `${searchText.slice(0, 40)}…` : searchText}”` : "Tìm theo tên sản phẩm"}
               </Link>

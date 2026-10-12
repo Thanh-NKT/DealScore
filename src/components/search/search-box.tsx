@@ -25,7 +25,7 @@ interface SearchBoxProps {
 /** Longer than this is a pasted paragraph, not a query; the server trims and sanitises anyway. */
 const MAX_QUERY = 200;
 
-export const SEARCH_PLACEHOLDER = "Tìm sản phẩm, hãng, hoặc dán link Shopee — vd: SSD 2TB dưới 3 triệu";
+export const SEARCH_PLACEHOLDER = "Tên sản phẩm, hãng hoặc link — vd: SSD 2TB dưới 3 triệu";
 export const SEARCH_PLACEHOLDER_SHORT = "Tìm sản phẩm hoặc dán link";
 
 /**
@@ -107,15 +107,15 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
         method="get"
         role="search"
         onSubmit={onSubmit}
-        className={`flex items-center gap-2.5 rounded-frame border-2 bg-surface p-1.5 pl-4 transition-colors duration-150 ease-out focus-within:border-primary motion-reduce:transition-none max-sm:pl-3.5 ${
-          secondary ? "border-line" : "border-line-strong"
+        className={`flex items-center gap-2.5 rounded-full border bg-surface p-1.5 pl-5 transition-[border-color,box-shadow] duration-150 ease-out focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 motion-reduce:transition-none max-sm:pl-4 ${
+          secondary ? "border-line" : "border-line-strong/40 shadow-lift"
         }`}
       >
         {compare?.a && <input type="hidden" name="a" value={compare.a} />}
         {compare?.b && <input type="hidden" name="b" value={compare.b} />}
-        <SearchIcon className="size-5 shrink-0 text-ink-2 max-[380px]:hidden" />
+        <SearchIcon className="size-5 shrink-0 text-primary max-[380px]:hidden" strokeWidth={2.2} />
         <label htmlFor={`${uid}-q`} className="sr-only">
-          {compare ? "Tìm sản phẩm để so sánh" : "Tìm sản phẩm hoặc dán link Shopee"}
+          {compare ? "Tìm sản phẩm để so sánh" : "Tìm sản phẩm hoặc dán link sản phẩm"}
         </label>
         <input
           ref={inputRef}
@@ -146,8 +146,8 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
         />
 
         {canLookup && !lookup.loading && !compare && (
-          <span className="hidden shrink-0 items-center rounded-sm bg-primary-soft px-2.5 py-1 text-micro font-semibold text-primary sm:inline-flex">
-            Link Shopee
+          <span className="hidden shrink-0 items-center rounded-full bg-accent px-2.5 py-1 text-micro font-semibold text-on-accent sm:inline-flex">
+            Đã nhận link
           </span>
         )}
 
@@ -160,7 +160,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
               lookup.clearProblem();
               inputRef.current?.focus();
             }}
-            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-sm text-ink-3 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink motion-reduce:transition-none"
+            className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-3 transition-colors duration-150 ease-out hover:bg-surface-2 hover:text-ink motion-reduce:transition-none"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true" className="size-4">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -172,7 +172,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           <button
             type="button"
             onClick={lookup.cancel}
-            className={buttonClass({ variant: "secondary", size: "md", rounded: "inner", className: "shrink-0" })}
+            className={buttonClass({ variant: "secondary", size: "md", className: "shrink-0" })}
           >
             Hủy
           </button>
@@ -180,7 +180,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           <button
             type="submit"
             disabled={lookup.navigating}
-            className={buttonClass({ variant: secondary ? "secondary" : "primary", size: "md", rounded: "inner", className: "shrink-0 max-sm:px-4" })}
+            className={buttonClass({ variant: secondary ? "secondary" : "primary", size: "md", className: "shrink-0 max-sm:px-4" })}
           >
             {lookup.navigating ? "Đang mở…" : canLookup && !compare ? "Phân tích link" : "Tìm kiếm"}
           </button>

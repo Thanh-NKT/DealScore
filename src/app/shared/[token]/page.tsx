@@ -54,7 +54,7 @@ export default async function SharedFolderPage({ params }: Props) {
     <main className="flex-1">
       <div className="mx-auto w-full max-w-[1440px] space-y-6 px-4 py-8 sm:px-6 lg:px-14">
         <header className="space-y-2">
-          <h1 className="display text-h2 font-extrabold leading-tight text-ink text-balance">{view.title}</h1>
+          <h1 className="display text-h2 font-semibold leading-tight text-ink text-balance">{view.title}</h1>
           <p className="text-body-sm text-ink-2">{sub.join(" · ")}</p>
         </header>
         {view.items.length > 0 ? (

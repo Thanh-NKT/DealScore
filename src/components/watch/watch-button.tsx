@@ -22,9 +22,9 @@ interface WatchButtonProps {
 }
 
 const BTN =
-  "inline-flex h-13 w-full items-center justify-center gap-2 whitespace-nowrap rounded-md border px-5 text-control font-bold transition-colors duration-150 ease-out cursor-pointer";
-const IDLE = "border-wait/35 bg-wait-soft/80 text-wait hover:bg-wait-soft";
-const WATCHING = "border-accent bg-accent text-on-accent hover:opacity-92";
+  "inline-flex h-13 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border px-5 text-control font-semibold transition-colors duration-150 ease-out cursor-pointer";
+const IDLE = "border-line-strong/50 bg-surface text-ink hover:border-primary hover:text-primary";
+const WATCHING = "border-primary/25 bg-accent text-on-accent hover:border-primary/50";
 const PAUSED = "border-line-strong bg-surface-2 text-ink-2 hover:bg-surface";
 
 /**

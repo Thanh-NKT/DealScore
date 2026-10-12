@@ -34,7 +34,7 @@ export default async function PreferencesPage() {
             Quay lại Tài khoản
           </Link>
         </nav>
-        <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-ink sm:text-h1">Sở thích mua sắm</h1>
+        <h1 className="display text-h1-sm font-semibold leading-[1.1] text-ink sm:text-h1">Sở thích mua sắm</h1>
         <p className="text-body leading-relaxed text-ink-2">
           Hãng, danh mục, khoảng giá và sàn bạn hay mua. Khi tìm kiếm, bật “Theo sở thích của tôi” để DealScore lọc theo các lựa chọn này. Những gì bạn gõ hoặc chọn trên trang tìm kiếm luôn được ưu tiên.
         </p>

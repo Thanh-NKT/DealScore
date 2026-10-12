@@ -10,12 +10,15 @@ import { segmentClass, segmentTrack } from "@/components/ui/segmented";
  * sentence on how the list is built), then filters, then the list. Server Component, works without JS.
  */
 export function DiscoveryShell({
+  eyebrow,
   title,
   lead,
   controls,
   children,
   footnote,
 }: {
+  /** Small mono label above the title, e.g. "Radar giảm giá". */
+  eyebrow?: ReactNode;
   title: string;
   lead: ReactNode;
   controls?: ReactNode;
@@ -23,23 +26,34 @@ export function DiscoveryShell({
   footnote?: ReactNode;
 }) {
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-8 sm:px-6 sm:py-12 lg:px-14">
-      <header className="max-w-[68ch] space-y-3">
-        <h1 className="display text-h1-sm font-extrabold leading-[1.1] text-ink text-balance sm:text-h1">{title}</h1>
-        <p className="text-body leading-relaxed text-ink-2 text-pretty">{lead}</p>
+    <main className="w-full flex-1">
+      <header className="relative overflow-hidden border-b border-line">
+        <div
+          aria-hidden="true"
+          className="bg-ledger pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_70%_90%_at_20%_0%,black,transparent_80%)]"
+        />
+        <div className="relative mx-auto max-w-[1440px] px-4 py-10 sm:px-6 sm:py-14 lg:px-14">
+          <div className="flex max-w-[68ch] flex-col gap-3">
+            {eyebrow && <span className="eyebrow flex items-center gap-1.5 text-ink-3">{eyebrow}</span>}
+            <h1 className="display text-h1-sm font-semibold leading-[1.06] text-ink text-balance sm:text-h1">{title}</h1>
+            <p className="text-body leading-relaxed text-ink-2 text-pretty sm:text-title sm:leading-relaxed">{lead}</p>
+          </div>
+          {controls && <div className="mt-7 space-y-3">{controls}</div>}
+        </div>
       </header>
-      {controls && <div className="mt-7 space-y-3">{controls}</div>}
-      <div className="mt-7 space-y-6">{children}</div>
-      {footnote && (
-        <p className="mt-12 max-w-[75ch] border-t border-line pt-5 text-label leading-[1.45] text-ink-3">{footnote}</p>
-      )}
+      <div className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-14">
+        <div className="space-y-6">{children}</div>
+        {footnote && (
+          <p className="mt-12 max-w-[75ch] border-t border-dashed border-line-strong/50 pt-5 text-label leading-[1.5] text-ink-3">{footnote}</p>
+        )}
+      </div>
     </main>
   );
 }
 
 /**
  * Category filter as a strip of pill links. The current one is marked with aria-current and, on a
- * light page, uses the applied-filter chip (primary); inside a night panel it is the lime pill.
+ * light page, uses the applied-filter chip (primary); inside a night panel it is the paper pill.
  * Phones scroll the strip sideways; wider screens wrap it.
  */
 export function CategoryStrip({
@@ -113,7 +127,7 @@ function Chevron({ dir, ...p }: SVGProps<SVGSVGElement> & { dir: "left" | "right
 }
 
 const PAGE_LINK =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line-strong/50 bg-surface px-5 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary hover:text-primary";
 
 export function Pager({ page, totalPages, hrefFor }: { page: number; totalPages: number; hrefFor: (p: number) => string }) {
   if (totalPages <= 1) return null;
@@ -156,13 +170,13 @@ export function DiscoveryEmpty({
   const night = tone === "night";
   return (
     <div
-      className={`flex items-start gap-3.5 rounded-lg border border-dashed p-5 sm:p-6 ${
+      className={`flex items-start gap-3.5 rounded-lg border border-dashed p-5 sm:p-7 ${
         night ? "border-night-line text-night-ink" : "border-line-strong bg-surface text-ink"
       }`}
     >
       <InfoIcon className={`mt-0.5 size-6 shrink-0 ${night ? "text-night-ink-2" : "text-ink-2"}`} />
       <div className="min-w-0">
-        <h2 className="display text-title font-bold leading-[1.3] sm:text-h3">{title}</h2>
+        <h2 className="display text-title font-semibold leading-[1.3] sm:text-h3">{title}</h2>
         <p className={`mt-1.5 max-w-[68ch] text-body leading-relaxed ${night ? "text-night-ink-2" : "text-ink-2"}`}>{body}</p>
         {action && (
           <Link

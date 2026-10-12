@@ -125,14 +125,14 @@ export function InteractivePriceChart({
   const dataDays = history.dayCount;
 
   return (
-    <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-6 sm:p-7">
+    <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-5 sm:p-7">
       {/* Header with Variant & Range Toggles */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2.5">
-            <h2 className="display text-h3 font-bold tracking-tight text-ink">Lịch sử giá</h2>
+            <h2 className="display text-h3 font-semibold text-ink">Lịch sử giá</h2>
             {variantTitle && (
-              <span className="rounded-sm border border-line bg-surface-2 px-2.5 py-0.5 text-micro font-semibold text-ink-2">
+              <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-micro font-semibold text-ink-2">
                 {variantTitle}
               </span>
             )}
@@ -158,19 +158,19 @@ export function InteractivePriceChart({
 
       {/* 4 Stats Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="flex flex-col gap-0.5 rounded-md bg-buy-soft p-3 sm:px-3.5">
+        <div className="flex flex-col gap-1 rounded-tile bg-buy-soft p-3 sm:px-4">
           <span className="text-micro font-semibold text-buy">Thấp nhất</span>
           <span className="num display text-title font-bold text-buy">{formatVnd(lo)}</span>
         </div>
-        <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
+        <div className="flex flex-col gap-1 rounded-tile bg-surface-2/70 p-3 sm:px-4">
           <span className="text-micro font-semibold text-ink-3">Giá trung vị</span>
           <span className="num display text-title font-bold text-ink">{formatVnd(med)}</span>
         </div>
-        <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
+        <div className="flex flex-col gap-1 rounded-tile bg-surface-2/70 p-3 sm:px-4">
           <span className="text-micro font-semibold text-ink-3">Cao nhất</span>
           <span className="num display text-title font-bold text-ink">{formatVnd(hi)}</span>
         </div>
-        <div className="flex flex-col gap-0.5 rounded-md bg-surface-2 p-3 sm:px-3.5">
+        <div className="flex flex-col gap-1 rounded-tile bg-surface-2/70 p-3 sm:px-4">
           <span className="text-micro font-semibold text-ink-3">So với giá trung vị</span>
           <span className={`num display text-title font-bold ${diffMedPct <= 0 ? "text-buy" : "text-avoid"}`}>
             {diffMedPct <= 0 ? "−" : "+"}
@@ -182,17 +182,17 @@ export function InteractivePriceChart({
       {/* Active Point Inspector Card (announced to screen readers as it changes) */}
       <div
         aria-live="polite"
-        className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-surface-2 px-4 py-2.5 text-label text-ink"
+        className="flex flex-wrap items-center justify-between gap-2.5 rounded-tile border border-line px-4 py-2.5 text-label text-ink"
       >
         <span className="flex items-center gap-1.5 font-medium">
-          <span className="size-2 rounded-full bg-primary" />
+          <span className="size-2.5 rounded-full bg-surface ring-[2.5px] ring-primary" />
           <span>
             Ngày: <strong className="font-semibold text-ink">{hoverDateLabel}</strong>
           </span>
         </span>
         <span>
           Giá ghi nhận:{" "}
-          <strong className="num text-body font-bold text-primary">{formatVnd(activeItem?.price ?? (current ?? null))}</strong>
+          <strong className="num text-body font-bold text-ink">{formatVnd(activeItem?.price ?? (current ?? null))}</strong>
         </span>
         <span className="text-ink-3">{activeItem?.current ? "Giá hiện tại" : "Thấp nhất trong ngày"}</span>
       </div>
@@ -233,7 +233,7 @@ export function InteractivePriceChart({
         >
           <defs>
             <linearGradient id={`${uid}-area`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.16" />
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.2" />
               <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.0" />
             </linearGradient>
           </defs>
@@ -316,9 +316,9 @@ export function InteractivePriceChart({
               cx={getX(last.x)}
               cy={getY(last.price)}
               r="7"
-              fill="var(--primary)"
-              stroke="var(--surface)"
-              strokeWidth="3"
+              fill="var(--surface)"
+              stroke="var(--primary)"
+              strokeWidth="2.5"
               vectorEffect="non-scaling-stroke"
             />
           )}
@@ -331,18 +331,18 @@ export function InteractivePriceChart({
                 x2={hoverX}
                 y1="0"
                 y2={H}
-                stroke="var(--primary)"
-                strokeWidth="1.5"
-                strokeDasharray="4 4"
+                stroke="var(--ink-3)"
+                strokeWidth="1"
+                strokeDasharray="3 4"
                 vectorEffect="non-scaling-stroke"
               />
               <circle
                 cx={hoverX}
                 cy={hoverY}
                 r="7"
-                fill="var(--primary)"
-                stroke="var(--surface)"
-                strokeWidth="3"
+                fill="var(--surface)"
+                stroke="var(--primary)"
+                strokeWidth="2.5"
                 vectorEffect="non-scaling-stroke"
               />
             </>
@@ -386,7 +386,7 @@ export function InteractivePriceChart({
           <span>Giá thấp nhất</span>
         </span>
         <span className="flex items-center gap-2">
-          <span className="size-2.5 rounded-full bg-primary" />
+          <span className="size-2.5 rounded-full bg-surface ring-[2.5px] ring-primary" />
           <span>Ngày đang xem</span>
         </span>
         {series.flashMarkers.length > 0 && (

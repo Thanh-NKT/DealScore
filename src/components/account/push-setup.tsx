@@ -58,7 +58,7 @@ async function detect(): Promise<{ state: State; sub: PushSubscription | null }>
 }
 
 const BTN_SECONDARY =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line-strong bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas disabled:cursor-progress disabled:text-ink-3";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line-strong/60 bg-surface px-5 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-canvas disabled:cursor-progress disabled:text-ink-3";
 
 /**
  * Turns browser notifications on for THIS device: asks permission, registers /sw.js, subscribes with
@@ -141,7 +141,7 @@ export function PushSetup({ onEnabled }: PushSetupProps) {
     }
   };
 
-  const box = "mt-3 space-y-2.5 rounded-md bg-surface-2 p-3.5 text-body-sm text-ink-2";
+  const box = "mt-3 space-y-2.5 rounded-tile bg-surface-2 p-4 text-body-sm text-ink-2";
 
   switch (state) {
     case "checking":

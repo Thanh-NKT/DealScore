@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ImageMissingIcon } from "@/components/ui/icons";
 
 interface ProductImageProps {
@@ -23,6 +23,14 @@ export function ProductImage({
   imgClassName = "",
 }: ProductImageProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  // A server-rendered image can fail before hydration, when React is not listening for onError yet:
+  // catch that case when the element is attached, or the browser's broken-image frame stays on screen.
+  const checkLoaded = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (img && img.complete && img.naturalWidth === 0 && img.currentSrc) setFailedSrc(img.getAttribute("src"));
+    },
+    [],
+  );
   const url = src?.trim() || null;
   const showImage = url != null && failedSrc !== url;
   const hasExplicitSize = /\b(size-|h-|aspect-)/.test(className);
@@ -36,6 +44,7 @@ export function ProductImage({
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={checkLoaded}
           src={url}
           alt=""
           loading="lazy"

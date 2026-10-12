@@ -31,7 +31,7 @@ export function RadarList({
   categoryNames: Record<string, string>;
 }) {
   return (
-    <ul className="flex flex-col gap-2.5">
+    <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-tile border border-line bg-surface">
       {items.map((item) => {
         const name = item.canonicalName?.trim() || "Sản phẩm chưa có tên";
         const price = validPrice(item.bestPrice);
@@ -43,14 +43,14 @@ export function RadarList({
             <Link
               href={`/${item.categorySlug}/${item.slug}?variant=${item.variantId}`}
               title={name}
-              className="group grid grid-cols-[48px_minmax(0,1fr)] items-center gap-x-4 gap-y-3 rounded-tile border border-line/80 bg-surface-2/40 px-3.5 py-3 text-ink transition-all duration-150 ease-out hover:border-primary/35 hover:bg-surface-2/75 md:grid-cols-[48px_minmax(0,1fr)_140px_130px_60px]"
+              className="group grid grid-cols-[56px_minmax(0,1fr)] items-center gap-x-4 gap-y-3 px-4 py-3.5 text-ink transition-colors duration-150 ease-out hover:bg-surface-2/50 md:grid-cols-[56px_minmax(0,1fr)_150px_140px_64px]"
             >
-              <div className="size-12 overflow-hidden rounded-inner border border-line/60 bg-surface">
-                <ProductImage src={item.image} className="p-1" iconClassName="size-5" />
+              <div className="size-14 overflow-hidden rounded-inner bg-surface-2/70">
+                <ProductImage src={item.image} className="p-1.5" imgClassName="mix-blend-multiply dark:mix-blend-normal" iconClassName="size-5 text-ink-3/50" />
               </div>
 
               <div className="min-w-0">
-                <p className="line-clamp-1 text-control font-bold leading-[1.35] text-ink transition-colors group-hover:text-primary">{name}</p>
+                <p className="line-clamp-1 text-control font-semibold leading-[1.35] text-ink group-hover:underline group-hover:underline-offset-2">{name}</p>
                 {meta && <p className="truncate text-micro leading-[1.45] text-ink-3">{meta}</p>}
               </div>
 
@@ -58,7 +58,7 @@ export function RadarList({
               <div className="col-start-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 md:contents">
                 <div className="flex flex-col items-start gap-1">
                   {pct > 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-md border border-buy/20 bg-buy-soft px-2 py-0.5 text-micro font-bold text-buy">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-buy py-0.5 pl-1.5 pr-2 text-micro font-bold text-canvas">
                       <ArrowDown className="size-3.5" />
                       <span className="sr-only">Thấp hơn </span>
                       <span className="num">{pct}%</span>
@@ -69,7 +69,7 @@ export function RadarList({
 
                 <div className="flex flex-col items-end gap-0.5 text-right">
                   {price != null ? (
-                    <span className="num whitespace-nowrap text-num-sm font-extrabold leading-tight text-ink">{formatVnd(price)}</span>
+                    <span className="num whitespace-nowrap text-num-sm font-bold leading-tight text-ink">{formatVnd(price)}</span>
                   ) : (
                     <span className="text-body-sm font-semibold text-ink-3">Chưa có giá</span>
                   )}

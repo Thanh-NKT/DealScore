@@ -49,7 +49,7 @@ function NoVoucherData({ platform, goHref }: { platform: string; goHref?: string
       <div className="flex items-start gap-3">
         <TicketIcon className="mt-1 size-5.5 shrink-0 text-ink-3" />
         <div className="space-y-1">
-          <h2 id="voucher-title" className="display text-h3 font-bold tracking-tight text-ink">
+          <h2 id="voucher-title" className="display text-h3 font-semibold text-ink">
             Mã giảm giá
           </h2>
           <p className="max-w-[68ch] text-body-sm leading-relaxed text-ink-2">
@@ -64,7 +64,7 @@ function NoVoucherData({ platform, goHref }: { platform: string; goHref?: string
             href={goHref}
             rel="sponsored nofollow noopener"
             target="_blank"
-            className={`flex h-11 items-center gap-2 rounded-md px-4 text-body-sm font-semibold transition-colors ${marketplaceStyle(platform).secondaryBtn}`}
+            className={`flex h-11 items-center gap-2 rounded-full px-4 text-body-sm font-semibold transition-colors ${marketplaceStyle(platform).secondaryBtn}`}
           >
             Xem mã trên {platform}
             <ExternalIcon className="size-4" />
@@ -121,7 +121,7 @@ function RefreshVouchersButton({ offerId }: { offerId: string }) {
         onClick={refresh}
         disabled={working}
         aria-busy={working}
-        className="flex h-11 items-center gap-2 rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors hover:bg-surface-2 cursor-pointer disabled:cursor-wait disabled:opacity-70"
+        className="flex h-11 items-center gap-2 rounded-full border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors hover:bg-surface-2 cursor-pointer disabled:cursor-wait disabled:opacity-70"
       >
         <RefreshIcon className={`size-4 ${working ? "animate-spin motion-reduce:animate-none" : ""}`} />
         {working ? "Đang làm mới…" : "Làm mới"}
@@ -229,8 +229,8 @@ function VoucherGroups({
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2.5">
-                  <TicketIcon className="size-5.5 text-primary" />
-                  <h2 id="voucher-title" className="display text-h3 font-bold tracking-tight text-ink">
+                  <TicketIcon className="size-5.5 text-ink" />
+                  <h2 id="voucher-title" className="display text-h3 font-semibold text-ink">
                     Mã giảm giá đang có
                   </h2>
                 </div>
@@ -252,7 +252,7 @@ function VoucherGroups({
                 <button
                   type="button"
                   onClick={pickBestCombo}
-                  className="h-11 rounded-md border border-line-strong bg-surface px-4 text-body-sm font-bold text-ink transition-colors hover:bg-surface-2 cursor-pointer"
+                  className="h-11 rounded-full border border-line-strong bg-surface px-4 text-body-sm font-bold text-ink transition-colors hover:bg-surface-2 cursor-pointer"
                 >
                   Chọn tổ hợp tốt nhất
                 </button>
@@ -279,7 +279,7 @@ function VoucherGroups({
                           onClick={() => toggleSelect(g.id, v.id, v.minSpend)}
                           aria-pressed={isChosen}
                           disabled={isDisabled}
-                          className={`relative grid grid-cols-[104px_1fr] min-h-[112px] rounded-md text-left overflow-hidden transition-colors border-2 cursor-pointer ${
+                          className={`relative grid grid-cols-[104px_1fr] min-h-[112px] rounded-tile text-left overflow-hidden transition-colors border-2 cursor-pointer ${
                             isChosen
                               ? "border-primary bg-primary-soft/10"
                               : isDisabled
@@ -292,7 +292,7 @@ function VoucherGroups({
                             style={{ backgroundColor: g.stubBg, color: g.stubFg }}
                             className="flex flex-col items-center justify-center gap-0.5 p-2.5 text-center border-r-2 border-dashed border-line-strong"
                           >
-                            <span className="num display text-price-input font-extrabold leading-none tracking-tight">
+                            <span className="num display text-price-input font-semibold leading-none tracking-tight">
                               {v.big}
                             </span>
                             <span className="text-micro font-bold leading-tight">{v.small}</span>
@@ -340,11 +340,11 @@ function VoucherGroups({
                 <span className="text-label font-semibold text-ink-2">
                   Giá ước tính với mã đã chọn
                 </span>
-                <span className="rounded-sm border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2">
+                <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-micro font-semibold text-ink-2">
                   Ước tính
                 </span>
               </div>
-              <span className="num display text-stat font-extrabold leading-none tracking-tight text-ink">
+              <span className="num display text-stat font-bold leading-none tracking-tight text-ink">
                 ~{formatVnd(estimatedTotal)}
               </span>
               {totalDiscount > 0 ? (
@@ -395,7 +395,7 @@ function VoucherGroups({
                       key={l.id}
                       type="button"
                       onClick={() => copyCode(l.code)}
-                      className="flex h-10 items-center gap-2 rounded-md border border-dashed border-line-strong bg-surface px-3 text-label font-semibold text-ink transition-colors hover:bg-surface-2 cursor-pointer"
+                      className="flex h-10 items-center gap-2 rounded-full border border-dashed border-line-strong bg-surface px-3 text-label font-semibold text-ink transition-colors hover:bg-surface-2 cursor-pointer"
                     >
                       <span>{l.code}</span>
                       <span className="text-micro font-bold text-primary">
@@ -413,7 +413,7 @@ function VoucherGroups({
                 href={goHref}
                 target="_blank"
                 rel="sponsored nofollow noopener"
-                className="flex h-10 w-fit items-center gap-2 rounded-md border border-dashed border-line-strong bg-surface px-3 text-label font-semibold text-ink transition-colors hover:bg-surface-2"
+                className="flex h-10 w-fit items-center gap-2 rounded-full border border-dashed border-line-strong bg-surface px-3 text-label font-semibold text-ink transition-colors hover:bg-surface-2"
               >
                 Lưu mã trên {platform}
                 <ExternalIcon className="size-4 text-primary" />
@@ -426,7 +426,7 @@ function VoucherGroups({
                 href={goHref}
                 target="_blank"
                 rel="sponsored nofollow noopener"
-                className={`flex h-13 items-center justify-center gap-2.5 rounded-md px-6 text-body font-bold transition-colors ${marketplaceStyle(platform).primaryBtn}`}
+                className={`flex h-13 items-center justify-center gap-2.5 rounded-full px-6 text-body font-bold transition-colors ${marketplaceStyle(platform).primaryBtn}`}
               >
                 <span>Mở {platform} và áp mã</span>
                 <ExternalIcon className="size-4.5" />

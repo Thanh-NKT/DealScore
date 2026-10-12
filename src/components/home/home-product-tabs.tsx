@@ -81,27 +81,21 @@ export function HomeProductTabs({
   return (
     <section
       aria-labelledby="showcase-title"
-      className="space-y-6 rounded-hero border border-line bg-surface/60 p-5 sm:p-7"
+      className="flex flex-col gap-6"
     >
       {/* Header + Segmented Tab Bar */}
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-micro font-bold text-primary">
-              <CheckCircleIcon className="size-3.5" strokeWidth={2.4} />
-              Chọn lọc tự động
-            </span>
-            <Link
-              href={currentMeta.seeAllHref}
-              className="text-label font-semibold text-primary underline-offset-4 hover:underline"
-            >
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <span className="eyebrow text-ink-3">Chọn lọc tự động · theo dữ liệu giá</span>
+          <h2 id="showcase-title" className="display text-h2-sm font-bold leading-tight text-ink sm:text-h2">
+            Khám phá giá tốt hôm nay
+          </h2>
+          <p className="text-body-sm leading-normal text-ink-2">
+            {currentMeta.subtitle} ·{" "}
+            <Link href={currentMeta.seeAllHref} className="font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary">
               {currentMeta.seeAllLabel} →
             </Link>
-          </div>
-          <h2 id="showcase-title" className="display text-h2 font-bold leading-[1.2] tracking-tight text-ink sm:text-stat">
-            Khám phá <span className="text-gradient-primary">giá tốt hôm nay</span>
-          </h2>
-          <p className="text-body-sm leading-normal text-ink-2">{currentMeta.subtitle}</p>
+          </p>
         </div>
 
         <div
@@ -131,7 +125,7 @@ export function HomeProductTabs({
                 }}
                 className={segmentClass(isActive)}
               >
-                <Icon className={`size-3.5 ${isActive ? "text-on-primary" : "text-ink-3"}`} />
+                <Icon className={`size-3.5 ${isActive ? "text-primary" : "text-ink-3"}`} />
                 {tab.label}
               </button>
             );
@@ -147,14 +141,6 @@ export function HomeProductTabs({
               key={product.productId}
               item={product}
               categoryName={categoryNames[product.categorySlug]}
-              insight={
-                product.score != null && product.score >= 75
-                  ? {
-                      icon: <CheckCircleIcon className="text-buy" />,
-                      text: `Deal Score ${Math.round(product.score)}/100 · Giá đang ở vùng tốt`,
-                    }
-                  : undefined
-              }
             />
           ))}
         </div>
@@ -184,9 +170,9 @@ export function HomeProductTabs({
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line bg-surface py-12 text-center">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong/50 bg-surface py-12 text-center">
             <p className="text-control font-semibold text-ink">Chưa có sản phẩm giảm sâu hôm nay</p>
-            <Link href="/radar" className="text-label font-semibold text-primary hover:underline">
+            <Link href="/radar" className="text-label font-semibold text-primary underline underline-offset-4">
               Xem tất cả giảm giá thật →
             </Link>
           </div>
@@ -204,7 +190,7 @@ export function HomeProductTabs({
                 insight={
                   product.watchCount > 0
                     ? {
-                        icon: <BellIcon className="text-primary" />,
+                        icon: <BellIcon className="text-ink-2" />,
                         text: `${product.watchCount} người đang theo dõi giá`,
                       }
                     : undefined
@@ -213,9 +199,9 @@ export function HomeProductTabs({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line bg-surface py-12 text-center">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-line-strong/50 bg-surface py-12 text-center">
             <p className="text-control font-semibold text-ink">Chưa có dữ liệu theo dõi nổi bật trong tuần</p>
-            <Link href="/trending" className="text-label font-semibold text-primary hover:underline">
+            <Link href="/trending" className="text-label font-semibold text-primary underline underline-offset-4">
               Mở trang Xu hướng →
             </Link>
           </div>
@@ -240,7 +226,7 @@ export function HomeProductTabs({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-line-strong bg-surface px-5 text-label font-semibold text-ink transition-colors hover:bg-surface-2"
+            className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             {expanded ? "Thu gọn danh sách" : `Xem thêm sản phẩm (${Math.min(8, activeTotalCount)} sản phẩm)`}
           </button>

@@ -41,15 +41,25 @@ routing only (`page`, `layout`, `route`, …). Everything else lives outside it:
 
 ## UI / design system
 
-Visual system is `DESIGN.md` ("Bàn giá sáng", normative, tokens in its frontmatter; sidecar
-`.impeccable/design.json`). Code checklist for new screens: `.impeccable/ui-conventions.md`.
-Tokens live in `src/app/globals.css` (light + dark) — use token classes (`bg-surface`, `text-ink`,
-`border-line-strong`, `bg-primary text-on-primary`, …), never hex literals (they break dark mode).
+Visual system is **"Sân trung lập"** (neutral ground); `src/app/globals.css` (light + dark tokens, header
+comment) is the source of truth. `DESIGN.md` / `.impeccable/` describe the retired "Bàn giá sáng" world: their
+palette and fonts are outdated, only their behavioural rules (verdict honesty, affiliate disclosure…) still hold.
+- DealScore's own colour is **iris** (`primary`, `accent` = soft lavender), a colour no marketplace owns; dark
+  bands are midnight iris (`night`), never pure black (black is TikTok's). Green / amber / red are verdicts only.
+- **Marketplace brand colours** (`--color-shopee`, `tiktok` + `tiktok-cyan/pink`, `tiki`, `sendo` in
+  `@theme`) appear only on marketplace identity (`MarketplaceMark` / `MarketplaceChip`,
+  `src/components/product/marketplace-mark.tsx`) and on exit buttons to that marketplace ("Đến Shopee" is Shopee
+  orange, "Đến TikTok Shop" black with its cyan/pink edge) via `marketplaceStyle()` (`marketplace.ts`),
+  `BuyButton` and `buttonClass({ variant: "marketplace" })`. Same shape for every marketplace; which one is solid
+  (primary) vs outlined is decided by price (best buy), never by marketplace.
+- Fonts: Be Vietnam Pro (text), Bricolage Grotesque (`display` headings, `num` prices).
+Use token classes (`bg-surface`, `text-ink`, `border-line-strong`, `bg-primary text-on-primary`, …), never hex
+literals (they break dark mode; brand hex values live only in the `globals.css` `@theme`).
 Reuse `VerdictTag` / `ScoreRing` (`src/components/product/verdict-tag.tsx`), `ProductCard`, and the
 primitives in `src/components/ui/` (`Button`/`buttonClass`, `SegmentedControl`/`segmentClass`, `pillClass`,
 `TextField`/`inputClass`, `Skeleton`). Font sizes and radii are `@theme` tokens (`text-label`, `rounded-tile`…);
 ESLint rejects `text-[Npx]`, `rounded-[Npx]`, `rounded-xl` and `font-[family-name:…]`.
-Numbers use the `num` utility (Plus Jakarta Sans, tabular), headings `display`; text ≥ 11px (11px only for nano labels). Page frame
+Numbers use the `num` utility (tabular), headings `display`; text ≥ 11px (11px only for nano labels). Page frame
 `max-w-[1440px] px-4 sm:px-6 lg:px-14`. `UI-mockup/` is the original reference; `docs/design-system/specimen.html`
 is the retired "Nhãn giá kệ hàng" world — don't copy it. The product is **DealScore** (renamed from Kairo).
 

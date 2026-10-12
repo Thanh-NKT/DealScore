@@ -37,7 +37,7 @@ interface SearchPageProps {
 export const dynamic = "force-dynamic";
 
 const PAGE_LINK =
-  "inline-flex min-h-11 items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 items-center rounded-full border border-line-strong/50 bg-surface px-5 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary hover:text-primary";
 
 function hasFilterParams(params: SearchParams): boolean {
   return (
@@ -206,12 +206,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           {/* Results header + sort */}
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0 space-y-1">
-              <h1 className="display text-h2-sm font-bold leading-tight tracking-tight text-ink max-sm:text-h3">
+              <h1 className="display text-h2-sm font-semibold leading-tight text-ink max-sm:text-h3">
                 {loadError ? (
                   "Kết quả tìm kiếm"
                 ) : (
                   <>
-                    <span className="num text-gradient-warm font-extrabold">{result.total}</span>{" "}
+                    <span className="num font-bold text-primary">{result.total}</span>{" "}
                     <span>sản phẩm{raw.q || hasFilters ? " phù hợp" : ""}</span>
                   </>
                 )}
@@ -219,7 +219,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               <p className="text-body-sm text-ink-2">
                 {raw.q ? (
                   <>
-                    Kết quả cho <strong className="font-bold text-primary">&ldquo;{raw.q}&rdquo;</strong> · Mỗi thẻ đã gom các nơi bán cùng một mẫu
+                    Kết quả cho <strong className="font-semibold text-ink">&ldquo;{raw.q}&rdquo;</strong> · Mỗi thẻ đã gom các nơi bán cùng một mẫu
                   </>
                 ) : (
                   "Mỗi thẻ đã gom các nơi bán cùng một mẫu sản phẩm"
@@ -263,7 +263,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
           {/* Product list */}
           {result.items.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {result.items.map((item) => (
                 <ProductCard
                   key={item.productId}

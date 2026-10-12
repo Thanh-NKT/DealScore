@@ -1,84 +1,102 @@
 @import "tailwindcss";
 
+/* `dark:` follows the app theme: the toggle (data-theme) wins, the OS preference applies otherwise. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) { @slot; }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) { @slot; }
+  }
+}
+
 /*
- * Design tokens: DESIGN.md ("Bàn giá sáng"). DESIGN.md is the source of truth;
- * values here must match its frontmatter and the dark values in its Colors section.
+ * "Sân trung lập" (neutral ground). DealScore stands between the marketplaces, so its own colour is
+ * one no marketplace owns: iris violet (Shopee is orange, TikTok Shop black/cyan/pink). Greys are cool and faintly violet; dark bands are midnight iris, never pure black
+ * (black is TikTok's). Marketplace colours appear only on marketplace identity (mark, dot) and on the
+ * exit buttons to that marketplace. Green / amber / red are reserved for the Deal Score verdicts.
  */
 :root {
-  --canvas: #EFECE5;
-  --surface: #F7F6F1;
-  --surface-2: #E8E5DC;
-  --line: #DCD9CF;
-  --line-strong: #8C887E;
-  --ink: #18191D;
-  --ink-2: #45484F;
-  --ink-3: #5E6168;
-  --primary: #1F5666;
-  --primary-hover: #17424F;
-  --primary-soft: #DFECEF;
+  --canvas: #F4F4F7;
+  --surface: #FFFFFF;
+  --surface-2: #EFEFF4;
+  --line: #E4E4EB;
+  --line-strong: #8D8BA0;
+  --ink: #14121E;
+  --ink-2: #45435A;
+  --ink-3: #66647C;
+  --primary: #4F35E3;
+  --primary-hover: #3F25CC;
+  --primary-soft: #EEEBFF;
   --on-primary: #FFFFFF;
-  --accent: #C7E866;
-  --accent-soft: #EBF1D8;
-  --on-accent: #15161A;
-  --night: #15161A;
-  --night-2: #1C1E24;
-  --night-line: #6B6E76;
+  --accent: #E1DAFF;
+  --accent-soft: #F4F1FF;
+  --on-accent: #2B1A99;
+  --night: #15112B;
+  --night-2: #211B40;
+  --night-line: #3C3566;
   --night-ink: #FFFFFF;
-  --night-ink-2: #C9CBD1;
-  --night-ink-3: #A9ACB4;
-  --buy: #0A7043;      --buy-soft: #E2EEE7;
-  --wait: #8F5400;     --wait-soft: #F3E7C6;
-  --avoid: #B42318;    --avoid-soft: #F3E0DD;
-  --unknown: #62656D;  --unknown-soft: #E8E5DC;
-  --tint-peach: #F2E3D5; --tint-lilac: #EBE1EF; --tint-violet: #DFECEF;
-  --tint-sky: #DFECF5;   --tint-butter: #F3E7C6; --tint-mint: #E2EEE7;
-  --focus: #1F5666;
-  --grad-primary: linear-gradient(135deg, #17424F 0%, #1F5666 50%, #2B7A8E 100%);
-  --grad-warm: linear-gradient(135deg, #8F5300 0%, #B4690E 52%, #C9821E 100%);
-  --grad-deal: linear-gradient(135deg, #17424F 0%, #0A7043 100%);
-  --lift: 0 12px 32px -12px rgb(21 22 26 / 0.22);
+  --night-ink-2: #D7D3EF;
+  --night-ink-3: #A9A4CB;
+  --buy: #047A4E;      --buy-soft: #E1F4EA;
+  --wait: #A05A00;     --wait-soft: #FCF0D7;
+  --avoid: #C9271D;    --avoid-soft: #FDE8E5;
+  --unknown: #66647C;  --unknown-soft: #EFEFF4;
+  --tint-peach: #FCE9DE; --tint-lilac: #EFE8FB; --tint-violet: #E8E5FF;
+  --tint-sky: #E0EEFA;   --tint-butter: #FBF1CF; --tint-mint: #DDF3E8;
+  --focus: #4F35E3;
+  --grid-dot: rgb(79 53 227 / 0.13);
+  --highlight: #DDD5FF;
+  --spectrum: linear-gradient(90deg, var(--avoid) 0%, var(--wait) 50%, var(--buy) 100%);
+  --lift: 0 1px 2px rgb(20 18 30 / 0.05), 0 14px 34px -14px rgb(43 26 153 / 0.22);
+  --glow: 0 10px 24px -10px rgb(79 53 227 / 0.6);
+  /* Text in a marketplace's colour on a light surface (AA): only marketplace.ts uses these. */
+  --shopee-ink: #C3361A;
+  --tiktok-ink: #010101;
+  --tiki-ink: #0A6FDB;
+  --sendo-ink: #C20D18;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   color-scheme: light;
 }
 
-/* Dark: Slate Charcoal. The petrol primary is lifted for text contrast, so text on it is dark. */
+/* Dark: midnight iris. The primary is lifted for contrast, so text on it is dark. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #181B22; --surface: #222630; --surface-2: #2C313E; --line: #363C4B; --line-strong: #737B8D;
-    --ink: #F4F5F7; --ink-2: #CBD0DA; --ink-3: #949BA8;
-    --primary: #5BAFC6; --primary-hover: #4A9DB4; --primary-soft: #1B333B; --on-primary: #0F1013;
-    --accent: #D4F66B; --accent-soft: #283318; --on-accent: #15161A;
-    --night: #14171D; --night-2: #1E222B; --night-line: #737B8D;
-    --night-ink: #FFFFFF; --night-ink-2: #CBD0DA; --night-ink-3: #949BA8;
-    --buy: #34D399; --buy-soft: #17362A; --wait: #F59E0B; --wait-soft: #382B14;
-    --avoid: #F87171; --avoid-soft: #3C1D1D; --unknown: #949BA8; --unknown-soft: #2C313E;
-    --tint-peach: #3B2C22; --tint-lilac: #36283E; --tint-violet: #1B333B;
-    --tint-sky: #1E3142; --tint-butter: #382B14; --tint-mint: #17362A;
-    --focus: #5BAFC6;
-    --grad-primary: linear-gradient(135deg, #6EC3DA 0%, #3B8EA5 52%, #2DD4BF 100%);
-    --grad-warm: linear-gradient(135deg, #F4C978 0%, #E0AF53 52%, #F59E0B 100%);
-    --grad-deal: linear-gradient(135deg, #6EC3DA 0%, #34D399 100%);
-    --lift: 0 12px 32px -12px rgb(0 0 0 / 0.5);
+    --canvas: #0D0C14; --surface: #16141F; --surface-2: #201D2C; --line: #2C2939; --line-strong: #6F6B86;
+    --ink: #F4F3F9; --ink-2: #CCC9DB; --ink-3: #9C99B2;
+    --primary: #A093FF; --primary-hover: #B5AAFF; --primary-soft: #262147; --on-primary: #110D2A;
+    --accent: #352C6E; --accent-soft: #1F1A3D; --on-accent: #E6E0FF;
+    --night: #130F28; --night-2: #1D1839; --night-line: #372F60;
+    --night-ink: #FFFFFF; --night-ink-2: #D4D0EC; --night-ink-3: #A39EC4;
+    --buy: #3DD68C; --buy-soft: #0F2A1D; --wait: #F5B13D; --wait-soft: #33260E;
+    --avoid: #FF7A6B; --avoid-soft: #3A1714; --unknown: #9C99B2; --unknown-soft: #201D2C;
+    --tint-peach: #36231A; --tint-lilac: #2B2240; --tint-violet: #242046;
+    --tint-sky: #172839; --tint-butter: #322B12; --tint-mint: #0F2A1D;
+    --focus: #A093FF;
+    --grid-dot: rgb(160 147 255 / 0.12);
+    --highlight: rgb(160 147 255 / 0.32);
+    --lift: 0 1px 0 rgb(255 255 255 / 0.03), 0 18px 40px -18px rgb(0 0 0 / 0.8);
+    --glow: 0 8px 20px -10px rgb(0 0 0 / 0.7);
+    --shopee-ink: #FF8B6E; --tiktok-ink: #FFFFFF; --tiki-ink: #6CB7FF; --sendo-ink: #FF7A80;
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --canvas: #181B22; --surface: #222630; --surface-2: #2C313E; --line: #363C4B; --line-strong: #737B8D;
-  --ink: #F4F5F7; --ink-2: #CBD0DA; --ink-3: #949BA8;
-  --primary: #5BAFC6; --primary-hover: #4A9DB4; --primary-soft: #1B333B; --on-primary: #0F1013;
-  --accent: #D4F66B; --accent-soft: #283318; --on-accent: #15161A;
-  --night: #14171D; --night-2: #1E222B; --night-line: #737B8D;
-  --night-ink: #FFFFFF; --night-ink-2: #CBD0DA; --night-ink-3: #949BA8;
-  --buy: #34D399; --buy-soft: #17362A; --wait: #F59E0B; --wait-soft: #382B14;
-  --avoid: #F87171; --avoid-soft: #3C1D1D; --unknown: #949BA8; --unknown-soft: #2C313E;
-  --tint-peach: #3B2C22; --tint-lilac: #36283E; --tint-violet: #1B333B;
-  --tint-sky: #1E3142; --tint-butter: #382B14; --tint-mint: #17362A;
-  --focus: #5BAFC6;
-  --grad-primary: linear-gradient(135deg, #6EC3DA 0%, #3B8EA5 52%, #2DD4BF 100%);
-  --grad-warm: linear-gradient(135deg, #F4C978 0%, #E0AF53 52%, #F59E0B 100%);
-  --grad-deal: linear-gradient(135deg, #6EC3DA 0%, #34D399 100%);
-  --lift: 0 12px 32px -12px rgb(0 0 0 / 0.5);
+  --canvas: #0D0C14; --surface: #16141F; --surface-2: #201D2C; --line: #2C2939; --line-strong: #6F6B86;
+  --ink: #F4F3F9; --ink-2: #CCC9DB; --ink-3: #9C99B2;
+  --primary: #A093FF; --primary-hover: #B5AAFF; --primary-soft: #262147; --on-primary: #110D2A;
+  --accent: #352C6E; --accent-soft: #1F1A3D; --on-accent: #E6E0FF;
+  --night: #130F28; --night-2: #1D1839; --night-line: #372F60;
+  --night-ink: #FFFFFF; --night-ink-2: #D4D0EC; --night-ink-3: #A39EC4;
+  --buy: #3DD68C; --buy-soft: #0F2A1D; --wait: #F5B13D; --wait-soft: #33260E;
+  --avoid: #FF7A6B; --avoid-soft: #3A1714; --unknown: #9C99B2; --unknown-soft: #201D2C;
+  --tint-peach: #36231A; --tint-lilac: #2B2240; --tint-violet: #242046;
+  --tint-sky: #172839; --tint-butter: #322B12; --tint-mint: #0F2A1D;
+  --focus: #A093FF;
+  --grid-dot: rgb(160 147 255 / 0.12);
+  --highlight: rgb(160 147 255 / 0.32);
+  --lift: 0 1px 0 rgb(255 255 255 / 0.03), 0 18px 40px -18px rgb(0 0 0 / 0.8);
+  --glow: 0 8px 20px -10px rgb(0 0 0 / 0.7);
+  --shopee-ink: #FF8B6E; --tiktok-ink: #FFFFFF; --tiki-ink: #6CB7FF; --sendo-ink: #FF7A80;
   color-scheme: dark;
 }
 
@@ -118,20 +136,41 @@
   --color-tint-sky: var(--tint-sky);
   --color-tint-butter: var(--tint-butter);
   --color-tint-mint: var(--tint-mint);
-  /* Radius scale (DESIGN.md "Shapes"). rounded-xl is Tailwind's 12px: use rounded-md instead. */
-  --radius-xs: 4px;
+
+  /*
+   * Marketplace brand colours: the exit buttons ("Đến Shopee") and the marketplace marks. The same in
+   * both themes, because they are the marketplaces' colours, not ours. `*-ink` is the AA text variant.
+   */
+  /* Shopee orange, deepened from #EE4D2D so white text on it passes WCAG AA (4.58:1; #EE4D2D is 3.66:1). */
+  --color-shopee: #DA391A;
+  --color-shopee-hover: #BE2E12;
+  --color-shopee-ink: var(--shopee-ink);
+  --color-tiktok: #010101;
+  --color-tiktok-hover: #26262B;
+  --color-tiktok-cyan: #25F4EE;
+  --color-tiktok-pink: #FE2C55;
+  --color-tiktok-ink: var(--tiktok-ink);
+  --color-tiki: #0A6FDB;
+  --color-tiki-hover: #0859B3;
+  --color-tiki-ink: var(--tiki-ink);
+  --color-sendo: #E5101D;
+  --color-sendo-hover: #C20D18;
+  --color-sendo-ink: var(--sendo-ink);
+  --color-on-brand: #FFFFFF;
+
+  /* Radius scale: soft containers, pill-shaped controls. rounded-xl is Tailwind's 12px: use rounded-md. */
+  --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-inner: 10px;
   --radius-md: 12px;
-  --radius-tile: 14px;
-  --radius-frame: 16px;
-  --radius-lg: 20px;
-  --radius-hero: 24px;
+  --radius-tile: 16px;
+  --radius-frame: 20px;
+  --radius-lg: 22px;
+  --radius-hero: 28px;
 
   /*
-   * Type scale (DESIGN.md "Typography"). Size only: line-height is set with leading-* where it
-   * matters, exactly like the arbitrary text-[Npx] classes these replace. Never add a size here
-   * without adding its role to DESIGN.md. ESLint rejects new text-[Npx] / rounded-[Npx].
+   * Type scale. Size only: line-height is set with leading-* where it matters.
+   * ESLint rejects new text-[Npx] / rounded-[Npx]: add a step here instead.
    */
   --text-nano: 11px;
   --text-micro: 12px;
@@ -143,55 +182,85 @@
   --text-title: 18px;
   --text-price-row: 19px;
   --text-h4: 20px;
-  --text-h3: 22px;
+  --text-h3: 23px;
   --text-price-input: 24px;
-  --text-h2-sm: 26px;
-  --text-h2: 28px;
-  --text-h1-sm: 30px;
-  --text-stat: 32px;
+  --text-h2-sm: 27px;
+  --text-h2: 34px;
+  --text-h1-sm: 32px;
+  --text-stat: 36px;
   --text-price-sm: 34px;
-  --text-price-md: 36px;
-  --text-h1: 40px;
-  --text-price-hero: 44px;
-  --text-display: 62px;
+  --text-price-md: 40px;
+  --text-h1: 46px;
+  --text-price-hero: 50px;
+  --text-hero: 60px;
+  --text-display: 76px;
   --shadow-lift: var(--lift);
+  --shadow-glow: var(--glow);
   --ease-out: var(--ease-out);
   --font-sans: var(--font-text);
-  --font-text: var(--font-jakarta), "Segoe UI", system-ui, sans-serif;
-  --font-display: var(--font-jakarta), "Segoe UI", system-ui, sans-serif;
+  --font-text: var(--font-be-vietnam), "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-be-vietnam), "Segoe UI", system-ui, sans-serif;
 }
 
-/* Numerals and display: Plus Jakarta Sans, tabular lining figures, crisp fintech tracking. */
+/* Numerals: Bricolage Grotesque, lining and tabular, so prices in a column line up. */
 @utility num {
   font-family: var(--font-display);
-  font-variant-numeric: tabular-nums lining-nums;
-  letter-spacing: -0.02em;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.015em;
 }
 
+/*
+ * Display headings: Bricolage Grotesque, gently tightened. Not more: Vietnamese stacks two marks over
+ * some vowels (ể, ẫ, ợ), and tighter tracking makes neighbouring marks touch.
+ */
 @utility display {
   font-family: var(--font-display);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.018em;
 }
 
-@utility text-gradient-primary {
-  background-image: var(--grad-primary);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* Section label: small semibold caps in the text face (Be Vietnam Pro keeps Vietnamese marks clear). */
+@utility eyebrow {
+  font-family: var(--font-text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.35;
 }
 
-@utility text-gradient-warm {
-  background-image: var(--grad-warm);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* "Court" dots: a faint iris dot grid behind hero areas — the neutral ground the prices sit on. */
+@utility bg-ledger {
+  background-image: radial-gradient(var(--grid-dot) 1.2px, transparent 1.4px);
+  background-size: 22px 22px;
+  background-position: -11px -11px;
 }
 
-@utility text-gradient-deal {
-  background-image: var(--grad-deal);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* An iris marker stroke under a word. */
+@utility highlight {
+  background-image: linear-gradient(transparent 68%, var(--highlight) 68%, var(--highlight) 90%, transparent 90%);
+  padding-inline: 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Inside a night band the verdict colours switch to their bright (dark-theme) values, in both themes. */
+@utility scope-night {
+  --buy: #3DD68C;
+  --wait: #F5B13D;
+  --avoid: #FF7A6B;
+  --unknown: #A9A4CB;
+}
+
+/* The Deal Score scale as a fill: avoid → wait → buy. Only ever drawn where it means the scale. */
+@utility bg-spectrum {
+  background-image: var(--spectrum);
+}
+
+/* The iris wash used once per screen at most (hero, decision panel header). */
+@utility bg-iris-wash {
+  background-image:
+    radial-gradient(60% 80% at 100% 0%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 70%),
+    radial-gradient(50% 60% at 0% 100%, color-mix(in oklab, var(--primary) 8%, transparent), transparent 70%);
 }
 
 body {
@@ -204,8 +273,8 @@ body {
 }
 
 ::selection {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 /* In the base layer so a utility can opt out (`focus-visible:outline-none` on an input whose frame shows
@@ -220,11 +289,39 @@ body {
 input, select, textarea { caret-color: var(--primary); }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
 
-/* The one authored motion: a verdict settles in when it first appears. */
+/* A verdict settles in when it first appears. */
 @keyframes verdict-in {
   from { opacity: 0; transform: translateY(4px) scale(0.98); }
   to { opacity: 1; transform: none; }
 }
+/* The gauge sweeps to its score once. */
+@keyframes gauge-sweep {
+  from { stroke-dashoffset: var(--gauge-from, 0); }
+}
+/* The price-ruler marker slides to today's price once. */
+@keyframes ruler-in {
+  from { left: 0; opacity: 0; }
+}
+/* Ticker strip scroll. */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+/* Hero sample: the line draws itself. */
+@keyframes draw-line {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+/* Face-off bars grow from the centre line. */
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+}
 @media (prefers-reduced-motion: no-preference) {
   .verdict-in { animation: verdict-in 420ms var(--ease-out) both; }
+  .gauge-sweep { animation: gauge-sweep 900ms var(--ease-out) both; }
+  .ruler-in { animation: ruler-in 900ms var(--ease-out) both; }
+  .ticker-track { animation: ticker 60s linear infinite; }
+  .ticker-track:hover { animation-play-state: paused; }
+  .draw-line { stroke-dasharray: 1; animation: draw-line 1600ms var(--ease-out) both 200ms; }
+  .bar-grow { animation: bar-grow 900ms var(--ease-out) both 150ms; }
 }

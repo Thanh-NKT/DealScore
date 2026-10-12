@@ -1,62 +1,89 @@
 /**
- * Display names and brand colours (DESIGN.md "Màu sàn"; fills darkened where needed for 4.5:1 text contrast) for marketplace codes stored in `listings.marketplace`
- * (shopee | tiktok | lazada | tiki | sendo …).
+ * Display names and brand colours for marketplace codes stored in `listings.marketplace`
+ * (shopee | tiktok; tiki / sendo only ever appear as names).
+ *
+ * DealScore's own UI is iris (a colour no marketplace owns). A marketplace's colour appears only where
+ * the marketplace itself is meant: its mark / dot, and the exit button that takes the buyer there
+ * ("Đến Shopee" is Shopee orange, "Đến TikTok Shop" TikTok black with its cyan/pink edge). Every
+ * marketplace gets the same button shape and size: only the colour says where it goes, never how
+ * prominent it is. Which button is the main one is decided by price (the best buy), not by marketplace.
+ *
+ * Colours are theme tokens (`--color-shopee` …, globals.css), so this file holds class names only.
  */
 const MARKETPLACE_NAMES: Record<string, string> = {
   shopee: "Shopee",
   tiktok: "TikTok Shop",
   tiktokshop: "TikTok Shop",
-  lazada: "Lazada",
   tiki: "Tiki",
   sendo: "Sendo",
 };
 
 export interface MarketplaceTheme {
+  /** Solid brand fill: the main exit button of a group. */
   primaryBtn: string;
+  /** Brand-tinted outline: exit buttons on the other rows; fills with the brand colour on hover. */
   secondaryBtn: string;
+  /** Neutral chip with a brand-coloured dot (::before), for "Shopee" / "TikTok Shop" labels. */
   badge: string;
+  /** Background + text of the square marketplace mark (MarketplaceMark). */
+  mark: string;
+  /** One or two letters drawn in the mark. */
+  initial: string;
 }
 
-const MARKETPLACE_THEMES: Record<string, MarketplaceTheme> = {
+type BrandKey = "shopee" | "tiktok" | "tiki" | "sendo";
+
+// TikTok's signature: a cyan edge on one side, a pink one on the other.
+const TIKTOK_EDGE = "shadow-[-2px_-1px_0_0_var(--color-tiktok-cyan),2px_1px_0_0_var(--color-tiktok-pink)]";
+
+const BRAND: Record<BrandKey, Omit<MarketplaceTheme, "badge"> & { dot: string }> = {
   shopee: {
-    primaryBtn: "bg-[#D73818] text-white hover:bg-[#B92F14] shadow-xs",
+    primaryBtn: "bg-shopee text-on-brand hover:bg-shopee-hover shadow-[0_10px_22px_-12px_rgb(218_57_26/0.9)]",
     secondaryBtn:
-      "border border-[#EE4D2D]/35 bg-[#EE4D2D]/10 text-[#B3301A] hover:bg-[#D73818] hover:text-white dark:text-[#FF7A59]",
-    badge: "border border-[#EE4D2D]/30 bg-[#EE4D2D]/12 text-[#B3301A] dark:text-[#FF7A59]",
-  },
-  lazada: {
-    primaryBtn: "bg-[#0F146D] text-white hover:bg-[#1C249E] dark:bg-[#2E38E0] dark:hover:bg-[#3F49F0] shadow-xs",
-    secondaryBtn:
-      "border border-[#0F146D]/35 bg-[#0F146D]/10 text-[#0F146D] hover:bg-[#0F146D] hover:text-white dark:border-[#6B75FF]/40 dark:bg-[#6B75FF]/15 dark:text-[#9BA2FF] dark:hover:bg-[#3F49F0] dark:hover:text-white",
-    badge:
-      "border border-[#0F146D]/25 bg-[#0F146D]/10 text-[#0F146D] dark:border-[#6B75FF]/35 dark:bg-[#6B75FF]/15 dark:text-[#9BA2FF]",
-  },
-  tiki: {
-    primaryBtn: "bg-[#0B6FD1] text-white hover:bg-[#0A5FB3] shadow-xs",
-    secondaryBtn:
-      "border border-[#1A94FF]/40 bg-[#1A94FF]/10 text-[#0B63B8] hover:bg-[#0B6FD1] hover:text-white dark:text-[#5CB3FF]",
-    badge: "border border-[#1A94FF]/30 bg-[#1A94FF]/12 text-[#0B63B8] dark:text-[#5CB3FF]",
+      "border border-shopee/45 bg-shopee/[0.07] text-shopee-ink hover:border-shopee hover:bg-shopee hover:text-on-brand",
+    mark: "bg-shopee text-on-brand",
+    initial: "S",
+    dot: "before:bg-shopee",
   },
   tiktok: {
-    primaryBtn: "bg-[#161823] text-white hover:bg-[#292C3E] dark:bg-[#E0204A] dark:hover:bg-[#C81A40] shadow-xs",
+    primaryBtn: `bg-tiktok text-on-brand hover:bg-tiktok-hover ${TIKTOK_EDGE} dark:ring-1 dark:ring-on-brand/20`,
     secondaryBtn:
-      "border border-[#161823]/35 bg-[#161823]/8 text-[#161823] hover:bg-[#161823] hover:text-white dark:border-[#FE2C55]/40 dark:bg-[#FE2C55]/15 dark:text-[#FF6B88] dark:hover:bg-[#E0204A] dark:hover:text-white",
-    badge:
-      "border border-[#161823]/25 bg-[#161823]/10 text-[#161823] dark:border-[#FE2C55]/35 dark:bg-[#FE2C55]/15 dark:text-[#FF6B88]",
+      "border border-tiktok-ink/35 bg-tiktok-ink/[0.04] text-tiktok-ink hover:border-tiktok hover:bg-tiktok hover:text-on-brand hover:shadow-[-2px_-1px_0_0_var(--color-tiktok-cyan),2px_1px_0_0_var(--color-tiktok-pink)]",
+    mark: `bg-tiktok text-on-brand shadow-[-1.5px_-1px_0_0_var(--color-tiktok-cyan),1.5px_1px_0_0_var(--color-tiktok-pink)] dark:ring-1 dark:ring-on-brand/25`,
+    initial: "T",
+    dot: "before:bg-tiktok before:shadow-[-1px_0_0_0_var(--color-tiktok-cyan),1px_0_0_0_var(--color-tiktok-pink)] dark:before:bg-on-brand",
+  },
+  tiki: {
+    primaryBtn: "bg-tiki text-on-brand hover:bg-tiki-hover",
+    secondaryBtn: "border border-tiki/45 bg-tiki/[0.07] text-tiki-ink hover:border-tiki hover:bg-tiki hover:text-on-brand",
+    mark: "bg-tiki text-on-brand",
+    initial: "Ti",
+    dot: "before:bg-tiki",
   },
   sendo: {
-    primaryBtn: "bg-[#E5101D] text-white hover:bg-[#C40B16] shadow-xs",
-    secondaryBtn:
-      "border border-[#E5101D]/35 bg-[#E5101D]/10 text-[#C40B16] hover:bg-[#E5101D] hover:text-white dark:text-[#FF6B74]",
-    badge: "border border-[#E5101D]/30 bg-[#E5101D]/10 text-[#C40B16] dark:text-[#FF6B74]",
+    primaryBtn: "bg-sendo text-on-brand hover:bg-sendo-hover",
+    secondaryBtn: "border border-sendo/45 bg-sendo/[0.07] text-sendo-ink hover:border-sendo hover:bg-sendo hover:text-on-brand",
+    mark: "bg-sendo text-on-brand",
+    initial: "Se",
+    dot: "before:bg-sendo",
   },
 };
 
-const DEFAULT_THEME: MarketplaceTheme = {
-  primaryBtn: "bg-primary text-on-primary hover:bg-primary-hover shadow-xs",
-  secondaryBtn: "border border-line-strong bg-surface text-ink hover:bg-surface-2",
-  badge: "border border-line bg-surface-2 text-ink-2",
+// A marketplace we have no colours for: DealScore's own neutral styles.
+const FALLBACK = {
+  primaryBtn: "bg-primary text-on-primary hover:bg-primary-hover shadow-glow",
+  secondaryBtn: "border border-line-strong/70 bg-surface text-ink hover:border-ink",
+  mark: "bg-ink text-surface",
+  dot: "before:bg-ink-3",
 };
+
+const BADGE_BASE =
+  "inline-flex items-center gap-1.5 border border-line bg-surface text-ink-2 before:size-2 before:shrink-0 before:rounded-full before:content-['']";
+
+function brandKey(code: string | null | undefined): string {
+  const key = code?.trim().toLowerCase().replace(/[\s_-]/g, "") ?? "";
+  return key === "tiktokshop" ? "tiktok" : key;
+}
 
 export function marketplaceName(code: string | null | undefined): string {
   const raw = code?.trim();
@@ -68,8 +95,18 @@ export function marketplaceName(code: string | null | undefined): string {
 }
 
 export function marketplaceStyle(code: string | null | undefined): MarketplaceTheme {
-  const key = code?.trim().toLowerCase().replace(/[\s_-]/g, "") ?? "";
-  if (key === "tiktokshop") return MARKETPLACE_THEMES.tiktok;
-  return MARKETPLACE_THEMES[key] ?? DEFAULT_THEME;
+  const key = brandKey(code);
+  const brand = BRAND[key as BrandKey];
+  if (brand) {
+    const { dot, ...rest } = brand;
+    return { ...rest, badge: `${BADGE_BASE} ${dot}` };
+  }
+  const name = marketplaceName(code);
+  return {
+    primaryBtn: FALLBACK.primaryBtn,
+    secondaryBtn: FALLBACK.secondaryBtn,
+    mark: FALLBACK.mark,
+    initial: name.charAt(0).toUpperCase(),
+    badge: `${BADGE_BASE} ${FALLBACK.dot}`,
+  };
 }
-

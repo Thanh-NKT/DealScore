@@ -15,7 +15,7 @@ interface ShareButtonProps {
 }
 
 const SECONDARY =
-  "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 cursor-pointer";
+  "inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-line-strong/60 bg-surface px-5 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2 cursor-pointer";
 
 type State = { kind: "idle" } | { kind: "copied" } | { kind: "manual" };
 

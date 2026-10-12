@@ -27,33 +27,34 @@
 
   var STYLE = [
     ":host{all:initial}",
-    ".k{--label:#F3F0E8;--raised:#FBFAF6;--rail:#E6E1D5;--hair:#D5CFC1;--ink:#1C1B19;--ink2:#4F4B43;--ink3:#645F54;--primary:#4B2E83;--on:#FBFAF6;",
-    "--buy:#1D6A42;--buy-s:#E1EFE5;--wait:#845600;--wait-s:#F5EBD3;--avoid:#A0261C;--avoid-s:#F6E0DC;--unknown:#5B574F;--unknown-s:#E8E4DA}",
-    "@media (prefers-color-scheme:dark){.k{--label:#191815;--raised:#22211E;--rail:#2C2A26;--hair:#3A3833;--ink:#EEEAE1;--ink2:#C3BDB0;--ink3:#A29C8F;--primary:#B9A2E6;--on:#191815;",
-    "--buy:#7CCB9C;--buy-s:#1B2E23;--wait:#E3B55C;--wait-s:#33291A;--avoid:#F08F84;--avoid-s:#3A1F1C;--unknown:#B3AEA3;--unknown-s:#2A2925}}",
+    // Same tokens as the web app's globals.css ("Sân trung lập": iris, cool greys, verdict colours).
+    ".k{--label:#EFEFF4;--raised:#FFFFFF;--rail:#EFEFF4;--hair:#E4E4EB;--ink:#14121E;--ink2:#45435A;--ink3:#66647C;--primary:#4F35E3;--on:#FFFFFF;",
+    "--buy:#047A4E;--buy-s:#E1F4EA;--wait:#A05A00;--wait-s:#FCF0D7;--avoid:#C9271D;--avoid-s:#FDE8E5;--unknown:#66647C;--unknown-s:#EFEFF4;--glow:0 10px 24px -10px rgb(79 53 227/.6)}",
+    "@media (prefers-color-scheme:dark){.k{--label:#201D2C;--raised:#16141F;--rail:#201D2C;--hair:#2C2939;--ink:#F4F3F9;--ink2:#CCC9DB;--ink3:#9C99B2;--primary:#A093FF;--on:#110D2A;",
+    "--buy:#3DD68C;--buy-s:#0F2A1D;--wait:#F5B13D;--wait-s:#33260E;--avoid:#FF7A6B;--avoid-s:#3A1714;--unknown:#9C99B2;--unknown-s:#201D2C;--glow:0 8px 20px -10px rgb(0 0 0/.7)}}",
     ".k{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:300px;max-width:calc(100vw - 32px);box-sizing:border-box;",
-    "font:14px/1.45 'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--raised);border:1px solid var(--hair);border-radius:4px;",
-    "box-shadow:0 1px 2px rgb(28 27 25/.08),0 8px 24px rgb(28 27 25/.10);padding:14px 16px}",
+    "font:14px/1.45 'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;color:var(--ink);background:var(--raised);border:1px solid var(--hair);border-radius:18px;",
+    "box-shadow:0 1px 2px rgb(20 18 30/.06),0 18px 40px -14px rgb(43 26 153/.28);padding:14px 16px}",
     ".top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}",
-    ".brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}",
-    ".mark{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:2px;background:var(--ink);color:var(--label);font-size:12px;font-weight:700}",
-    ".x{all:unset;cursor:pointer;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;color:var(--ink3);font-size:20px}",
+    ".brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:-.01em}.brand em{font-style:normal;color:var(--primary)}",
+    ".mark{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;border-radius:7px;background:var(--primary);color:var(--on)}.mark svg{width:24px;height:24px}",
+    ".x{all:unset;cursor:pointer;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;color:var(--ink3);font-size:20px}",
     ".x:hover{background:var(--rail);color:var(--ink)}",
     ".price{font-weight:800;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums lining-nums;letter-spacing:-.01em}",
     ".cap{font-size:12px;color:var(--ink3)}",
     ".row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}",
-    ".tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;border-radius:4px;border:1px solid currentColor;font-weight:700;white-space:nowrap}",
+    ".tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;border-radius:999px;font-weight:700;white-space:nowrap}",
     ".tag svg{width:18px;height:18px;flex:none}",
     ".buy{color:var(--buy);background:var(--buy-s)}.wait{color:var(--wait);background:var(--wait-s)}",
     ".avoid{color:var(--avoid);background:var(--avoid-s)}.unknown{color:var(--unknown);background:var(--unknown-s);border:1.5px dotted currentColor}",
     ".score{font-size:13px;color:var(--ink3)}.score b{font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}",
     "ul{margin:10px 0 0;padding:0;list-style:none;color:var(--ink2);font-size:13px}li{margin-top:4px}",
-    ".stale{margin-top:10px;padding:6px 8px;border:1.5px dashed var(--ink2);border-radius:4px;font-size:12px}",
+    ".stale{margin-top:10px;padding:6px 8px;border:1.5px dashed var(--ink3);border-radius:10px;font-size:12px}",
     ".act{display:grid;gap:8px;margin-top:12px}",
-    ".btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:40px;padding:0 12px;border-radius:4px;",
+    ".btn{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:999px;",
     "font-weight:600;font-size:14px;text-align:center;transition:background-color .16s cubic-bezier(.22,1,.36,1)}",
-    ".pri{background:var(--primary);color:var(--on)}.pri:hover{background:color-mix(in oklab,var(--primary) 86%,var(--ink))}",
-    ".sec{border:1.5px solid var(--ink2);color:var(--ink)}.sec:hover{background:var(--rail)}",
+    ".pri{background:var(--primary);color:var(--on);box-shadow:var(--glow)}.pri:hover{background:color-mix(in oklab,var(--primary) 86%,var(--ink))}",
+    ".sec{border:1px solid color-mix(in oklab,var(--ink3) 55%,transparent);color:var(--ink)}.sec:hover{border-color:var(--primary);color:var(--primary)}",
     ".btn:focus-visible,.x:focus-visible{outline:2px solid var(--primary);outline-offset:2px}",
     ".done{display:flex;align-items:flex-start;justify-content:center;gap:6px;margin:4px 0 0;color:var(--buy);font-weight:600;font-size:13px}",
     ".done svg{flex:none;margin-top:2px}",
@@ -65,6 +66,9 @@
     ".cov{margin-top:8px;font-size:12px;color:var(--ink2)}",
     ".fresh{margin-top:8px;font-size:12px;color:var(--ink3)}",
   ].join("");
+
+  var MARK =
+    '<svg viewBox="0 0 32 32" fill="none"><rect x="8.5" y="9" width="6" height="15" rx="3" fill="currentColor" fill-opacity=".42"/><rect x="17.5" y="14.5" width="6" height="9.5" rx="3" fill="currentColor"/><path d="M17.6 9.3l2.1 2.1 3.7-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   var CHECK =
     '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -116,7 +120,7 @@
     shadow.innerHTML =
       "<style>" + STYLE + "</style>" +
       '<section class="k" role="complementary" aria-label="DealScore">' +
-      '<div class="top"><span class="brand"><span class="mark" aria-hidden="true">D</span>DealScore</span>' +
+      '<div class="top"><span class="brand"><span class="mark" aria-hidden="true">' + MARK + '</span><span>Deal<em>Score</em></span></span>' +
       '<button class="x" type="button" aria-label="Ẩn khung DealScore cho sản phẩm này">×</button></div>' +
       inner +
       "</section>";

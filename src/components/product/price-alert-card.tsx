@@ -146,23 +146,23 @@ export function PriceAlertCard({
   }
 
   const PILL =
-    "h-10 flex-1 rounded-full border border-line bg-surface-2/55 px-3 text-label font-semibold text-ink transition-colors hover:border-line-strong hover:bg-surface-2 cursor-pointer";
+    "h-10 flex-1 whitespace-nowrap rounded-full border border-line bg-surface px-3.5 text-label font-semibold text-ink transition-colors hover:border-primary hover:text-primary cursor-pointer";
 
   return (
-    <div className="flex flex-col gap-4.5 rounded-lg border border-line bg-surface p-6 text-ink sm:p-7">
+    <div className="flex flex-col gap-5 rounded-lg border border-line bg-surface p-5 text-ink sm:p-7">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent">
           <TargetIcon className="size-5.5" strokeWidth={2.4} />
         </span>
         <div className="flex flex-col">
-          <h2 className="display text-h3 font-bold tracking-tight text-ink">Đặt giá mong muốn</h2>
+          <h2 className="display text-h3 font-semibold text-ink">Đặt giá mong muốn</h2>
           <span className="text-label text-ink-3">DealScore báo cho bạn khi giá xuống tới mức này</span>
         </div>
       </div>
 
       {/* Target Price Input */}
-      <div className="flex h-[58px] items-center rounded-md border border-line-strong bg-surface-2/45 px-4.5 text-ink transition-all focus-within:border-primary focus-within:bg-surface focus-within:ring-1 focus-within:ring-primary">
+      <div className="flex h-15 items-center rounded-tile border border-line-strong/50 bg-surface px-5 text-ink transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-ink/8">
         <label htmlFor="target-price-input" className="sr-only">
           Giá mong muốn
         </label>
@@ -173,7 +173,7 @@ export function PriceAlertCard({
           value={targetStr}
           placeholder="Ví dụ: 2.399.000"
           onChange={(e) => handleInputChange(e.target.value)}
-          className="num display w-full min-w-0 flex-1 border-none bg-transparent text-price-input font-bold tracking-tight text-ink outline-none placeholder:text-body placeholder:font-medium placeholder:text-ink-3"
+          className="num display w-full min-w-0 flex-1 border-none bg-transparent text-price-input font-semibold tracking-tight text-ink outline-none placeholder:text-body placeholder:font-medium placeholder:text-ink-3"
         />
         <span className="text-title font-bold text-ink-2">đ</span>
       </div>
@@ -206,7 +206,7 @@ export function PriceAlertCard({
 
       {/* Target Progress / Status Box */}
       {cur != null && (
-        <div className="flex flex-col gap-2 rounded-md border border-line/80 bg-surface-2/45 p-3.5 text-label sm:p-4">
+        <div className="flex flex-col gap-2.5 rounded-tile bg-surface-2/60 p-4 text-label">
           <div className="flex justify-between">
             <span className="text-ink-2">Giá hiện tại</span>
             <strong className="num font-bold text-ink">{formatVnd(cur)}</strong>
@@ -214,7 +214,7 @@ export function PriceAlertCard({
           {gap != null && (
             <div className="flex justify-between">
               <span className="text-ink-2">{gap > 0 ? "Cần giảm thêm" : "Đã đạt mức giá này"}</span>
-              <strong className={`num font-bold ${gap > 0 ? "text-primary" : "text-buy"}`}>
+              <strong className={`num font-bold ${gap > 0 ? "text-ink" : "text-buy"}`}>
                 {gap > 0 ? formatVnd(gap) : "Đã đạt"}
               </strong>
             </div>
@@ -226,7 +226,7 @@ export function PriceAlertCard({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={closePct}
-            className="h-1.5 w-full overflow-hidden rounded-full bg-line"
+            className="h-2 w-full overflow-hidden rounded-full bg-surface"
           >
             <div style={{ width: `${closePct}%` }} className="h-full rounded-full bg-primary transition-all duration-300" />
           </div>
@@ -258,13 +258,13 @@ export function PriceAlertCard({
               setWithDealScore(e.target.checked);
               setStatus({ kind: "idle" });
             }}
-            className="size-4.5 rounded-xs accent-primary cursor-pointer"
+            className="size-4.5 rounded-xs accent-ink cursor-pointer"
           />
           <span>Báo cả khi Deal Score từ {DEAL_SCORE_THRESHOLD} trở lên</span>
         </label>
         <p className="text-micro leading-relaxed text-ink-3">
           Thông báo gửi qua email hoặc trình duyệt theo{" "}
-          <Link href="/account/notifications" className="font-semibold text-primary underline-offset-4 hover:underline">
+          <Link href="/account/notifications" className="font-semibold text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
             cài đặt thông báo
           </Link>{" "}
           của bạn.
@@ -282,7 +282,7 @@ export function PriceAlertCard({
         type="button"
         disabled={pending}
         onClick={handleSave}
-        className="flex h-13 w-full items-center justify-center gap-2 rounded-md bg-primary px-6 text-body font-bold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover cursor-pointer disabled:opacity-50"
+        className="flex h-13 w-full items-center justify-center gap-2 rounded-full bg-primary px-6 text-body font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover cursor-pointer disabled:opacity-50"
       >
         {status.kind === "saved" ? (
           <>

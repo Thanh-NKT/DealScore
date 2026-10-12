@@ -16,8 +16,9 @@ import { VariantPicker } from "@/components/product/variant-picker";
 import { variantVerdict } from "@/lib/pricing/variant-verdict";
 import { verdictNote } from "@/lib/pricing/verdict-copy";
 import { compareMarketplaces } from "@/lib/pricing/marketplace-compare";
-import { MarketplaceCompare } from "@/components/product/marketplace-compare";
+import { MARKETPLACE_COMPARE_ID, MarketplaceCompare } from "@/components/product/marketplace-compare";
 import { ScoreRing, VerdictTag } from "@/components/product/verdict-tag";
+import { PriceRuler } from "@/components/product/price-ruler";
 import { UpdatedAt } from "@/components/product/updated-at";
 import { BuyButton } from "@/components/product/buy-button";
 import type { Recommendation } from "@/lib/pricing/deal-score";
@@ -31,6 +32,7 @@ import { trackAfter } from "@/lib/analytics/track";
 import { isShareVisit, shareText, shareUrl } from "@/lib/share";
 import { ShareButton } from "@/components/share/share-button";
 import { marketplaceName } from "@/components/product/marketplace";
+import { MarketplaceMark } from "@/components/product/marketplace-mark";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { InteractivePriceChart } from "@/components/product/interactive-price-chart";
 import { DealScoreBreakdown } from "@/components/product/deal-score-breakdown";
@@ -137,6 +139,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   const jsonLd = buildProductJsonLd(toSeoProduct(data), siteUrl());
   const offerCount = pricing.offers.length;
+  // The marketplaces this variant is tracked on, cheapest offer's first (offers are sorted by price).
+  const trackedMarketplaces = [...new Set(pricing.offers.map((o) => o.marketplace))];
   const marketplaceComparison = compareMarketplaces(pricing.offers);
 
   const goHref =
@@ -157,124 +161,146 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   return (
     <div className="flex w-full flex-col bg-canvas pb-24">
-      <div className="mx-auto w-full max-w-[1440px] px-4 pt-5 sm:px-6 lg:px-14">
+      <div className="mx-auto w-full max-w-[1440px] px-4 pt-6 sm:px-6 lg:px-14">
         {jsonLd && (
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
         )}
 
         {/* Breadcrumb Bar */}
-        <nav aria-label="Đường dẫn" className="flex flex-wrap items-center gap-2 pb-5 text-label text-ink-3">
-          <Link href="/" className="transition-colors hover:text-ink">
+        <nav aria-label="Đường dẫn" className="flex flex-wrap items-center gap-1.5 pb-6 text-label text-ink-3">
+          <Link href="/" className="rounded-full px-1 transition-colors hover:text-ink">
             Trang chủ
           </Link>
-          <span aria-hidden="true">/</span>
-          <Link href={categoryHref} className="transition-colors hover:text-ink">
+          <span aria-hidden="true" className="text-line-strong">›</span>
+          <Link href={categoryHref} className="rounded-full px-1 transition-colors hover:text-ink">
             {product.categoryName}
           </Link>
-          <span aria-hidden="true">/</span>
-          <span className="max-w-[42ch] truncate font-semibold text-ink">{product.canonicalName}</span>
+          <span aria-hidden="true" className="text-line-strong">›</span>
+          <span className="max-w-[42ch] truncate px-1 font-medium text-ink-2">{product.canonicalName}</span>
         </nav>
 
-        <article className="flex flex-col gap-8">
-          {/* Section 1: Unified Hero & Decision Card */}
-          <section className="grid grid-cols-1 items-stretch gap-8 rounded-hero border border-line bg-surface p-5 sm:p-7 min-[1121px]:grid-cols-[460px_minmax(0,1fr)] min-[1121px]:gap-10">
-            {/* Left: Image Gallery (90-day stats live in the chart card: one source of truth) */}
-            <div className="flex flex-col max-[1120px]:order-2">
-              <ProductGallery
-                image={product.image}
-                alt={product.canonicalName}
-                galleryImages={data.galleryImages}
-              />
-            </div>
-
-            {/* Right: Decision Core & Pricing */}
-            <div className="flex flex-col justify-between gap-5">
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={categoryHref}
-                      className="rounded-full border border-line bg-surface-2/60 px-3 py-1 text-micro font-semibold text-ink-2 transition-colors hover:border-line-strong hover:text-ink"
-                    >
-                      {product.categoryName}
-                    </Link>
-                    {offerCount >= 1 && (
-                      <span className="rounded-full bg-primary-soft px-3 py-1 text-micro font-bold text-primary">
-                        Đã gom {offerCount} nơi bán cùng mẫu
+        <article className="flex flex-col gap-12">
+          {/* Section 1: title, gallery, variants + the decision panel */}
+          <section className="grid grid-cols-1 items-start gap-8 min-[1121px]:grid-cols-[minmax(0,1fr)_minmax(0,560px)] min-[1121px]:gap-12 2xl:grid-cols-[minmax(0,1fr)_minmax(0,600px)]">
+            {/* Left: title, gallery, variants (90-day stats live in the ruler and the chart card) */}
+            <div className="flex min-w-0 flex-col gap-6 max-[1120px]:contents">
+              <div className="flex flex-col gap-3 max-[1120px]:order-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={categoryHref}
+                    className="eyebrow rounded-full border border-line bg-surface px-2.5 py-1 text-ink-2 transition-colors hover:border-primary/40 hover:text-primary"
+                  >
+                    {product.categoryName}
+                  </Link>
+                  {offerCount >= 1 && (
+                    <span className="rounded-full bg-accent px-2.5 py-1 text-micro font-semibold text-on-accent">
+                      Đã gom {offerCount} nơi bán cùng mẫu
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 text-micro text-ink-3">
+                    {!pricing.isStale && (
+                      <span aria-hidden="true" className="relative flex size-2">
+                        <span className="absolute inset-0 animate-ping rounded-full bg-buy/50 motion-reduce:hidden" />
+                        <span className="relative size-2 rounded-full bg-buy" />
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1.5 text-micro text-ink-3">
-                      <span className="size-1.5 rounded-full bg-buy" />
-                      {pricing.updatedAt ? <UpdatedAt iso={pricing.updatedAt} isStale={pricing.isStale} variant="compact" /> : "Vừa cập nhật"}
-                    </span>
-                  </div>
-
-                  <h1 className="display text-h2-sm font-extrabold leading-[1.22] tracking-tight text-ink sm:text-h1-sm">
-                    {product.canonicalName}
-                  </h1>
-
-                  {(product.brand || product.model) && (
-                    <div className="flex flex-wrap items-center gap-2 text-label text-ink-2">
-                      {product.brand && (
-                        <span>
-                          Thương hiệu: <strong className="font-semibold text-ink">{product.brand}</strong>
-                        </span>
-                      )}
-                      {product.brand && product.model && <span aria-hidden="true">·</span>}
-                      {product.model && (
-                        <span>
-                          Mã SP: <strong className="font-semibold text-ink">{product.model}</strong>
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    {pricing.updatedAt ? <UpdatedAt iso={pricing.updatedAt} isStale={pricing.isStale} variant="compact" /> : "Vừa cập nhật"}
+                  </span>
                 </div>
 
-                {/* Variant Selector */}
-                <VariantPicker variants={pickerVariants} selectedId={selectedVariantId} range={range} />
+                <h1 className="display max-w-[30ch] text-h2-sm font-bold leading-[1.06] text-ink sm:text-h2 xl:text-h1">
+                  {product.canonicalName}
+                </h1>
+
+                {(product.brand || product.model) && (
+                  <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 text-label text-ink-3">
+                    {product.brand && (
+                      <div className="flex gap-1.5">
+                        <dt>Thương hiệu</dt>
+                        <dd className="font-semibold text-ink">{product.brand}</dd>
+                      </div>
+                    )}
+                    {product.model && (
+                      <div className="flex gap-1.5">
+                        <dt>Mã SP</dt>
+                        <dd className="font-semibold text-ink">{product.model}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
               </div>
 
-              {/* Main Price & Decision Box */}
-              <div className="flex flex-col gap-4 rounded-frame border border-line bg-surface-2/35 p-5">
-                {/* Top: Best Price + Deal Score Ring */}
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <PriceSummary
-                      cheapest={buy ?? pricing.lastKnown}
-                      offerCount={offerCount}
-                    />
-                    <UnitPriceNote unitPrice={heroUnitPrice} variantKey={currentVariant?.variantKey ?? ""} className="mt-1.5" />
+              {/* Phones: title, variants, the decision panel, then the gallery */}
+              <div className="min-w-0 max-[1120px]:order-4 min-[1121px]:max-w-[640px]">
+                <ProductGallery
+                  image={product.image}
+                  alt={product.canonicalName}
+                  galleryImages={data.galleryImages}
+                />
+              </div>
+              <div className="min-w-0 empty:hidden max-[1120px]:order-2">
+                <VariantPicker variants={pickerVariants} selectedId={selectedVariantId} range={range} />
+              </div>
+            </div>
+
+            {/* Right: the decision panel (sticky on wide screens) */}
+            <div className="flex min-w-0 flex-col max-[1120px]:order-3 min-[1121px]:sticky min-[1121px]:top-28">
+              <div className="flex flex-col overflow-hidden rounded-hero border border-line bg-surface shadow-lift">
+                {/* Panel head: the marketplaces this answer weighs, each in its own colour. */}
+                <div className="bg-iris-wash flex items-center justify-between gap-3 border-b border-line px-5 py-3 sm:px-7">
+                  <span className="eyebrow text-ink-3">Bảng quyết định</span>
+                  {trackedMarketplaces.length > 0 && (
+                    <span className="flex min-w-0 items-center gap-2 text-micro text-ink-3">
+                      <span className="truncate">{trackedMarketplaces.length > 1 ? "Đang so trên" : "Theo dõi trên"}</span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        {trackedMarketplaces.map((m) => (
+                          <MarketplaceMark key={m} marketplace={m} size="sm" label />
+                        ))}
+                      </span>
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-5 p-5 sm:p-7">
+                  {/* Price + Deal Score gauge */}
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex min-w-0 flex-[1_1_12rem] flex-col">
+                      <PriceSummary
+                        cheapest={buy ?? pricing.lastKnown}
+                        offerCount={offerCount}
+                      />
+                      <UnitPriceNote unitPrice={heroUnitPrice} variantKey={currentVariant?.variantKey ?? ""} className="mt-1.5" />
+                    </div>
+
+                    {recommendation && (
+                      <div className="flex shrink-0 flex-col items-center gap-1.5">
+                        <ScoreRing
+                          score={headline?.score}
+                          recommendation={recommendation}
+                          size="lg"
+                        />
+                        <span className="eyebrow text-ink-3">Deal Score</span>
+                      </div>
+                    )}
                   </div>
 
                   {recommendation && (
-                    <div className="flex shrink-0 flex-col items-center gap-1">
-                      <ScoreRing
-                        score={headline?.score}
-                        recommendation={recommendation}
-                        size="lg"
-                        showBadge
-                      />
-                      <span className="text-micro font-bold text-ink-3">Deal Score</span>
-                    </div>
+                    <VerdictTag
+                      recommendation={recommendation}
+                      size="lg"
+                      note={verdictNote(recommendation, hasFakeSale, cheapest?.isFlashSale ?? false)}
+                    />
                   )}
+
+                  {pricing.allOutOfStock && (
+                    <p className="rounded-tile bg-surface-2 px-4 py-3 text-body-sm font-medium text-ink">
+                      Tạm hết hàng ở mọi nơi bán đang theo dõi.
+                    </p>
+                  )}
+
                 </div>
 
-                {recommendation && (
-                  <VerdictTag
-                    recommendation={recommendation}
-                    size="lg"
-                    note={verdictNote(recommendation, hasFakeSale, cheapest?.isFlashSale ?? false)}
-                  />
-                )}
-
-                {pricing.allOutOfStock && (
-                  <p className="text-body-sm font-medium text-ink">
-                    Tạm hết hàng ở mọi nơi bán đang theo dõi.
-                  </p>
-                )}
-
-                {/* Bottom: Aligned Action Bar (the sticky bar appears once this scrolls away) */}
-                <div id="primary-buy" className="flex flex-col gap-2 pt-1">
+                {/* Actions (the sticky bar appears once this scrolls away) */}
+                <div id="primary-buy" className="flex flex-col gap-3 border-t border-line bg-surface-2/40 p-5 sm:px-7">
                   <div className="flex flex-wrap items-center gap-2.5">
                     {buy && (
                       <BuyButton
@@ -285,7 +311,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                         variant="primary"
                         size="lg"
                         affiliateLabel={false}
-                        className="h-13 min-w-0 flex-[1.2_1_13rem] rounded-md text-control font-bold"
+                        className="h-13 min-w-0 flex-[1.2_1_13rem] text-control font-semibold"
                       />
                     )}
                     <div className="min-w-0 flex-[1_1_11rem]">
@@ -311,19 +337,58 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
                         price: currentPrice,
                         recommendation,
                       })}
-                      className="flex size-13 shrink-0 items-center justify-center rounded-md border border-line-strong bg-surface text-ink transition-colors hover:bg-surface-2 cursor-pointer"
+                      className="flex size-13 shrink-0 items-center justify-center rounded-full border border-line-strong/50 bg-surface text-ink transition-colors hover:border-primary hover:text-primary cursor-pointer"
                     />
                   </div>
                   <span className="text-micro leading-[1.45] text-ink-3">
                     Nếu bạn mua qua liên kết, DealScore có thể nhận hoa hồng. Điều này không làm thay đổi giá bạn trả.
                   </span>
                 </div>
+
+                {/* The evidence under the action: where it is cheapest, and where today's price sits in 90 days. */}
+                {(marketplaceComparison || pricing.stats.dayCount >= 2) && (
+                  <div className="flex flex-col gap-3 border-t border-line p-5 sm:px-7">
+                    {marketplaceComparison && (
+                      <a
+                        href={`#${MARKETPLACE_COMPARE_ID}`}
+                        className="group flex items-center gap-3.5 rounded-tile border border-line px-4 py-3 transition-colors hover:border-primary/40 hover:bg-primary-soft/30"
+                      >
+                        <span aria-hidden="true" className="flex shrink-0 items-center -space-x-1.5">
+                          {marketplaceComparison.rows.slice(0, 3).map((r) => (
+                            <MarketplaceMark key={r.marketplace} marketplace={r.marketplace} size="md" round className="ring-2 ring-surface" />
+                          ))}
+                        </span>
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="text-body-sm font-semibold leading-snug text-ink">{marketplaceComparison.summary}</span>
+                          <span className="text-label font-semibold text-primary">
+                            So sánh {marketplaceComparison.rows.length} sàn <span aria-hidden="true">↓</span>
+                          </span>
+                        </span>
+                      </a>
+                    )}
+
+                    {/* Where the cheapest listed price sits in its 90-day range (same basis as the Deal Score) */}
+                    {pricing.stats.dayCount >= 2 && (
+                      <PriceRuler
+                        low={pricing.stats.low}
+                        median={pricing.stats.median}
+                        high={pricing.stats.high}
+                        current={cheapest?.price ?? null}
+                        className="rounded-tile border border-line px-4 py-3.5"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </section>
 
           {/* Notice for ingest-created draft products */}
           <DraftProductNotice isDraft={product.status === "draft"} offerCount={offerCount} dataDays={dailyPrices.length} />
+
+          {/* Cross-marketplace comparison ("sàn nào rẻ hơn?", the first question): renders only with ≥ 2 real
+              marketplaces (never simulated), so it sits right under the decision panel. */}
+          {marketplaceComparison && <MarketplaceCompare comparison={marketplaceComparison} offers={pricing.offers} />}
 
           {/* Section 2: Interactive Price History & Deal Score Breakdown */}
           <section className="grid grid-cols-1 items-start gap-6 min-[1121px]:grid-cols-[1fr_420px]">
@@ -347,8 +412,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           {/* P4 A: price-season calendar (recorded history + next event date), after the chart, before offers */}
           {data.season ? <SeasonCalendar season={data.season} /> : null}
 
-          {/* Cross-marketplace comparison: renders only with ≥ 2 real marketplaces (never simulated) */}
-          {marketplaceComparison && <MarketplaceCompare comparison={marketplaceComparison} offers={pricing.offers} />}
 
           {/* Section 3: Marketplace Comparison & Price Alert */}
           <section className="grid grid-cols-1 items-start gap-6 min-[1121px]:grid-cols-[1fr_420px]">

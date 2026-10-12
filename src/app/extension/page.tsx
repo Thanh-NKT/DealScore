@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckIcon, MonitorIcon } from "@/components/ui/icons";
 import { buttonClass } from "@/components/ui/button";
+import { LogoMark } from "@/components/layout/logo-mark";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +25,13 @@ export default function ExtensionPage() {
         </nav>
 
         {/* Hero Banner */}
-        <div className="flex flex-col items-center gap-6 rounded-lg border border-line bg-surface p-8 text-center shadow-sm sm:p-12">
-          <div className="flex size-16 items-center justify-center rounded-lg bg-night text-accent">
+        <div className="flex flex-col items-center gap-6 rounded-hero border border-line bg-surface p-8 text-center shadow-sm sm:p-14">
+          <div className="flex size-16 items-center justify-center rounded-tile bg-accent text-on-accent">
             <MonitorIcon className="size-8" />
           </div>
 
           <div className="flex max-w-[680px] flex-col gap-3">
-            <h1 className="display text-stat font-extrabold leading-[1.15] tracking-[-0.02em] text-ink sm:text-price-hero">
+            <h1 className="display text-stat font-semibold leading-[1.15] tracking-[-0.02em] text-ink sm:text-price-hero">
               Biết ngay thời điểm mua tốt nhất ngay trên sàn
             </h1>
             <p className="text-body leading-[1.6] text-ink-2 sm:text-title">
@@ -56,7 +57,7 @@ export default function ExtensionPage() {
             </a>
             <Link
               href="/search"
-              className="flex h-13 items-center gap-2 rounded-md border border-line-strong bg-surface px-6 text-control font-semibold text-ink transition-colors hover:bg-surface-2"
+              className="flex h-13 items-center gap-2 rounded-full border border-line-strong/50 bg-surface px-7 text-control font-semibold text-ink transition-colors hover:border-primary hover:text-primary"
             >
               <span>Dùng trên web</span>
             </Link>
@@ -72,7 +73,7 @@ export default function ExtensionPage() {
         {/* Section: Mockup UI Previews matching Extension.html */}
         <div className="mt-14 flex flex-col items-center gap-8">
           <div className="text-center">
-            <h2 className="display text-h2 font-bold tracking-[-0.02em] text-ink">
+            <h2 className="display text-h2 font-semibold tracking-[-0.02em] text-ink">
               Giao diện tiện ích khi bạn mở Shopee
             </h2>
             <p className="mt-1 text-control text-ink-3">
@@ -86,15 +87,11 @@ export default function ExtensionPage() {
               <span className="text-label font-bold text-ink-3">
                 Popup: đã đủ dữ liệu
               </span>
-              <div className="w-[360px] overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
+              <div className="w-[360px] overflow-hidden rounded-lg border border-line bg-surface shadow-lift">
                 {/* Header */}
                 <div className="flex items-center gap-2.5 bg-night px-4 py-3 text-night-ink">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />
-                    </svg>
-                  </span>
-                  <span className="flex-1 display text-title font-extrabold tracking-[-0.02em]">
+                  <LogoMark className="size-8" />
+                  <span className="flex-1 display text-title font-bold tracking-[-0.02em]">
                     DealScore
                   </span>
                   <span className="rounded-full border border-night-line bg-night-2 px-2.5 py-1 text-micro font-semibold text-night-ink-2">
@@ -125,7 +122,7 @@ export default function ExtensionPage() {
                   <div className="flex items-center justify-between gap-3 rounded-md bg-canvas p-3.5">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-micro text-ink-3">Giá hiện tại</span>
-                      <span className="display text-price-input font-extrabold tracking-[-0.02em] text-ink">
+                      <span className="display text-price-input font-semibold tracking-[-0.02em] text-ink">
                         1.690.000đ
                       </span>
                     </div>
@@ -135,7 +132,7 @@ export default function ExtensionPage() {
                           <circle cx="30" cy="30" r="25" fill="none" stroke="var(--line)" strokeWidth="6" />
                           <circle cx="30" cy="30" r="25" fill="none" stroke="var(--buy)" strokeWidth="6" strokeLinecap="round" strokeDasharray="144.5 157.1" transform="rotate(-90 30 30)" />
                         </svg>
-                        <span className="display text-h4 font-extrabold tracking-[-0.02em] text-ink">
+                        <span className="display text-h4 font-semibold tracking-[-0.02em] text-ink">
                           92
                         </span>
                       </div>
@@ -186,7 +183,7 @@ export default function ExtensionPage() {
                     <span className="text-micro font-bold text-ink-2">Nơi khác đang bán</span>
                     <div className="flex items-center justify-between gap-2 text-label">
                       <span className="flex items-center gap-2">
-                        <span className="rounded-md border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2">
+                        <span className="rounded-full border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2">
                           Shopee
                         </span>
                         <span>Trang bạn đang xem</span>
@@ -195,7 +192,7 @@ export default function ExtensionPage() {
                     </div>
                     <div className="flex items-center justify-between gap-2 text-label">
                       <span className="flex items-center gap-2">
-                        <span className="rounded-md border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2">
+                        <span className="rounded-full border border-line bg-surface-2 px-2 py-0.5 text-micro font-semibold text-ink-2">
                           TikTok Shop
                         </span>
                         <span>Philips Việt Nam</span>
@@ -208,7 +205,7 @@ export default function ExtensionPage() {
                   <div className="flex flex-col gap-2 pt-2">
                     <button
                       type="button"
-                      className="flex h-11 items-center justify-center gap-2 rounded-md bg-accent text-body-sm font-bold text-ink"
+                      className="flex h-11 items-center justify-center gap-2 rounded-full bg-accent text-body-sm font-semibold text-on-accent"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" />
@@ -216,10 +213,10 @@ export default function ExtensionPage() {
                       <span>Theo dõi giá</span>
                     </button>
                     <div className="grid grid-cols-2 gap-2">
-                      <span className="flex h-10 items-center justify-center rounded-md border border-line-strong text-label font-semibold text-ink">
+                      <span className="flex h-10 items-center justify-center rounded-full border border-line-strong/50 text-label font-semibold text-ink">
                         Xem lịch sử giá
                       </span>
-                      <span className="flex h-10 items-center justify-center rounded-md border border-line-strong text-label font-semibold text-ink">
+                      <span className="flex h-10 items-center justify-center rounded-full border border-line-strong/50 text-label font-semibold text-ink">
                         So sánh giá
                       </span>
                     </div>
@@ -233,15 +230,11 @@ export default function ExtensionPage() {
               <span className="text-label font-bold text-ink-3">
                 Popup: chưa đủ dữ liệu
               </span>
-              <div className="w-[360px] overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
+              <div className="w-[360px] overflow-hidden rounded-lg border border-line bg-surface shadow-lift">
                 {/* Header */}
                 <div className="flex items-center gap-2.5 bg-night px-4 py-3 text-night-ink">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />
-                    </svg>
-                  </span>
-                  <span className="flex-1 display text-title font-extrabold tracking-[-0.02em]">
+                  <LogoMark className="size-8" />
+                  <span className="flex-1 display text-title font-bold tracking-[-0.02em]">
                     DealScore
                   </span>
                   <span className="rounded-full border border-night-line bg-night-2 px-2.5 py-1 text-micro font-semibold text-night-ink-2">
@@ -273,7 +266,7 @@ export default function ExtensionPage() {
                   <div className="flex items-center justify-between gap-3 rounded-md bg-canvas p-3.5">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-micro text-ink-3">Giá hiện tại</span>
-                      <span className="display text-price-input font-extrabold tracking-[-0.02em] text-ink">
+                      <span className="display text-price-input font-semibold tracking-[-0.02em] text-ink">
                         2.790.000đ
                       </span>
                     </div>
@@ -282,7 +275,7 @@ export default function ExtensionPage() {
                         <svg width="54" height="54" viewBox="0 0 60 60" aria-hidden="true" className="absolute left-0 top-0">
                           <circle cx="30" cy="30" r="25" fill="none" stroke="var(--ink-3)" strokeWidth="2" strokeDasharray="4 4" />
                         </svg>
-                        <span className="display text-h4 font-extrabold text-ink-3">
+                        <span className="display text-h4 font-semibold text-ink-3">
                           —
                         </span>
                       </div>
@@ -311,7 +304,7 @@ export default function ExtensionPage() {
                   <div className="flex flex-col gap-2 pt-2">
                     <button
                       type="button"
-                      className="flex h-11 items-center justify-center gap-2 rounded-md bg-accent text-body-sm font-bold text-ink"
+                      className="flex h-11 items-center justify-center gap-2 rounded-full bg-accent text-body-sm font-semibold text-on-accent"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" />

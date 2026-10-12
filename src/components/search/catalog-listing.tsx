@@ -17,7 +17,7 @@ interface CatalogListingProps {
 }
 
 const PAGE_LINK =
-  "inline-flex min-h-11 items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2";
+  "inline-flex min-h-11 items-center rounded-full border border-line-strong/50 bg-surface px-5 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:border-primary hover:text-primary";
 
 /**
  * SSR listing for the SEO landing pages (/{category}, /brand/{brand}), 1.7. Same cards and
@@ -29,22 +29,26 @@ export function CatalogListing({ title, result, basePath, searchHref, loadError,
   const pageHref = (n: number) => (n <= 1 ? basePath : `${basePath}?page=${n}`);
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-8 px-4 py-8 sm:px-6 sm:py-12 lg:px-14">
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0 space-y-1.5">
-          <h1 className="display text-h1 leading-[1.1] font-extrabold text-balance text-ink max-sm:text-h1-sm">{title}</h1>
-          <p className="text-body-sm text-ink-3">
-            <span className="num font-semibold text-ink-2">{result.total}</span> sản phẩm, giá theo dõi hằng ngày
-          </p>
+    <main className="w-full flex-1">
+      <header className="border-b border-line bg-ledger">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-end justify-between gap-x-6 gap-y-4 px-4 py-10 sm:px-6 sm:py-14 lg:px-14">
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className="eyebrow text-ink-3">Bảng giá</span>
+            <h1 className="display text-h1 leading-[1.05] font-semibold text-balance text-ink max-sm:text-h1-sm">{title}</h1>
+            <p className="text-body text-ink-2">
+              <span className="num font-bold text-primary">{result.total}</span> sản phẩm, giá theo dõi hằng ngày
+            </p>
+          </div>
+          <Link
+            href={searchHref}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-5 text-body-sm font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover"
+          >
+            Lọc theo giá, sắp xếp
+            <span aria-hidden="true">→</span>
+          </Link>
         </div>
-        <Link
-          href={searchHref}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
-        >
-          Lọc theo giá, sắp xếp
-          <span aria-hidden="true">→</span>
-        </Link>
       </header>
+      <div className="mx-auto w-full max-w-[1440px] space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-14">
       {aside}
 
       {result.items.length > 0 ? (
@@ -78,6 +82,7 @@ export function CatalogListing({ title, result, basePath, searchHref, loadError,
           )}
         </nav>
       )}
+      </div>
     </main>
   );
 }

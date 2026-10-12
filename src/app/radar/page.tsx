@@ -4,6 +4,7 @@ import { getFilterFacets } from "@/lib/search";
 import { siteUrl } from "@/lib/site-url";
 import { CategoryStrip, DiscoveryEmpty, DiscoveryShell, Pager } from "@/components/discovery/discovery-shell";
 import { RadarList } from "@/components/discovery/radar-list";
+import { TrendDownIcon } from "@/components/ui/icons";
 
 interface PageProps {
   searchParams: Promise<{ cat?: string; page?: string }>;
@@ -47,6 +48,7 @@ export default async function RadarPage({ searchParams }: PageProps) {
 
   return (
     <DiscoveryShell
+      eyebrow={<><TrendDownIcon className="size-3.5 text-buy" strokeWidth={2.4} />Radar giảm giá</>}
       title="Giảm giá thật hôm nay"
       lead={
         <>
@@ -60,7 +62,7 @@ export default async function RadarPage({ searchParams }: PageProps) {
       {/* Light botanical panel: category pills, then one card-row per real drop. */}
       <section
         aria-label="Danh sách giảm giá thật"
-        className="space-y-5 rounded-hero border border-line bg-surface p-5 text-ink sm:p-8"
+        className="space-y-5 text-ink"
       >
         <CategoryStrip tone="light" categories={categories} current={cat} hrefFor={(s) => href(s)} />
         {radarRes.status === "rejected" ? (
@@ -89,7 +91,7 @@ export default async function RadarPage({ searchParams }: PageProps) {
         ) : (
           <div className="space-y-3">
             <p className="text-body-sm text-ink-2">
-              <span className="num text-gradient-warm text-title font-extrabold">{radarRes.value.total}</span> sản phẩm, giảm sâu nhất trước
+              <span className="num text-title font-bold text-primary">{radarRes.value.total}</span> sản phẩm, giảm sâu nhất trước
             </p>
             <RadarList items={radarRes.value.items} categoryNames={categoryNames} />
           </div>

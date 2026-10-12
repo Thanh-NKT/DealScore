@@ -1,17 +1,17 @@
 /**
- * DESIGN.md "Viên lọc": a rounded-full filter chip that toggles on/off (category strips, drop-size
- * filters). 40px tall so it is a real tap target; on = petrol fill (light) or lime (night panel).
+ * Filter chip: a rounded-full chip that toggles on/off (category strips, drop-size filters). 40px tall
+ * so it is a real tap target; on = iris fill (light) or a paper fill (night panel).
  * `className` is layout-only.
  */
 type PillTone = "light" | "night";
 
 const TONE: Record<PillTone, { on: string; off: string }> = {
   light: {
-    on: "border-primary bg-primary font-bold text-on-primary shadow-xs",
-    off: "border-line bg-surface font-medium text-ink-2 hover:border-primary/40 hover:text-primary",
+    on: "border-primary bg-primary font-semibold text-on-primary",
+    off: "border-line bg-surface font-medium text-ink-2 hover:border-primary/40 hover:text-ink",
   },
   night: {
-    on: "border-accent bg-accent font-semibold text-on-accent",
+    on: "border-night-ink bg-night-ink font-semibold text-night",
     off: "border-night-line font-medium text-night-ink hover:bg-night-2",
   },
 };

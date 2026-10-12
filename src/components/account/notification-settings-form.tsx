@@ -123,7 +123,7 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
       className="space-y-7"
     >
       <section aria-labelledby={`${uid}-channels`} className="space-y-3">
-        <h2 id={`${uid}-channels`} className="display text-h4 font-bold leading-tight text-ink">
+        <h2 id={`${uid}-channels`} className="display text-h4 font-semibold leading-tight text-ink">
           Nhận thông báo giá qua
         </h2>
         <div className="divide-y divide-line rounded-md border border-line bg-surface">
@@ -152,7 +152,7 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
           </div>
         </div>
         {noChannel && (
-          <p role="status" className="flex items-start gap-2 rounded-md bg-surface-2 p-3.5 text-body-sm text-ink">
+          <p role="status" className="flex items-start gap-2 rounded-tile bg-surface-2 p-4 text-body-sm text-ink">
             <InfoIcon className="mt-0.5 size-4 shrink-0" />
             <span>
               Khi tắt cả hai kênh, bạn sẽ không nhận được thông báo giá nào. Các sản phẩm vẫn được theo dõi, và bạn có thể xem giá trong “Đang theo dõi” bất cứ lúc nào.
@@ -162,7 +162,7 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
       </section>
 
       <fieldset className="space-y-3">
-        <legend className="display mb-3 text-h4 font-bold leading-tight text-ink">Tần suất</legend>
+        <legend className="display mb-3 text-h4 font-semibold leading-tight text-ink">Tần suất</legend>
         <p className="text-body-sm text-ink-3">Tần suất này áp dụng cho cả theo dõi giá và tìm kiếm đã lưu.</p>
         <div className="divide-y divide-line rounded-md border border-line bg-surface">
           {(
@@ -226,7 +226,7 @@ export function NotificationSettingsForm({ initialSettings }: NotificationSettin
 
       <section aria-labelledby={`${uid}-quiet`} className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id={`${uid}-quiet`} className="display text-h4 font-bold leading-tight text-ink">
+          <h2 id={`${uid}-quiet`} className="display text-h4 font-semibold leading-tight text-ink">
             Giờ im lặng
           </h2>
           <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 text-control font-semibold text-ink">

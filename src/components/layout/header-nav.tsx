@@ -8,25 +8,26 @@ import { ChevronDownIcon } from "@/components/ui/icons";
 
 // Phones: the nav sits on its own scrollable row under the logo, so full labels fit; desktop: inline.
 const NAV_LINK =
-  "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md px-3.5 text-body-sm transition-colors duration-150 ease-out max-[1023px]:h-10 max-[1023px]:px-3";
+  "relative inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-body-sm transition-colors duration-150 ease-out";
 
-/** Primary navigation matching UI mockup. The current section is marked (aria-current) with surface-2. */
+/** Primary navigation. The current section is marked (aria-current) with a soft iris pill. */
 export function HeaderNav({ signedIn }: { signedIn: boolean }) {
   const path = usePathname() ?? "/";
   const links = [
     { href: "/search", label: "Tìm kiếm", active: path.startsWith("/search") },
     { href: "/radar", label: "Giảm giá thật", active: path.startsWith("/radar") },
     { href: "/trending", label: "Xu hướng", active: path.startsWith("/trending") },
+    { href: "/compare", label: "So sánh", active: path.startsWith("/compare") },
     { href: "/account/watch", label: "Đang theo dõi", active: path.startsWith("/account/watch") },
   ];
   return (
-    <nav aria-label="Điều hướng chính" className="flex items-center gap-1 max-[1023px]:w-max">
+    <nav aria-label="Điều hướng chính" className="flex items-center gap-0.5 max-[1023px]:w-max">
       {links.map(({ href, label, active }) => (
         <Link
           key={href}
           href={href}
           aria-current={active ? "page" : undefined}
-          className={`${NAV_LINK} ${active ? "bg-surface-2 font-semibold text-ink" : "font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"}`}
+          className={`${NAV_LINK} ${active ? "bg-primary-soft font-semibold text-primary" : "font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"}`}
         >
           <span className="whitespace-nowrap">{label}</span>
         </Link>
@@ -73,7 +74,7 @@ export function AccountMenu({ email }: { email: string | null }) {
     };
   }, [open]);
 
-  const item = "flex min-h-11 w-full items-center px-3 text-left text-control text-ink hover:bg-surface-2";
+  const item = "flex min-h-11 w-full items-center rounded-inner px-3 text-left text-control text-ink hover:bg-surface-2";
 
   return (
     <div ref={wrapRef} className="relative">
@@ -84,18 +85,18 @@ export function AccountMenu({ email }: { email: string | null }) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         title={label}
-        className="inline-flex min-h-11 max-w-[14rem] items-center gap-2 rounded-full border border-line bg-surface pl-1.5 pr-2.5 text-body-sm font-medium text-ink transition-colors duration-150 ease-out hover:border-line-strong max-[640px]:max-w-[9rem]"
+        className="ml-1 inline-flex min-h-10 max-w-[11rem] items-center 2xl:max-w-[14rem] gap-2 rounded-full border border-line bg-surface pl-1 pr-2.5 text-body-sm font-medium text-ink transition-colors duration-150 ease-out hover:border-primary/40 max-[640px]:max-w-[9rem]"
       >
-        <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent text-label font-bold text-on-accent">
+        <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-label font-bold text-on-primary">
           {initial}
         </span>
-        <span className="min-w-0 truncate max-[400px]:sr-only">{label}</span>
+        <span className="min-w-0 truncate max-xl:sr-only">{label}</span>
         <ChevronDownIcon className={`size-4 shrink-0 text-ink-3 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div role="menu" aria-label="Tài khoản" className="absolute right-0 top-[calc(100%+6px)] z-50 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-md border border-line bg-surface py-1 shadow-lift">
-          <p className="border-b border-line px-3 py-2 text-label text-ink-3">
+        <div role="menu" aria-label="Tài khoản" className="absolute right-0 top-[calc(100%+6px)] z-50 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-tile border border-line bg-surface p-1.5 shadow-lift">
+          <p className="mb-1 border-b border-line px-3 pb-2.5 pt-1.5 text-label text-ink-3">
             Đăng nhập với
             <span className="block truncate text-body-sm font-medium text-ink" title={label}>
               {label}
@@ -116,7 +117,7 @@ export function AccountMenu({ email }: { email: string | null }) {
           <Link role="menuitem" href="/account/preferences" className={item}>
             Sở thích mua sắm
           </Link>
-          <form action={signOut} className="border-t border-line">
+          <form action={signOut} className="mt-1 border-t border-line pt-1">
             <button role="menuitem" type="submit" className={item}>
               Đăng xuất
             </button>

@@ -34,7 +34,7 @@ export default async function RestoreAccountPage() {
         </span>
 
         <div className="space-y-2">
-          <h1 className="display text-h2 font-extrabold leading-[1.15] text-ink max-[760px]:text-price-input">Tài khoản đang chờ xóa</h1>
+          <h1 className="display text-h2 font-semibold leading-[1.15] text-ink max-[760px]:text-price-input">Tài khoản đang chờ xóa</h1>
           <p className="text-control leading-relaxed text-ink-2 [overflow-wrap:anywhere]">
             Tài khoản <strong className="font-semibold text-ink">{user.email}</strong> đã được yêu cầu xóa mềm và dự kiến sẽ bị xóa vĩnh viễn vào
             ngày <strong className="num font-semibold text-ink">{purgeDateStr}</strong>.
@@ -61,7 +61,7 @@ export default async function RestoreAccountPage() {
           <form action={signOut}>
             <button
               type="submit"
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-line-strong bg-surface px-4 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-line-strong/60 bg-surface px-5 text-control font-semibold text-ink transition-colors duration-150 ease-out hover:bg-surface-2"
             >
               Không khôi phục, đăng xuất ngay
             </button>

@@ -61,9 +61,9 @@ function PickList({ items, keep, exclude }: { items: SearchItem[]; keep: { a?: s
             <ProductImage src={i.image} className="size-12 shrink-0 rounded-md bg-surface-2! p-1" iconClassName="size-5" />
             <span className="min-w-0 flex-1">
               <span className="line-clamp-2 text-body-sm font-semibold text-ink [overflow-wrap:anywhere]">{i.canonicalName}</span>
-              <span className="num text-title font-extrabold text-ink">{i.bestPrice != null ? formatVnd(i.bestPrice) : "Chưa có giá"}</span>
+              <span className="num text-title font-bold text-ink">{i.bestPrice != null ? formatVnd(i.bestPrice) : "Chưa có giá"}</span>
             </span>
-            <span className="inline-flex min-h-10 shrink-0 items-center rounded-md border border-line-strong bg-surface px-4 text-body-sm font-semibold text-ink">Chọn</span>
+            <span className="inline-flex min-h-10 shrink-0 items-center rounded-full border border-line-strong/60 bg-surface px-5 text-body-sm font-semibold text-ink">Chọn</span>
           </Link>
         </li>
       ))}
@@ -82,7 +82,7 @@ function ChosenLabel({ data, position }: { data: ProductPageData; position: "A" 
         <p className="text-micro font-semibold text-ink-3">Sản phẩm {position} đã chọn</p>
         <p className="line-clamp-2 text-body-sm font-semibold text-ink [overflow-wrap:anywhere]">{data.product.canonicalName}</p>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="num text-title font-extrabold">{price != null ? formatVnd(price) : "—"}</span>
+          <span className="num text-title font-bold">{price != null ? formatVnd(price) : "—"}</span>
           <VerdictTag recommendation={verdict} />
           <ScoreRing score={h?.score} recommendation={verdict} size="sm" />
         </div>
@@ -104,9 +104,14 @@ export default async function ComparePage({ searchParams }: PageProps) {
   const [a, b] = await Promise.all([load(aSlug, clean(sp.va)), load(bSlug, clean(sp.vb))]);
 
   const heading = (
-    <header className="max-w-[68ch] space-y-2">
-      <h1 className="display text-h1 leading-[1.1] font-extrabold text-ink max-sm:text-h1-sm">So sánh hai sản phẩm</h1>
-      <p className="text-body leading-relaxed text-ink-2">
+    <header className="flex max-w-[68ch] flex-col gap-3">
+      <span className="eyebrow flex items-center gap-2 text-ink-3">
+        <span className="num rounded-xs bg-ink px-1.5 py-0.5 text-surface">A</span>
+        đối chiếu
+        <span className="num rounded-xs bg-accent px-1.5 py-0.5 text-on-accent">B</span>
+      </span>
+      <h1 className="display text-h1 leading-[1.05] font-semibold text-ink max-sm:text-h1-sm">So sánh hai sản phẩm</h1>
+      <p className="text-body leading-relaxed text-ink-2 sm:text-title sm:leading-relaxed">
         Đặt hai sản phẩm cạnh nhau: giá hôm nay, Deal Score, mức so với lịch sử giá và thông số.
       </p>
     </header>
@@ -124,7 +129,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
   if (a && b && a.product.id !== b.product.id) {
     return (
       <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 px-4 py-8 sm:px-6 sm:py-12 lg:px-14">
-        <h1 className="display text-h1 leading-[1.1] font-extrabold text-ink max-sm:text-h1-sm">So sánh</h1>
+        <h1 className="display text-h1 leading-[1.1] font-semibold text-ink max-sm:text-h1-sm">So sánh</h1>
         <CompareView comparison={buildComparison(a, b)} />
       </main>
     );
@@ -143,13 +148,13 @@ export default async function ComparePage({ searchParams }: PageProps) {
       {heading}
 
       {(aSlug && !a) || (bSlug && !b) ? (
-        <p className="flex items-start gap-2.5 rounded-md bg-surface-2 p-3.5 text-body-sm text-ink">
+        <p className="flex items-start gap-2.5 rounded-tile bg-surface-2 p-4 text-body-sm text-ink">
           <InfoIcon className="mt-0.5 size-[18px] shrink-0 text-ink-2" />
           Không tìm thấy một trong hai sản phẩm trong link. Hãy chọn lại bên dưới.
         </p>
       ) : null}
       {a && b && a.product.id === b.product.id && (
-        <p className="flex items-start gap-2.5 rounded-md bg-surface-2 p-3.5 text-body-sm text-ink">
+        <p className="flex items-start gap-2.5 rounded-tile bg-surface-2 p-4 text-body-sm text-ink">
           <InfoIcon className="mt-0.5 size-[18px] shrink-0 text-ink-2" />
           Hai bên đang là cùng một sản phẩm. Hãy chọn một sản phẩm khác để so sánh.
         </p>
@@ -158,7 +163,7 @@ export default async function ComparePage({ searchParams }: PageProps) {
       {kept && <ChosenLabel data={kept} position={keep.a ? "A" : "B"} />}
 
       <section aria-labelledby="pick-heading" className="space-y-3">
-        <h2 id="pick-heading" className="display text-h3 font-bold text-ink max-sm:text-title">
+        <h2 id="pick-heading" className="display text-h3 font-semibold text-ink max-sm:text-title">
           {kept ? "Chọn sản phẩm để so sánh cùng" : "Chọn sản phẩm đầu tiên"}
         </h2>
         <SearchBox initialQuery={q ?? ""} compare={keep} />
