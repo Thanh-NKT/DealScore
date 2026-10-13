@@ -20,8 +20,25 @@ export function HeaderNav({ signedIn }: { signedIn: boolean }) {
     { href: "/compare", label: "So sánh", active: path.startsWith("/compare") },
     { href: "/account/watch", label: "Đang theo dõi", active: path.startsWith("/account/watch") },
   ];
+
+  // Phones: the nav row scrolls sideways, so bring the current section into view (otherwise "So sánh" /
+  // "Đang theo dõi" sit cut off at the right edge). Only the row scrolls, never the page.
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const scroller = navRef.current?.parentElement;
+    const current = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!scroller || scroller.scrollWidth <= scroller.clientWidth) return;
+    if (!current) {
+      scroller.scrollLeft = 0;
+      return;
+    }
+    const s = scroller.getBoundingClientRect();
+    const c = current.getBoundingClientRect();
+    scroller.scrollLeft += c.left - s.left - (s.width - c.width) / 2;
+  }, [path]);
+
   return (
-    <nav aria-label="Điều hướng chính" className="flex items-center gap-0.5 max-[1023px]:w-max">
+    <nav ref={navRef} aria-label="Điều hướng chính" className="flex items-center gap-0.5 max-[1023px]:w-max">
       {links.map(({ href, label, active }) => (
         <Link
           key={href}
@@ -33,6 +50,20 @@ export function HeaderNav({ signedIn }: { signedIn: boolean }) {
         </Link>
       ))}
     </nav>
+  );
+}
+
+// Pages that already are the sign-in form: a "Đăng nhập" button there only points back at itself.
+const AUTH_PAGES = ["/login", "/register", "/forgot-password", "/reset-password", "/auth/"];
+
+/** Signed-out header action; hidden on the auth pages themselves. */
+export function LoginLink({ className }: { className: string }) {
+  const path = usePathname() ?? "/";
+  if (AUTH_PAGES.some((p) => path === p || (p.endsWith("/") && path.startsWith(p)))) return null;
+  return (
+    <Link href="/login" className={className}>
+      Đăng nhập
+    </Link>
   );
 }
 

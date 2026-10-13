@@ -40,7 +40,7 @@ export function SiteFooter() {
   return (
     <footer className="scope-night mt-auto bg-night text-night-ink-2">
       <div className="mx-auto max-w-[1440px] px-4 pb-10 pt-14 sm:px-6 lg:px-14 lg:pt-20">
-        <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr] lg:gap-20">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1.2fr_1fr] lg:gap-20">
           <div className="flex flex-col gap-7">
             <p className="display max-w-[16ch] text-h2 font-bold leading-[1.02] text-night-ink sm:text-h1">
               Mua đúng lúc. <span className="text-night-ink-3">Không mua vội.</span>
@@ -63,10 +63,11 @@ export function SiteFooter() {
                   <span key={s.label} className={`${s.grow} ${s.tone}`} />
                 ))}
               </div>
-              <div className="flex gap-1 text-micro text-night-ink-3">
+              {/* Phones: range above label, so "Có thể chờ" / "Nên mua" fit their quarter instead of truncating. */}
+              <div className="flex gap-1 text-micro leading-snug text-night-ink-3">
                 {SCALE.map((s) => (
-                  <span key={s.label} className={`${s.grow} min-w-0 truncate last:text-right`}>
-                    <span className="num font-semibold text-night-ink-2">{s.range}</span> {s.label}
+                  <span key={s.label} className={`${s.grow} min-w-0 last:text-right`}>
+                    <span className="num block font-semibold text-night-ink-2 sm:inline">{s.range}</span> {s.label}
                   </span>
                 ))}
               </div>

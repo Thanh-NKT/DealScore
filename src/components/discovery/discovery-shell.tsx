@@ -181,7 +181,7 @@ export function DiscoveryEmpty({
         {action && (
           <Link
             href={action.href}
-            className={buttonClass({ size: "md", className: "mt-4" })}
+            className={buttonClass({ size: "md", className: "mt-4 max-w-full text-center max-sm:whitespace-normal max-sm:text-balance max-sm:py-2.5" })}
           >
             {action.text}
           </Link>

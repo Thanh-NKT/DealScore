@@ -26,7 +26,7 @@ interface SearchBoxProps {
 const MAX_QUERY = 200;
 
 export const SEARCH_PLACEHOLDER = "Tên sản phẩm, hãng hoặc link — vd: SSD 2TB dưới 3 triệu";
-export const SEARCH_PLACEHOLDER_SHORT = "Tìm sản phẩm hoặc dán link";
+export const SEARCH_PLACEHOLDER_SHORT = "Tên sản phẩm hoặc link";
 
 /**
  * Keyword search with sectioned suggestions (search row, categories, brands, products; recent searches
@@ -45,6 +45,10 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
   const [query, setQuery] = useState(initialQuery.slice(0, MAX_QUERY));
   const lookup = useLookup();
   const narrow = useNarrow();
+  // Phones get a shorter hint so it isn't cut off next to the submit button.
+  const placeholder = compare
+    ? narrow ? "Tên hoặc model sản phẩm" : "Tên, hãng hoặc model sản phẩm…"
+    : narrow ? SEARCH_PLACEHOLDER_SHORT : SEARCH_PLACEHOLDER;
 
   const trimmed = query.trim().replace(/\s+/g, " ");
   const isLink = looksLikeLink(trimmed);
@@ -141,7 +145,7 @@ export function SearchBox({ initialQuery = "", secondary = false, compare }: Sea
           aria-describedby={`${uid}-status`}
           aria-keyshortcuts="/"
           readOnly={lookup.loading}
-          placeholder={compare ? "Tên, hãng hoặc model sản phẩm…" : narrow ? SEARCH_PLACEHOLDER_SHORT : SEARCH_PLACEHOLDER}
+          placeholder={placeholder}
           className="h-11 w-full min-w-0 flex-1 bg-transparent text-body text-ink placeholder:text-ink-3 focus:outline-none focus-visible:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
 

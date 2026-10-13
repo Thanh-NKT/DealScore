@@ -15,11 +15,20 @@ export function LogoMark({ className = "size-9" }: { className?: string }) {
 }
 
 /** Logo mark + wordmark ("Deal" in ink, "Score" in iris). `tone="night"` for dark bands (footer). */
-export function Wordmark({ tone = "light", compact = false }: { tone?: "light" | "night"; compact?: boolean }) {
+/** `markOnlyOnNarrow`: below 360px only the mark shows (header: wordmark + actions don't fit one row at 320px). */
+export function Wordmark({
+  tone = "light",
+  compact = false,
+  markOnlyOnNarrow = false,
+}: {
+  tone?: "light" | "night";
+  compact?: boolean;
+  markOnlyOnNarrow?: boolean;
+}) {
   return (
     <span className={`flex items-center gap-2.5 max-[440px]:gap-2 ${tone === "night" ? "text-night-ink" : "text-ink"}`}>
       <LogoMark className={compact ? "size-8" : "size-9 max-[440px]:size-8"} />
-      <span className={`display font-bold leading-none ${compact ? "text-title" : "text-h4 max-[440px]:text-title"}`}>
+      <span className={`display font-bold leading-none ${compact ? "text-title" : "text-h4 max-[440px]:text-title"} ${markOnlyOnNarrow ? "max-[359px]:sr-only" : ""}`}>
         Deal<span className={tone === "night" ? "text-night-ink-3" : "text-primary"}>Score</span>
       </span>
     </span>

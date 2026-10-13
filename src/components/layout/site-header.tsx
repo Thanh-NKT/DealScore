@@ -2,7 +2,7 @@ import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { BellIcon, MonitorIcon } from "@/components/ui/icons";
-import { AccountMenu, HeaderNav } from "./header-nav";
+import { AccountMenu, HeaderNav, LoginLink } from "./header-nav";
 import { Wordmark } from "./logo-mark";
 import { MarketplaceMark } from "@/components/product/marketplace-mark";
 import { ThemeToggle } from "./theme-toggle";
@@ -52,7 +52,7 @@ export async function SiteHeader() {
         <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-14 max-[1023px]:h-auto max-[1023px]:flex-wrap max-[1023px]:gap-y-0 max-[1023px]:pt-3 max-[440px]:gap-x-3">
           <div className="flex min-w-0 items-center gap-3 self-stretch sm:gap-8 max-[1023px]:contents">
             <Link href="/" aria-label="DealScore — Trang chủ" className="flex shrink-0 items-center rounded-inner">
-              <Wordmark />
+              <Wordmark markOnlyOnNarrow />
             </Link>
             <div className="min-w-0 self-center max-[1023px]:order-last max-[1023px]:-mx-4 max-[1023px]:mt-3 max-[1023px]:w-[calc(100%+2rem)] max-[1023px]:overflow-x-auto max-[1023px]:border-t max-[1023px]:border-line max-[1023px]:px-3 max-[1023px]:py-1.5 max-[1023px]:[scrollbar-width:none]">
               <HeaderNav signedIn={Boolean(user)} />
@@ -79,12 +79,7 @@ export async function SiteHeader() {
             {user ? (
               <AccountMenu email={user.email ?? null} />
             ) : (
-              <Link
-                href="/login"
-                className="ml-1 flex h-10 items-center justify-center rounded-full bg-primary px-5 text-body-sm font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover max-[440px]:ml-0.5 max-[440px]:h-9 max-[440px]:px-3.5 max-[440px]:text-label"
-              >
-                Đăng nhập
-              </Link>
+              <LoginLink className="ml-1 flex h-10 items-center justify-center rounded-full bg-primary px-5 text-body-sm font-semibold text-on-primary transition-colors duration-150 ease-out hover:bg-primary-hover max-[440px]:ml-0.5 max-[440px]:h-9 max-[440px]:px-3.5 max-[440px]:text-label" />
             )}
           </div>
         </div>
