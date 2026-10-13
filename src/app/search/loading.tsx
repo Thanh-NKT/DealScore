@@ -15,7 +15,7 @@ export default function SearchLoading() {
           </div>
         </div>
       </div>
-      <div className="mx-auto grid w-full max-w-[1440px] items-start gap-7 px-4 py-8 sm:px-6 lg:px-14 md:grid-cols-[248px_minmax(0,1fr)] lg:grid-cols-[264px_minmax(0,1fr)]">
+      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-7 px-4 py-8 sm:px-6 lg:px-14 md:grid-cols-[248px_minmax(0,1fr)] lg:grid-cols-[264px_minmax(0,1fr)]">
         <Skeleton className="h-[420px] w-full rounded-lg max-md:h-13" />
         <div className="min-w-0 space-y-6">
           <div className="flex flex-wrap items-end justify-between gap-4">

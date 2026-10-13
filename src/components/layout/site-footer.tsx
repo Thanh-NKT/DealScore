@@ -92,7 +92,7 @@ export function SiteFooter() {
           </nav>
         </div>
 
-        <div className="mt-14 grid gap-6 border-t border-night-line/70 pt-8 lg:grid-cols-[auto_1fr] lg:items-center lg:gap-14">
+        <div className="mt-14 grid grid-cols-1 gap-6 border-t border-night-line/70 pt-8 lg:grid-cols-[auto_1fr] lg:items-center lg:gap-14">
           <Link href="/" aria-label="DealScore — Trang chủ" className="w-fit rounded-inner">
             <Wordmark tone="night" />
           </Link>

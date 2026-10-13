@@ -41,7 +41,7 @@ export function SortSelect({ params, baseQuery }: { params: SearchParams; baseQu
   };
 
   return (
-    <div className="flex min-w-0 max-w-full flex-col items-end gap-1.5">
+    <div className="flex min-w-0 max-w-full flex-col items-end gap-1.5 max-sm:w-full max-sm:items-stretch">
       <SegmentedControl
         label="Sắp xếp"
         value={shown}

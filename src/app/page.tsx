@@ -110,7 +110,7 @@ export default async function Home() {
           aria-hidden="true"
           className="bg-ledger pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_75%_70%_at_20%_25%,black,transparent_75%)]"
         />
-        <div className="relative mx-auto grid max-w-[1440px] items-center gap-14 px-4 pb-16 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] lg:gap-16 lg:px-14 lg:pb-24 lg:pt-16">
+        <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-14 px-4 pb-16 pt-10 sm:px-6 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] lg:gap-16 lg:px-14 lg:pb-24 lg:pt-16">
           <div className="flex min-w-0 flex-col gap-8">
             <div className="flex flex-col gap-6">
               <span className="inline-flex w-fit max-w-full items-center gap-2.5 rounded-full border border-line bg-surface/90 py-1.5 pl-1.5 pr-4 text-label font-medium text-ink-2 shadow-xs backdrop-blur">
@@ -251,7 +251,7 @@ export default async function Home() {
             </Link>
           </div>
 
-          <ol className="relative grid gap-8 md:grid-cols-3 md:gap-0">
+          <ol className="relative grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-0">
             {STEPS.map((step, i) => {
               const Icon = step.icon;
               return (

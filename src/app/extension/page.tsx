@@ -83,11 +83,11 @@ export default function ExtensionPage() {
 
           <div className="flex w-full flex-wrap items-start justify-center gap-8 lg:gap-12">
             {/* Popup 1: Sufficient Data */}
-            <div className="flex flex-col gap-3">
+            <div className="flex w-full max-w-[360px] flex-col gap-3">
               <span className="text-label font-bold text-ink-3">
                 Popup: đã đủ dữ liệu
               </span>
-              <div className="w-[360px] overflow-hidden rounded-lg border border-line bg-surface shadow-lift">
+              <div className="w-full overflow-hidden rounded-lg border border-line bg-surface shadow-lift">
                 {/* Header */}
                 <div className="flex items-center gap-2.5 bg-night px-4 py-3 text-night-ink">
                   <LogoMark className="size-8" />
@@ -226,11 +226,11 @@ export default function ExtensionPage() {
             </div>
 
             {/* Popup 2: Insufficient Data */}
-            <div className="flex flex-col gap-3">
+            <div className="flex w-full max-w-[360px] flex-col gap-3">
               <span className="text-label font-bold text-ink-3">
                 Popup: chưa đủ dữ liệu
               </span>
-              <div className="w-[360px] overflow-hidden rounded-lg border border-line bg-surface shadow-lift">
+              <div className="w-full overflow-hidden rounded-lg border border-line bg-surface shadow-lift">
                 {/* Header */}
                 <div className="flex items-center gap-2.5 bg-night px-4 py-3 text-night-ink">
                   <LogoMark className="size-8" />

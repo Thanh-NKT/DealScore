@@ -198,7 +198,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </div>
       </section>
 
-      <div className="mx-auto grid w-full max-w-[1440px] items-start gap-7 px-4 py-8 sm:px-6 lg:px-14 md:grid-cols-[248px_minmax(0,1fr)] lg:grid-cols-[264px_minmax(0,1fr)]">
+      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-7 px-4 py-8 sm:px-6 lg:px-14 md:grid-cols-[248px_minmax(0,1fr)] lg:grid-cols-[264px_minmax(0,1fr)]">
         <Filters
           params={params}
           availableCategories={facets.categories}
@@ -237,7 +237,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 max-sm:w-full">
               {canOfferSave ? (
                 <SaveSearchButton
                   query={rawQuery}
