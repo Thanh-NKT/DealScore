@@ -4,7 +4,7 @@
  * existing ProductCard renders them. Every query error throws.
  */
 import { createClient } from "@/lib/supabase/server";
-import type { SearchItem } from "@/lib/search";
+import { categoryIdForSlug, type SearchItem } from "@/lib/search";
 
 export const RADAR_PAGE_SIZE = 24;
 export const RADAR_MIN_DROP = 0.1;
@@ -69,10 +69,7 @@ function toCard(r: CardRow): SearchItem {
 
 async function categoryId(slug: string | undefined): Promise<string | undefined | null> {
   if (!slug) return undefined;
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("categories").select("id").eq("slug", slug).maybeSingle();
-  if (error) throw new Error(`Failed to read category: ${error.message}`);
-  return data?.id ?? null; // null = unknown slug
+  return categoryIdForSlug(await createClient(), slug); // null = unknown slug
 }
 
 export async function loadRadar(opts: { categorySlug?: string; page?: number } = {}): Promise<{

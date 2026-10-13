@@ -30,9 +30,12 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: call getUser() right after creating the client to refresh the token.
-  // Do not add logic between createServerClient and getUser().
-  await supabase.auth.getUser();
+  // IMPORTANT: call getClaims() right after creating the client to refresh the token.
+  // Do not add logic between createServerClient and getClaims().
+  // getClaims (not getUser): it refreshes an expired session the same way, but verifies the JWT locally
+  // against the cached JWKS when the project uses asymmetric signing keys — no Auth round trip on every
+  // request. With legacy HS256 keys it falls back to getUser() itself. Pages still call getUser().
+  await supabase.auth.getClaims();
 
   return supabaseResponse;
 }

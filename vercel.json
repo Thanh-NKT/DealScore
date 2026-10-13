@@ -1,1 +1,4 @@
-{ "crons": [{ "path": "/api/cron/purge-accounts", "schedule": "0 20 * * *" }] }
+{
+  "regions": ["icn1"],
+  "crons": [{ "path": "/api/cron/purge-accounts", "schedule": "0 20 * * *" }]
+}

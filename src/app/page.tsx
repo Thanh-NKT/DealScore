@@ -16,7 +16,7 @@ import { HomeProductTabs } from "@/components/home/home-product-tabs";
 import { HomeRadarPanel } from "@/components/home/home-radar-panel";
 import { getFilterFacets, searchProducts } from "@/lib/search";
 import { loadRadar, loadTrending } from "@/lib/discovery";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/session";
 import { buttonClass } from "@/components/ui/button";
 import { MarketplaceMark } from "@/components/product/marketplace-mark";
 
@@ -74,14 +74,14 @@ const SIGNALS = [
 const PROMISES = ["Giá các sàn đặt cạnh nhau", "Lịch sử giá theo từng phân loại", "Không ai trả tiền để được xếp hạng"];
 
 export default async function Home() {
-  const supabase = await createClient();
   const [featuredRes, recentRes, watchedRes, radarRes, facetsRes, userRes] = await Promise.allSettled([
     searchProducts({ sort: "deal_score", page: 1 }),
     searchProducts({ sort: "updated", page: 1 }),
     loadTrending("watched"),
     loadRadar({ page: 1 }),
     getFilterFacets(),
-    supabase.auth.getUser(),
+    // Same memoised read as SiteHeader: one Auth round trip per request, not two.
+    getCurrentUser(),
   ]);
 
   if (featuredRes.status === "rejected") console.error("home: featured searchProducts failed", featuredRes.reason);
@@ -99,7 +99,7 @@ export default async function Home() {
   const radarItems = radarRes.status === "fulfilled" ? radarRes.value.items : [];
   const categories = facetsRes.status === "fulfilled" ? facetsRes.value.categories : [];
   const categoryNames = Object.fromEntries(categories.map((c) => [c.slug, c.name]));
-  const signedIn = userRes.status === "fulfilled" && Boolean(userRes.value.data.user);
+  const signedIn = userRes.status === "fulfilled" && userRes.value !== null;
 
   return (
     <main className="w-full flex-1">

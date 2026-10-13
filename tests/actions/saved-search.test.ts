@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let currentUser: { id: string } | null = null;
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: async () => currentUser }));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), unstable_cache: <T,>(fn: T) => fn }));
 vi.mock("@/lib/analytics/track", () => ({ trackAfter: vi.fn() }));
 // Intent: "nồi chiên dưới 2 triệu" → category + price (what /search would apply).
 vi.mock("@/lib/search/resolve-params", () => ({

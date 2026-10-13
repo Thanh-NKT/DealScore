@@ -72,6 +72,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   if (rawRange === "7") range = 7;
   else if (rawRange === "90") range = 90;
 
+  // The viewer is independent of the product: start the Auth + profile read now, in parallel with the
+  // page data, instead of after it. The no-op catch keeps a 404 path from leaving it unhandled.
+  const userPromise = getCurrentUser();
+  userPromise.catch(() => {});
+
   const data = await getPageData(productSlug, variant);
 
   if (!data) {
@@ -93,7 +98,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   // One "now" for server and client renders of the chart (its Vietnam day decides the window).
   const nowIso = new Date().toISOString();
 
-  const user = await getCurrentUser();
+  const user = await userPromise;
   const existingWatch = user
     ? await getMyWatchForVariant(user.id, selectedVariantId).catch((err) => {
         console.error("getMyWatchForVariant failed", err);

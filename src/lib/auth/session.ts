@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
@@ -16,8 +17,11 @@ export interface CurrentUser {
  * Current user from the server session (cookies).
  * Returns null when not signed in.
  * Throws if an auth.user exists but its public.users profile cannot be read.
+ *
+ * Memoised per request (React cache): the header and the page both ask, and each ask is an Auth
+ * round trip plus a profile read — paid once instead of twice.
  */
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = await createClient();
 
   const {
@@ -48,7 +52,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     marketingOptIn: profile.marketing_opt_in,
     deletedAt: profile.deleted_at,
   };
-}
+});
 
 /**
  * Requires the user to be signed in and pass every AuthGate check.

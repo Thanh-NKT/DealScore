@@ -80,11 +80,16 @@ async function loadPreferences(
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const raw = parseSearchParams(await searchParams);
-  const user = await getCurrentUser().catch(() => null);
+  // Facets don't depend on the query: start them first, awaited with the results below.
+  const facetsPromise = getFilterFacets();
+  facetsPromise.catch(() => {});
 
   // Query intent (spec §3): "ssd 2tb dưới 3 triệu" → category + capacity + price chips. The URL
   // always wins over what the text says (applyIntent). getIntentVocab never throws.
-  const { params: intentParams, applied, demandIntent } = await resolveSearchParams(raw);
+  const [user, { params: intentParams, applied, demandIntent }] = await Promise.all([
+    getCurrentUser().catch(() => null),
+    resolveSearchParams(raw),
+  ]);
 
   // "Theo sở thích của tôi" (spec §5, off by default): saved preferences fill what neither the URL
   // nor the query intent set. Only the searched params change — links keep `prefs=1` (carried by
@@ -96,7 +101,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   // A failed search must not take the whole page down: show a "retry" state instead. Facets only
   // feed the filter column, so they degrade to empty lists.
-  const [searchRes, facetsRes] = await Promise.allSettled([searchProducts(queryParams), getFilterFacets()]);
+  const [searchRes, facetsRes] = await Promise.allSettled([searchProducts(queryParams), facetsPromise]);
   if (searchRes.status === "rejected") console.error("search: searchProducts failed", searchRes.reason);
   if (facetsRes.status === "rejected") console.error("search: getFilterFacets failed", facetsRes.reason);
   let loadError = searchRes.status === "rejected";

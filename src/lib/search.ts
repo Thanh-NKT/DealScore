@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { Database } from "@/lib/database.types";
 import { MARKETPLACES, type MarketplaceId } from "@/lib/marketplaces";
 import { expandQuery } from "@/lib/search/synonyms";
@@ -272,11 +274,22 @@ type SearchRpcRow = Database["public"]["Functions"]["search_products"]["Returns"
  */
 async function resolveCategoryId(supabase: SupabaseServer, params: SearchParams): Promise<string | undefined | null> {
   if (params.categoryId || !params.categorySlug) return params.categoryId;
-  const { data: cat, error: catError } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("slug", params.categorySlug)
-    .maybeSingle();
+  return categoryIdForSlug(supabase, params.categorySlug);
+}
+
+/**
+ * Category slug → id, from the cached catalog facets when the slug is there (no round trip), else one
+ * direct read: a category created inside the cache window, or no Next cache at all (tsx jobs, tests).
+ * Unknown slug → null; a failed direct read throws.
+ */
+export async function categoryIdForSlug(supabase: SupabaseServer, slug: string): Promise<string | null> {
+  try {
+    const hit = (await cachedCatalogFacets()).categories.find((c) => c.slug === slug);
+    if (hit) return hit.id;
+  } catch {
+    // Cache unavailable or its load failed: the direct read below decides.
+  }
+  const { data: cat, error: catError } = await supabase.from("categories").select("id").eq("slug", slug).maybeSingle();
   if (catError) throw new Error(`Failed to read category: ${catError.message}`);
   return cat ? cat.id : null;
 }
@@ -484,11 +497,15 @@ export const NO_ADVANCED_FILTERS: AdvancedFilterAvailability = { rating: false, 
  * Brands come from a distinct RPC: reading the whole column into the app gets
  * silently truncated by PostgREST at 1000 rows.
  */
-export async function getFilterFacets(): Promise<FilterFacets> {
-  const supabase = await createClient();
+/** FilterFacets plus each category's id, so a `?cat=` slug resolves without its own read. */
+type CatalogFacets = Omit<FilterFacets, "categories"> & { categories: Array<{ id: string; slug: string; name: string }> };
+
+async function readCatalogFacets(): Promise<CatalogFacets> {
+  // Public catalog only, so a cookie-less client inside a shared cache (unstable_cache can't read cookies()).
+  const supabase = createPublicClient();
 
   const [catRes, brandRes, availRes] = await Promise.all([
-    supabase.from("categories").select("slug, name").order("sort_order"),
+    supabase.from("categories").select("id, slug, name").order("sort_order"),
     supabase.rpc("product_brands"),
     supabase.rpc("filter_availability"),
   ]);
@@ -508,6 +525,20 @@ export async function getFilterFacets(): Promise<FilterFacets> {
     .sort((a, b) => a.localeCompare(b, "vi"));
 
   return { categories: catRes.data ?? [], brands, advanced, marketplaces };
+}
+
+/**
+ * Facets change only when the catalog does, yet every list page (home, search, radar, trending) needs them:
+ * shared for 5 minutes instead of three reads per page view. Errors throw, so a failure is never cached.
+ */
+const cachedCatalogFacets = unstable_cache(readCatalogFacets, ["catalog-facets-v1"], {
+  revalidate: 300,
+  tags: ["catalog-facets"],
+});
+
+export async function getFilterFacets(): Promise<FilterFacets> {
+  const { categories, ...rest } = await cachedCatalogFacets();
+  return { ...rest, categories: categories.map(({ slug, name }) => ({ slug, name })) };
 }
 
 /**
