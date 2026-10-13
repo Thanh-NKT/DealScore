@@ -1,14 +1,11 @@
-import Link from "next/link";
 import { BellIcon, CheckIcon, ShieldCheckIcon } from "@/components/ui/icons";
 import { LogoMark } from "@/components/layout/logo-mark";
-import { segmentClass, segmentTrack } from "@/components/ui/segmented";
+import { AuthCardFooter, AuthCardHeading } from "./auth-card";
 
 interface AuthShellProps {
-  title: string;
+  /** Without a title the children own the whole card body (AuthTabs renders its own heading). */
+  title?: string;
   intro?: React.ReactNode;
-  /** Shows the "Đăng nhập | Đăng ký" switch with this segment selected. */
-  tab?: "login" | "register";
-  next?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
@@ -20,16 +17,12 @@ const BENEFITS = [
   { icon: ShieldCheckIcon, text: "Xuất hoặc xóa dữ liệu của bạn bất cứ lúc nào." },
 ];
 
-function withNext(path: string, next?: string) {
-  return next && next !== "/" ? `${path}?next=${encodeURIComponent(next)}` : path;
-}
-
 /**
- * Two columns on a measuring-grid page: the form card (logo, optional "Đăng nhập | Đăng ký" switch,
- * title, form) and, beside it on wide screens, a night panel with what an account gets you and an
- * illustrated price alert. Phones show the form first and the list under it.
+ * Two columns on a measuring-grid page: the form card (logo, title, form, or AuthTabs with its
+ * "Đăng nhập | Đăng ký" switch) and, beside it on wide screens, a night panel with what an account
+ * gets you and an illustrated price alert. Phones show the form first and the list under it.
  */
-export function AuthShell({ title, intro, tab, next, children, footer }: AuthShellProps) {
+export function AuthShell({ title, intro, children, footer }: AuthShellProps) {
   return (
     <main className="relative flex w-full flex-1 items-center overflow-hidden">
       <div
@@ -40,23 +33,15 @@ export function AuthShell({ title, intro, tab, next, children, footer }: AuthShe
         <section className="rounded-hero border border-line bg-surface px-5 py-7 shadow-lift min-[760px]:px-10 min-[760px]:py-10 lg:order-2 lg:rounded-l-none lg:border-l-0">
           <LogoMark className="size-11" />
 
-          {tab && (
-            <nav aria-label="Đăng nhập hoặc tạo tài khoản" className={segmentTrack({ display: "grid", className: "mt-7 grid-cols-2" })}>
-              <TabLink href={withNext("/login", next)} active={tab === "login"}>
-                Đăng nhập
-              </TabLink>
-              <TabLink href={withNext("/register", next)} active={tab === "register"}>
-                Đăng ký
-              </TabLink>
-            </nav>
+          {title ? (
+            <>
+              <AuthCardHeading title={title} intro={intro} />
+              <div className="mt-7">{children}</div>
+              {footer && <AuthCardFooter>{footer}</AuthCardFooter>}
+            </>
+          ) : (
+            children
           )}
-
-          <h1 className="display mt-7 text-h2 font-semibold leading-[1.12] text-balance text-ink max-[760px]:text-price-input">{title}</h1>
-          {intro && <div className="mt-2 text-control leading-relaxed text-ink-2 text-pretty">{intro}</div>}
-
-          <div className="mt-7">{children}</div>
-
-          {footer && <div className="mt-7 border-t border-line pt-5 text-body-sm leading-relaxed text-ink-2">{footer}</div>}
         </section>
 
         <aside
@@ -109,17 +94,5 @@ export function AuthShell({ title, intro, tab, next, children, footer }: AuthShe
         </aside>
       </div>
     </main>
-  );
-}
-
-function TabLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={segmentClass(active, { size: "lg" })}
-    >
-      {children}
-    </Link>
   );
 }

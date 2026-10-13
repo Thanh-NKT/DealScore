@@ -4,6 +4,7 @@ import { getFilterFacets } from "@/lib/search";
 import { siteUrl } from "@/lib/site-url";
 import { ProductCard } from "@/components/search/product-card";
 import { BellIcon, TrendUpIcon } from "@/components/ui/icons";
+import { TRENDING_HEADING } from "@/components/discovery/headings";
 import { CategoryStrip, DiscoveryEmpty, DiscoveryShell, SegmentedLinks } from "@/components/discovery/discovery-shell";
 
 interface PageProps {
@@ -68,8 +69,7 @@ export default async function TrendingPage({ searchParams }: PageProps) {
 
   return (
     <DiscoveryShell
-      eyebrow={<><TrendUpIcon className="size-3.5 text-primary" strokeWidth={2.4} />Bảng xếp hạng</>}
-      title="Xu hướng"
+      {...TRENDING_HEADING}
       lead={tab.lead}
       controls={
         <>

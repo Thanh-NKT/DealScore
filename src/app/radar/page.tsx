@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
-import { loadRadar, RADAR_MIN_DROP } from "@/lib/discovery";
+import { loadRadar } from "@/lib/discovery";
 import { getFilterFacets } from "@/lib/search";
 import { siteUrl } from "@/lib/site-url";
 import { CategoryStrip, DiscoveryEmpty, DiscoveryShell, Pager } from "@/components/discovery/discovery-shell";
 import { RadarList } from "@/components/discovery/radar-list";
-import { TrendDownIcon } from "@/components/ui/icons";
+import { RADAR_HEADING, RADAR_MIN_DROP_PCT as MIN_DROP_PCT } from "@/components/discovery/headings";
 
 interface PageProps {
   searchParams: Promise<{ cat?: string; page?: string }>;
 }
 
 export const dynamic = "force-dynamic";
-
-const MIN_DROP_PCT = Math.round(RADAR_MIN_DROP * 100);
 
 function parse(sp: { cat?: string; page?: string }) {
   const page = Number(sp.page);
@@ -48,15 +46,7 @@ export default async function RadarPage({ searchParams }: PageProps) {
 
   return (
     <DiscoveryShell
-      eyebrow={<><TrendDownIcon className="size-3.5 text-buy" strokeWidth={2.4} />Radar giảm giá</>}
-      title="Giảm giá thật hôm nay"
-      lead={
-        <>
-          Những sản phẩm đang rẻ hơn ít nhất <strong className="font-semibold text-ink">{MIN_DROP_PCT}%</strong> so với giá
-          trung vị 30 ngày mà DealScore ghi nhận. Chúng tôi so với giá đã bán thật, không so với giá niêm yết người bán tự đặt,
-          nên “giảm 50%” trên giấy không lọt vào đây.
-        </>
-      }
+      {...RADAR_HEADING}
       footnote="Chỉ tính sản phẩm còn hàng, có giá cập nhật trong 48 giờ và có ít nhất 10 ngày dữ liệu trong 30 ngày qua. Giá flash sale có thể chỉ kéo dài vài giờ. Hoa hồng tiếp thị không ảnh hưởng tới thứ tự."
     >
       {/* Light botanical panel: category pills, then one card-row per real drop. */}
