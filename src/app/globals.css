@@ -316,7 +316,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--primary); }
 @keyframes bar-grow {
   from { transform: scaleX(0); }
 }
+/* A route's loading screen shows only if the page is slow (LoadingRegion). */
+@keyframes loading-in {
+  from { opacity: 0; }
+}
 @media (prefers-reduced-motion: no-preference) {
+  .loading-in { animation: loading-in 200ms var(--ease-out) 250ms both; }
   .verdict-in { animation: verdict-in 420ms var(--ease-out) both; }
   .gauge-sweep { animation: gauge-sweep 900ms var(--ease-out) both; }
   .ruler-in { animation: ruler-in 900ms var(--ease-out) both; }
