@@ -10,16 +10,24 @@ import { ChevronDownIcon } from "@/components/ui/icons";
 const NAV_LINK =
   "relative inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-body-sm transition-colors duration-150 ease-out";
 
-/** Primary navigation. The current section is marked (aria-current) with a soft iris pill. */
+/**
+ * Primary navigation. The current section is marked (aria-current) with a soft iris pill.
+ *
+ * Every route is dynamic, so a default <Link> prefetches nothing and each click waits a full round trip
+ * to the function region (~350ms from Vietnam). The public sections prefetch the whole page as soon as
+ * the header shows (kept 5 min in the client cache), so a click renders at once. "Đang theo dõi" is the
+ * user's own list and changes as they watch / unwatch: it prefetches only on intent (hover, touch, focus).
+ */
 export function HeaderNav({ signedIn }: { signedIn: boolean }) {
   const path = usePathname() ?? "/";
   const links = [
-    { href: "/search", label: "Tìm kiếm", active: path.startsWith("/search") },
-    { href: "/radar", label: "Giảm giá thật", active: path.startsWith("/radar") },
-    { href: "/trending", label: "Xu hướng", active: path.startsWith("/trending") },
-    { href: "/compare", label: "So sánh", active: path.startsWith("/compare") },
-    { href: "/account/watch", label: "Đang theo dõi", active: path.startsWith("/account/watch") },
+    { href: "/search", label: "Tìm kiếm", active: path.startsWith("/search"), eager: true },
+    { href: "/radar", label: "Giảm giá thật", active: path.startsWith("/radar"), eager: true },
+    { href: "/trending", label: "Xu hướng", active: path.startsWith("/trending"), eager: true },
+    { href: "/compare", label: "So sánh", active: path.startsWith("/compare"), eager: true },
+    { href: "/account/watch", label: "Đang theo dõi", active: path.startsWith("/account/watch"), eager: false },
   ];
+  const [intent, setIntent] = useState<string | null>(null);
 
   // Phones: the nav row scrolls sideways, so bring the current section into view (otherwise "So sánh" /
   // "Đang theo dõi" sit cut off at the right edge). Only the row scrolls, never the page.
@@ -39,10 +47,14 @@ export function HeaderNav({ signedIn }: { signedIn: boolean }) {
 
   return (
     <nav ref={navRef} aria-label="Điều hướng chính" className="flex items-center gap-0.5 max-[1023px]:w-max">
-      {links.map(({ href, label, active }) => (
+      {links.map(({ href, label, active, eager }) => (
         <Link
           key={href}
           href={href}
+          prefetch={eager || intent === href ? true : false}
+          onMouseEnter={eager ? undefined : () => setIntent(href)}
+          onTouchStart={eager ? undefined : () => setIntent(href)}
+          onFocus={eager ? undefined : () => setIntent(href)}
           aria-current={active ? "page" : undefined}
           className={`${NAV_LINK} ${active ? "bg-primary-soft font-semibold text-primary" : "font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"}`}
         >

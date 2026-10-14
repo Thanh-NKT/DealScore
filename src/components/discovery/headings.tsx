@@ -1,7 +1,7 @@
 import { RADAR_MIN_DROP } from "@/lib/discovery";
 import { TrendDownIcon, TrendUpIcon } from "@/components/ui/icons";
 
-/** Heading copy shared by the discovery pages and their loading.tsx, so a navigation shows the real title at once. */
+/** Heading copy of the discovery pages (/radar, /trending). */
 export const RADAR_MIN_DROP_PCT = Math.round(RADAR_MIN_DROP * 100);
 
 export const RADAR_HEADING = {

@@ -28,6 +28,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
 };
 
+import { Suspense } from "react";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { siteUrl } from "@/lib/site-url";
@@ -45,6 +47,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col bg-canvas text-ink">
+        {/* useSearchParams needs a Suspense boundary to keep static routes static. */}
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         <SiteHeader />
         {children}
         <SiteFooter />

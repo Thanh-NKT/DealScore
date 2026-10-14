@@ -777,7 +777,7 @@ Cố định ở đáy, nền `surface` 95% làm mờ nền, viền trên `line`
 Bộ SVG tự vẽ trong `src/components/ui/icons.tsx`: lưới 24px, nét 1.75 (2–2.4 khi cần đậm), đầu và góc tròn, `currentColor`, ẩn với trình đọc màn hình trừ khi có `title`.
 
 ### Trạng thái tải, lỗi và không tìm thấy
-- **Tải:** `loading.tsx` ở gốc, `/search` và trang sản phẩm vẽ **khung xương đúng hình khối thật** (khối anh hùng + hộp quyết định; dải tìm kiếm + cột lọc + 6 thẻ; tiêu đề + 4 thẻ) bằng `Skeleton` (`surface-2`, nhấp nháy nhẹ, đứng yên dưới `prefers-reduced-motion`) trong `LoadingRegion` (`aria-busy`, một dòng "Đang tải…" cho trình đọc màn hình). Không dùng vòng xoay.
+- **Tải (chuyển trang):** route **không** có `loading.tsx`: trang cũ đứng yên tới khi trang mới sẵn sàng rồi đổi thẳng. Một khung xương đã hiện phải đứng ≥ 300ms (React) nên dù server trả trong 100ms vẫn thành một nhịp "trắng" giữa hai trang. Phản hồi "đã bấm" là thanh iris mảnh ở mép trên (`NavigationProgress`, `src/components/layout/navigation-progress.tsx`), chỉ hiện nếu chờ > 150ms. `Skeleton` / `LoadingRegion` (`surface-2`, nhấp nháy nhẹ, đứng yên dưới `prefers-reduced-motion`; `aria-busy` + một dòng "Đang tải…") dành cho phần tải **bên trong** một trang. Không dùng vòng xoay.
 - **Lỗi:** `src/app/error.tsx` (Next 16 truyền `retry`): thẻ `surface` bo 20px, ô biểu tượng cảnh báo, tiêu đề "Chưa tải được trang này", một câu không đổ lỗi cho người dùng, nút chính "Thử lại" + nút phụ "Về trang chủ", mã lỗi (`digest`) 12px `ink-3` để đối chiếu log.
 - **Không tìm thấy:** `src/app/not-found.tsx`: cùng khung, "Không tìm thấy trang này", hai lối đi tiếp "Tìm sản phẩm" / "Về trang chủ", `noindex`.
 
